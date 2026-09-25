@@ -13,6 +13,7 @@ import '../../../core/widgets/card_container.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../models/growth_record.dart';
 import '../../../services/service_locator.dart';
+import '../widgets/bmi_widgets.dart';
 
 class GrowthScreen extends StatefulWidget {
   const GrowthScreen({super.key});
@@ -35,6 +36,8 @@ class _GrowthScreenState extends State<GrowthScreen> {
   @override
   Widget build(BuildContext context) {
     final series = _series;
+    // The BMI tab sits after the measured-metric tabs.
+    final tabLabels = [...?series?.map((s) => s.type.label), 'BMI'];
     return AppShellScaffold(
       tab: AppTab.tracking,
       appBar: AppBar(title: const Text('Theo dõi tăng trưởng')),
@@ -45,7 +48,7 @@ class _GrowthScreenState extends State<GrowthScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
                   child: Row(
-                    children: List.generate(series.length, (i) {
+                    children: List.generate(tabLabels.length, (i) {
                       final active = i == _tabIndex;
                       return Expanded(
                         child: GestureDetector(
@@ -60,7 +63,7 @@ class _GrowthScreenState extends State<GrowthScreen> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              series[i].type.label,
+                              tabLabels[i],
                               style: AppTextStyles.bodySecondary.copyWith(
                                 color: active ? AppColors.primaryDark : AppColors.textSecondary,
                                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
@@ -72,65 +75,68 @@ class _GrowthScreenState extends State<GrowthScreen> {
                     }),
                   ),
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _CurrentValueCard(series: series[_tabIndex]),
-                        const SizedBox(height: AppSpacing.lg),
-                        CardContainer(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Biểu đồ bách phân vị WHO', style: AppTextStyles.h3),
-                              const SizedBox(height: AppSpacing.md),
-                              SizedBox(height: 160, child: _PercentileChart(series: series[_tabIndex])),
-                            ],
+                if (_tabIndex == series.length)
+                  const Expanded(child: BmiTab())
+                else
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _CurrentValueCard(series: series[_tabIndex]),
+                          const SizedBox(height: AppSpacing.lg),
+                          CardContainer(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Biểu đồ bách phân vị WHO', style: AppTextStyles.h3),
+                                const SizedBox(height: AppSpacing.md),
+                                SizedBox(height: 160, child: _PercentileChart(series: series[_tabIndex])),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        CardContainer(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Ghi nhận số đo mới', style: AppTextStyles.h3),
-                              const SizedBox(height: AppSpacing.md),
-                              AppTextField(
-                                label: series[_tabIndex].type.inputLabel,
-                                hint: 'Nhập số đo',
-                                controller: _valueCtrl,
-                                keyboardType: TextInputType.number,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              PrimaryButton(
-                                label: 'Lưu số đo',
-                                onPressed: () {
-                                  ServiceLocator.growthService.addRecord(GrowthRecord(
-                                    childId: 'c1',
-                                    metricType: series[_tabIndex].type,
-                                    value: double.tryParse(_valueCtrl.text) ?? 0,
-                                    date: DateTime.now(),
-                                    percentile: series[_tabIndex].percentile,
-                                  ));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Đã lưu số đo mới.')),
-                                  );
-                                },
-                              ),
-                            ],
+                          const SizedBox(height: AppSpacing.lg),
+                          CardContainer(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Ghi nhận số đo mới', style: AppTextStyles.h3),
+                                const SizedBox(height: AppSpacing.md),
+                                AppTextField(
+                                  label: series[_tabIndex].type.inputLabel,
+                                  hint: 'Nhập số đo',
+                                  controller: _valueCtrl,
+                                  keyboardType: TextInputType.number,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                PrimaryButton(
+                                  label: 'Lưu số đo',
+                                  onPressed: () {
+                                    ServiceLocator.growthService.addRecord(GrowthRecord(
+                                      childId: 'c1',
+                                      metricType: series[_tabIndex].type,
+                                      value: double.tryParse(_valueCtrl.text) ?? 0,
+                                      date: DateTime.now(),
+                                      percentile: series[_tabIndex].percentile,
+                                    ));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Đã lưu số đo mới.')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        TextButton(
-                          onPressed: () => context.push(AppRoutes.growthHistory, extra: series[_tabIndex].type),
-                          child: const Text('Xem lịch sử →'),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.lg),
+                          TextButton(
+                            onPressed: () => context.push(AppRoutes.growthHistory, extra: series[_tabIndex].type),
+                            child: const Text('Xem lịch sử →'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
     );

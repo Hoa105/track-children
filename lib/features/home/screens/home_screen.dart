@@ -19,6 +19,7 @@ import '../widgets/ai_chat_fab.dart';
 import '../widgets/ai_suggestion_card.dart';
 import '../widgets/assessment_cta_card.dart';
 import '../widgets/milestone_reminder_card.dart';
+import '../widgets/upcoming_vaccine_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -233,6 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => context.push(AppRoutes.activityGroups),
                       ),
                       const SizedBox(height: AppSpacing.lg),
+                      UpcomingVaccineCard(
+                        child: child,
+                        onTap: () => context.push(AppRoutes.vaccination, extra: child.id),
+                      ),
                       MilestoneReminderCard(
                         onTap: () => context.push(AppRoutes.notifications),
                       ),

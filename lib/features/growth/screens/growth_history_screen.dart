@@ -9,13 +9,18 @@ import '../../../core/widgets/bottom_nav_bar.dart';
 import '../../../core/widgets/card_container.dart';
 import '../../../models/growth_record.dart';
 import '../../../services/service_locator.dart';
+import '../widgets/bmi_widgets.dart';
 
 /// History of past measurements for a single growth metric (weight, height
 /// or head circumference) — kept separate from the assessment domain
 /// [HistoryScreen] since the two track unrelated data.
 class GrowthHistoryScreen extends StatefulWidget {
-  const GrowthHistoryScreen({super.key, required this.initialType});
+  const GrowthHistoryScreen({super.key, required this.initialType, this.initialShowBmi = false});
   final GrowthMetricType initialType;
+  final bool initialShowBmi;
+
+  /// Route `extra` that opens this screen on the BMI tab.
+  static const bmiTabExtra = 'bmi';
 
   @override
   State<GrowthHistoryScreen> createState() => _GrowthHistoryScreenState();
@@ -23,12 +28,14 @@ class GrowthHistoryScreen extends StatefulWidget {
 
 class _GrowthHistoryScreenState extends State<GrowthHistoryScreen> {
   late GrowthMetricType _type;
+  bool _showBmi = false;
   List<GrowthRecord>? _records;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType;
+    _showBmi = widget.initialShowBmi;
     _load();
   }
 
@@ -48,14 +55,19 @@ class _GrowthHistoryScreenState extends State<GrowthHistoryScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
             child: Row(
-              children: List.generate(GrowthMetricType.values.length, (i) {
-                final type = GrowthMetricType.values[i];
-                final active = type == _type;
+              children: List.generate(GrowthMetricType.values.length + 1, (i) {
+                // The BMI tab sits after the measured-metric tabs.
+                final isBmi = i == GrowthMetricType.values.length;
+                final type = isBmi ? null : GrowthMetricType.values[i];
+                final active = isBmi ? _showBmi : !_showBmi && type == _type;
                 return Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() {
-                      _type = type;
-                      _load();
+                      _showBmi = isBmi;
+                      if (type != null) {
+                        _type = type;
+                        _load();
+                      }
                     }),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -67,7 +79,7 @@ class _GrowthHistoryScreenState extends State<GrowthHistoryScreen> {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        type.label,
+                        type?.label ?? 'BMI',
                         style: AppTextStyles.bodySecondary.copyWith(
                           color: active ? AppColors.primaryDark : AppColors.textSecondary,
                           fontWeight: active ? FontWeight.w700 : FontWeight.w500,
@@ -79,68 +91,71 @@ class _GrowthHistoryScreenState extends State<GrowthHistoryScreen> {
               }),
             ),
           ),
-          Expanded(
-            child: records == null
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CardContainer(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Xu hướng ${_type.label.toLowerCase()}', style: AppTextStyles.h3),
-                              const SizedBox(height: AppSpacing.md),
-                              SizedBox(height: 160, child: _TrendChart(records: records)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text('Các lần đo', style: AppTextStyles.h3),
-                        const SizedBox(height: AppSpacing.md),
-                        for (final record in records)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                            child: CardContainer(
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '${record.date.day}/${record.date.month}/${record.date.year}',
-                                          style: AppTextStyles.titleMedium,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text('${record.value} ${_type.unit}', style: AppTextStyles.caption),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceGreen,
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      '${record.percentile}th',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.primaryDark,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+          if (_showBmi)
+            const Expanded(child: BmiHistoryList())
+          else
+            Expanded(
+              child: records == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CardContainer(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Xu hướng ${_type.label.toLowerCase()}', style: AppTextStyles.h3),
+                                const SizedBox(height: AppSpacing.md),
+                                SizedBox(height: 160, child: _TrendChart(records: records)),
+                              ],
                             ),
                           ),
-                      ],
+                          const SizedBox(height: AppSpacing.lg),
+                          Text('Các lần đo', style: AppTextStyles.h3),
+                          const SizedBox(height: AppSpacing.md),
+                          for (final record in records)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                              child: CardContainer(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${record.date.day}/${record.date.month}/${record.date.year}',
+                                            style: AppTextStyles.titleMedium,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text('${record.value} ${_type.unit}', style: AppTextStyles.caption),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceGreen,
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        '${record.percentile}th',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.primaryDark,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-          ),
+            ),
         ],
       ),
     );

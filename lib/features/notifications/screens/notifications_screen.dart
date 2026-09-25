@@ -17,9 +17,11 @@ class _NotificationItem {
   const _NotificationItem(this.title, this.time, this.icon, this.color, this.route);
 }
 
-/// Verbatim from prototype_reference.md § "Notifications list items".
+/// Verbatim from prototype_reference.md § "Notifications list items", plus
+/// the vaccination reminder added with the "Tiêm chủng / Mọc răng" module.
 final _items = [
   _NotificationItem('Cần theo dõi thêm', '2 giờ trước', Icons.warning_amber_rounded, AppColors.amberDark, AppRoutes.history),
+  _NotificationItem('Sắp đến lịch tiêm chủng', 'Hôm nay', Icons.vaccines_rounded, AppColors.danger, AppRoutes.vaccination),
   _NotificationItem('Đến hạn đo tăng trưởng', 'Hôm nay', Icons.show_chart_rounded, AppColors.primaryDark, AppRoutes.growth),
   _NotificationItem('Mốc đánh giá 18 tháng', 'Hôm qua', Icons.flag_rounded, AppColors.purple, AppRoutes.home),
   _NotificationItem('Hoạt động mới cho bé', '14/08', Icons.extension_rounded, AppColors.primaryDark, AppRoutes.activityGroups),

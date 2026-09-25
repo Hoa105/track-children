@@ -14,6 +14,7 @@ class AppChip extends StatelessWidget {
     this.color = AppColors.primary,
     this.lightColor = AppColors.surfaceGreen,
     this.icon,
+    this.enabled = true,
   });
 
   final String label;
@@ -23,30 +24,33 @@ class AppChip extends StatelessWidget {
   final Color lightColor;
   final IconData? icon;
 
+  /// When false the chip is greyed out and ignores taps.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: AppRadius.pillRadius,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? lightColor : AppColors.surface,
+          color: !enabled ? AppColors.background : (selected ? lightColor : AppColors.surface),
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: selected ? color : AppColors.border),
+          border: Border.all(color: enabled && selected ? color : AppColors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 14, color: selected ? color : AppColors.textMuted),
+              Icon(icon, size: 14, color: enabled && selected ? color : AppColors.textMuted),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: AppTextStyles.bodySecondary.copyWith(
-                color: selected ? color : AppColors.textSecondary,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: !enabled ? AppColors.textMuted : (selected ? color : AppColors.textSecondary),
+                fontWeight: enabled && selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],

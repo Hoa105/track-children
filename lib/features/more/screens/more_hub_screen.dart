@@ -13,9 +13,9 @@ import '../../../services/service_locator.dart';
 
 /// Documented interpretation: the prototype has no single dedicated "Thêm"
 /// screen body of its own — see prototype_reference.md's navigation-graph
-/// note. This hub links to the 3 screens that logically belong under it
-/// (Cài đặt, Góc đồng hành, Thông báo) instead of guessing at a hidden
-/// prototype screen.
+/// note. This hub links to the screens that logically belong under it
+/// (Tiêm chủng & Mọc răng, Góc đồng hành, Thông báo, Cài đặt) instead of
+/// guessing at a hidden prototype screen.
 class MoreHubScreen extends StatelessWidget {
   const MoreHubScreen({super.key});
 
@@ -57,6 +57,15 @@ class MoreHubScreen extends StatelessWidget {
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: AppSpacing.lg),
+          _HubTile(
+            title: 'Tiêm chủng & Mọc răng',
+            subtitle: 'Lịch tiêm chủng mở rộng và sơ đồ răng sữa',
+            icon: Icons.vaccines_rounded,
+            tint: AppColors.dangerSurfaceLight,
+            iconColor: AppColors.danger,
+            onTap: () => context.push(AppRoutes.vaccination),
+          ),
+          const SizedBox(height: AppSpacing.md),
           _HubTile(
             title: 'Góc đồng hành',
             subtitle: 'Bài viết, FAQ và câu chuyện từ mentor',

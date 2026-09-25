@@ -6,6 +6,8 @@ import 'child_service.dart';
 import 'community_service.dart';
 import 'growth_service.dart';
 import 'journal_service.dart';
+import 'teething_service.dart';
+import 'vaccination_service.dart';
 
 /// Simple manual service-locator (no DI package needed for this app's size).
 abstract final class ServiceLocator {
@@ -17,4 +19,6 @@ abstract final class ServiceLocator {
   static final JournalService journalService = MockJournalService();
   static final AIChatService aiChatService = MockAIChatService();
   static final CommunityService communityService = MockCommunityService();
+  static final VaccinationService vaccinationService = MockVaccinationService();
+  static final TeethingService teethingService = MockTeethingService();
 }

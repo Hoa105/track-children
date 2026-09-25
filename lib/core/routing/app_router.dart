@@ -25,6 +25,11 @@ import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/settings/screens/account_settings_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
+import '../../features/vaccination/screens/tooth_add_screen.dart';
+import '../../features/vaccination/screens/tooth_list_screen.dart';
+import '../../features/vaccination/screens/vaccination_screen.dart';
+import '../../features/vaccination/screens/vaccine_add_screen.dart';
+import '../../features/vaccination/screens/vaccine_dose_detail_screen.dart';
 import '../../models/assessment_domain.dart';
 import '../../models/growth_record.dart';
 import 'app_routes.dart';
@@ -51,6 +56,7 @@ final appRouter = GoRouter(
       path: AppRoutes.growthHistory,
       builder: (context, state) => GrowthHistoryScreen(
         initialType: state.extra is GrowthMetricType ? state.extra as GrowthMetricType : GrowthMetricType.weight,
+        initialShowBmi: state.extra == GrowthHistoryScreen.bmiTabExtra,
       ),
     ),
     GoRoute(
@@ -86,6 +92,29 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.notifications, builder: (context, state) => const NotificationsScreen()),
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsScreen()),
     GoRoute(path: AppRoutes.accountSettings, builder: (context, state) => const AccountSettingsScreen()),
+    GoRoute(
+      path: AppRoutes.vaccination,
+      builder: (context, state) => VaccinationScreen(childId: state.extra is String ? state.extra as String : null),
+    ),
+    GoRoute(
+      path: '${AppRoutes.vaccineDoseDetail}/:childId/:doseId',
+      builder: (context, state) => VaccineDoseDetailScreen(
+        childId: state.pathParameters['childId']!,
+        doseId: state.pathParameters['doseId']!,
+      ),
+    ),
+    GoRoute(
+      path: '${AppRoutes.vaccineAdd}/:childId',
+      builder: (context, state) => VaccineAddScreen(childId: state.pathParameters['childId']!),
+    ),
+    GoRoute(
+      path: '${AppRoutes.toothAdd}/:childId',
+      builder: (context, state) => ToothAddScreen(childId: state.pathParameters['childId']!),
+    ),
+    GoRoute(
+      path: '${AppRoutes.toothList}/:childId',
+      builder: (context, state) => ToothListScreen(childId: state.pathParameters['childId']!),
+    ),
     GoRoute(path: AppRoutes.moreHub, builder: (context, state) => const MoreHubScreen()),
   ],
 );

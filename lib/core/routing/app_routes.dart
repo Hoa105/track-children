@@ -25,6 +25,11 @@ abstract final class AppRoutes {
   static const notifications = '/notifications'; // s21 "18"
   static const settings = '/settings'; // s22 "19"
   static const accountSettings = '/settings/account'; // Thông tin & cài đặt tài khoản của mẹ
+  static const vaccination = '/vaccination'; // module "Tiêm chủng / Mọc răng" (extra: childId)
+  static const vaccineDoseDetail = '/vaccination/dose'; // (:childId/:doseId)
+  static const vaccineAdd = '/vaccination/add'; // thêm mũi tiêm ngoài lịch TCMR (:childId)
+  static const toothAdd = '/vaccination/teeth/add'; // ghi nhận răng mọc (:childId)
+  static const toothList = '/vaccination/teeth/list'; // danh sách răng đã mọc, sửa/bỏ đánh dấu (:childId)
   static const moreHub = '/more'; // bottom-nav "Thêm" hub (documented interpretation)
   static const chatStub = '/companion/chat';
   static const communityCreatePost = '/companion/community/new';
