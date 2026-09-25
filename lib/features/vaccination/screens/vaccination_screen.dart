@@ -76,25 +76,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (_children.length > 1)
-                  SizedBox(
-                    height: 52,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-                      itemCount: _children.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-                      itemBuilder: (context, i) {
-                        final c = _children[i];
-                        return AppChip(
-                          label: c.name.split(' ').last,
-                          icon: Icons.child_care_rounded,
-                          selected: c.id == child.id,
-                          onTap: () => setState(() => _child = c),
-                        );
-                      },
-                    ),
-                  ),
+
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
                   child: Row(
