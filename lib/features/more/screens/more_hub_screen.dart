@@ -14,7 +14,7 @@ import '../../../services/service_locator.dart';
 /// Documented interpretation: the prototype has no single dedicated "Thêm"
 /// screen body of its own — see prototype_reference.md's navigation-graph
 /// note. This hub links to the screens that logically belong under it
-/// (Tiêm chủng & Mọc răng, Góc đồng hành, Thông báo, Cài đặt) instead of
+/// (Tiêm chủng & Mọc răng, Tính lượng sữa, Góc đồng hành, Thông báo, Cài đặt) instead of
 /// guessing at a hidden prototype screen.
 class MoreHubScreen extends StatelessWidget {
   const MoreHubScreen({super.key});
@@ -64,6 +64,24 @@ class MoreHubScreen extends StatelessWidget {
             tint: AppColors.dangerSurfaceLight,
             iconColor: AppColors.danger,
             onTap: () => context.push(AppRoutes.vaccination),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _HubTile(
+            title: 'Tính lượng sữa tham khảo',
+            subtitle: 'Lượng sữa mỗi ngày, mỗi cữ theo tuổi và cân nặng của bé',
+            icon: Icons.local_drink_outlined,
+            tint: AppColors.surfaceGreen,
+            iconColor: AppColors.primaryDark,
+            onTap: () => context.push(AppRoutes.milkCalculator),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _HubTile(
+            title: 'Hồ sơ được chia sẻ với tôi',
+            subtitle: 'Lời mời và hồ sơ bé người thân chia sẻ với bạn',
+            icon: Icons.group_outlined,
+            tint: AppColors.purpleSurface,
+            iconColor: AppColors.purpleHeading,
+            onTap: () => context.push(AppRoutes.sharedWithMe),
           ),
           const SizedBox(height: AppSpacing.md),
           _HubTile(

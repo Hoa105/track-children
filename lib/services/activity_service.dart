@@ -3,9 +3,13 @@ import '../core/theme/app_colors.dart';
 import '../models/activity.dart';
 import '../models/activity_group.dart';
 
+/// The activity library is shared content; progress ("Đã làm") is stored
+/// per child, favorites per account.
 abstract class ActivityService {
-  Future<List<ActivityGroup>> getGroups();
-  Future<void> markDone(String groupId, String activityId, bool done);
+  /// With [childId], each [Activity.isDone] reflects that child's progress;
+  /// without it every activity comes back not done (library only).
+  Future<List<ActivityGroup>> getGroups({String? childId});
+  Future<void> markDone(String childId, String activityId, bool done);
   Future<void> toggleFavorite(String groupId, String activityId, bool favorite);
   Future<List<Activity>> getFavorites();
 }
@@ -14,6 +18,13 @@ abstract class ActivityService {
 /// (prototype_reference.md § "Activity groups + items").
 class MockActivityService implements ActivityService {
   late final List<ActivityGroup> _groups = _buildGroups();
+
+  /// childId → ids of activities done with that child.
+  late final Map<String, Set<String>> _doneByChild = _seedDone();
+  final Set<String> _favorites = {};
+
+  /// The prototype's `d` flags, which describe bé Minh (c1).
+  final Set<String> _prototypeDone = {};
 
   static Activity _item(
     String groupId,
@@ -30,7 +41,7 @@ class MockActivityService implements ActivityService {
       name: n,
       ageRangeLabel: a,
       durationLabel: t,
-      isDone: d,
+      isDone: false,
       kind: kind,
       goal: kind == ActivityKind.move
           ? 'Vận động tinh, phối hợp tay – mắt, khả năng tập trung.'
@@ -206,7 +217,11 @@ class MockActivityService implements ActivityService {
       final items = (g['items'] as List)
           .asMap()
           .entries
-          .map((e) => _item(id, e.key, e.value[0], e.value[1], e.value[2], e.value[3], kind))
+          .map((e) {
+            final item = _item(id, e.key, e.value[0], e.value[1], e.value[2], e.value[3], kind);
+            if (e.value[3] as bool) _prototypeDone.add(item.id);
+            return item;
+          })
           .toList();
       return ActivityGroup(
         id: id,
@@ -220,30 +235,61 @@ class MockActivityService implements ActivityService {
     }).toList();
   }
 
-  @override
-  Future<List<ActivityGroup>> getGroups() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _groups;
+  /// Demo progress per child: bé Minh keeps the prototype's flags; the
+  /// others have done every activity whose age range ends before their age.
+  Map<String, Set<String>> _seedDone() {
+    // Building the groups is what fills [_prototypeDone].
+    final groups = _groups;
+    Set<String> doneUpTo(int months) => {
+          for (final g in groups)
+            for (final a in g.items)
+              if ((_upperAgeMonths(a.ageRangeLabel) ?? 99) <= months) a.id,
+        };
+    return {
+      'c1': {..._prototypeDone},
+      'c2': doneUpTo(4),
+      'sc1': doneUpTo(24),
+      'sc2': doneUpTo(8),
+    };
+  }
+
+  static int? _upperAgeMonths(String label) {
+    final match = RegExp(r'[–-]\s*(\d+)').firstMatch(label);
+    return match == null ? null : int.parse(match.group(1)!);
   }
 
   @override
-  Future<void> markDone(String groupId, String activityId, bool done) async {
+  Future<List<ActivityGroup>> getGroups({String? childId}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final done = childId == null ? const <String>{} : (_doneByChild[childId] ?? const <String>{});
+    return [
+      for (final g in _groups)
+        ActivityGroup(
+          id: g.id,
+          name: g.name,
+          tint: g.tint,
+          kind: g.kind,
+          emoji: g.emoji,
+          description: g.description,
+          items: [
+            for (final a in g.items)
+              a.copyWith(isDone: done.contains(a.id), isFavorite: _favorites.contains(a.id)),
+          ],
+        ),
+    ];
+  }
+
+  @override
+  Future<void> markDone(String childId, String activityId, bool done) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    final group = _groups.firstWhere((g) => g.id == groupId);
-    final index = group.items.indexWhere((a) => a.id == activityId);
-    if (index != -1) {
-      group.items[index] = group.items[index].copyWith(isDone: done);
-    }
+    final set = _doneByChild.putIfAbsent(childId, () => {});
+    done ? set.add(activityId) : set.remove(activityId);
   }
 
   @override
   Future<void> toggleFavorite(String groupId, String activityId, bool favorite) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    final group = _groups.firstWhere((g) => g.id == groupId);
-    final index = group.items.indexWhere((a) => a.id == activityId);
-    if (index != -1) {
-      group.items[index] = group.items[index].copyWith(isFavorite: favorite);
-    }
+    favorite ? _favorites.add(activityId) : _favorites.remove(activityId);
   }
 
   @override
@@ -252,7 +298,7 @@ class MockActivityService implements ActivityService {
     return [
       for (final group in _groups)
         for (final activity in group.items)
-          if (activity.isFavorite) activity,
+          if (_favorites.contains(activity.id)) activity.copyWith(isFavorite: true),
     ];
   }
 }

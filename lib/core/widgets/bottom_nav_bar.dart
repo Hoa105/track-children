@@ -32,10 +32,13 @@ extension AppTabX on AppTab {
 }
 
 class AppBottomNavBar extends StatelessWidget {
-  const AppBottomNavBar({super.key, required this.current, required this.onTap});
+  const AppBottomNavBar({super.key, required this.current, required this.onTap, this.tabs = AppTab.values});
 
   final AppTab current;
   final ValueChanged<AppTab> onTap;
+
+  /// Tabs to show, in order — per-child tabs the user can't access are left out.
+  final List<AppTab> tabs;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +51,7 @@ class AppBottomNavBar extends StatelessWidget {
           border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: Row(
-          children: AppTab.values.map((tab) {
+          children: tabs.map((tab) {
             final active = tab == current;
             return Expanded(
               child: InkWell(

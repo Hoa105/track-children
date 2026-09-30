@@ -1,3 +1,4 @@
+import 'active_child.dart';
 import 'activity_service.dart';
 import 'ai_chat_service.dart';
 import 'assessment_service.dart';
@@ -6,6 +7,7 @@ import 'child_service.dart';
 import 'community_service.dart';
 import 'growth_service.dart';
 import 'journal_service.dart';
+import 'sharing_service.dart';
 import 'teething_service.dart';
 import 'vaccination_service.dart';
 
@@ -21,4 +23,6 @@ abstract final class ServiceLocator {
   static final CommunityService communityService = MockCommunityService();
   static final VaccinationService vaccinationService = MockVaccinationService();
   static final TeethingService teethingService = MockTeethingService();
+  static final SharingService sharingService = MockSharingService();
+  static final ActiveChildController activeChild = ActiveChildController(childService);
 }

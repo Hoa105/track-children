@@ -10,6 +10,8 @@ import '../../../core/widgets/illustration_placeholder.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../models/activity.dart';
 import '../../../models/activity_group.dart';
+import '../../../models/child_share.dart';
+import '../../../services/active_child.dart';
 import '../../../services/service_locator.dart';
 
 /// Single detail screen that branches on [Activity.kind] instead of 3
@@ -29,11 +31,20 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   Activity? _activity;
   ActivityGroup? _group;
   bool _isFavorite = false;
+  ActiveChild? _active;
 
   @override
   void initState() {
     super.initState();
-    ServiceLocator.activityService.getGroups().then((groups) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final active = await ServiceLocator.activeChild.ensure();
+    final showProgress = active != null && active.canView(ShareSection.activities);
+    _active = active;
+    ServiceLocator.activityService.getGroups(childId: showProgress ? active.child.id : null).then((groups) {
+      if (!mounted) return;
       for (final g in groups) {
         for (final a in g.items) {
           if (a.id == widget.activityId) {
@@ -60,14 +71,22 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
   Future<void> _markDone() async {
     final activity = _activity;
-    final group = _group;
-    if (activity == null || group == null) return;
-    await ServiceLocator.activityService.markDone(group.id, activity.id, true);
+    final active = _active;
+    if (activity == null || active == null) return;
+    final done = !activity.isDone;
+    await ServiceLocator.activityService.markDone(active.child.id, activity.id, done);
     if (!mounted) return;
-    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã đánh dấu hoạt động hoàn thành')),
+      SnackBar(
+        content: Text(done
+            ? 'Đã ghi nhận ${active.shortName} làm hoạt động này'
+            : 'Đã bỏ đánh dấu cho ${active.shortName}'),
+      ),
     );
+    if (!done) {
+      setState(() => _activity = activity.copyWith(isDone: false));
+      return;
+    }
     // Changed from the prototype's original shortcut (jumping to "Thêm
     // nhật ký"): now returns to whichever screen pushed this detail (the
     // activity list, or Home's activity-of-the-day card) per product
@@ -148,12 +167,28 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                       label: Text(_isFavorite ? 'Đã yêu thích' : 'Yêu thích'),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: PrimaryButton(label: 'Đánh dấu đã thực hiện', onPressed: _markDone),
-                  ),
+                  if (_active?.canView(ShareSection.activities) ?? false) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: activity.isDone ? 'Bỏ đánh dấu' : 'Đánh dấu đã thực hiện',
+                        color: activity.isDone ? AppColors.textSecondaryAlt : AppColors.primary,
+                        onPressed: _active!.canEdit(ShareSection.activities) ? _markDone : null,
+                      ),
+                    ),
+                  ],
                 ],
               ),
+              if (_active != null && _active!.canView(ShareSection.activities)) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  [
+                    'B${_active!.shortName.substring(1)} ${activity.isDone ? 'đã' : 'chưa'} làm hoạt động này',
+                    if (!_active!.canEdit(ShareSection.activities)) 'bạn chỉ có quyền xem',
+                  ].join(' · '),
+                  style: AppTextStyles.caption,
+                ),
+              ],
             ],
           ),
         ),

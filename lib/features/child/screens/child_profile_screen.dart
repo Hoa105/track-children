@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_shell_scaffold.dart';
 import '../../../core/widgets/bottom_nav_bar.dart';
+import '../../../core/widgets/card_container.dart';
+import '../../../core/widgets/empty_avatar.dart';
 import '../../../models/child.dart';
+import '../../../models/child_share.dart';
 import '../../../services/service_locator.dart';
 
 class ChildProfileScreen extends StatefulWidget {
-  const ChildProfileScreen({super.key, this.isNew = false});
+  const ChildProfileScreen({super.key, this.isNew = false, this.childId});
 
   /// When true, this shows a blank "Thêm hồ sơ bé mới" form (opened in edit
   /// mode immediately, saving calls [ChildService.addChild]) instead of
-  /// loading and viewing the first existing child.
+  /// loading and viewing an existing child.
   final bool isNew;
+
+  /// Which child to show; falls back to the first child when null.
+  final String? childId;
 
   @override
   State<ChildProfileScreen> createState() => _ChildProfileScreenState();
@@ -22,6 +29,7 @@ class ChildProfileScreen extends StatefulWidget {
 
 class _ChildProfileScreenState extends State<ChildProfileScreen> {
   Child? _child;
+  List<ChildShare>? _shares;
   bool _editing = false;
   bool _loading = true;
 
@@ -47,7 +55,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     } else {
       ServiceLocator.childService.getChildren().then((children) {
         if (children.isNotEmpty && mounted) {
-          _loadChild(children.first);
+          _loadChild(children.firstWhere((c) => c.id == widget.childId, orElse: () => children.first));
         }
         if (mounted) setState(() => _loading = false);
       });
@@ -64,6 +72,19 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       _weeksCtrl.text = child.gestationalWeeks?.toString() ?? '';
       _weightCtrl.text = child.birthWeightKg?.toString() ?? '';
     });
+    _loadShares();
+  }
+
+  Future<void> _loadShares() async {
+    final child = _child;
+    if (child == null) return;
+    final shares = await ServiceLocator.sharingService.getShares(child.id);
+    if (mounted) setState(() => _shares = shares);
+  }
+
+  Future<void> _openSharing() async {
+    await context.push('${AppRoutes.childSharing}/${_child!.id}');
+    await _loadShares();
   }
 
   @override
@@ -307,9 +328,84 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
                       ),
                     ),
                   ],
+                  if (!widget.isNew && child != null && !_editing) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    _SharingCard(shares: _shares, onTap: _openSharing),
+                  ],
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// Entry point to F23 from the child's own profile: who else follows this
+/// child, tapping through to the member list.
+class _SharingCard extends StatelessWidget {
+  const _SharingCard({required this.shares, required this.onTap});
+
+  final List<ChildShare>? shares;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final shares = this.shares ?? const <ChildShare>[];
+    final joined = shares.where((s) => s.status == ShareStatus.accepted).toList();
+    final pendingCount = shares.length - joined.length;
+    final shown = joined.take(3).toList();
+    final subtitle = shares.isEmpty
+        ? 'Chưa chia sẻ với ai · Mời bố hoặc người thân cùng xem'
+        : [
+            if (joined.isNotEmpty) joined.map((s) => '${s.role.label} ${s.displayName.split(' ').last}').join(', '),
+            if (pendingCount > 0) '$pendingCount lời mời đang chờ',
+          ].join(' · ');
+    return CardContainer(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: [
+          if (shown.isEmpty)
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: AppColors.surfaceGreen, shape: BoxShape.circle),
+              child: const Icon(Icons.group_add_outlined, color: AppColors.primaryDark),
+            )
+          else
+            SizedBox(
+              width: 44 + (shown.length - 1) * 20,
+              height: 44,
+              child: Stack(
+                children: [
+                  for (var i = 0; i < shown.length; i++)
+                    Positioned(
+                      left: i * 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.surface, width: 2),
+                        ),
+                        child: EmptyAvatar(label: shown[i].displayName, size: 40),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Người cùng theo dõi', style: AppTextStyles.titleMedium),
+                const SizedBox(height: 2),
+                Text(subtitle, style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+        ],
+      ),
     );
   }
 }

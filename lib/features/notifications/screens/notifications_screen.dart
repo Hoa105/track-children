@@ -18,9 +18,13 @@ class _NotificationItem {
 }
 
 /// Verbatim from prototype_reference.md § "Notifications list items", plus
-/// the vaccination reminder added with the "Tiêm chủng / Mọc răng" module.
+/// the vaccination reminder added with the "Tiêm chủng / Mọc răng" module
+/// and the profile-sharing events (F23.8).
 final _items = [
+  _NotificationItem('Trần Thu Hà muốn chuyển quyền chủ hồ sơ bé Trần Gia Hân cho bạn', '30 phút trước', Icons.swap_horiz_rounded, AppColors.purple, AppRoutes.sharedWithMe),
+  _NotificationItem('Trần Thu Hà mời bạn cùng theo dõi bé Trần Gia Huy', '1 giờ trước', Icons.mark_email_unread_outlined, AppColors.purple, AppRoutes.sharedWithMe),
   _NotificationItem('Cần theo dõi thêm', '2 giờ trước', Icons.warning_amber_rounded, AppColors.amberDark, AppRoutes.history),
+  _NotificationItem('Bố Nam đã chấp nhận lời mời theo dõi bé Bảo Minh', 'Hôm qua', Icons.group_add_outlined, AppColors.primaryDark, '${AppRoutes.childSharing}/c1'),
   _NotificationItem('Sắp đến lịch tiêm chủng', 'Hôm nay', Icons.vaccines_rounded, AppColors.danger, AppRoutes.vaccination),
   _NotificationItem('Đến hạn đo tăng trưởng', 'Hôm nay', Icons.show_chart_rounded, AppColors.primaryDark, AppRoutes.growth),
   _NotificationItem('Mốc đánh giá 18 tháng', 'Hôm qua', Icons.flag_rounded, AppColors.purple, AppRoutes.home),

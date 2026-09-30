@@ -5,6 +5,7 @@ abstract class JournalService {
   Future<List<JournalEntry>> getEntries(String childId);
   Future<void> addEntry(JournalEntry entry);
   Future<void> updateEntry(JournalEntry entry);
+  Future<void> deleteEntry(String entryId);
 }
 
 /// Seeded verbatim from prototype_reference.md § "Journal (Nhật ký) entries".
@@ -56,5 +57,11 @@ class MockJournalService implements JournalService {
     if (index != -1) {
       _entries[index] = entry;
     }
+  }
+
+  @override
+  Future<void> deleteEntry(String entryId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _entries.removeWhere((e) => e.id == entryId);
   }
 }

@@ -29,7 +29,7 @@ class _JournalAddScreenState extends State<JournalAddScreen> {
   Future<void> _save() async {
     await ServiceLocator.journalService.addEntry(JournalEntry(
       id: 'j${DateTime.now().microsecondsSinceEpoch}',
-      childId: 'c1',
+      childId: ServiceLocator.activeChild.value!.child.id,
       date: _date,
       mood: _mood,
       domains: _domains.toList(),

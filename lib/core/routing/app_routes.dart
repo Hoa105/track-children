@@ -8,6 +8,10 @@ abstract final class AppRoutes {
   static const home = '/home'; // s4 "4"
   static const childProfile = '/child-profile'; // s5 "5"
   static const childProfileNew = '/child-profile/new'; // "Thêm hồ sơ bé mới" — no dedicated prototype screen id, reuses s5's form in a blank/add state (see child_profile_screen.dart)
+  static const childSharing = '/child-profile/sharing'; // F23.4/F23.5 người cùng theo dõi bé (:childId)
+  static const childShareInvite = '/child-profile/invite'; // F23.1/F23.2 mời người chăm sóc (:childId)
+  static const sharedWithMe = '/shared-children'; // F23.3/F23.6 lời mời & hồ sơ được chia sẻ với tôi
+  static const sharedChildProfile = '/shared-children/profile'; // F23.6/F23.7 xem hồ sơ được chia sẻ (:accessId)
   static const growth = '/growth'; // s6 "6"
   static const growthHistory = '/growth/history'; // growth metric history (own screen, not the assessment history)
   static const assessmentQuestion = '/assessment/question'; // s7-10 "8a-8d" (:domainIndex)
@@ -25,11 +29,13 @@ abstract final class AppRoutes {
   static const notifications = '/notifications'; // s21 "18"
   static const settings = '/settings'; // s22 "19"
   static const accountSettings = '/settings/account'; // Thông tin & cài đặt tài khoản của mẹ
+  static const deleteAccount = '/settings/delete-account'; // F01.6 yêu cầu xóa tài khoản & dữ liệu
   static const vaccination = '/vaccination'; // module "Tiêm chủng / Mọc răng" (extra: childId)
   static const vaccineDoseDetail = '/vaccination/dose'; // (:childId/:doseId)
   static const vaccineAdd = '/vaccination/add'; // thêm mũi tiêm ngoài lịch TCMR (:childId)
   static const toothAdd = '/vaccination/teeth/add'; // ghi nhận răng mọc (:childId)
   static const toothList = '/vaccination/teeth/list'; // danh sách răng đã mọc, sửa/bỏ đánh dấu (:childId)
+  static const milkCalculator = '/nutrition/milk'; // Tính lượng sữa tham khảo cho bé đang chọn
   static const moreHub = '/more'; // bottom-nav "Thêm" hub (documented interpretation)
   static const chatStub = '/companion/chat';
   static const communityCreatePost = '/companion/community/new';

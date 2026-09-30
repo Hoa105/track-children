@@ -8,8 +8,11 @@ class Activity {
   final String name;
   final String ageRangeLabel; // prototype field `a`
   final String durationLabel; // prototype field `t`
-  final bool isDone; // prototype field `d`
+  /// Done with the child the list was loaded for (see ActivityService).
+  final bool isDone;
   final ActivityKind kind;
+
+  /// Per account, not per child.
   final bool isFavorite;
 
   // Detail-screen fields (populated for the handful of activities that have

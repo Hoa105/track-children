@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -7,6 +8,7 @@ import '../../../core/widgets/app_chip.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/illustration_placeholder.dart';
 import '../../../models/assessment_domain.dart';
+import '../../../models/child_share.dart';
 import '../../../models/journal_entry.dart';
 import '../../../services/service_locator.dart';
 
@@ -44,7 +46,9 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
   }
 
   Future<void> _load() async {
-    final entries = await ServiceLocator.journalService.getEntries('c1');
+    final active = await ServiceLocator.activeChild.ensure();
+    if (active == null) return;
+    final entries = await ServiceLocator.journalService.getEntries(active.child.id);
     final entry = entries.firstWhere((e) => e.id == widget.entryId);
     if (!mounted) return;
     setState(() {
@@ -61,21 +65,37 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
   Future<void> _save() async {
     final entry = _entry;
     if (entry == null) return;
-    final updated = entry.copyWith(
-      mood: _mood,
-      domains: _domains.toList(),
-      note: _noteCtrl.text,
-      date: _date,
-    );
+    final updated = entry.copyWith(mood: _mood, domains: _domains.toList(), note: _noteCtrl.text, date: _date);
     await ServiceLocator.journalService.updateEntry(updated);
     if (!mounted) return;
     setState(() {
       _entry = updated;
       _editing = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã lưu thay đổi')),
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu thay đổi')));
+  }
+
+  Future<void> _confirmDelete() async {
+    final entry = _entry;
+    if (entry == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa nhật ký?'),
+        content: const Text('Nội dung nhật ký này sẽ bị xóa vĩnh viễn và không thể khôi phục.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Xóa', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
     );
+    if (confirmed != true) return;
+    await ServiceLocator.journalService.deleteEntry(entry.id);
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -85,21 +105,30 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final canEdit = ServiceLocator.activeChild.value?.canEdit(ShareSection.journal) ?? false;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_editing ? 'Sửa nhật ký' : 'Chi tiết nhật ký'),
         actions: [
-          IconButton(
-            icon: Icon(_editing ? Icons.check_rounded : Icons.edit_outlined),
-            tooltip: _editing ? 'Lưu' : 'Sửa',
-            onPressed: () {
-              if (_editing) {
-                _save();
-              } else {
-                setState(() => _editing = true);
-              }
-            },
-          ),
+          if (canEdit && !_editing)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              tooltip: 'Xóa',
+              onPressed: _confirmDelete,
+            ),
+          if (canEdit)
+            IconButton(
+              icon: Icon(_editing ? Icons.check_rounded : Icons.edit_outlined),
+              tooltip: _editing ? 'Lưu' : 'Sửa',
+              onPressed: () {
+                if (_editing) {
+                  _save();
+                } else {
+                  setState(() => _editing = true);
+                }
+              },
+            ),
         ],
       ),
       body: SafeArea(
@@ -139,12 +168,12 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                       color: domain.color,
                       onTap: _editing
                           ? () => setState(() {
-                                if (_domains.contains(domain)) {
-                                  _domains.remove(domain);
-                                } else {
-                                  _domains.add(domain);
-                                }
-                              })
+                              if (_domains.contains(domain)) {
+                                _domains.remove(domain);
+                              } else {
+                                _domains.add(domain);
+                              }
+                            })
                           : null,
                     ),
                 ],

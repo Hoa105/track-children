@@ -6,8 +6,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/empty_avatar.dart';
 import '../../../core/widgets/otp_dialog.dart';
+import '../../../models/parent_role.dart';
 import '../../../services/service_locator.dart';
-import '../../auth/screens/login_screen.dart' show ParentRole;
 
 /// Dedicated "Cài đặt tài khoản" screen: the mother's own account info
 /// (previously just a static header inside [SettingsScreen]) now lives here

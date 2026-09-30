@@ -20,10 +20,16 @@ import '../../features/journal/screens/journal_add_screen.dart';
 import '../../features/journal/screens/journal_detail_screen.dart';
 import '../../features/journal/screens/journal_screen.dart';
 import '../../features/more/screens/more_hub_screen.dart';
+import '../../features/nutrition/screens/milk_calculator_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/settings/screens/account_settings_screen.dart';
+import '../../features/settings/screens/delete_account_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/sharing/screens/child_share_invite_screen.dart';
+import '../../features/sharing/screens/child_sharing_screen.dart';
+import '../../features/sharing/screens/shared_child_profile_screen.dart';
+import '../../features/sharing/screens/shared_with_me_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 import '../../features/vaccination/screens/tooth_add_screen.dart';
 import '../../features/vaccination/screens/tooth_list_screen.dart';
@@ -49,8 +55,24 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginScreen()),
     GoRoute(path: AppRoutes.childPicker, builder: (context, state) => const ChildPickerScreen()),
     GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),
-    GoRoute(path: AppRoutes.childProfile, builder: (context, state) => const ChildProfileScreen()),
+    GoRoute(
+      path: AppRoutes.childProfile,
+      builder: (context, state) => ChildProfileScreen(childId: state.extra is String ? state.extra as String : null),
+    ),
     GoRoute(path: AppRoutes.childProfileNew, builder: (context, state) => const ChildProfileScreen(isNew: true)),
+    GoRoute(
+      path: '${AppRoutes.childSharing}/:childId',
+      builder: (context, state) => ChildSharingScreen(childId: state.pathParameters['childId']!),
+    ),
+    GoRoute(
+      path: '${AppRoutes.childShareInvite}/:childId',
+      builder: (context, state) => ChildShareInviteScreen(childId: state.pathParameters['childId']!),
+    ),
+    GoRoute(path: AppRoutes.sharedWithMe, builder: (context, state) => const SharedWithMeScreen()),
+    GoRoute(
+      path: '${AppRoutes.sharedChildProfile}/:accessId',
+      builder: (context, state) => SharedChildProfileScreen(accessId: state.pathParameters['accessId']!),
+    ),
     GoRoute(path: AppRoutes.growth, builder: (context, state) => const GrowthScreen()),
     GoRoute(
       path: AppRoutes.growthHistory,
@@ -89,9 +111,11 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.companionSaved, builder: (context, state) => const CompanionSavedScreen()),
     GoRoute(path: AppRoutes.chatStub, builder: (context, state) => const ChatStubScreen()),
     GoRoute(path: AppRoutes.communityCreatePost, builder: (context, state) => const CommunityCreatePostScreen()),
+    GoRoute(path: AppRoutes.milkCalculator, builder: (context, state) => const MilkCalculatorScreen()),
     GoRoute(path: AppRoutes.notifications, builder: (context, state) => const NotificationsScreen()),
     GoRoute(path: AppRoutes.settings, builder: (context, state) => const SettingsScreen()),
     GoRoute(path: AppRoutes.accountSettings, builder: (context, state) => const AccountSettingsScreen()),
+    GoRoute(path: AppRoutes.deleteAccount, builder: (context, state) => const DeleteAccountScreen()),
     GoRoute(
       path: AppRoutes.vaccination,
       builder: (context, state) => VaccinationScreen(childId: state.extra is String ? state.extra as String : null),

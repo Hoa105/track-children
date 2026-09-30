@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/otp_dialog.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../models/parent_role.dart';
 import '../../../services/service_locator.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,15 +16,6 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
-}
-
-enum ParentRole {
-  mother('Mẹ'),
-  father('Bố'),
-  guardian('Người giám hộ khác');
-
-  const ParentRole(this.label);
-  final String label;
 }
 
 class _LoginScreenState extends State<LoginScreen> {

@@ -11,7 +11,9 @@ import '../../../core/widgets/card_container.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../models/activity.dart';
 import '../../../models/activity_group.dart';
+import '../../../models/child_share.dart';
 import '../../../services/service_locator.dart';
+import '../widgets/active_child_banner.dart';
 
 enum _StatusFilter { all, notDone, done }
 
@@ -101,9 +103,15 @@ class _ActivityGroupDetailScreenState extends State<ActivityGroupDetailScreen> {
   @override
   void initState() {
     super.initState();
-    ServiceLocator.activityService.getGroups().then((groups) {
-      setState(() => _group = groups.firstWhere((g) => g.id == widget.groupId));
-    });
+    ServiceLocator.activeChild.ensure().then((_) => _load());
+  }
+
+  bool get _showProgress => ServiceLocator.activeChild.value?.canView(ShareSection.activities) ?? false;
+
+  Future<void> _load() async {
+    final active = ServiceLocator.activeChild.value;
+    final groups = await ServiceLocator.activityService.getGroups(childId: _showProgress ? active!.child.id : null);
+    if (mounted) setState(() => _group = groups.firstWhere((g) => g.id == widget.groupId));
   }
 
   bool get _hasActiveFilter =>
@@ -167,12 +175,22 @@ class _ActivityGroupDetailScreenState extends State<ActivityGroupDetailScreen> {
     }
 
     final items = _filteredItems(group.items);
+    final active = ServiceLocator.activeChild.value;
+    final showProgress = _showProgress;
 
     return AppShellScaffold(
       tab: AppTab.activities,
       appBar: AppBar(title: Text(group.name)),
       body: Column(
         children: [
+          if (active != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+              child: ActiveChildBanner(
+                active: active,
+                progressText: showProgress ? 'Đã làm ${group.doneCount}/${group.items.length} hoạt động trong nhóm' : null,
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
             child: Row(
@@ -211,7 +229,10 @@ class _ActivityGroupDetailScreenState extends State<ActivityGroupDetailScreen> {
               itemBuilder: (context, i) {
                 final activity = items[i];
                 return CardContainer(
-                  onTap: () => context.push('${AppRoutes.activityDetail}/${activity.id}'),
+                  onTap: () async {
+                    await context.push('${AppRoutes.activityDetail}/${activity.id}');
+                    await _load();
+                  },
                   child: Row(
                     children: [
                       Container(
@@ -220,7 +241,7 @@ class _ActivityGroupDetailScreenState extends State<ActivityGroupDetailScreen> {
                         decoration: BoxDecoration(color: group.tint, borderRadius: BorderRadius.circular(10)),
                         alignment: Alignment.center,
                         child: Icon(
-                          activity.isDone ? Icons.check_rounded : Icons.circle_outlined,
+                          showProgress && activity.isDone ? Icons.check_rounded : Icons.circle_outlined,
                           size: 16,
                           color: AppColors.primaryDark,
                         ),
@@ -242,7 +263,7 @@ class _ActivityGroupDetailScreenState extends State<ActivityGroupDetailScreen> {
                           ],
                         ),
                       ),
-                      if (activity.isDone)
+                      if (showProgress && activity.isDone)
                         const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
                     ],
                   ),

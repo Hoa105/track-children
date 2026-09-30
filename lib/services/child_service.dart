@@ -4,6 +4,10 @@ abstract class ChildService {
   Future<List<Child>> getChildren();
   Future<Child> updateChild(Child child);
   Future<Child> addChild(Child child);
+
+  /// Adds an existing profile (keeping its id and data) to this account —
+  /// used when someone hands their child's profile over (F23.11).
+  Future<void> adoptChild(Child child);
 }
 
 class MockChildService implements ChildService {
@@ -56,5 +60,12 @@ class MockChildService implements ChildService {
     );
     _children.add(created);
     return created;
+  }
+
+  @override
+  Future<void> adoptChild(Child child) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _children.removeWhere((c) => c.id == child.id);
+    _children.add(child);
   }
 }
