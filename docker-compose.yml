@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env.example
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./ai-service/.env.example
+
+  admin-web:
+    build: ./admin-web
+    ports:
+      - "5173:5173"
