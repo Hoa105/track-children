@@ -14,21 +14,25 @@ Repository được tổ chức theo mô hình monorepo gồm bốn thành phầ
 
 ```text
 track-children/
-├── mobile/                     # Flutter application
+├── mobile/                         # Flutter application
 │   ├── lib/
-│   │   ├── app/                # App configuration and routes
-│   │   ├── core/               # Shared theme, widgets, network, storage
-│   │   ├── features/           # Feature modules
-│   │   │   └── <feature>/
-│   │   │       ├── models/
-│   │   │       ├── api/
-│   │   │       ├── screens/
-│   │   │       └── widgets/
-│   │   ├── models/
-│   │   ├── services/
-│   │   └── shared/             # Reusable UI and utilities
-│   ├── test/
-│   ├── pubspec.yaml
+│   │   ├── main.dart                # Application entrypoint
+│   │   ├── app/                     # App-level configuration
+│   │   ├── core/                    # Shared infrastructure and UI
+│   │   ├── features/                # Application feature groups
+│   │   ├── models/                  # Data models
+│   │   ├── services/                # Business and data services
+│   │   └── shared/                  # Reusable widgets and utilities
+│   ├── assets/                      # Images, icons, and illustrations
+│   ├── test/                        # Flutter tests
+│   ├── android/                     # Android platform project
+│   ├── ios/                         # iOS platform project
+│   ├── linux/                       # Linux platform project
+│   ├── macos/                       # macOS platform project
+│   ├── web/                         # Web platform project
+│   ├── windows/                     # Windows platform project
+│   ├── pubspec.yaml                 # Flutter dependencies and assets
+│   ├── analysis_options.yaml        # Dart analyzer configuration
 │   └── README.md
 │
 ├── backend/                    # FastAPI backend
