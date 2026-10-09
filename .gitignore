@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local database schema files
+/schema_ai.sql
+/schema_postgresql.sql
+
 # Symbolication related
 app.*.symbols
 

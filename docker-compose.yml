@@ -1,10 +1,53 @@
 services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: track-children-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "timezone=Asia/Ho_Chi_Minh"]
+    environment:
+      POSTGRES_DB: track_children
+      POSTGRES_USER: track_children
+      POSTGRES_PASSWORD: track_children_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - track_children_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U track_children -d track_children"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-db:
+    image: pgvector/pgvector:pg16
+    container_name: track-children-ai-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "timezone=Asia/Ho_Chi_Minh"]
+    environment:
+      POSTGRES_DB: track_children_ai
+      POSTGRES_USER: track_children
+      POSTGRES_PASSWORD: track_children_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - track_children_ai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U track_children -d track_children_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env.example
+    environment:
+      DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
+    depends_on:
+      db:
+        condition: service_healthy
 
   ai-service:
     build: ./ai-service
@@ -12,8 +55,20 @@ services:
       - "8001:8001"
     env_file:
       - ./ai-service/.env.example
+    environment:
+      DATABASE_URL: postgresql://track_children:track_children_dev@ai-db:5432/track_children_ai
+      BACKEND_API_URL: http://backend:8000
+    depends_on:
+      ai-db:
+        condition: service_healthy
+      backend:
+        condition: service_started
 
   admin-web:
     build: ./admin-web
     ports:
       - "5173:5173"
+
+volumes:
+  track_children_postgres_data:
+  track_children_ai_postgres_data:
