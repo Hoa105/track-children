@@ -1,4 +1,4 @@
-﻿-- TRACK CHILDREN AI DATABASE
+-- TRACK CHILDREN AI DATABASE
 -- 3 schema: ai_kb, ai_chatbot, ai_analysis
 -- Chạy file này trong database track_children_ai.
 -- Các ID tham chiếu Backend chỉ là UUID/ID; xác thực qua Backend API.
@@ -16,7 +16,7 @@ CREATE OR REPLACE FUNCTION common.set_updated_at() RETURNS trigger AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
--- F14.1 � T�i li?u co s? tri th?c
+-- F14.1 – Tài liệu cơ sở tri thức
 CREATE TABLE IF NOT EXISTS ai_kb.kb_documents (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     title         varchar(300) NOT NULL,
@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS ai_kb.kb_documents (
     version       int NOT NULL DEFAULT 1,
     status        varchar(15) NOT NULL DEFAULT 'uploaded'
                   CHECK (status IN ('uploaded','processing','indexed','failed','archived')),
-    is_active     boolean NOT NULL DEFAULT true,    -- chatbot ch? truy xu?t t�i li?u active
+    is_active     boolean NOT NULL DEFAULT true,    -- chatbot chỉ truy xuất tài liệu active
     uploaded_by   uuid,
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
--- F14.2 � Chunk + embedding (d?i s? chi?u theo model embedding, vd 768 / 1024 / 1536)
+-- F14.2 – Chunk + embedding (đổi số chiều theo model embedding, vd 768 / 1024 / 1536)
 CREATE TABLE IF NOT EXISTS ai_kb.kb_chunks (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id   uuid NOT NULL REFERENCES ai_kb.kb_documents(id) ON DELETE CASCADE,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS ai_kb.kb_index_jobs (
     created_at    timestamptz NOT NULL DEFAULT now()
 );
 
--- F14.3 / F14.4 � [Option] Candidate Criteria do LLM tr�ch xu?t & ki?m duy?t
+-- F14.3 / F14.4 – [Option] Candidate Criteria do LLM trích xuất & kiểm duyệt
 CREATE TABLE IF NOT EXISTS ai_kb.candidate_criteria (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id   uuid NOT NULL REFERENCES ai_kb.kb_documents(id) ON DELETE CASCADE,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS ai_kb.candidate_criteria (
     milestone_id  int,
     title         varchar(300) NOT NULL,
     description   text,
-    suggested_questions jsonb,                      -- ["B� c� ... kh�ng?", ...]
+    suggested_questions jsonb,                      -- ["Bé có ... không?", ...]
     source_excerpt text,
     llm_model     varchar(100),
     confidence    numeric(4,3),
@@ -87,12 +87,12 @@ CREATE TABLE IF NOT EXISTS ai_kb.candidate_criteria (
     reviewed_by   uuid,
     reviewed_at   timestamptz,
     review_note   text,
-    promoted_criterion_id uuid,   -- ti�u ch� ch�nh th?c du?c t?o ra
+    promoted_criterion_id uuid,   -- tiêu chí chính thức được tạo ra
     created_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS candidate_criteria_status_idx ON ai_kb.candidate_criteria (status);
 
--- F10 � H?i tho?i chatbot
+-- F10 – Hội thoại chatbot
 CREATE TABLE IF NOT EXISTS ai_chatbot.chat_conversations (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     uuid NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS ai_chatbot.chat_messages (
 CREATE INDEX IF NOT EXISTS chat_messages_conversation_created_idx
     ON ai_chatbot.chat_messages (conversation_id, created_at);
 
--- Ngu?n tr�ch d?n c?a c�u tr? l?i (RAG citations)
+-- Nguồn trích dẫn của câu trả lời (RAG citations)
 CREATE TABLE IF NOT EXISTS ai_chatbot.chat_message_sources (
     message_id  uuid NOT NULL REFERENCES ai_chatbot.chat_messages(id) ON DELETE CASCADE,
     chunk_id    uuid NOT NULL REFERENCES ai_kb.kb_chunks(id) ON DELETE CASCADE,
@@ -127,10 +127,10 @@ CREATE TABLE IF NOT EXISTS ai_chatbot.chat_message_sources (
     PRIMARY KEY (message_id, chunk_id)
 );
 
--- F18.1 / F18.3 � Log tuong t�c & hi?u nang
+-- F18.1 / F18.3 – Log tương tác & hiệu năng
 CREATE TABLE IF NOT EXISTS ai_chatbot.chat_request_logs (
     id                 bigserial PRIMARY KEY,
-    message_id         uuid REFERENCES ai_chatbot.chat_messages(id) ON DELETE SET NULL,   -- tin nh?n tr? l?i
+    message_id         uuid REFERENCES ai_chatbot.chat_messages(id) ON DELETE SET NULL,   -- tin nhắn trả lời
     conversation_id    uuid REFERENCES ai_chatbot.chat_conversations(id) ON DELETE SET NULL,
     user_id            uuid,
     query_text         text,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS ai_chatbot.chat_request_logs (
 CREATE INDEX IF NOT EXISTS chat_request_logs_created_idx
     ON ai_chatbot.chat_request_logs (created_at);
 
--- F18.2 � C�u h?i kh�ng c� ngu?n ph� h?p
+-- F18.2 – Câu hỏi không có nguồn phù hợp
 CREATE TABLE IF NOT EXISTS ai_chatbot.unanswered_questions (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     message_id    uuid REFERENCES ai_chatbot.chat_messages(id) ON DELETE SET NULL,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS ai_chatbot.unanswered_questions (
     created_at    timestamptz NOT NULL DEFAULT now()
 );
 
--- F06 / F15.2 � Log ph�n t�ch k?t qu? d�nh gi� b?ng AI
+-- F06 / F15.2 – Log phân tích kết quả đánh giá bằng AI
 CREATE TABLE IF NOT EXISTS ai_analysis.analysis_logs (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     assessment_id    uuid NOT NULL,
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS ai_analysis.analysis_logs (
     reference_version_id uuid,
     llm_model        varchar(100),
     prompt_version   varchar(20),
-    input_payload    jsonb NOT NULL,                -- c�u tr? l?i + tu?i + ch? s? tang tru?ng (d� ?n danh)
+    input_payload    jsonb NOT NULL,                -- câu trả lời + tuổi + chỉ số tăng trưởng (đã ẩn danh)
     output_payload   jsonb,
     used_chunk_ids   uuid[],
     latency_ms       int,
@@ -187,7 +187,7 @@ CREATE INDEX IF NOT EXISTS analysis_logs_assessment_idx
     ON ai_analysis.analysis_logs (assessment_id);
 
 -- =====================================================================
--- G?n trigger updated_at cho m?i b?ng c� c?t updated_at
+-- Gắn trigger updated_at cho mọi bảng có cột updated_at
 -- =====================================================================
 DO $$
 DECLARE r record;

@@ -1,16 +1,16 @@
-﻿-- =====================================================================
--- ?NG D?NG CHAM S�C & THEO D�I S? PH�T TRI?N C?A TR? 0�6 TU?I
--- PostgreSQL 15+  |  1 database, m?i nh�m ch?c nang = 1 schema (16 schema)
+-- =====================================================================
+-- ỨNG DỤNG CHĂM SÓC & THEO DÕI SỰ PHÁT TRIỂN CỦA TRẺ 0–6 TUỔI
+-- PostgreSQL 15+  |  1 database, mỗi nhóm chức năng = 1 schema (14 schema + common)
 --   Backend   : account, admin, child, growth, health, reference, criteria,
 --               assessment, activity, diary, notification, community, report
--- Flutter app KH�NG k?t n?i tr?c ti?p DB: g?i REST API c?a Backend
--- (cache offline ph�a mobile xem file schema_flutter_local.sql)
+-- Flutter app KHÔNG kết nối trực tiếp DB: gọi REST API của Backend
+-- (dữ liệu AI/chatbot nằm ở database riêng: ai-service/migrations)
 -- =====================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- gen_random_uuid()
-CREATE EXTENSION IF NOT EXISTS citext;     -- email kh�ng ph�n bi?t hoa/thu?ng
+CREATE EXTENSION IF NOT EXISTS citext;     -- email không phân biệt hoa/thường
 
-CREATE SCHEMA IF NOT EXISTS common;   -- h�m d�ng chung
+CREATE SCHEMA IF NOT EXISTS common;   -- hàm dùng chung
 CREATE SCHEMA IF NOT EXISTS account;
 CREATE SCHEMA IF NOT EXISTS admin;
 CREATE SCHEMA IF NOT EXISTS child;
@@ -26,29 +26,29 @@ CREATE SCHEMA IF NOT EXISTS community;
 CREATE SCHEMA IF NOT EXISTS report;
 
 -- ---------------------------------------------------------------------
--- H�m ti?n �ch: t? c?p nh?t updated_at
+-- Hàm tiện ích: tự cập nhật updated_at
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION common.set_updated_at() RETURNS trigger AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================================
--- PH?N 1. BACKEND (13 schema)
+-- PHẦN 1. BACKEND (13 schema)
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- F01 � T�i kho?n ph? huynh & quy?n ri�ng tu
+-- F01 – Tài khoản phụ huynh & quyền riêng tư
 -- ---------------------------------------------------------------------
 CREATE TABLE account.users (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email           citext UNIQUE,
-    phone           varchar(16) UNIQUE CHECK (phone ~ '^\+[1-9][0-9]{7,14}$'),   -- chu?n E.164, vd +84912345678
+    phone           varchar(16) UNIQUE CHECK (phone ~ '^\+[1-9][0-9]{7,14}$'),   -- chuẩn E.164, vd +84912345678
     password_hash   text NOT NULL,
     full_name       varchar(150) NOT NULL,
     avatar_url      text,
     gender          varchar(10) CHECK (gender IN ('male','female','other')),
     date_of_birth   date,
-    relationship    varchar(30),                 -- m? / b? / ngu?i gi�m h?...
+    relationship    varchar(30),                 -- mẹ / bố / người giám hộ...
     status          varchar(20) NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending','active','locked','pending_deletion','deleted')),
     email_verified_at timestamptz,
@@ -59,11 +59,11 @@ CREATE TABLE account.users (
     CHECK (email IS NOT NULL OR phone IS NOT NULL)
 );
 
--- OTP / token x�c th?c dang k�, qu�n m?t kh?u (F01.1, F01.4)
+-- OTP / token xác thực đăng ký, quên mật khẩu (F01.1, F01.4)
 CREATE TABLE account.verification_codes (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     uuid REFERENCES account.users(id) ON DELETE CASCADE,
-    target      varchar(255) NOT NULL,            -- email ho?c s? di?n tho?i
+    target      varchar(255) NOT NULL,            -- email hoặc số điện thoại
     purpose     varchar(30) NOT NULL CHECK (purpose IN ('register','reset_password','change_email','change_phone')),
     code_hash   text NOT NULL,
     attempts    smallint NOT NULL DEFAULT 0,
@@ -73,7 +73,7 @@ CREATE TABLE account.verification_codes (
 );
 CREATE INDEX ON account.verification_codes (target, purpose);
 
--- Phi�n dang nh?p / refresh token (F01.2)
+-- Phiên đăng nhập / refresh token (F01.2)
 CREATE TABLE account.user_sessions (
     id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             uuid NOT NULL REFERENCES account.users(id) ON DELETE CASCADE,
@@ -88,7 +88,7 @@ CREATE TABLE account.user_sessions (
 );
 CREATE INDEX ON account.user_sessions (user_id);
 
--- FCM token d? d?y th�ng b�o (F08)
+-- FCM token để đẩy thông báo (F08)
 CREATE TABLE account.device_tokens (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     uuid NOT NULL REFERENCES account.users(id) ON DELETE CASCADE,
@@ -98,7 +98,7 @@ CREATE TABLE account.device_tokens (
     updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
--- �i?u kho?n & ch�nh s�ch d? li?u theo phi�n b?n (F01.5)
+-- Điều khoản & chính sách dữ liệu theo phiên bản (F01.5)
 CREATE TABLE account.legal_documents (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     doc_type      varchar(30) NOT NULL CHECK (doc_type IN ('terms','privacy','data_policy')),
@@ -121,14 +121,14 @@ CREATE TABLE account.user_consents (
     UNIQUE (user_id, document_id)
 );
 
--- Y�u c?u x�a t�i kho?n & d? li?u (F01.6)
+-- Yêu cầu xóa tài khoản & dữ liệu (F01.6)
 CREATE TABLE account.data_deletion_requests (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       uuid NOT NULL REFERENCES account.users(id),
     reason        text,
     status        varchar(20) NOT NULL DEFAULT 'pending'
                   CHECK (status IN ('pending','cancelled','processing','completed')),
-    scheduled_at  timestamptz,                    -- v� d?: sau 30 ng�y cho ph�p h?y
+    scheduled_at  timestamptz,                    -- ví dụ: sau 30 ngày cho phép hủy
     requested_at  timestamptz NOT NULL DEFAULT now(),
     completed_at  timestamptz
 );
@@ -136,7 +136,7 @@ CREATE UNIQUE INDEX one_open_deletion_request
     ON account.data_deletion_requests (user_id) WHERE status IN ('pending','processing');
 
 -- ---------------------------------------------------------------------
--- F11 � Admin & ph�n quy?n
+-- F11 – Admin & phân quyền
 -- ---------------------------------------------------------------------
 CREATE TABLE admin.admin_users (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -174,7 +174,7 @@ CREATE TABLE admin.admin_user_roles (
     PRIMARY KEY (admin_user_id, role_id)
 );
 
--- Nh?t k� thao t�c c?a admin (d�ng chung cho F11�F22)
+-- Nhật ký thao tác của admin (dùng chung cho F11–F22)
 CREATE TABLE admin.admin_audit_logs (
     id            bigserial PRIMARY KEY,
     admin_user_id uuid REFERENCES admin.admin_users(id),
@@ -190,17 +190,17 @@ CREATE INDEX ON admin.admin_audit_logs (entity_type, entity_id);
 CREATE INDEX ON admin.admin_audit_logs (created_at);
 
 -- ---------------------------------------------------------------------
--- F02 � H? so tr?  |  F23 � Chia s? h? so tr? v?i ngu?i cham s�c
+-- F02 – Hồ sơ trẻ  |  F23 – Chia sẻ hồ sơ trẻ với người chăm sóc
 -- ---------------------------------------------------------------------
 CREATE TABLE child.children (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_user_id    uuid NOT NULL REFERENCES account.users(id),   -- NGU?N DUY NH?T x�c d?nh ch? h? so (d?i du?c: F23.9)
+    owner_user_id    uuid NOT NULL REFERENCES account.users(id),   -- NGUỒN DUY NHẤT xác định chủ hồ sơ (đổi được: F23.9)
     full_name        varchar(150) NOT NULL,
     nickname         varchar(50),
     date_of_birth    date NOT NULL,
-    gender           varchar(10) NOT NULL CHECK (gender IN ('male','female')),  -- c?n cho chu?n WHO
+    gender           varchar(10) NOT NULL CHECK (gender IN ('male','female')),  -- cần cho chuẩn WHO
     avatar_url       text,
-    gestational_weeks smallint CHECK (gestational_weeks BETWEEN 22 AND 45),     -- t�nh tu?i hi?u ch?nh tr? sinh non
+    gestational_weeks smallint CHECK (gestational_weeks BETWEEN 22 AND 45),     -- tính tuổi hiệu chỉnh trẻ sinh non
     birth_weight_kg  numeric(4,2),
     birth_height_cm  numeric(4,1),
     blood_type       varchar(5),
@@ -212,21 +212,21 @@ CREATE TABLE child.children (
 );
 CREATE INDEX ON child.children (owner_user_id) WHERE deleted_at IS NULL;
 
--- CH? ch?a ngu?i cham s�c du?c chia s?. Ch? h? so n?m ? children.owner_user_id.
--- Chuy?n quy?n ch? (F23.9) l�m trong 1 transaction:
---   1) x�a d�ng member c?a ch? m?i  2) UPDATE children.owner_user_id  3) th�m ch? cu l�m caregiver
+-- CHỈ chứa người chăm sóc được chia sẻ. Chủ hồ sơ nằm ở children.owner_user_id.
+-- Chuyển quyền chủ (F23.9) làm trong 1 transaction:
+--   1) xóa dòng member của chủ mới  2) UPDATE children.owner_user_id  3) thêm chủ cũ làm caregiver
 CREATE TABLE child.child_members (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     child_id    uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
     user_id     uuid NOT NULL REFERENCES account.users(id) ON DELETE CASCADE,
-    relationship varchar(30),                     -- b?, �ng, b�, ngu?i gi�m h?...
+    relationship varchar(30),                     -- bố, ông, bà, người giám hộ...
     status      varchar(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked','left')),
     joined_at   timestamptz NOT NULL DEFAULT now(),
     ended_at    timestamptz,
     UNIQUE (child_id, user_id)
 );
 
--- Ch?n ch? h? so b? th�m l�m caregiver (tr�nh 1 ngu?i c� 2 vai tr�)
+-- Chặn chủ hồ sơ bị thêm làm caregiver (tránh 1 người có 2 vai trò)
 CREATE OR REPLACE FUNCTION child.prevent_owner_as_member() RETURNS trigger AS $$
 BEGIN
   IF EXISTS (SELECT 1 FROM child.children c WHERE c.id = NEW.child_id AND c.owner_user_id = NEW.user_id) THEN
@@ -237,7 +237,7 @@ END; $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_child_members_not_owner BEFORE INSERT OR UPDATE OF child_id, user_id ON child.child_members
   FOR EACH ROW EXECUTE FUNCTION child.prevent_owner_as_member();
 
--- Quy?n theo t?ng m?c d? li?u: Kh�ng xem / Xem / Xem & s?a (F23.2)
+-- Quyền theo từng mục dữ liệu: Không xem / Xem / Xem & sửa (F23.2)
 CREATE TABLE child.child_member_permissions (
     member_id   uuid NOT NULL REFERENCES child.child_members(id) ON DELETE CASCADE,
     data_scope  varchar(20) NOT NULL
@@ -246,7 +246,7 @@ CREATE TABLE child.child_member_permissions (
     PRIMARY KEY (member_id, data_scope)
 );
 
--- L?i m?i qua email / S�T / m� m?i (F23.1, F23.3)
+-- Lời mời qua email / SĐT / mã mời (F23.1, F23.3)
 CREATE TABLE child.child_invitations (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     child_id       uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
@@ -265,7 +265,7 @@ CREATE TABLE child.child_invitations (
 );
 CREATE INDEX ON child.child_invitations (child_id, status);
 
--- L?ch s? c?p nh?t d? li?u theo ngu?i th?c hi?n (F23.10 � option)
+-- Lịch sử cập nhật dữ liệu theo người thực hiện (F23.10 – option)
 CREATE TABLE child.child_data_change_logs (
     id          bigserial PRIMARY KEY,
     child_id    uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
@@ -280,9 +280,9 @@ CREATE TABLE child.child_data_change_logs (
 CREATE INDEX ON child.child_data_change_logs (child_id, created_at DESC);
 
 -- ---------------------------------------------------------------------
--- F04 � Tang tru?ng th? ch?t (chu?n WHO)
+-- F04 – Tăng trưởng thể chất (chuẩn WHO)
 -- ---------------------------------------------------------------------
--- B?ng chu?n WHO (LMS) � import 1 l?n t? WHO Child Growth Standards
+-- Bảng chuẩn WHO (LMS) – import 1 lần từ WHO Child Growth Standards
 CREATE TABLE growth.who_growth_standards (
     indicator   varchar(10) NOT NULL CHECK (indicator IN ('wfa','lhfa','wfl','wfh','bmifa','hcfa')),
     sex         varchar(10) NOT NULL CHECK (sex IN ('male','female')),
@@ -298,16 +298,16 @@ CREATE TABLE growth.who_growth_standards (
     PRIMARY KEY (indicator, sex, x_type, x_value, version)
 );
 
--- M?i S? �O l� m?t d�ng, c� ng�y do ri�ng (F04.1, F04.5)
--- C�n n?ng, chi?u cao, v�ng d?u c� th? do ? c�c ng�y kh�c nhau
+-- Mỗi SỐ ĐO là một dòng, có ngày đo riêng (F04.1, F04.5)
+-- Cân nặng, chiều cao, vòng đầu có thể đo ở các ngày khác nhau
 CREATE TABLE growth.growth_measurements (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     child_id      uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
     metric        varchar(20) NOT NULL CHECK (metric IN ('weight','height','head_circumference')),
     value         numeric(6,2) NOT NULL CHECK (value > 0),   -- weight: kg | height, head_circumference: cm
-    measure_position varchar(10) CHECK (measure_position IN ('lying','standing')),  -- ch? d�ng cho height
+    measure_position varchar(10) CHECK (measure_position IN ('lying','standing')),  -- chỉ dùng cho height
     measured_at   date NOT NULL,
-    age_in_days   int  NOT NULL,                   -- snapshot tu?i t?i ng�y do
+    age_in_days   int  NOT NULL,                   -- snapshot tuổi tại ngày đo
     note          text,
     created_by    uuid REFERENCES account.users(id),
     updated_by    uuid REFERENCES account.users(id),
@@ -315,32 +315,32 @@ CREATE TABLE growth.growth_measurements (
     created_at    timestamptz NOT NULL DEFAULT now(),
     updated_at    timestamptz NOT NULL DEFAULT now(),
     deleted_at    timestamptz,
-    UNIQUE (id, child_id)                          -- d? growth_evaluations ki?m tra c�ng tr?
+    UNIQUE (id, child_id)                          -- để growth_evaluations kiểm tra cùng trẻ
 );
--- M?i ch? s? ch? c� 1 s? do / ng�y; nh?p l?i c�ng ng�y th� c?p nh?t
+-- Mỗi chỉ số chỉ có 1 số đo / ngày; nhập lại cùng ngày thì cập nhật
 CREATE UNIQUE INDEX uq_growth_measurement_day
     ON growth.growth_measurements (child_id, metric, measured_at) WHERE deleted_at IS NULL;
--- V? bi?u d? / l?ch s? t?ng ch? s?
+-- Vẽ biểu đồ / lịch sử từng chỉ số
 CREATE INDEX ON growth.growth_measurements (child_id, metric, measured_at DESC) WHERE deleted_at IS NULL;
 
--- K?t qu? Z-score / BMI / ph�n lo?i (F04.3)
--- measurement_id = s? do ch�nh; paired_measurement_id = s? do gh�p c?p
--- (wfl/wfh/bmifa c?n c? c�n n?ng v� chi?u cao, c� th? do ? 2 ng�y kh�c nhau)
+-- Kết quả Z-score / BMI / phân loại (F04.3)
+-- measurement_id = số đo chính; paired_measurement_id = số đo ghép cặp
+-- (wfl/wfh/bmifa cần cả cân nặng và chiều cao, có thể đo ở 2 ngày khác nhau)
 CREATE TABLE growth.growth_evaluations (
     id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     child_id              uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
     indicator             varchar(10) NOT NULL CHECK (indicator IN ('wfa','lhfa','wfl','wfh','bmifa','hcfa')),
     measurement_id        uuid NOT NULL,
     paired_measurement_id uuid,
-    evaluated_at_date     date NOT NULL,            -- ng�y d�ng d? d�nh gi� (ng�y c?a s? do m?i nh?t trong c?p)
-    value                 numeric(7,2) NOT NULL,    -- gi� tr? do (ho?c BMI t�nh du?c)
+    evaluated_at_date     date NOT NULL,            -- ngày dùng để đánh giá (ngày của số đo mới nhất trong cặp)
+    value                 numeric(7,2) NOT NULL,    -- giá trị đo (hoặc BMI tính được)
     z_score               numeric(5,2),
     percentile            numeric(5,2),
     classification        varchar(30),              -- normal, underweight, stunted, overweight, ...
     standard_version      varchar(20) NOT NULL DEFAULT 'WHO-2006',
     created_at            timestamptz NOT NULL DEFAULT now(),
     UNIQUE (measurement_id, indicator),
-    -- Kh�a ngo?i k�p: s? do (v� s? do gh�p c?p) b?t bu?c thu?c C�NG child_id v?i d�nh gi�
+    -- Khóa ngoại kép: số đo (và số đo ghép cặp) bắt buộc thuộc CÙNG child_id với đánh giá
     FOREIGN KEY (measurement_id, child_id)
         REFERENCES growth.growth_measurements (id, child_id) ON DELETE CASCADE,
     FOREIGN KEY (paired_measurement_id, child_id)
@@ -349,9 +349,9 @@ CREATE TABLE growth.growth_evaluations (
 CREATE INDEX ON growth.growth_evaluations (child_id, indicator, evaluated_at_date DESC);
 
 -- ---------------------------------------------------------------------
--- F05 � Cham s�c s?c kh?e co b?n
+-- F05 – Chăm sóc sức khỏe cơ bản
 -- ---------------------------------------------------------------------
--- Lu?ng s?a tham kh?o theo tu?i (F05.1)
+-- Lượng sữa tham khảo theo tuổi (F05.1)
 CREATE TABLE health.milk_reference_rules (
     id             serial PRIMARY KEY,
     age_from_days  int NOT NULL,
@@ -362,17 +362,17 @@ CREATE TABLE health.milk_reference_rules (
     ml_per_feed_max   int,
     ml_per_kg_per_day numeric(5,1),
     note           text,
-    source_id      uuid,                           -- FK -> reference_sources (th�m b�n du?i)
+    source_id      uuid,                           -- FK -> reference_sources (thêm bên dưới)
     is_active      boolean NOT NULL DEFAULT true
 );
 
--- Danh m?c v?c xin & l?ch ti�m theo m?c tu?i (F05.2, F16.1)
+-- Danh mục vắc xin & lịch tiêm theo mốc tuổi (F05.2, F16.1)
 CREATE TABLE health.vaccines (
     id            serial PRIMARY KEY,
     code          varchar(30) NOT NULL UNIQUE,
     name          varchar(150) NOT NULL,
     disease       varchar(200),
-    is_mandatory  boolean NOT NULL DEFAULT false,  -- TCMR hay d?ch v?
+    is_mandatory  boolean NOT NULL DEFAULT false,  -- TCMR hay dịch vụ
     description   text,
     is_active     boolean NOT NULL DEFAULT true
 );
@@ -383,7 +383,7 @@ CREATE TABLE health.vaccine_schedules (
     dose_number     smallint NOT NULL DEFAULT 1,
     age_from_days   int NOT NULL,
     age_to_days     int,
-    min_interval_days int,                         -- kho?ng c�ch t?i thi?u v?i mui tru?c
+    min_interval_days int,                         -- khoảng cách tối thiểu với mũi trước
     note            text,
     UNIQUE (vaccine_id, dose_number)
 );
@@ -402,13 +402,13 @@ CREATE TABLE health.child_vaccinations (
     created_at   timestamptz NOT NULL DEFAULT now(),
     updated_at   timestamptz NOT NULL DEFAULT now(),
     UNIQUE (child_id, schedule_id),
-    -- �� ti�m <=> c� ng�y ti�m; chua ti�m / b? qua th� kh�ng c� ng�y ti�m
+    -- Đã tiêm <=> có ngày tiêm; chưa tiêm / bỏ qua thì không có ngày tiêm
     CHECK ((status = 'done' AND vaccinated_at IS NOT NULL) OR (status <> 'done' AND vaccinated_at IS NULL))
 );
 
--- M?c rang (F05.4, F16.2)
+-- Mọc răng (F05.4, F16.2)
 CREATE TABLE health.tooth_references (
-    code            varchar(10) PRIMARY KEY,       -- vd: UL-A (h�m tr�n, tr�i, rang c?a gi?a)
+    code            varchar(10) PRIMARY KEY,       -- vd: UL-A (hàm trên, trái, răng cửa giữa)
     name            varchar(100) NOT NULL,
     jaw             varchar(5) CHECK (jaw IN ('upper','lower')),
     side            varchar(5) CHECK (side IN ('left','right')),
@@ -430,12 +430,12 @@ CREATE TABLE health.child_teeth (
 );
 
 -- ---------------------------------------------------------------------
--- F13 � Ngu?n & d? li?u tham chi?u ph�t tri?n
+-- F13 – Nguồn & dữ liệu tham chiếu phát triển
 -- ---------------------------------------------------------------------
 CREATE TABLE reference.reference_sources (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     title         varchar(300) NOT NULL,
-    organization  varchar(200),                    -- WHO, UNICEF, B? Y t?, CDC...
+    organization  varchar(200),                    -- WHO, UNICEF, Bộ Y tế, CDC...
     authors       text,
     publish_year  smallint,
     url           text,
@@ -448,7 +448,7 @@ CREATE TABLE reference.reference_sources (
 ALTER TABLE health.milk_reference_rules
     ADD CONSTRAINT fk_milk_source FOREIGN KEY (source_id) REFERENCES reference.reference_sources(id);
 
--- Phi�n b?n b? d? li?u tham chi?u d�ng khi ph�n t�ch (F13.3)
+-- Phiên bản bộ dữ liệu tham chiếu dùng khi phân tích (F13.3)
 CREATE TABLE reference.reference_data_versions (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     version       varchar(20) NOT NULL UNIQUE,
@@ -472,20 +472,20 @@ CREATE TABLE reference.reference_contents (
 );
 
 -- ---------------------------------------------------------------------
--- F12 � B? ti�u ch� & c�u h?i d�nh gi� ph�t tri?n
+-- F12 – Bộ tiêu chí & câu hỏi đánh giá phát triển
 -- ---------------------------------------------------------------------
 CREATE TABLE criteria.developmental_domains (
     id          serial PRIMARY KEY,
     code        varchar(30) NOT NULL UNIQUE,       -- gross_motor, fine_motor, language, cognitive, social_emotional
     name        varchar(100) NOT NULL,
     description text,
-    icon_url    text,                              -- hi?n th? ? m�n danh s�ch linh v?c (F09.1)
+    icon_url    text,                              -- hiển thị ở màn danh sách lĩnh vực (F09.1)
     color_hex   varchar(9),
     sort_order  smallint NOT NULL DEFAULT 0,
     is_active   boolean NOT NULL DEFAULT true
 );
 
-CREATE TABLE criteria.age_milestones (                  -- c�c m?c tu?i (vd: 2, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72 th�ng)
+CREATE TABLE criteria.age_milestones (                  -- các mốc tuổi (vd: 2, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72 tháng)
     id          serial PRIMARY KEY,
     label       varchar(50) NOT NULL,
     age_from_months smallint NOT NULL,
@@ -494,7 +494,7 @@ CREATE TABLE criteria.age_milestones (                  -- c�c m?c tu?i (vd: 2
     CHECK (age_to_months >= age_from_months)
 );
 
-CREATE TABLE criteria.criteria_versions (               -- v�ng d?i: draft -> published -> archived (F12.2)
+CREATE TABLE criteria.criteria_versions (               -- vòng đời: draft -> published -> archived (F12.2)
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     version       varchar(20) NOT NULL UNIQUE,
     name          varchar(200),
@@ -516,7 +516,7 @@ CREATE TABLE criteria.criteria (
     code          varchar(30) NOT NULL,
     title         varchar(300) NOT NULL,
     description   text,
-    is_red_flag   boolean NOT NULL DEFAULT false,   -- d?u hi?u c?n luu �
+    is_red_flag   boolean NOT NULL DEFAULT false,   -- dấu hiệu cần lưu ý
     sort_order    smallint NOT NULL DEFAULT 0,
     is_active     boolean NOT NULL DEFAULT true,
     created_at    timestamptz NOT NULL DEFAULT now(),
@@ -525,11 +525,11 @@ CREATE TABLE criteria.criteria (
 );
 CREATE INDEX ON criteria.criteria (version_id, milestone_id, domain_id);
 
-CREATE TABLE criteria.criteria_questions (              -- nhi?u c�u h?i / 1 ti�u ch� (F12.3)
+CREATE TABLE criteria.criteria_questions (              -- nhiều câu hỏi / 1 tiêu chí (F12.3)
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     criterion_id  uuid NOT NULL REFERENCES criteria.criteria(id) ON DELETE CASCADE,
     question_text text NOT NULL,
-    hint_text     text,                             -- g?i � quan s�t / v� d?
+    hint_text     text,                             -- gợi ý quan sát / ví dụ
     media_url     text,
     answer_type   varchar(15) NOT NULL DEFAULT 'three_level'
                   CHECK (answer_type IN ('yes_no','three_level')),
@@ -537,7 +537,7 @@ CREATE TABLE criteria.criteria_questions (              -- nhi?u c�u h?i / 1 t
     is_active     boolean NOT NULL DEFAULT true
 );
 
--- Li�n k?t ti�u ch� <-> n?i dung tham chi?u (F13.2)
+-- Liên kết tiêu chí <-> nội dung tham chiếu (F13.2)
 CREATE TABLE criteria.criterion_references (
     criterion_id  uuid NOT NULL REFERENCES criteria.criteria(id) ON DELETE CASCADE,
     reference_content_id uuid NOT NULL REFERENCES reference.reference_contents(id) ON DELETE CASCADE,
@@ -545,7 +545,7 @@ CREATE TABLE criteria.criterion_references (
 );
 
 -- ---------------------------------------------------------------------
--- F06 � ��nh gi� & ph�n t�ch s? ph�t tri?n (F15 xem tr�n Admin)
+-- F06 – Đánh giá & phân tích sự phát triển (F15 xem trên Admin)
 -- ---------------------------------------------------------------------
 CREATE TABLE assessment.assessments (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -554,12 +554,12 @@ CREATE TABLE assessment.assessments (
     criteria_version_id uuid NOT NULL REFERENCES criteria.criteria_versions(id),
     milestone_id    int NOT NULL REFERENCES criteria.age_milestones(id),
     assessment_type varchar(15) NOT NULL DEFAULT 'periodic'
-                    CHECK (assessment_type IN ('periodic','quick_monthly')),  -- hi?n app ch? c� 1 lu?ng -> d�ng 'periodic'
+                    CHECK (assessment_type IN ('periodic','quick_monthly')),  -- hiện app chỉ có 1 luồng -> dùng 'periodic'
     age_in_days     int NOT NULL,
     status          varchar(15) NOT NULL DEFAULT 'in_progress'
                     CHECK (status IN ('in_progress','completed','abandoned')),
     overall_level   varchar(20) CHECK (overall_level IN ('on_track','monitor','needs_support')),
-    summary_text    text,                           -- t�m t?t do AI sinh
+    summary_text    text,                           -- tóm tắt do AI sinh
     started_at      timestamptz NOT NULL DEFAULT now(),
     completed_at    timestamptz,
     created_at      timestamptz NOT NULL DEFAULT now()
@@ -584,13 +584,13 @@ CREATE TABLE assessment.assessment_domain_results (
     domain_id     int NOT NULL REFERENCES criteria.developmental_domains(id),
     score_percent numeric(5,2),
     level         varchar(20) NOT NULL CHECK (level IN ('on_track','monitor','needs_support')),
-    analysis_text text,                             -- ph�n t�ch AI theo linh v?c
+    analysis_text text,                             -- phân tích AI theo lĩnh vực
     recommended_activity_ids uuid[],
     UNIQUE (assessment_id, domain_id)
 );
 
 -- ---------------------------------------------------------------------
--- F20 / F09 � Ho?t d?ng h? tr? ph�t tri?n
+-- F20 / F09 – Hoạt động hỗ trợ phát triển
 -- ---------------------------------------------------------------------
 CREATE TABLE activity.activities (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -611,7 +611,7 @@ CREATE TABLE activity.activities (
     updated_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ON activity.activities (status, age_from_months, age_to_months);
--- L?c ho?t d?ng theo linh v?c: d�ng activity_domains(domain_id, activity_id)
+-- Lọc hoạt động theo lĩnh vực: dùng activity_domains(domain_id, activity_id)
 
 CREATE TABLE activity.activity_domains (
     activity_id uuid NOT NULL REFERENCES activity.activities(id) ON DELETE CASCADE,
@@ -620,7 +620,7 @@ CREATE TABLE activity.activity_domains (
 );
 CREATE INDEX ON activity.activity_domains (domain_id, activity_id);
 
--- Hu?ng d?n th?c hi?n t?ng bu?c (m�n chi ti?t ho?t d?ng, F09.2)
+-- Hướng dẫn thực hiện từng bước (màn chi tiết hoạt động, F09.2)
 CREATE TABLE activity.activity_steps (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     activity_id uuid NOT NULL REFERENCES activity.activities(id) ON DELETE CASCADE,
@@ -631,7 +631,7 @@ CREATE TABLE activity.activity_steps (
     UNIQUE (activity_id, step_number)
 );
 
--- Video / ?nh / �m thanh minh h?a (F09.2, F20.3)
+-- Video / ảnh / âm thanh minh họa (F09.2, F20.3)
 CREATE TABLE activity.activity_media (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     activity_id uuid NOT NULL REFERENCES activity.activities(id) ON DELETE CASCADE,
@@ -644,7 +644,7 @@ CREATE TABLE activity.activity_media (
 );
 CREATE INDEX ON activity.activity_media (activity_id, sort_order);
 
--- Ho?t d?ng y�u th�ch c?a ph? huynh (m�n danh s�ch y�u th�ch)
+-- Hoạt động yêu thích của phụ huynh (màn danh sách yêu thích)
 CREATE TABLE activity.activity_favorites (
     user_id     uuid NOT NULL REFERENCES account.users(id) ON DELETE CASCADE,
     activity_id uuid NOT NULL REFERENCES activity.activities(id) ON DELETE CASCADE,
@@ -653,14 +653,14 @@ CREATE TABLE activity.activity_favorites (
 );
 CREATE INDEX ON activity.activity_favorites (user_id, created_at DESC);
 
--- Tr?ng th�i "�� l�m" theo T?NG TR? (kh�c y�u th�ch: y�u th�ch theo ph? huynh)
+-- Trạng thái "Đã làm" theo TỪNG TRẺ (khác yêu thích: yêu thích theo phụ huynh)
 CREATE TABLE activity.child_activity_progress (
     child_id     uuid NOT NULL REFERENCES child.children(id) ON DELETE CASCADE,
     activity_id  uuid NOT NULL REFERENCES activity.activities(id) ON DELETE CASCADE,
     status       varchar(15) NOT NULL DEFAULT 'done' CHECK (status IN ('in_progress','done')),
     completed_at timestamptz,
     note         text,
-    updated_by   uuid REFERENCES account.users(id),   -- ai d�nh d?u (caregiver cung c� th?)
+    updated_by   uuid REFERENCES account.users(id),   -- ai đánh dấu (caregiver cũng có thể)
     created_at   timestamptz NOT NULL DEFAULT now(),
     updated_at   timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (child_id, activity_id),
@@ -669,7 +669,7 @@ CREATE TABLE activity.child_activity_progress (
 CREATE INDEX ON activity.child_activity_progress (child_id, completed_at DESC);
 
 -- ---------------------------------------------------------------------
--- F07 � Nh?t k� ph�t tri?n
+-- F07 – Nhật ký phát triển
 -- ---------------------------------------------------------------------
 CREATE TABLE diary.diary_entries (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -684,11 +684,11 @@ CREATE TABLE diary.diary_entries (
     deleted_by  uuid REFERENCES account.users(id),
     created_at  timestamptz NOT NULL DEFAULT now(),
     updated_at  timestamptz NOT NULL DEFAULT now(),
-    deleted_at  timestamptz                          -- x�a m?m (F07.3)
+    deleted_at  timestamptz                          -- xóa mềm (F07.3)
 );
-CREATE INDEX ON diary.diary_entries (child_id, entry_date DESC) WHERE deleted_at IS NULL;  -- l?c theo th?i gian (F07.2)
+CREATE INDEX ON diary.diary_entries (child_id, entry_date DESC) WHERE deleted_at IS NULL;  -- lọc theo thời gian (F07.2)
 
--- M?t b�i nh?t k� thu?c nhi?u linh v?c (nhi?u-nhi?u)
+-- Một bài nhật ký thuộc nhiều lĩnh vực (nhiều-nhiều)
 CREATE TABLE diary.diary_entry_domains (
     entry_id  uuid NOT NULL REFERENCES diary.diary_entries(id) ON DELETE CASCADE,
     domain_id int  NOT NULL REFERENCES criteria.developmental_domains(id),
@@ -705,7 +705,7 @@ CREATE TABLE diary.diary_media (
 );
 
 -- ---------------------------------------------------------------------
--- F08 / F17 � Th�ng b�o & nh?c l?ch
+-- F08 / F17 – Thông báo & nhắc lịch
 -- ---------------------------------------------------------------------
 CREATE TABLE notification.notification_types (
     id              serial PRIMARY KEY,
@@ -721,11 +721,11 @@ CREATE TABLE notification.notification_templates (
     type_id     int NOT NULL REFERENCES notification.notification_types(id) ON DELETE CASCADE,
     language    varchar(5) NOT NULL DEFAULT 'vi',
     title       varchar(200) NOT NULL,
-    body        text NOT NULL,                      -- h? tr? placeholder {{child_name}}, {{date}}...
+    body        text NOT NULL,                      -- hỗ trợ placeholder {{child_name}}, {{date}}...
     UNIQUE (type_id, language)
 );
 
-CREATE TABLE notification.reminder_rules (                   -- c?u h�nh th?i di?m g?i (F17.2)
+CREATE TABLE notification.reminder_rules (                   -- cấu hình thời điểm gửi (F17.2)
     id            serial PRIMARY KEY,
     type_id       int NOT NULL REFERENCES notification.notification_types(id) ON DELETE CASCADE,
     days_before   smallint NOT NULL DEFAULT 0,
@@ -741,7 +741,7 @@ CREATE TABLE notification.user_notification_settings (
     PRIMARY KEY (user_id, type_id)
 );
 
--- L?ch nh?c c? th? sinh ra cho t?ng tr? (job qu�t b?ng n�y d? g?i)
+-- Lịch nhắc cụ thể sinh ra cho từng trẻ (job quét bảng này để gửi)
 CREATE TABLE notification.reminders (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     child_id      uuid REFERENCES child.children(id) ON DELETE CASCADE,
@@ -763,7 +763,7 @@ CREATE TABLE notification.notifications (
     reminder_id   uuid REFERENCES notification.reminders(id) ON DELETE SET NULL,
     title         varchar(200) NOT NULL,
     body          text NOT NULL,
-    target_type   varchar(30),                      -- d? di?u hu?ng (F08.5): growth, assessment, vaccination, activity, invitation...
+    target_type   varchar(30),                      -- để điều hướng (F08.5): growth, assessment, vaccination, activity, invitation...
     target_id     text,
     data          jsonb,
     read_at       timestamptz,
@@ -783,7 +783,7 @@ CREATE TABLE notification.notification_delivery_logs (       -- F17.4
 );
 
 -- ---------------------------------------------------------------------
--- F21 / F22 � C?ng d?ng & ki?m duy?t (Option)
+-- F21 / F22 – Cộng đồng & kiểm duyệt (Option)
 -- ---------------------------------------------------------------------
 CREATE TABLE community.posts (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -823,7 +823,7 @@ CREATE TABLE community.post_likes (
     PRIMARY KEY (post_id, user_id)
 );
 
--- B�i vi?t d� luu (kh�c th�ch)
+-- Bài viết đã lưu (khác thích)
 CREATE TABLE community.post_saves (
     post_id    uuid NOT NULL REFERENCES community.posts(id) ON DELETE CASCADE,
     user_id    uuid NOT NULL REFERENCES account.users(id) ON DELETE CASCADE,
@@ -859,7 +859,7 @@ CREATE TABLE community.moderation_actions (               -- F22.2, F22.3
 );
 
 -- ---------------------------------------------------------------------
--- F19 � Th?ng k� (g?i �: materialized view/ b?ng t?ng h?p theo ng�y)
+-- F19 – Thống kê (gợi ý: materialized view / bảng tổng hợp theo ngày)
 -- ---------------------------------------------------------------------
 CREATE TABLE report.daily_stats (
     stat_date            date PRIMARY KEY,
