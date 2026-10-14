@@ -46,3 +46,12 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Local environment and signing secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.mobileprovision
+secrets/
