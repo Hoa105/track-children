@@ -19,7 +19,7 @@ class TeethingScreen extends StatelessWidget {
       final child = store.childById(childId);
       if (child == null) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Mọc răng')),
+          appBar: AppBar(title: const Text('Mọc răng', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
           body: const Center(child: Text('Không tìm thấy hồ sơ bé.')),
         );
       }
@@ -44,7 +44,7 @@ class TeethingScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Nụ cười của bé'),
+          title: const Text('Nụ cười của bé', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           backgroundColor: AppColors.background,
           scrolledUnderElevation: 0,
         ),
@@ -99,6 +99,7 @@ class TeethingScreen extends StatelessWidget {
                       dates.isEmpty
                           ? 'Bé chưa mọc răng nào'
                           : 'Chiếc răng đầu tiên: ${toothDate(dates.first)}',
+                      style: TextStyle(color: dates.isEmpty ? AppColors.textSecondary : AppColors.primaryDark, fontWeight: dates.isEmpty ? FontWeight.w400 : FontWeight.w600),
                     ),
                   ],
                 ),
@@ -126,7 +127,7 @@ class TeethingScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -161,10 +162,13 @@ class TeethingScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 'Răng sắp mọc',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
               ),
               for (final t in upcoming)
                 Card(
+                  color: AppColors.purpleSurfaceLight,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   child: ListTile(
                     leading: SizedBox(
                       width: 36,
@@ -177,8 +181,9 @@ class TeethingScreen extends StatelessWidget {
                     ),
                     title: Text(
                       '${t.type.label} ${t.jaw == Jaw.upper ? 'hàm trên' : 'hàm dưới'}',
+                      style: const TextStyle(fontWeight: FontWeight.w400, color: AppColors.textPrimary),
                     ),
-                    subtitle: Text('Tham khảo: ${t.eruptionLabel}'),
+                    subtitle: Text(t.eruptionLabel, style: const TextStyle(color: AppColors.purpleText, fontWeight: FontWeight.w600)),
                   ),
                 ),
             ],
@@ -227,7 +232,7 @@ class _ParentHandbook extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -263,7 +268,8 @@ class _ParentHandbook extends StatelessWidget {
                       item.$1,
                       style: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -281,7 +287,7 @@ class _ParentHandbook extends StatelessWidget {
               const SizedBox(height: 18),
               const Text(
                 'Nguồn tham khảo',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 8),
               const SelectableText(
@@ -334,7 +340,7 @@ class _ParentHandbook extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -379,7 +385,7 @@ class ToothListScreen extends StatelessWidget {
             ..sort((a, b) => records[b.id]!.compareTo(records[a.id]!));
       return Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(title: Text('Răng đã mọc (${teeth.length}/20)')),
+        appBar: AppBar(title: Text('Răng đã mọc (${teeth.length}/20)', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
         body: teeth.isEmpty
             ? const Center(
                 child: Padding(
@@ -397,7 +403,8 @@ class ToothListScreen extends StatelessWidget {
                         'Bé chưa mọc răng nào.',
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       SizedBox(height: 8),
@@ -603,7 +610,7 @@ class _ToothEditorState extends State<_ToothEditor> {
           children: [
             Text(
               editing ? 'Sửa răng đã mọc' : 'Ghi nhận răng mọc',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 16),
             if (selected != null)
@@ -635,7 +642,7 @@ class _ToothEditorState extends State<_ToothEditor> {
                       style: const TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -651,6 +658,7 @@ class _ToothEditorState extends State<_ToothEditor> {
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -681,6 +689,7 @@ class _ToothEditorState extends State<_ToothEditor> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Thường mọc: ${PrimaryTooth.all.firstWhere((t) => t.id == _toothId).eruptionLabel}',
+                  style: const TextStyle(color: AppColors.purpleText, fontWeight: FontWeight.w600),
                 ),
               ),
             const SizedBox(height: 12),
@@ -698,7 +707,7 @@ class _ToothEditorState extends State<_ToothEditor> {
                 ),
               ),
               icon: const Icon(Icons.calendar_today),
-              label: Text('Ngày mọc: ${toothDate(_date)}'),
+              label: Text('Ngày mọc: ${toothDate(_date)}', style: const TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
               onPressed: _busy || child == null
                   ? null
                   : () async {

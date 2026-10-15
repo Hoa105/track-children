@@ -406,7 +406,7 @@ class ToothChartLegend extends StatelessWidget {
             Icon(Icons.circle, size: 8, color: item.$1),
             const SizedBox(width: 5),
             Flexible(
-              child: Text(item.$2, style: const TextStyle(fontSize: 11)),
+              child: Text(item.$2, style: TextStyle(fontSize: 11, color: item.$2 == 'Đã mọc' ? AppColors.primary : AppColors.textSecondary, fontWeight: item.$2 == 'Đã mọc' ? FontWeight.w600 : FontWeight.w400)),
             ),
           ],
         ),
