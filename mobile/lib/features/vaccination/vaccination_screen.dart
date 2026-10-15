@@ -603,7 +603,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                     Flexible(
                                                       child: Text(
                                                         missing.isEmpty
-                                                            ? 'Đủ bản ghi'
+                                                            ? ''
                                                             : '${missing.length} mũi chưa ghi nhận',
                                                         textAlign:
                                                             TextAlign.start,
