@@ -1,8 +1,10 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 
-class ChildProfileSelectionScreen extends StatelessWidget {
+class ChildProfileSelectionScreen extends StatefulWidget {
   const ChildProfileSelectionScreen({
     required this.onSelectChild,
     required this.onAddChild,
@@ -12,6 +14,12 @@ class ChildProfileSelectionScreen extends StatelessWidget {
   final ValueChanged<String> onSelectChild;
   final VoidCallback onAddChild;
 
+  @override
+  State<ChildProfileSelectionScreen> createState() => _SelectionState();
+}
+
+class _SelectionState extends State<ChildProfileSelectionScreen>
+    with DemoStoreBinding {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -40,12 +48,31 @@ class ChildProfileSelectionScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 24),
-                  _ChildProfileCard(onTap: () => onSelectChild('Bé An')),
+                  if (!DemoStore.instance.signedIn)
+                    _ChildProfileCard(
+                      onTap: () => widget.onSelectChild('Bé An'),
+                    ),
+                  for (final child in DemoStore.instance.children)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ChildProfileCard(
+                        name: child['full_name'] as String,
+                        age: DemoStore.instance.ageLabel(child),
+                        onTap: () async {
+                          await DemoStore.instance.selectChild(
+                            child['id'] as String,
+                          );
+                          if (context.mounted) {
+                            widget.onSelectChild(child['full_name'] as String);
+                          }
+                        },
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: onAddChild,
+                      onPressed: widget.onAddChild,
                       icon: const Icon(Icons.add_rounded),
                       label: const Text('Thêm hồ sơ bé'),
                       style: OutlinedButton.styleFrom(
@@ -69,7 +96,12 @@ class ChildProfileSelectionScreen extends StatelessWidget {
 }
 
 class _ChildProfileCard extends StatelessWidget {
-  const _ChildProfileCard({required this.onTap});
+  const _ChildProfileCard({
+    required this.onTap,
+    this.name = 'B? An',
+    this.age = '24 th?ng',
+  });
+  final String name, age;
 
   final VoidCallback onTap;
 
@@ -114,17 +146,14 @@ class _ChildProfileCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bé An',
+                    name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppColors.primaryDark,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '24 tháng',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text(age, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
             ),

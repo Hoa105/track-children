@@ -1,10 +1,12 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../app_colors.dart';
 import '../../app_layout.dart';
+import '../../services/demo_store.dart';
 import '../sharing/child_sharing_screen.dart';
 
 /// UI boundary: the host uploads [avatar] and persists the database fields.
@@ -54,12 +56,29 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _members = List.of(widget.members);
+    _members = widget.initialFields?['id'] != null
+        ? demoSharingMembers(widget.initialFields!['id'] as String)
+        : List.of(widget.members);
     _pending = List.generate(
       widget.pendingInvitations,
       (_) => 'Lời mời đang chờ',
     );
+    if (widget.initialFields?['id'] != null) {
+      _pending.clear();
+      _pending.addAll(
+        List<String>.from(
+          DemoStore.instance.childById(
+                    widget.initialFields!['id'] as String,
+                  )?['pending']
+                  as List? ??
+              [],
+        ),
+      );
+    }
     final fields = widget.initialFields ?? {};
+    if (fields['avatar_base64'] != null) {
+      _avatarBytes = base64Decode(fields['avatar_base64'] as String);
+    }
     _editing = widget.initialFields == null;
     _name = TextEditingController(text: fields['full_name'] as String?);
     _weeks = TextEditingController(
@@ -162,6 +181,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       'gestational_weeks': int.tryParse(_weeks.text),
       'birth_weight_kg': double.tryParse(_weight.text.replaceAll(',', '.')),
       'avatar_url': widget.initialFields?['avatar_url'],
+      if (_avatarBytes != null) 'avatar_base64': base64Encode(_avatarBytes!),
     };
     if (widget.onSave == null) {
       setState(() => _preview = true);
@@ -483,12 +503,35 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
                             await Navigator.of(context).push<void>(
                               MaterialPageRoute(
                                 builder: (_) => ChildSharingScreen(
+                                  childId:
+                                      widget.initialFields?['id'] as String?,
                                   members: _members,
                                   pending: _pending,
                                 ),
                               ),
                             );
-                            if (mounted) setState(() {});
+                            if (mounted) {
+                              setState(() {
+                                final id =
+                                    widget.initialFields?['id'] as String?;
+                                if (id != null) {
+                                  _members
+                                    ..clear()
+                                    ..addAll(demoSharingMembers(id));
+                                  _pending
+                                    ..clear()
+                                    ..addAll(
+                                      List<String>.from(
+                                        DemoStore.instance.childById(
+                                                  id,
+                                                )?['pending']
+                                                as List? ??
+                                            [],
+                                      ),
+                                    );
+                                }
+                              });
+                            }
                           },
                         ),
                       if (_preview && widget.onOpenHomePreview != null)
