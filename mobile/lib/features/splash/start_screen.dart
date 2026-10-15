@@ -43,30 +43,35 @@ class _StartScreenState extends State<StartScreen> {
     }
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SizedBox.expand(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(
-                'assets/images/scenery/backgrounds/start_screen.png',
-                fit: BoxFit.contain,
-                semanticLabel: 'Bé lớn khôn. Cùng con lớn khôn mỗi ngày.',
-                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                  if (wasSynchronouslyLoaded || frame != null) {
-                    _onArtworkVisible();
-                  }
-                  return child;
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  // Never trap the user on the launch screen if decoding fails.
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/scenery/backgrounds/start_screen.png',
+              fit: BoxFit.cover,
+              semanticLabel: 'Bé lớn khôn. Cùng con lớn khôn mỗi ngày.',
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded || frame != null) {
                   _onArtworkVisible();
-                  return const Center(child: Text('Bé lớn khôn'));
-                },
+                }
+                return child;
+              },
+              errorBuilder: (context, error, stackTrace) {
+                // Never trap the user on the launch screen if decoding fails.
+                _onArtworkVisible();
+                return const Center(child: Text('Bé lớn khôn'));
+              },
+            ),
+            SafeArea(
+              child: Center(
+                child: Transform.translate(
+                  offset: const Offset(0, -40),
+                  child: const _LoadingDots(),
+                ),
               ),
-              const Center(child: _LoadingDots()),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
