@@ -1,3 +1,5 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
@@ -80,6 +82,29 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       if (verified != true) return;
     }
 
+    if (DemoStore.instance.signedIn) {
+      try {
+        await DemoStore.instance.saveParent({
+          'fullName': _fullNameController.text.trim(),
+          'username': _usernameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': newPhone,
+          'role': _role.name,
+        });
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Chưa lưu được tài khoản test. Kiểm tra email trùng.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      if (!mounted) return;
+    }
     setState(() {
       _savedPhone = newPhone;
       _isEditing = false;
