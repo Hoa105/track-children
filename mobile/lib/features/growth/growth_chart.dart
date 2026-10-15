@@ -3,13 +3,15 @@ import '../../services/demo_store.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_colors.dart';
 import '../../services/who_growth_reference.dart';
 
 class GrowthChart extends StatefulWidget {
   const GrowthChart({
+    this.selectedIndex,
+    this.highlightIndex,
+    this.onSelected,
     this.rangeStart,
     this.rangeEnd,
     this.previewAnchor,
@@ -23,6 +25,8 @@ class GrowthChart extends StatefulWidget {
     super.key,
   });
   final String? childId;
+  final int? selectedIndex, highlightIndex;
+  final ValueChanged<int>? onSelected;
   final DateTime? rangeStart, rangeEnd, previewAnchor;
   final List<double> values;
   final List<DateTime> dates;
@@ -37,6 +41,9 @@ class _GrowthChartState extends State<GrowthChart> {
   String? _sex;
   DateTime? _birth;
   bool _error = false;
+  bool _showMedian = true;
+  bool _showBand = true;
+  int? _activeIndex;
   @override
   void initState() {
     super.initState();
@@ -46,18 +53,20 @@ class _GrowthChartState extends State<GrowthChart> {
   Future<void> _load() async {
     try {
       final reference = await WhoGrowthReference.load();
-      final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
       final latest = widget.previewAnchor ?? widget.dates.last;
       setState(() {
         _reference = reference;
-        _sex = widget.preview
-            ? 'boys'
-            : prefs.getString('who_profile_${widget.childName}_sex');
         final child = widget.childId == null
             ? null
             : DemoStore.instance.childById(widget.childId!);
-        if (child != null) _sex = child['gender'] == 'male' ? 'boys' : 'girls';
+        _sex = widget.preview
+            ? 'boys'
+            : switch (child?['gender']) {
+                'male' => 'boys',
+                'female' => 'girls',
+                _ => null,
+              };
         _birth = widget.preview
             ? DateTime(
                 latest.year,
@@ -67,11 +76,12 @@ class _GrowthChartState extends State<GrowthChart> {
                   DateTime(latest.year, latest.month - 7, 0).day,
                 ),
               )
-            : DateTime.tryParse(
-                child?['date_of_birth'] as String? ??
-                    prefs.getString('who_profile_${widget.childName}_birth') ??
-                    '',
-              );
+            : DateTime.tryParse(child?['date_of_birth']?.toString() ?? '');
+        if (!widget.preview &&
+            _birth != null &&
+            _birth!.isAfter(DateTime.now())) {
+          _birth = null;
+        }
       });
     } catch (_) {
       if (mounted) setState(() => _error = true);
@@ -117,23 +127,31 @@ class _GrowthChartState extends State<GrowthChart> {
         }
       }
     }
+    final selected = widget.selectedIndex ?? _activeIndex;
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 200,
+          height: 220,
           child: LayoutBuilder(
-            builder: (context, c) => GestureDetector(
-              onTapUp: (details) {
+            builder: (context, c) {
+              void chooseIndex(int index) {
+                setState(() => _activeIndex = index);
+                widget.onSelected?.call(index);
+              }
+
+              void select(double dx) {
                 final first = widget.rangeStart ?? widget.dates.first;
                 final span = (widget.rangeEnd ?? widget.dates.last)
                     .difference(first)
                     .inMilliseconds;
-                final fraction =
-                    ((details.localPosition.dx - 42) / (c.maxWidth - 56)).clamp(
-                      0.0,
-                      1.0,
-                    );
+                final fraction = ((dx - 42) / (c.maxWidth - 56)).clamp(
+                  0.0,
+                  1.0,
+                );
                 var index = 0;
                 var distance = double.infinity;
                 for (var i = 0; i < widget.dates.length; i++) {
@@ -146,88 +164,180 @@ class _GrowthChartState extends State<GrowthChart> {
                     index = i;
                   }
                 }
-                final date = widget.dates[index];
-                final row = _birth == null || _sex == null
-                    ? null
-                    : _reference?.at(widget.metric, _sex!, _birth!, date);
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${date.day}/${date.month}/${date.year} · ${widget.values[index].toStringAsFixed(1)} ${widget.unit}${row == null ? '' : ' · WHO: ${row[1].toStringAsFixed(1)} ${widget.unit}'}',
-                      ),
-                    ),
-                  );
-              },
-              child: CustomPaint(
+                chooseIndex(index);
+              }
+
+              Widget plot(double progress) => CustomPaint(
                 key: const ValueKey('growth-who-chart'),
-                size: Size(c.maxWidth, 200),
+                size: Size(c.maxWidth, 220),
                 painter: GrowthChartPainter(
                   widget.values,
                   widget.dates,
                   samples,
                   rangeStart: widget.rangeStart,
                   rangeEnd: widget.rangeEnd,
+                  selectedIndex: selected,
+                  highlightIndex: widget.highlightIndex,
+                  showMedian: _showMedian,
+                  showBand: _showBand,
+                  progress: progress,
+                  axisStyle: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(fontSize: 10, color: AppColors.textSecondary),
                 ),
-              ),
-            ),
+              );
+              return Semantics(
+                label:
+                    'Biểu đồ ${widget.values.length} lần đo. Kéo ngang để xem số đo.',
+                onIncrease: () => chooseIndex(
+                  ((selected ?? 0) + 1).clamp(0, widget.values.length - 1),
+                ),
+                onDecrease: () => chooseIndex(
+                  ((selected ?? 0) - 1).clamp(0, widget.values.length - 1),
+                ),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (d) => select(d.localPosition.dx),
+                  onHorizontalDragStart: (d) => select(d.localPosition.dx),
+                  onHorizontalDragUpdate: (d) => select(d.localPosition.dx),
+                  child: motion == Duration.zero
+                      ? plot(1)
+                      : TweenAnimationBuilder<double>(
+                          duration: motion,
+                          tween: Tween(begin: 0, end: 1),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, progress, _) => plot(progress),
+                        ),
+                ),
+              );
+            },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Wrap(
-          spacing: 16,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 2,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             const Text(
-              '● Số đo của bé',
+              'Số đo của bé',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
             if (samples.isNotEmpty) ...[
-              const Text(
-                '┄ Trung vị WHO',
-                style: TextStyle(fontSize: 11, color: Color(0xFFBB7435)),
+              Semantics(
+                toggled: _showMedian,
+                child: TextButton(
+                  key: const ValueKey('toggle-who-median'),
+                  onPressed: () => setState(() => _showMedian = !_showMedian),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    minimumSize: const Size(0, 40),
+                    foregroundColor: _showMedian
+                        ? const Color(0xFFBB7435)
+                        : AppColors.textSecondary,
+                  ),
+                  child: Text(
+                    'Trung vị WHO',
+                    style: TextStyle(
+                      fontSize: 10,
+                      decoration: _showMedian
+                          ? TextDecoration.none
+                          : TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
               ),
-              const Text(
-                '▰ Vùng −2 đến +2 SD',
-                style: TextStyle(fontSize: 11, color: Color(0xFF647FA8)),
+              Semantics(
+                toggled: _showBand,
+                child: TextButton(
+                  key: const ValueKey('toggle-who-band'),
+                  onPressed: () => setState(() => _showBand = !_showBand),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    minimumSize: const Size(0, 40),
+                    foregroundColor: _showBand
+                        ? const Color(0xFF647FA8)
+                        : AppColors.textSecondary,
+                  ),
+                  child: Text(
+                    'Vùng −2 đến +2 SD',
+                    style: TextStyle(
+                      fontSize: 10,
+                      decoration: _showBand
+                          ? TextDecoration.none
+                          : TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
               ),
             ],
+            IconButton(
+              tooltip: 'Chuẩn WHO',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(
+                Icons.info_outline_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                useSafeArea: true,
+                showDragHandle: true,
+                isScrollControlled: true,
+                builder: (context) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Hiểu biểu đồ WHO',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 21,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Đường xanh là số đo của bé. Đường cam nét đứt là trung vị WHO theo tuổi và giới tính. Vùng nhạt thể hiện −2 đến +2 độ lệch chuẩn (SD), không phải kết luận về sức khỏe.',
+                      ),
+                      const SizedBox(height: 12),
+                      if (['height', 'bmi'].contains(widget.metric))
+                        const Text(
+                          'Dưới 2 tuổi dùng chiều dài đo nằm; từ 2 tuổi dùng chiều cao đo đứng. Số đo khác tư thế cần quy đổi trước khi đối chiếu.',
+                        ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Chuẩn áp dụng từ 0 đến 60 tháng. Dữ liệu tham khảo không thay thế đánh giá của nhân viên y tế.',
+                      ),
+                      const SizedBox(height: 16),
+                      const SelectableText(
+                        'Nguồn: WHO Child Growth Standards\nhttps://www.who.int/tools/child-growth-standards',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         if (samples.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _error
-                  ? 'Chưa tải được đường WHO. Hãy mở lại màn hình.'
-                  : _birth == null || _sex == null
-                  ? 'Chưa có thông tin đối chiếu WHO.'
-                  : 'Không có chuẩn WHO trong khoảng tuổi này (0–60 tháng).',
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-        if (samples.isNotEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'WHO theo tuổi và giới tính · vùng SD là tham chiếu, không phải kết luận sức khỏe.',
-              style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-            ),
-          ),
-        if (samples.isNotEmpty && ['height', 'bmi'].contains(widget.metric))
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text(
-              'Dưới 2 tuổi: đo nằm; từ 2 tuổi: đo đứng. Số đo khác tư thế cần quy đổi trước khi đối chiếu.',
-              style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+          Text(
+            _error
+                ? 'Chưa tải được đường WHO. Hãy mở lại màn hình.'
+                : _birth == null || _sex == null
+                ? 'Chưa có thông tin đối chiếu WHO.'
+                : 'Không có chuẩn WHO trong khoảng tuổi này (0–60 tháng).',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
             ),
           ),
       ],
@@ -249,7 +359,17 @@ class GrowthChartPainter extends CustomPainter {
     this.reference, {
     this.rangeStart,
     this.rangeEnd,
+    this.selectedIndex,
+    this.highlightIndex,
+    this.showMedian = true,
+    this.showBand = true,
+    this.progress = 1,
+    this.axisStyle,
   });
+  final int? selectedIndex, highlightIndex;
+  final bool showMedian, showBand;
+  final double progress;
+  final TextStyle? axisStyle;
   final DateTime? rangeStart, rangeEnd;
   final List<double> values;
   final List<DateTime> dates;
@@ -282,12 +402,18 @@ class GrowthChartPainter extends CustomPainter {
       final label = TextPainter(
         text: TextSpan(
           text: (high - (high - low) * i / 3).toStringAsFixed(1),
-          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+          style:
+              axisStyle ??
+              const TextStyle(fontSize: 10, color: AppColors.textSecondary),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       label.paint(canvas, Offset(0, y - 6));
     }
+    canvas.save();
+    canvas.clipRect(
+      Rect.fromLTRB(42, 0, 42 + (size.width - 56) * progress, size.height),
+    );
     Path line(List<Offset> points) {
       final p = Path()..moveTo(points.first.dx, points.first.dy);
       for (final o in points.skip(1)) {
@@ -306,22 +432,26 @@ class GrowthChartPainter extends CustomPainter {
         area.lineTo(p.dx, p.dy);
       }
       area.close();
-      canvas.drawPath(area, Paint()..color = const Color(0x24647FA8));
+      if (showBand) {
+        canvas.drawPath(area, Paint()..color = const Color(0x24647FA8));
+      }
       final median = line(
         group.map((r) => point(r.date, r.values[1])).toList(),
       );
-      for (final metric in median.computeMetrics()) {
-        for (double d = 0; d < metric.length; d += 10) {
-          canvas.drawPath(
-            metric.extractPath(d, math.min(d + 6, metric.length)),
-            Paint()
-              ..color = const Color(0xFFBB7435)
-              ..strokeWidth = 2
-              ..style = PaintingStyle.stroke,
-          );
+      if (showMedian) {
+        for (final metric in median.computeMetrics()) {
+          for (double d = 0; d < metric.length; d += 10) {
+            canvas.drawPath(
+              metric.extractPath(d, math.min(d + 6, metric.length)),
+              Paint()
+                ..color = const Color(0xFFBB7435)
+                ..strokeWidth = 2
+                ..style = PaintingStyle.stroke,
+            );
+          }
         }
       }
-      if (group.length == 1) {
+      if (showMedian && group.length == 1) {
         canvas.drawCircle(
           point(group.first.date, group.first.values[1]),
           3,
@@ -341,9 +471,37 @@ class GrowthChartPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
     );
-    for (final p in points) {
+    for (var i = 0; i < points.length; i++) {
+      final p = points[i];
+      if (i == highlightIndex) {
+        canvas.drawCircle(
+          p,
+          9 + 8 * (1 - progress),
+          Paint()..color = AppColors.primary.withValues(alpha: .13),
+        );
+      }
       canvas.drawCircle(p, 5, Paint()..color = Colors.white);
       canvas.drawCircle(p, 3.5, Paint()..color = AppColors.primary);
+    }
+    canvas.restore();
+    if (selectedIndex != null &&
+        selectedIndex! >= 0 &&
+        selectedIndex! < points.length) {
+      final p = points[selectedIndex!];
+      canvas.drawLine(
+        Offset(p.dx, 8),
+        Offset(p.dx, size.height - 8),
+        Paint()
+          ..color = AppColors.primary.withValues(alpha: .22)
+          ..strokeWidth = 1,
+      );
+      canvas.drawCircle(
+        p,
+        9,
+        Paint()..color = AppColors.primary.withValues(alpha: .12),
+      );
+      canvas.drawCircle(p, 6, Paint()..color = Colors.white);
+      canvas.drawCircle(p, 4.5, Paint()..color = AppColors.primary);
     }
   }
 
