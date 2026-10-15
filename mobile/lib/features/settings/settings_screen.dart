@@ -11,6 +11,7 @@ import '../navigation/app_bottom_navigation_bar.dart';
 import '../sharing/child_sharing_screen.dart';
 import 'delete_account_screen.dart';
 import '../growth/growth_screen.dart';
+import '../explore/explore_screen.dart';
 import 'demo_data_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -159,6 +160,12 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                 widget.childName,
             onLogout: widget.onLogout,
           ),
+        ),
+      );
+    } else if (destination == 'Khám phá') {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ExploreScreen(onLogout: widget.onLogout),
         ),
       );
     } else if (destination != 'Cá nhân') {
