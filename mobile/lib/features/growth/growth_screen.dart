@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app_colors.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 import '../settings/settings_screen.dart';
+import '../explore/explore_screen.dart';
 import 'who_bmi_card.dart';
 import 'growth_chart.dart';
 
@@ -392,9 +393,11 @@ class _GrowthScreenState extends State<GrowthScreen> {
             );
           } else if (label == 'Tạo ghi chép') {
             _update();
-          } else if (label != 'Theo dõi') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Khám phá sẽ sớm ra mắt.')),
+          } else if (label == 'Khám phá') {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ExploreScreen(onLogout: widget.onLogout),
+              ),
             );
           }
         },
