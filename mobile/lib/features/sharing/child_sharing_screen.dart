@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -184,48 +183,78 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
       context,
       _childId == null
           ? 'Chia sẻ hồ sơ bé'
-          : 'Chia sẻ · ${DemoStore.instance.childById(_childId)?['full_name'] ?? 'Hồ sơ bé'}',
+          : 'Chia sẻ hồ sơ bé · ${DemoStore.instance.childById(_childId)?['full_name'] ?? ''}',
+      actions: [
+        PopupMenuButton<String>(
+          tooltip: 'Quản lý chia sẻ',
+          onSelected: (_) => _transferOwnership(),
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'transfer',
+              child: Text('Chuyển quyền sở hữu hồ sơ'),
+            ),
+          ],
+        ),
+      ],
     ),
     body: SafeArea(
       top: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          _SharingIntroCard(),
-          const SizedBox(height: 14),
-          _OwnerCard(),
-          const SizedBox(height: 12),
-          _MemberCapacityCard(count: _members.length + _pending.length),
-          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: _ActionTile(
-                  icon: Icons.person_add_alt_1_rounded,
-                  title: 'Mời người cùng chăm bé',
-                  subtitle: 'Email hoặc SĐT',
-                  onTap: _invite,
+                child: FilledButton.icon(
+                  onPressed: _invite,
+                  style: _primaryButtonStyle(),
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: const Text('Mời cùng chăm bé'),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ActionTile(
-                  icon: Icons.qr_code_2_rounded,
-                  title: 'Mã mời',
-                  subtitle: 'Hiệu lực 7 ngày',
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => InviteMemberScreen(
-                        childId: _childId,
-                        startWithCode: true,
-                        onSendInvite: (_) {},
-                      ),
+              const SizedBox(width: 12),
+              IconButton.outlined(
+                tooltip: 'Mã mời',
+                style: IconButton.styleFrom(minimumSize: const Size(56, 56)),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => InviteMemberScreen(
+                      childId: _childId,
+                      startWithCode: true,
+                      onSendInvite: (_) {},
                     ),
                   ),
                 ),
+                icon: const Icon(Icons.qr_code_2_rounded),
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Còn ${(3 - _members.length - _pending.length).clamp(0, 3)} vị trí chia sẻ',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 22),
+          _SectionHeading(
+            title: 'Người đang cùng chăm bé',
+            trailing: '${_members.length}',
+          ),
+          const SizedBox(height: 10),
+          if (_members.isEmpty)
+            const _EmptyMembersCard()
+          else
+            ..._members.map(
+              (member) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _MemberCard(
+                  member: member,
+                  onTap: () => _openPermissions(member),
+                ),
+              ),
+            ),
           if (_pending.isNotEmpty) ...[
             const SizedBox(height: 22),
             _SectionHeading(
@@ -242,40 +271,6 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
               },
             ),
           ],
-          const SizedBox(height: 22),
-          _SectionHeading(
-            title: 'Người đang cùng chăm bé',
-            trailing: '${_members.length}/3',
-          ),
-          const SizedBox(height: 10),
-          if (_members.isEmpty)
-            const _EmptyMembersCard()
-          else
-            ..._members.map(
-              (member) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _MemberCard(
-                  member: member,
-                  onTap: () => _openPermissions(member),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          _OwnerPrivacyNote(),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: _transferOwnership,
-            icon: const Icon(Icons.swap_horiz_rounded),
-            label: const Text('Chuyển quyền sở hữu hồ sơ'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primaryDark,
-              side: const BorderSide(color: AppColors.border),
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
         ],
       ),
     ),
@@ -300,6 +295,29 @@ class SharingPermissionsScreen extends StatefulWidget {
 }
 
 class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
+  EdgeDraggingAutoScroller? _dragScroller;
+
+  void _scrollWhileDragging(
+    BuildContext itemContext,
+    DragUpdateDetails details,
+  ) {
+    _dragScroller ??= EdgeDraggingAutoScroller(
+      Scrollable.of(itemContext),
+      velocityScalar: 30,
+    );
+    _dragScroller!.startAutoScrollIfNecessary(
+      Rect.fromCenter(center: details.globalPosition, width: 48, height: 48),
+    );
+  }
+
+  void _stopDragScroll() => _dragScroller?.stopAutoScroll();
+
+  @override
+  void dispose() {
+    _stopDragScroll();
+    super.dispose();
+  }
+
   late final Map<String, AccessLevel> _permissions =
       Map<String, AccessLevel>.from(widget.member.permissions);
 
@@ -342,6 +360,18 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: _sharingAppBar(context, 'Quyền truy cập'),
+    bottomNavigationBar: _SharingBottomBar(
+      child: FilledButton(
+        onPressed: () {
+          widget.member.permissions
+            ..clear()
+            ..addAll(_permissions);
+          Navigator.of(context).pop();
+        },
+        style: _primaryButtonStyle(),
+        child: const Text('Lưu thay đổi'),
+      ),
+    ),
     body: SafeArea(
       top: false,
       child: ListView(
@@ -359,35 +389,28 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Kéo từng mục vào vùng quyền phù hợp. Mục để ngoài hai vùng cấp quyền sẽ không được xem hoặc chỉnh sửa.',
+            'Nhấn giữ một mục rồi kéo vào vùng Xem hoặc Xem & sửa. Kéo về Chưa cấp quyền để thu hồi.',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
           for (final level in AccessLevel.values)
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _PermissionDropZone(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _PermissionZone(
                 level: level,
                 modules: _modules
-                    .where((module) => _permissions[module] == level)
+                    .where(
+                      (module) =>
+                          (_permissions[module] ?? AccessLevel.none) == level,
+                    )
                     .toList(),
-                onModuleDropped: (module) =>
+                onDrop: (module) =>
                     setState(() => _permissions[module] = level),
+                onDragUpdate: _scrollWhileDragging,
+                onDragEnd: _stopDragScroll,
               ),
             ),
-          const SizedBox(height: 6),
           const _OwnerPrivacyNote(),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () {
-              widget.member.permissions
-                ..clear()
-                ..addAll(_permissions);
-              Navigator.of(context).pop();
-            },
-            style: _primaryButtonStyle(),
-            child: const Text('Lưu thay đổi'),
-          ),
           if (widget.onRevoke != null) ...[
             const SizedBox(height: 10),
             TextButton.icon(
@@ -837,7 +860,7 @@ class _SharedProfileSwitcherScreenState
                                   ? 'Được chia sẻ với bạn · 24 tháng'
                                   : 'Hồ sơ của bạn · 3 tuổi',
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -1013,31 +1036,36 @@ class _OwnershipTransferScreenState extends State<OwnershipTransferScreen> {
   );
 }
 
-PreferredSizeWidget _sharingAppBar(BuildContext context, String title) =>
-    AppBar(
-      backgroundColor: AppColors.background,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.of(context).maybePop(),
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
-        color: AppColors.textPrimary,
-      ),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      centerTitle: true,
-    );
+PreferredSizeWidget _sharingAppBar(
+  BuildContext context,
+  String title, {
+  List<Widget>? actions,
+}) => AppBar(
+  backgroundColor: AppColors.background,
+  surfaceTintColor: Colors.transparent,
+  elevation: 0,
+  leading: IconButton(
+    onPressed: () => Navigator.of(context).maybePop(),
+    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+    color: AppColors.textPrimary,
+  ),
+  title: Text(
+    title,
+    style: const TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      color: AppColors.textPrimary,
+    ),
+  ),
+  actions: actions,
+  centerTitle: false,
+);
 
 ButtonStyle _primaryButtonStyle() => FilledButton.styleFrom(
   backgroundColor: AppColors.primary,
   foregroundColor: Colors.white,
-  minimumSize: const Size.fromHeight(50),
-  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+  minimumSize: const Size.fromHeight(56),
+  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 );
 
@@ -1070,16 +1098,18 @@ class _SurfaceCard extends StatelessWidget {
   const _SurfaceCard({
     required this.child,
     this.padding = const EdgeInsets.all(14),
+    this.attention = false,
   });
 
   final Widget child;
   final EdgeInsets padding;
+  final bool attention;
 
   @override
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: attention ? AppColors.purpleSurfaceLight : AppColors.surface,
       borderRadius: BorderRadius.circular(22),
       border: Border.all(color: const Color(0xFFF1EFE8)),
       boxShadow: const [
@@ -1091,235 +1121,6 @@ class _SurfaceCard extends StatelessWidget {
       ],
     ),
     child: child,
-  );
-}
-
-class _SharingIntroCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(24),
-      gradient: const LinearGradient(
-        colors: [Color(0xFFE9F2E6), Color(0xFFF8F4E9)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.family_restroom_rounded,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bên nhau chăm sóc bé',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Chia sẻ hành trình lớn khôn với gia đình.',
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _OwnerCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => _SurfaceCard(
-    child: Row(
-      children: [
-        _AvatarBadge(
-          initial: DemoStore.instance.signedIn
-              ? (DemoStore.instance.parent['fullName'] as String).substring(
-                  0,
-                  1,
-                )
-              : 'A',
-          owner: true,
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                DemoStore.instance.signedIn
-                    ? DemoStore.instance.parent['fullName'] as String
-                    : 'Nguyễn Minh Anh',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Chủ sở hữu · Bạn',
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Toàn quyền',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _MemberCapacityCard extends StatelessWidget {
-  const _MemberCapacityCard({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => _SurfaceCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.people_alt_outlined,
-              size: 19,
-              color: AppColors.primary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Thành viên được mời',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            Text(
-              '$count/3',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: count / 3,
-            minHeight: 7,
-            backgroundColor: AppColors.primarySoft,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          'Còn ${3 - count} vị trí chia sẻ',
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
-    ),
-  );
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF0EEE7)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(icon, size: 20, color: AppColors.primary),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
   );
 }
 
@@ -1357,6 +1158,7 @@ class _PendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SurfaceCard(
+    attention: true,
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
     child: Column(
       children: [
@@ -1378,8 +1180,6 @@ class _PendingCard extends StatelessWidget {
                     children: [
                       Text(
                         entries[i],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -1387,7 +1187,7 @@ class _PendingCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Đang chờ · Còn hiệu lực 6 ngày',
+                        'Đang chờ phản hồi',
                         style: Theme.of(context).textTheme.bodySmall
                             ?.copyWith(color: AppColors.textSecondary),
                       ),
@@ -1399,10 +1199,7 @@ class _PendingCard extends StatelessWidget {
                   itemBuilder: (_) => const [
                     PopupMenuItem(value: 'cancel', child: Text('Hủy lời mời')),
                   ],
-                  child: const Icon(
-                    Icons.more_horiz_rounded,
-                    color: AppColors.textSecondary,
-                  ),
+                  tooltip: 'Tùy chọn lời mời',
                 ),
               ],
             ),
@@ -1446,24 +1243,6 @@ class _MemberCard extends StatelessWidget {
                     '${member.role} · ${member.contact}',
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        size: 12,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          'Đang hoạt động',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.primaryDark),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -1570,7 +1349,7 @@ class _PersonSummaryCard extends StatelessWidget {
               Text(
                 '${member.role} · ${member.contact}',
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -1583,190 +1362,6 @@ class _PersonSummaryCard extends StatelessWidget {
           size: 20,
         ),
       ],
-    ),
-  );
-}
-
-class _PermissionDropZone extends StatelessWidget {
-  const _PermissionDropZone({
-    required this.level,
-    required this.modules,
-    required this.onModuleDropped,
-  });
-
-  final AccessLevel level;
-  final List<String> modules;
-  final ValueChanged<String> onModuleDropped;
-
-  @override
-  Widget build(BuildContext context) => DragTarget<String>(
-    onWillAcceptWithDetails: (_) => true,
-    onAcceptWithDetails: (details) => onModuleDropped(details.data),
-    builder: (context, candidates, rejected) {
-      final isHovering = candidates.isNotEmpty;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isHovering ? AppColors.primarySoft : AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isHovering ? AppColors.primary : AppColors.border,
-            width: isHovering ? 1.5 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  switch (level) {
-                    AccessLevel.none => Icons.block_outlined,
-                    AccessLevel.view => Icons.visibility_outlined,
-                    AccessLevel.edit => Icons.edit_note_rounded,
-                  },
-                  color: level == AccessLevel.none
-                      ? AppColors.textSecondary
-                      : AppColors.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    switch (level) {
-                      AccessLevel.none => 'Chưa cấp quyền',
-                      AccessLevel.view => 'Xem',
-                      AccessLevel.edit => 'Xem & sửa',
-                    },
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${modules.length} mục',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (modules.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  isHovering ? 'Thả mục vào đây' : 'Kéo mục vào vùng này',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              )
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final module in modules)
-                    _DraggablePermissionToken(module: module, level: level),
-                ],
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-class _DraggablePermissionToken extends StatelessWidget {
-  const _DraggablePermissionToken({required this.module, required this.level});
-
-  final String module;
-  final AccessLevel level;
-
-  @override
-  Widget build(BuildContext context) {
-    final feedback = Material(
-      color: Colors.transparent,
-      child: _PermissionToken(module: module, level: level, elevated: true),
-    );
-    final placeholder = Opacity(
-      opacity: 0.35,
-      child: _PermissionToken(module: module, level: level),
-    );
-    final token = _PermissionToken(module: module, level: level);
-
-    if (kIsWeb) {
-      return Draggable<String>(
-        data: module,
-        feedback: feedback,
-        childWhenDragging: placeholder,
-        child: token,
-      );
-    }
-
-    return LongPressDraggable<String>(
-      data: module,
-      feedback: feedback,
-      childWhenDragging: placeholder,
-      child: token,
-    );
-  }
-}
-
-class _PermissionToken extends StatelessWidget {
-  const _PermissionToken({
-    required this.module,
-    required this.level,
-    this.elevated = false,
-  });
-
-  final String module;
-  final AccessLevel level;
-  final bool elevated;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label: '$module, ${_accessLabel(level)}. Kéo để di chuyển.',
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: level == AccessLevel.none
-            ? const Color(0xFFF3F2ED)
-            : const Color(0xFFE8F2E8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-        boxShadow: elevated
-            ? const [BoxShadow(color: Color(0x22000000), blurRadius: 8)]
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_moduleIcon(module), size: 16, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Text(
-            module,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(width: 5),
-          const Icon(
-            Icons.drag_indicator_rounded,
-            size: 15,
-            color: AppColors.textSecondary,
-          ),
-        ],
-      ),
     ),
   );
 }
@@ -1880,7 +1475,7 @@ class _ContactChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: selected ? AppColors.primaryDark : AppColors.textSecondary,
         ),
@@ -1907,7 +1502,7 @@ class _StaticPill extends StatelessWidget {
     child: Text(
       label,
       style: TextStyle(
-        fontSize: 10,
+        fontSize: 12,
         color: selected ? AppColors.primaryDark : AppColors.textSecondary,
       ),
     ),
@@ -1953,7 +1548,7 @@ class _InviteCodeCard extends StatelessWidget {
         const SizedBox(height: 10),
         const Text(
           'Mã bảo mật · Tự hết hạn sau 7 ngày',
-          style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
@@ -1994,7 +1589,7 @@ class _InfoBanner extends StatelessWidget {
           child: Text(
             text,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               height: 1.45,
               color: AppColors.primaryDark,
             ),
@@ -2057,17 +1652,206 @@ class _DetailLine extends StatelessWidget {
       Expanded(
         child: Text(
           label,
-          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ),
       Text(
         value,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
       ),
     ],
+  );
+}
+
+class _SharingBottomBar extends StatelessWidget {
+  const _SharingBottomBar({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: AppColors.background,
+      border: const Border(top: BorderSide(color: AppColors.border)),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: .06),
+          blurRadius: 20,
+          offset: const Offset(0, -4),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: child,
+      ),
+    ),
+  );
+}
+
+class _PermissionZone extends StatelessWidget {
+  const _PermissionZone({
+    required this.level,
+    required this.modules,
+    required this.onDrop,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+  });
+  final AccessLevel level;
+  final List<String> modules;
+  final ValueChanged<String> onDrop;
+  final void Function(BuildContext, DragUpdateDetails) onDragUpdate;
+  final VoidCallback onDragEnd;
+
+  @override
+  Widget build(BuildContext context) => DragTarget<String>(
+    key: ValueKey('permission-zone-${level.name}'),
+    onWillAcceptWithDetails: (details) =>
+        _modules.contains(details.data) && !modules.contains(details.data),
+    onAcceptWithDetails: (details) => onDrop(details.data),
+    builder: (context, candidates, rejected) {
+      final hovering = candidates.isNotEmpty;
+      final color = level == AccessLevel.edit
+          ? AppColors.purpleText
+          : AppColors.primary;
+      final title = level == AccessLevel.none
+          ? 'Chưa cấp quyền'
+          : _accessLabel(level);
+      return AnimatedContainer(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: hovering ? color.withValues(alpha: .12) : AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: hovering ? color : AppColors.border,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  switch (level) {
+                    AccessLevel.none => Icons.lock_outline_rounded,
+                    AccessLevel.view => Icons.visibility_outlined,
+                    AccessLevel.edit => Icons.edit_note_rounded,
+                  },
+                  color: color,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${modules.length}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (modules.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  hovering ? 'Thả để chọn quyền' : 'Kéo mục vào đây',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final module in modules)
+                    LongPressDraggable<String>(
+                      onDragUpdate: (details) => onDragUpdate(context, details),
+                      onDragEnd: (_) => onDragEnd(),
+                      key: ValueKey('permission-item-$module'),
+                      data: module,
+                      maxSimultaneousDrags: 1,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.sizeOf(context).width - 48,
+                          ),
+                          child: _PermissionItem(module: module, color: color),
+                        ),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: .3,
+                        child: _PermissionItem(module: module, color: color),
+                      ),
+                      child: Semantics(
+                        label:
+                            '$module, $title. Nhấn giữ để kéo sang vùng quyền khác.',
+                        child: _PermissionItem(module: module, color: color),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _PermissionItem extends StatelessWidget {
+  const _PermissionItem({required this.module, required this.color});
+  final String module;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 48),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: color.withValues(alpha: .2)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_moduleIcon(module), size: 18, color: color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            module,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.drag_indicator_rounded,
+          size: 18,
+          color: AppColors.textSecondary,
+        ),
+      ],
+    ),
   );
 }
