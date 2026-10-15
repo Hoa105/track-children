@@ -1,3 +1,5 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
@@ -12,7 +14,13 @@ class DeleteAccountScreen extends StatefulWidget {
 }
 
 class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
-  final Map<String, _OwnershipChoice?> _choices = {'Bé An': null};
+  late final Map<String, _OwnershipChoice?> _choices =
+      DemoStore.instance.signedIn
+      ? {
+          for (final c in DemoStore.instance.children)
+            c['full_name'] as String: null,
+        }
+      : {'Bé An': null};
 
   Future<void> _continue() async {
     if (_choices.values.any((choice) => choice == null)) return;

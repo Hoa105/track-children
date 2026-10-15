@@ -1,23 +1,29 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../account/account_settings_screen.dart';
 import '../auth/parent_role.dart';
 import '../child/add_child_profile_screen.dart';
+import '../child/child_profile_screen.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 import '../sharing/child_sharing_screen.dart';
 import 'delete_account_screen.dart';
+import '../growth/growth_screen.dart';
+import 'demo_data_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({this.onLogout, super.key});
+  const SettingsScreen({this.onLogout, this.childName = 'Bé An', super.key});
 
   final VoidCallback? onLogout;
+  final String childName;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
   bool _notificationsEnabled = true;
   bool _biometricEnabled = false;
 
@@ -30,12 +36,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _changePassword() async {
-    final changed = await showDialog<bool>(
+    final changed = await showDialog<String>(
       context: context,
       builder: (_) => const _ChangePasswordDialog(),
     );
-    if (!mounted || changed != true) return;
-    _toast('Đổi mật khẩu chưa được kết nối dịch vụ tài khoản.');
+    if (!mounted || changed == null) return;
+    if (DemoStore.instance.signedIn) {
+      try {
+        await DemoStore.instance.saveParent({'password': changed});
+        if (mounted) _toast('Đã đổi mật khẩu tài khoản test.');
+      } catch (_) {
+        if (mounted) _toast('Chưa lưu được mật khẩu.');
+      }
+    } else {
+      _toast('Đổi mật khẩu chưa được kết nối dịch vụ tài khoản.');
+    }
   }
 
   Future<void> _selectLanguage() async {
@@ -124,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (_) => AddChildProfileScreen(
           onOpenHomePreview: (name) {
             Navigator.of(context).pop();
-            _toast('Hồ sơ $name đã được tạo trong bản xem trước.');
+            _toast('Đã lưu hồ sơ $name trong dữ liệu test.');
           },
         ),
       ),
@@ -133,7 +148,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _onNavigationTap(String destination) {
     if (destination == 'Trang chủ') {
-      Navigator.of(context).maybePop();
+      Navigator.of(context)
+          .popUntil((route) => route.settings.name == '/home' || route.isFirst);
+    } else if (destination == 'Theo dõi') {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => GrowthScreen(
+            childName:
+                DemoStore.instance.child?['full_name'] as String? ??
+                widget.childName,
+            onLogout: widget.onLogout,
+          ),
+        ),
+      );
     } else if (destination != 'Cá nhân') {
       _toast('$destination sẽ được làm ở bước sau.');
     }
@@ -165,12 +192,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _ParentSummaryCard(
                         onTap: () => Navigator.of(context).push<void>(
                           MaterialPageRoute(
-                            builder: (_) => const AccountSettingsScreen(
-                              fullName: 'Nguyễn Thị Hoa',
-                              username: 'mai_nguyen',
-                              email: 'ban@email.com',
-                              phone: '0912345678',
-                              role: ParentRole.mother,
+                            builder: (_) => AccountSettingsScreen(
+                              fullName:
+                                  DemoStore.instance.parent['fullName']
+                                      as String,
+                              username:
+                                  DemoStore.instance.parent['username']
+                                      as String,
+                              email:
+                                  DemoStore.instance.parent['email'] as String,
+                              phone:
+                                  DemoStore.instance.parent['phone'] as String,
+                              role: ParentRole.values.byName(
+                                DemoStore.instance.parent['role'] as String,
+                              ),
                             ),
                           ),
                         ),
@@ -232,9 +267,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Material(
                             color: Colors.transparent,
                             child: SwitchListTile.adaptive(
-                              value: _notificationsEnabled,
-                              onChanged: (value) =>
-                                  setState(() => _notificationsEnabled = value),
+                              value: DemoStore.instance.signedIn
+                                  ? DemoStore.instance.parent['notifications']
+                                        as bool
+                                  : _notificationsEnabled,
+                              onChanged: (value) => DemoStore.instance.signedIn
+                                  ? DemoStore.instance.saveParent({
+                                      'notifications': value,
+                                    })
+                                  : setState(
+                                      () => _notificationsEnabled = value,
+                                    ),
                               activeThumbColor: AppColors.primary,
                               secondary: const Icon(
                                 Icons.notifications_outlined,
@@ -259,9 +302,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Material(
                             color: Colors.transparent,
                             child: SwitchListTile.adaptive(
-                              value: _biometricEnabled,
-                              onChanged: (value) =>
-                                  setState(() => _biometricEnabled = value),
+                              value: DemoStore.instance.signedIn
+                                  ? DemoStore.instance.parent['biometric']
+                                        as bool
+                                  : _biometricEnabled,
+                              onChanged: (value) => DemoStore.instance.signedIn
+                                  ? DemoStore.instance.saveParent({
+                                      'biometric': value,
+                                    })
+                                  : setState(() => _biometricEnabled = value),
                               activeThumbColor: AppColors.primary,
                               secondary: const Icon(
                                 Icons.fingerprint_rounded,
@@ -306,6 +355,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                DemoDataScreen(onReset: widget.onLogout),
+                          ),
+                        ),
+                        icon: const Icon(Icons.science_outlined),
+                        label: const Text(
+                          'Dữ liệu kiểm thử · chỉ lưu trên thiết bị',
+                        ),
+                      ),
                       Text(
                         'Bé Lớn Khôn · phiên bản 1.0.0',
                         textAlign: TextAlign.center,
@@ -355,14 +416,17 @@ class _ParentSummaryCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const EmptyAvatar(initial: 'N'),
+            EmptyAvatar(
+              initial: (DemoStore.instance.parent['fullName'] as String)
+                  .substring(0, 1),
+            ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'mai_nguyen',
+                    DemoStore.instance.parent['fullName'] as String,
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -371,7 +435,7 @@ class _ParentSummaryCard extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'ban@email.com',
+                    DemoStore.instance.parent['email'] as String,
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -521,7 +585,12 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             _PasswordField(
               label: 'Mật khẩu hiện tại',
               controller: _currentController,
-              validator: _required,
+              validator: (value) =>
+                  _required(value) ??
+                  (DemoStore.instance.signedIn &&
+                          value != DemoStore.instance.parent['password']
+                      ? 'Mật khẩu hiện tại chưa đúng.'
+                      : null),
             ),
             const SizedBox(height: 14),
             _PasswordField(
@@ -541,13 +610,13 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     ),
     actions: [
       TextButton(
-        onPressed: () => Navigator.of(context).pop(false),
+        onPressed: () => Navigator.of(context).pop(),
         child: const Text('Hủy'),
       ),
       FilledButton(
         onPressed: () {
           if (_formKey.currentState!.validate()) {
-            Navigator.of(context).pop(true);
+            Navigator.of(context).pop(_newController.text);
           }
         },
         child: const Text('Xác nhận'),
@@ -599,7 +668,11 @@ class _ChildProfilesSettingsScreen extends StatelessWidget {
   final VoidCallback onAddChild;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: DemoStore.instance,
+    builder: (context, _) => _content(context),
+  );
+  Widget _content(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
       backgroundColor: AppColors.background,
@@ -608,7 +681,25 @@ class _ChildProfilesSettingsScreen extends StatelessWidget {
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const _ChildProfileSettingsTile(name: 'Bé An', age: '24 tháng'),
+        if (!DemoStore.instance.signedIn)
+          const _ChildProfileSettingsTile(name: 'Bé An', age: '24 tháng'),
+        for (final child in DemoStore.instance.children)
+          ListTile(
+            leading: const Icon(Icons.child_care_rounded),
+            title: Text(child['full_name'] as String),
+            subtitle: Text(DemoStore.instance.ageLabel(child)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ChildProfileScreen(
+                  initialFields: child,
+                  onSave: (fields, avatar) => DemoStore.instance
+                      .saveChild(child['id'] as String, fields)
+                      .then((_) {}),
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: onAddChild,
