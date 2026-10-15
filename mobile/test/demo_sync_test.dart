@@ -169,8 +169,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GrowthScreen), findsOneWidget);
       expect(find.text('12.5'), findsOneWidget);
-      expect(find.text('┄ Trung vị WHO'), findsOneWidget);
-      await tester.tap(find.text('Cập nhật số đo'));
+      expect(find.text('Trung vị WHO'), findsOneWidget);
+      await tester.tap(find.byTooltip('Cập nhật số đo'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '12.8');
       await tester.tap(find.text('Lưu số đo'));

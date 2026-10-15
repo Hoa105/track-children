@@ -115,7 +115,7 @@ void main() {
         ]) {
           final item = find.descendant(
             of: care,
-            matching: find.bySemanticsLabel(RegExp('^$label,')),
+            matching: find.bySemanticsLabel(label),
           );
           await tester.ensureVisible(item);
           await tester.pumpAndSettle();
@@ -240,7 +240,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('Dữ liệu xem trước'), findsNothing);
           expect(find.byType(DropdownButton<int>), findsNothing);
-          expect(find.text(stages[age].$3), findsOneWidget);
+          expect(find.text(stages[age].$3.replaceAll('\n', ' ')), findsOneWidget);
           final character = tester.widget<Image>(
             find.byKey(const ValueKey('home-hero-character')),
           );

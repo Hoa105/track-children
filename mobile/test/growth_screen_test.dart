@@ -13,7 +13,7 @@ void main() {
       const MaterialApp(home: GrowthScreen(childName: 'Test')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cập nhật số đo'));
+    await tester.tap(find.byTooltip('Cập nhật số đo'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(0), '8,1');
     await tester.enterText(find.byType(TextFormField).at(1), '68');
@@ -24,7 +24,11 @@ void main() {
     await tester.tap(find.text('BMI'));
     await tester.pumpAndSettle();
     expect(find.text('17.5'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Chưa có khoảng tham chiếu'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      find.text('Chưa có khoảng tham chiếu'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Chưa có khoảng tham chiếu'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(

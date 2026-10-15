@@ -8,8 +8,8 @@ import 'package:track_children/features/growth/growth_screen.dart';
 import 'package:track_children/services/demo_store.dart';
 
 Future<void> choose(WidgetTester tester, DateTimeRange? range) async {
-  await tester.ensureVisible(find.text('Tùy chọn'));
-  await tester.tap(find.text('Tùy chọn'));
+  await tester.ensureVisible(find.byTooltip('Tùy chọn'));
+  await tester.tap(find.byTooltip('Tùy chọn'));
   await tester.pumpAndSettle();
   expect(find.byType(DateRangePickerDialog), findsOneWidget);
   Navigator.of(tester.element(find.byType(DateRangePickerDialog))).pop(range);
@@ -33,7 +33,10 @@ void main() {
       await tester.pumpAndSettle();
       await choose(tester, DateTimeRange(start: start, end: end));
       for (final tab in ['Cân nặng', 'Chiều cao', 'Vòng đầu', 'BMI']) {
-        tester.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(0);
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .jumpTo(0);
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.text(tab).first);
         await tester.tap(find.text(tab).first);

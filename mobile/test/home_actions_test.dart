@@ -13,6 +13,30 @@ void main() {
     await DemoStore.instance.selectChild('child_an');
   });
 
+  testWidgets('reduced motion disables hero fades and background zoom', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: const HomeScreen(childName: 'Bảo An'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+    final scale = tester.widget<Transform>(
+      find.byKey(const ValueKey('home-background-scale')),
+    );
+    expect(scale.transform.entry(0, 0), 1);
+    await DemoStore.instance.selectChild('child_linh');
+    await tester.pumpAndSettle();
+    expect(find.text('Gia Linh'), findsOneWidget);
+    expect(find.text('Bảo An'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('timeline reveals current milestone after switching child', (
     tester,
   ) async {

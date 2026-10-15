@@ -53,12 +53,12 @@ void main() {
         ),
       ),
     );
-      await tester.runAsync(() async {
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-      });
-      await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
     expect(
-      find.text('Ví dụ mẫu · Bé trai · 8 tháng tại ngày đo'),
+      find.text('Ví dụ mẫu · Chuẩn WHO · Bé trai · 8 tháng tại ngày đo'),
       findsOneWidget,
     );
     expect(find.textContaining('Trung vị tham chiếu'), findsOneWidget);

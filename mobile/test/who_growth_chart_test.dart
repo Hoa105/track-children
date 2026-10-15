@@ -57,7 +57,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 200));
       });
       await tester.pumpAndSettle();
-      expect(find.text('┄ Trung vị WHO'), findsOneWidget);
+      expect(find.text('Trung vị WHO'), findsOneWidget);
       final paint = tester.widget<CustomPaint>(
         find.byKey(const ValueKey('growth-who-chart')),
       );
@@ -85,8 +85,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('● Số đo của bé'), findsOneWidget);
-    expect(find.text('┄ Trung vị WHO'), findsNothing);
+    expect(find.text('Số đo của bé'), findsOneWidget);
+    expect(find.text('Trung vị WHO'), findsNothing);
     expect(find.text('Chưa có thông tin đối chiếu WHO.'), findsOneWidget);
   });
 }
