@@ -61,6 +61,8 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/data/who_bmi.json
+    - assets/data/who_growth.json
     - assets/images/scenery/backgrounds/
     - assets/images/scenery/characters/
     - assets/images/scenery/icons/care/
