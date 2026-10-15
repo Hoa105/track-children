@@ -1,3 +1,8 @@
+import '../journal/journal_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../../services/app_notifications.dart';
+import '../activities/activities_screen.dart';
+import '../explore/explore_screen.dart';
 import '../../services/demo_store.dart';
 
 import 'dart:ui' as ui;
@@ -15,6 +20,7 @@ import '../child/child_profile_screen.dart';
 import '../growth/growth_screen.dart';
 import '../teething/teething_screen.dart';
 import '../vaccination/vaccination_screen.dart';
+import '../feeding/milk_calculator_screen.dart';
 
 class _HomeHeroPreview {
   const _HomeHeroPreview({
@@ -153,12 +159,60 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     _Shortcut('Nhật ký', 'Chưa có dữ liệu', 'diary_book.png'),
   ];
 
+  Future<void> _openLatestJournal() async {
+    final store = DemoStore.instance;
+    final child = store.child;
+    if (child == null) {
+      await _showOverview('Nhật ký');
+      return;
+    }
+    final childId = child['id'] as String;
+    final entries = store.journalEntries(childId);
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => entries.isEmpty
+            ? JournalScreen(childId: childId)
+            : JournalEditorScreen(childId: childId, entry: entries.first),
+      ),
+    );
+  }
+
   Future<void> _showOverview(String label) async {
     final child = DemoStore.instance.child;
+    if (label == 'Thông báo') {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      );
+      return;
+    }
+    if (label == 'Nhật ký' && child != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => JournalScreen(childId: child['id'] as String),
+        ),
+      );
+      return;
+    }
+    if (label == 'Lượng sữa' && child != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => MilkCalculatorScreen(childId: child['id'] as String),
+        ),
+      );
+      return;
+    }
     if (label == 'Tiêm chủng' && child != null) {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => VaccinationScreen(childId: child['id'] as String),
+        ),
+      );
+      return;
+    }
+    if (label == 'Hoạt động' && child != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ActivitiesScreen(childId: child['id'] as String),
         ),
       );
       return;
@@ -222,81 +276,12 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     );
   }
 
-  Future<void> _openQuickActions() async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Ghi chép nhanh',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Đóng',
-                    onPressed: () => Navigator.pop(sheetContext),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              ListTile(
-                leading: SvgPicture.asset(
-                  'assets/images/scenery/icons/ui/ruler-solid.svg',
-                  width: 28,
-                  height: 28,
-                ),
-                title: const Text('Thêm số đo'),
-                subtitle: const Text('Cân nặng, chiều cao, vòng đầu'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pop(sheetContext, 'growth'),
-              ),
-              for (final entry in [
-                ('Ghi lượng sữa', 'milk_bottle.png'),
-                ('Viết nhật ký', 'diary_book.png'),
-              ])
-                ListTile(
-                  leading: Image.asset(
-                    'assets/images/scenery/icons/care/${entry.$2}',
-                    width: 36,
-                    height: 36,
-                  ),
-                  title: Text(entry.$1),
-                  subtitle: const Text('Chưa khả dụng'),
-                  enabled: false,
-                ),
-            ],
-          ),
-        ),
-      ),
+  Future<void> _openMeasurement() async {
+    await openMeasurementFromHome(
+      context,
+      childName:
+          DemoStore.instance.child?['full_name'] as String? ?? widget.childName,
     );
-    if (!mounted) return;
-    if (action == 'growth') {
-      await openMeasurementFromHome(
-        context,
-        childName:
-            DemoStore.instance.child?['full_name'] as String? ??
-            widget.childName,
-      );
-    }
   }
 
   void _openSettings() {
@@ -472,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                     onTap: () => _showOverview('Hành trình lớn khôn'),
                   ),
                   const SizedBox(height: 16),
-                  _JournalCard(onTap: () => _showOverview('Nhật ký')),
+                  _JournalCard(onTap: _openLatestJournal),
                 ],
               ),
             ),
@@ -486,9 +471,13 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
           } else if (label == 'Theo dõi') {
             _openGrowth();
           } else if (label == 'Tạo ghi chép') {
-            _openQuickActions();
+            _openMeasurement();
           } else if (label == 'Khám phá') {
-            _showOverview('Hành trình lớn khôn');
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ExploreScreen(onLogout: widget.onLogout),
+              ),
+            );
           } else if (label == 'Trang chủ') {
             if (MediaQuery.disableAnimationsOf(context)) {
               _scrollController.jumpTo(0);
@@ -846,13 +835,19 @@ class _RoundAction extends StatelessWidget {
         width: 48,
         height: 48,
         child: Center(
-          child: SvgPicture.asset(
-            asset,
-            width: 24,
-            height: 24,
-            semanticsLabel: asset.contains('notification')
-                ? 'Thông báo'
-                : 'Cài đặt',
+          child: Badge.count(
+            count: unreadNotificationCount(DemoStore.instance),
+            isLabelVisible:
+                asset.contains('notification') &&
+                unreadNotificationCount(DemoStore.instance) > 0,
+            child: SvgPicture.asset(
+              asset,
+              width: 24,
+              height: 24,
+              semanticsLabel: asset.contains('notification')
+                  ? 'Thông báo'
+                  : 'Cài đặt',
+            ),
           ),
         ),
       ),
@@ -940,6 +935,15 @@ class _FrostedHeroPanel extends StatelessWidget {
 class _Shortcut {
   const _Shortcut(this.label, this.status, this.iconAsset);
   final String label, status, iconAsset;
+
+  Color get accentColor => switch (iconAsset) {
+    'milk_bottle.png' => const Color(0xFF62B5D9),
+    'vaccination_syringe.png' => const Color(0xFFF08095),
+    'tooth.png' => const Color(0xFF7CA9E8),
+    'activity_blocks.png' => const Color(0xFF96B95D),
+    'diary_book.png' => const Color(0xFFAB83DE),
+    _ => AppColors.primary,
+  };
 }
 
 class _CareCard extends StatelessWidget {
@@ -993,11 +997,17 @@ class _CareCard extends StatelessWidget {
               _CareItem(
                 item: _Shortcut(
                   item.label,
-                  item.label == 'Tiêm chủng' && DemoStore.instance.child != null
+                  item.label == 'Lượng sữa'
+                      ? 'Ước tính theo cân nặng'
+                      : item.label == 'Tiêm chủng' &&
+                            DemoStore.instance.child != null
                       ? 'Đã tiêm ${DemoStore.instance.vaccinations(DemoStore.instance.child!['id'] as String).where((r) => r['given'] == true).length} mũi'
                       : item.label == 'Mọc răng' &&
                             DemoStore.instance.child != null
                       ? 'Đã mọc ${DemoStore.instance.teeth(DemoStore.instance.child!['id'] as String).length}/20 răng'
+                      : item.label == 'Hoạt động' &&
+                            DemoStore.instance.child != null
+                      ? 'Đã thực hiện ${DemoStore.instance.completedActivities(DemoStore.instance.child!['id'] as String).length} hoạt động'
                       : (DemoStore.instance.child?['care'] as Map?)?[item.label]
                                 as String? ??
                             item.status,
@@ -1031,15 +1041,15 @@ class _CareItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Material(
-              color: AppColors.primarySoft,
+              color: Color.lerp(Colors.white, item.accentColor, .2),
               borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-                splashColor: AppColors.primary.withValues(alpha: .14),
-                highlightColor: AppColors.primary.withValues(alpha: .08),
-                hoverColor: AppColors.primary.withValues(alpha: .08),
+                splashColor: item.accentColor.withValues(alpha: .14),
+                highlightColor: item.accentColor.withValues(alpha: .08),
+                hoverColor: item.accentColor.withValues(alpha: .08),
                 child: Padding(
                   padding: const EdgeInsets.all(AppLayout.smallGap),
                   child: Image.asset(
@@ -1572,7 +1582,7 @@ class _JournalCard extends StatelessWidget {
             TextButton(
               onPressed: onTap,
               child: const Text(
-                'Xem gần đây  ›',
+                'Xem chi tiết  ›',
                 style: TextStyle(color: AppColors.primary, fontSize: 12),
               ),
             ),
