@@ -1,4 +1,7 @@
+import '../../services/demo_store.dart';
+
 import 'dart:ui' as ui;
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
@@ -9,6 +12,7 @@ import '../../app_layout.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 import '../settings/settings_screen.dart';
 import '../child/child_profile_screen.dart';
+import '../growth/growth_screen.dart';
 
 class _HomeHeroPreview {
   const _HomeHeroPreview({
@@ -115,7 +119,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
   final _scrollController = ScrollController();
   final _backgroundScale = ValueNotifier<double>(1.08);
 
@@ -148,6 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _comingSoon(BuildContext context, String label) {
+    if (label == 'Theo dõi nhanh') {
+      _openGrowth();
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -161,16 +169,34 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSettings() {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => SettingsScreen(onLogout: widget.onLogout),
+        builder: (_) => SettingsScreen(
+          onLogout: widget.onLogout,
+          childName:
+              DemoStore.instance.child?['full_name'] as String? ??
+              widget.childName,
+        ),
+      ),
+    );
+  }
+
+  void _openGrowth() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => GrowthScreen(
+          childName:
+              DemoStore.instance.child?['full_name'] as String? ??
+              widget.childName,
+          onLogout: widget.onLogout,
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final name = widget.childName.trim().isEmpty
-        ? 'Bé An'
-        : widget.childName.trim();
+    final active = DemoStore.instance.child;
+    final currentName = active?['full_name'] as String? ?? widget.childName;
+    final name = currentName.trim().isEmpty ? 'Bé An' : currentName.trim();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -191,7 +217,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           .toDouble();
                       final heroHeight =
                           widthBasedHeight * AppLayout.homeHeroHeightFactor;
-                      final preview = _homeHeroPreviews[widget.heroAgeIndex];
+                      final months = active == null
+                          ? null
+                          : int.parse(
+                              DemoStore.instance
+                                  .ageLabel(active)
+                                  .split(' ')
+                                  .first,
+                            );
+                      final ageIndex = months == null
+                          ? widget.heroAgeIndex
+                          : months < 4
+                          ? 0
+                          : months < 7
+                          ? 1
+                          : months < 10
+                          ? 2
+                          : months < 13
+                          ? 3
+                          : months < 48
+                          ? 4
+                          : 5;
+                      final preview = _homeHeroPreviews[ageIndex];
                       return Stack(
                         key: const ValueKey('home-hero'),
                         children: [
@@ -237,11 +284,21 @@ class _HomeScreenState extends State<HomeScreen> {
                               name: name,
                               heroHeight: heroHeight,
                               preview: preview,
-                              onProfileTap: () => Navigator.of(context)
-                                  .push<void>(
+                              onProfileTap: () =>
+                                  Navigator.of(context).push<void>(
                                     MaterialPageRoute(
                                       builder: (_) => ChildProfileScreen(
-                                        initialFields: {'full_name': name},
+                                        initialFields:
+                                            active ?? {'full_name': name},
+                                        onSave: active == null
+                                            ? null
+                                            : (fields, avatar) => DemoStore
+                                                  .instance
+                                                  .saveChild(
+                                                    active['id'] as String,
+                                                    fields,
+                                                  )
+                                                  .then((_) {}),
                                       ),
                                     ),
                                   ),
@@ -267,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList.list(
                 children: [
-                  const _GrowthCards(),
+                  _GrowthCards(),
                   const SizedBox(height: 14),
                   _TimelineCard(
                     onTap: () => _comingSoon(context, 'Hành trình phát triển'),
@@ -284,6 +341,8 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (label) {
           if (label == 'Cá nhân') {
             _openSettings();
+          } else if (label == 'Theo dõi') {
+            _openGrowth();
           } else if (label != 'Trang chủ') {
             _comingSoon(context, label);
           }
@@ -458,11 +517,20 @@ class _ProfileHeader extends StatelessWidget {
               BoxShadow(color: Color(0x1A194C3C), blurRadius: 8),
             ],
           ),
-          child: const Icon(
-            Icons.child_care_rounded,
-            color: AppColors.primary,
-            size: 28,
-          ),
+          child: DemoStore.instance.child?['avatar_base64'] != null
+              ? ClipOval(
+                  child: Image.memory(
+                    base64Decode(
+                      DemoStore.instance.child!['avatar_base64'] as String,
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : const Icon(
+                  Icons.child_care_rounded,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -471,8 +539,12 @@ class _ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Chào mẹ,',
+                Text(
+                  DemoStore.instance.parent['role'] == 'father'
+                      ? 'Chào bố,'
+                      : DemoStore.instance.parent['role'] == 'guardian'
+                      ? 'Chào bạn,'
+                      : 'Chào mẹ,',
                   style: TextStyle(color: AppColors.primaryDark, fontSize: 13),
                 ),
                 Row(
@@ -487,14 +559,33 @@ class _ProfileHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.primary,
-                    ),
+                    if (DemoStore.instance.signedIn)
+                      PopupMenuButton<String>(
+                        tooltip: 'Đổi hồ sơ bé',
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.primary,
+                        ),
+                        itemBuilder: (_) => [
+                          for (final child in DemoStore.instance.children)
+                            PopupMenuItem(
+                              value: child['id'] as String,
+                              child: Text(child['full_name'] as String),
+                            ),
+                        ],
+                        onSelected: (id) => DemoStore.instance.selectChild(id),
+                      )
+                    else
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.primary,
+                      ),
                   ],
                 ),
-                const Text(
-                  '24 tháng · 12,5 kg · 85 cm',
+                Text(
+                  DemoStore.instance.child == null
+                      ? '24 tháng · 12,5 kg · 85 cm'
+                      : '${DemoStore.instance.ageLabel(DemoStore.instance.child!)} · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 0) ?? '—'} kg · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 1) ?? '—'} cm',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: AppLayout.homeHeroBodySize,
@@ -718,7 +809,16 @@ class _CareCard extends StatelessWidget {
           runSpacing: AppLayout.mediumGap,
           children: [
             for (final item in _HomeScreenState._shortcuts)
-              _CareItem(item: item, onTap: () => onTap(item.label)),
+              _CareItem(
+                item: _Shortcut(
+                  item.label,
+                  (DemoStore.instance.child?['care'] as Map?)?[item.label]
+                          as String? ??
+                      item.status,
+                  item.iconAsset,
+                ),
+                onTap: () => onTap(item.label),
+              ),
           ],
         ),
       ],
@@ -796,20 +896,53 @@ class _GrowthCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      const cards = [
+      final store = DemoStore.instance;
+      final child = store.child;
+      String value(int metric, String fallback) => child == null
+          ? fallback
+          : '${store.latest(child['id'] as String, metric)?.toStringAsFixed(1) ?? '?'} ${metric == 0 ? 'kg' : 'cm'}';
+      String change(int metric, String fallback) {
+        if (child == null) return fallback;
+        final records = store
+            .records(child['id'] as String)
+            .where((r) => r['v$metric'] != null)
+            .toList();
+        if (records.length < 2) return 'Số đo đầu tiên';
+        final delta =
+            (records.last['v$metric'] as num) -
+            (records[records.length - 2]['v$metric'] as num);
+        return '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)} ${metric == 0 ? 'kg' : 'cm'}';
+      }
+
+      List<double> trend(int metric, List<double> fallback) {
+        if (child == null) return fallback;
+        final values = store
+            .records(child['id'] as String)
+            .where((r) => r['v$metric'] != null)
+            .map((r) => (r['v$metric'] as num).toDouble())
+            .toList();
+        if (values.isEmpty) return [.5];
+        final lo = values.reduce((a, b) => a < b ? a : b),
+            hi = values.reduce((a, b) => a > b ? a : b);
+        return values
+            .map((v) => hi == lo ? .5 : .15 + (v - lo) / (hi - lo) * .7)
+            .toList();
+      }
+
+      final cards = [
         _MetricCard(
           iconAsset: 'assets/images/scenery/icons/ui/bamboo_segment-solid.svg',
           label: 'Cân nặng',
-          value: '12,5 kg',
-          change: '↑ +0,3kg',
-          trend: [.25, .5, .65, .82],
+          value: value(0, '12,5 kg'),
+          change: change(0, '↑ +0,3kg'),
+          trend: trend(0, [.25, .5, .65, .82]),
         ),
         _MetricCard(
           iconAsset: 'assets/images/scenery/icons/ui/ruler-solid.svg',
           label: 'Chiều cao',
-          value: '85 cm',
-          change: '↑ +1,2cm',
-          trend: [.2, .42, .48, .75, .9],
+          value: value(1, '85 cm'),
+          change: change(1, '↑ +1,2cm'),
+          trend: trend(1, [.2, .42, .48, .75, .9]),
         ),
       ];
       final stacked =
@@ -953,7 +1086,7 @@ class _SparkPainter extends CustomPainter {
     final path = Path();
     for (var i = 0; i < values.length; i++) {
       final pt = Offset(
-        s.width * i / (values.length - 1),
+        values.length == 1 ? s.width / 2 : s.width * i / (values.length - 1),
         s.height * (1 - values[i]),
       );
       if (i == 0) {
@@ -967,10 +1100,25 @@ class _SparkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SparkPainter old) => false;
+  bool shouldRepaint(covariant _SparkPainter old) => old.values != values;
 }
 
-const _currentAgeMilestoneIndex = 0;
+int get _currentAgeMilestoneIndex {
+  final child = DemoStore.instance.child;
+  if (child == null) return 0;
+  final months = int.parse(DemoStore.instance.ageLabel(child).split(' ').first);
+  return months < 4
+      ? 0
+      : months < 7
+      ? 1
+      : months < 10
+      ? 2
+      : months < 13
+      ? 3
+      : months < 48
+      ? 4
+      : 5;
+}
 
 class _TimelineCard extends StatelessWidget {
   const _TimelineCard({required this.onTap});
@@ -1098,7 +1246,7 @@ class _TimelineCard extends StatelessWidget {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Bé đang ở những tháng đầu đời. Ba mẹ cùng theo dõi từng bước phát triển nhé!',
+                  DemoStore.instance.child == null ? 'Bé đang ở những tháng đầu đời. Ba mẹ cùng theo dõi từng bước phát triển nhé!' : 'Bé đang ở giai đoạn ${DemoStore.instance.ageLabel(DemoStore.instance.child!)}. Cùng theo dõi từng bước phát triển nhé!',
                   style: TextStyle(fontSize: 12, color: Color(0xFF41584D)),
                 ),
               ),
@@ -1196,12 +1344,14 @@ class _JournalCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bé ăn ngon hơn',
+                      (DemoStore.instance.child?['journal'] as Map?)?['title']
+                              as String? ??
+                          'Bé ăn ngon hơn',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -1210,7 +1360,9 @@ class _JournalCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Hôm nay, 08:30   ·   Dinh dưỡng',
+                      DemoStore.instance.child == null
+                          ? 'Hôm nay, 08:30   ·   Dinh dưỡng'
+                          : '${(DemoStore.instance.child?['journal'] as Map?)?['date']?.toString().split('T').first ?? '—'} · ${(DemoStore.instance.child?['journal'] as Map?)?['category'] ?? 'Nhật ký'}',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary,
