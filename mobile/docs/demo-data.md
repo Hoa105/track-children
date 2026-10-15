@@ -1,6 +1,6 @@
 # Bộ dữ liệu test đồng bộ
 
-Chạy app từ `mobile_2`. Dữ liệu hư cấu được tạo một lần, lưu trong SharedPreferences với khóa `synchronized_demo_v1`. Các lần mở sau giữ lại thay đổi; các khóa dữ liệu tăng trưởng cũ ngoài bộ test không bị xóa. Tuổi mẫu được tính theo ngày tạo dữ liệu, không đổi ngày sinh sau mỗi lần mở app.
+Chạy app từ `mobile`. Dữ liệu hư cấu được tạo một lần, lưu trong SharedPreferences với khóa `synchronized_demo_v1`. Các lần mở sau giữ lại thay đổi; các khóa dữ liệu tăng trưởng cũ ngoài bộ test không bị xóa. Tuổi mẫu được tính theo ngày tạo dữ liệu, không đổi ngày sinh sau mỗi lần mở app.
 
 ## Đăng nhập
 
@@ -38,7 +38,7 @@ OTP trong luồng đăng ký/đổi số điện thoại dùng `123456`; không 
 
 Kho test phục vụ đồng bộ trên **một thiết bị**, chưa đồng bộ qua backend hoặc giữa hai máy. Các thao tác gửi email/SMS, chấp nhận lời mời để cấp quyền tài khoản khác, chuyển quyền sở hữu, xóa tài khoản thật, đăng nhập mạng xã hội, nhắc lịch hệ điều hành và khóa sinh trắc chưa được kết nối dịch vụ. Các màn hình xem thử của chúng không xác nhận tính đúng đắn của dịch vụ thật. Tùy chọn sinh trắc hiện chỉ lưu trạng thái mô phỏng.
 
-Lượng sữa, tiêm chủng, mọc răng, hoạt động và nhật ký trên Home có dữ liệu tổng quan theo bé; các trang chức năng này chưa được triển khai trong `mobile_2`. Không coi các shortcut thông báo “sẽ được làm ở bước sau” là chức năng đã hoàn thành.
+Lượng sữa, tiêm chủng, mọc răng, hoạt động và nhật ký trên Home mở bảng tổng quan theo bé; các trang ghi chép và chi tiết chức năng này chưa được triển khai. Bảng ghi rõ giới hạn. Nút cộng mở bảng thao tác nhanh: “Thêm số đo” đi thẳng đến biểu mẫu tăng trưởng; ghi sữa và viết nhật ký hiện “Chưa khả dụng”. Thẻ cân nặng/chiều cao mở đúng tab theo dõi; mức thay đổi so với lần đo trước. Thông báo hiện trạng thái rỗng vì chưa kết nối nhắc lịch. Tab Khám phá hiện chỉ mở tổng quan giai đoạn tuổi.
 
 Thông tin đăng nhập được lưu dạng rõ **chỉ trong kho test hư cấu này**, không phải kiến trúc xác thực để dùng thật. Không nhập dữ liệu thật vào bộ test.
 
@@ -46,6 +46,7 @@ Thông tin đăng nhập được lưu dạng rõ **chỉ trong kho test hư c�
 
 ```powershell
 flutter test test/demo_sync_test.dart
+flutter test test/home_actions_test.dart test/home_layout_test.dart
 flutter test test/growth_screen_test.dart test/who_growth_chart_test.dart test/who_bmi_reference_test.dart
 ```
 
