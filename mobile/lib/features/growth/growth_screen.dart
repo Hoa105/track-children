@@ -13,8 +13,16 @@ import 'who_bmi_card.dart';
 import 'growth_chart.dart';
 
 class GrowthScreen extends StatefulWidget {
-  const GrowthScreen({required this.childName, this.onLogout, super.key});
+  const GrowthScreen({
+    required this.childName,
+    this.onLogout,
+    this.initialMetric = 0,
+    this.openMeasurement = false,
+    super.key,
+  });
   final String childName;
+  final int initialMetric;
+  final bool openMeasurement;
   final VoidCallback? onLogout;
   @override
   State<GrowthScreen> createState() => _GrowthScreenState();
@@ -36,6 +44,7 @@ class _GrowthScreenState extends State<GrowthScreen> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialMetric.clamp(0, 3);
     _childId = DemoStore.instance.child?['id'] as String?;
     DemoStore.instance.addListener(_onDemoChanged);
     _load();
@@ -78,7 +87,14 @@ class _GrowthScreenState extends State<GrowthScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        if (widget.openMeasurement && _loadError == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _update();
+          });
+        }
+      }
     }
   }
 

@@ -144,26 +144,126 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
   }
 
   static const _shortcuts = <_Shortcut>[
-    _Shortcut('Lượng sữa', '3/5 bữa', 'milk_bottle.png'),
-    _Shortcut('Tiêm chủng', 'Còn 1 mũi', 'vaccination_syringe.png'),
-    _Shortcut('Mọc răng', 'Đang theo dõi', 'tooth.png'),
-    _Shortcut('Hoạt động', 'Đạt 4/5', 'activity_blocks.png'),
-    _Shortcut('Nhật ký', '3 ghi chú mới', 'diary_book.png'),
+    _Shortcut('Lượng sữa', 'Chưa có dữ liệu', 'milk_bottle.png'),
+    _Shortcut('Tiêm chủng', 'Chưa có dữ liệu', 'vaccination_syringe.png'),
+    _Shortcut('Mọc răng', 'Chưa có dữ liệu', 'tooth.png'),
+    _Shortcut('Hoạt động', 'Chưa có dữ liệu', 'activity_blocks.png'),
+    _Shortcut('Nhật ký', 'Chưa có dữ liệu', 'diary_book.png'),
   ];
 
-  void _comingSoon(BuildContext context, String label) {
-    if (label == 'Theo dõi nhanh') {
-      _openGrowth();
-      return;
-    }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$label sẽ được làm ở bước sau.'),
-          behavior: SnackBarBehavior.floating,
+  Future<void> _showOverview(String label) async {
+    final child = DemoStore.instance.child;
+    final care = child?['care'] as Map?;
+    final journal = child?['journal'] as Map?;
+    final message = switch (label) {
+      'Thông báo' => 'Chưa có thông báo. Nhắc lịch tự động chưa được kết nối.',
+      'Nhật ký' =>
+        journal == null
+            ? 'Chưa có nhật ký cho bé.'
+            : '${journal['title'] ?? 'Nhật ký'}\n${journal['date']?.toString().split('T').first ?? ''} · ${journal['category'] ?? ''}',
+      'Hành trình lớn khôn' =>
+        child == null
+            ? 'Chọn hồ sơ bé để xem giai đoạn hiện tại.'
+            : 'Bé đang ở giai đoạn ${DemoStore.instance.ageLabel(child)}.',
+      _ => care?[label]?.toString() ?? 'Chưa có dữ liệu cho bé.',
+    };
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Text(message),
+              const SizedBox(height: 16),
+              if (label != 'Thông báo')
+                const Text(
+                  'Thông tin tổng quan. Tính năng ghi chép và chi tiết mục này chưa khả dụng.',
+                ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => Navigator.pop(sheetContext),
+                child: const Text('Đóng'),
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Future<void> _openQuickActions() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Ghi chép nhanh',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Đóng',
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              ListTile(
+                leading: SvgPicture.asset(
+                  'assets/images/scenery/icons/ui/ruler-solid.svg',
+                  width: 28,
+                  height: 28,
+                ),
+                title: const Text('Thêm số đo'),
+                subtitle: const Text('Cân nặng, chiều cao, vòng đầu'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pop(sheetContext, 'growth'),
+              ),
+              for (final entry in [
+                ('Ghi lượng sữa', 'milk_bottle.png'),
+                ('Viết nhật ký', 'diary_book.png'),
+              ])
+                ListTile(
+                  leading: Image.asset(
+                    'assets/images/scenery/icons/care/${entry.$2}',
+                    width: 36,
+                    height: 36,
+                  ),
+                  title: Text(entry.$1),
+                  subtitle: const Text('Chưa khả dụng'),
+                  enabled: false,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'growth') _openGrowth(openMeasurement: true);
   }
 
   void _openSettings() {
@@ -179,10 +279,12 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     );
   }
 
-  void _openGrowth() {
+  void _openGrowth({int metric = 0, bool openMeasurement = false}) {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => GrowthScreen(
+          initialMetric: metric,
+          openMeasurement: openMeasurement,
           childName:
               DemoStore.instance.child?['full_name'] as String? ??
               widget.childName,
@@ -303,6 +405,8 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                                     ),
                                   ),
                               onSettingsTap: _openSettings,
+                              onNotificationsTap: () =>
+                                  _showOverview('Thông báo'),
                             ),
                           ),
                         ],
@@ -313,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                     offset: const Offset(0, -AppLayout.homeHeroOverlap),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _CareCard(onTap: (s) => _comingSoon(context, s)),
+                      child: _CareCard(onTap: _showOverview),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -324,13 +428,13 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList.list(
                 children: [
-                  _GrowthCards(),
+                  _GrowthCards(onTap: (metric) => _openGrowth(metric: metric)),
                   const SizedBox(height: 14),
                   _TimelineCard(
-                    onTap: () => _comingSoon(context, 'Hành trình phát triển'),
+                    onTap: () => _showOverview('Hành trình lớn khôn'),
                   ),
                   const SizedBox(height: 14),
-                  _JournalCard(onTap: () => _comingSoon(context, 'Nhật ký')),
+                  _JournalCard(onTap: () => _showOverview('Nhật ký')),
                 ],
               ),
             ),
@@ -343,8 +447,16 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
             _openSettings();
           } else if (label == 'Theo dõi') {
             _openGrowth();
-          } else if (label != 'Trang chủ') {
-            _comingSoon(context, label);
+          } else if (label == 'Tạo ghi chép') {
+            _openQuickActions();
+          } else if (label == 'Khám phá') {
+            _showOverview('Hành trình lớn khôn');
+          } else if (label == 'Trang chủ') {
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
           }
         },
       ),
@@ -359,6 +471,7 @@ class _HomeTopSection extends StatelessWidget {
     required this.preview,
     required this.onProfileTap,
     required this.onSettingsTap,
+    required this.onNotificationsTap,
   });
 
   final String name;
@@ -366,6 +479,7 @@ class _HomeTopSection extends StatelessWidget {
   final _HomeHeroPreview preview;
   final VoidCallback onProfileTap;
   final VoidCallback onSettingsTap;
+  final VoidCallback onNotificationsTap;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -377,6 +491,7 @@ class _HomeTopSection extends StatelessWidget {
           name: name,
           onTap: onProfileTap,
           onSettingsTap: onSettingsTap,
+          onNotificationsTap: onNotificationsTap,
         ),
       ),
       const SizedBox(height: 8),
@@ -498,10 +613,12 @@ class _ProfileHeader extends StatelessWidget {
     required this.name,
     required this.onTap,
     required this.onSettingsTap,
+    required this.onNotificationsTap,
   });
   final String name;
   final VoidCallback onTap;
   final VoidCallback onSettingsTap;
+  final VoidCallback onNotificationsTap;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) => Row(
@@ -545,7 +662,11 @@ class _ProfileHeader extends StatelessWidget {
                       : DemoStore.instance.parent['role'] == 'guardian'
                       ? 'Chào bạn,'
                       : 'Chào mẹ,',
-                  style: TextStyle(color: AppColors.primaryDark, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.primaryDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Row(
                   children: [
@@ -584,7 +705,7 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 Text(
                   DemoStore.instance.child == null
-                      ? '24 tháng · 12,5 kg · 85 cm'
+                      ? 'Chưa chọn hồ sơ bé'
                       : '${DemoStore.instance.ageLabel(DemoStore.instance.child!)} · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 0) ?? '—'} kg · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 1) ?? '—'} cm',
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -605,8 +726,7 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               _RoundAction(
                 asset: 'assets/images/scenery/icons/ui/notification_bell.svg',
-                dot: true,
-                onTap: () {},
+                onTap: onNotificationsTap,
               ),
               const SizedBox(height: AppLayout.smallGap),
               _RoundAction(
@@ -621,8 +741,7 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               _RoundAction(
                 asset: 'assets/images/scenery/icons/ui/notification_bell.svg',
-                dot: true,
-                onTap: () {},
+                onTap: onNotificationsTap,
               ),
               const SizedBox(width: AppLayout.smallGap),
               _RoundAction(
@@ -637,14 +756,9 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _RoundAction extends StatelessWidget {
-  const _RoundAction({
-    required this.asset,
-    required this.onTap,
-    this.dot = false,
-  });
+  const _RoundAction({required this.asset, required this.onTap});
   final String asset;
   final VoidCallback onTap;
-  final bool dot;
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white,
@@ -653,26 +767,17 @@ class _RoundAction extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: SizedBox(
-        width: 46,
-        height: 46,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SvgPicture.asset(asset, width: 24, height: 24),
-            if (dot)
-              Positioned(
-                right: 10,
-                top: 9,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE65F5F),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
+        width: 48,
+        height: 48,
+        child: Center(
+          child: SvgPicture.asset(
+            asset,
+            width: 24,
+            height: 24,
+            semanticsLabel: asset.contains('notification')
+                ? 'Thông báo'
+                : 'Cài đặt',
+          ),
         ),
       ),
     ),
@@ -783,7 +888,7 @@ class _CareCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         InkWell(
-          onTap: () => onTap('Theo dõi nhanh'),
+          onTap: null,
           borderRadius: BorderRadius.circular(16),
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -832,81 +937,99 @@ class _CareItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: AppLayout.homeCareIconSize + AppLayout.smallGap * 2,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Tooltip(
-          message: '${item.label}: ${item.status}',
-          child: Semantics(
-            label: '${item.label}, ${item.status}',
-            button: true,
-            child: Material(
-              color: AppColors.primarySoft,
-              borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onTap,
-                overlayColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.pressed) ||
-                      states.contains(WidgetState.hovered) ||
-                      states.contains(WidgetState.focused)) {
-                    return AppColors.primary.withValues(alpha: .32);
-                  }
-                  return null;
-                }),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppLayout.smallGap),
-                  child: Image.asset(
-                    'assets/images/scenery/icons/care/${item.iconAsset}',
-                    width: AppLayout.homeCareIconSize,
-                    height: AppLayout.homeCareIconSize,
-                    fit: BoxFit.contain,
-                    excludeFromSemantics: true,
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+      child: SizedBox(
+        width: AppLayout.homeCareIconSize + AppLayout.smallGap * 2,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Tooltip(
+              message: '${item.label}: ${item.status}',
+              child: Semantics(
+                label: '${item.label}, ${item.status}',
+                button: true,
+                child: Material(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: onTap,
+                    overlayColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.pressed) ||
+                          states.contains(WidgetState.hovered) ||
+                          states.contains(WidgetState.focused)) {
+                        return AppColors.primary.withValues(alpha: .32);
+                      }
+                      return null;
+                    }),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppLayout.smallGap),
+                      child: Image.asset(
+                        'assets/images/scenery/icons/care/${item.iconAsset}',
+                        width: AppLayout.homeCareIconSize,
+                        height: AppLayout.homeCareIconSize,
+                        fit: BoxFit.contain,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: AppLayout.smallGap),
+            Text(
+              item.label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF173052),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.status,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: AppLayout.smallGap),
-        Text(
-          item.label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF173052),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          item.status,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-        ),
-      ],
+      ),
     ),
   );
 }
 
 class _GrowthCards extends StatelessWidget {
-  const _GrowthCards();
+  const _GrowthCards({required this.onTap});
+  final ValueChanged<int> onTap;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final store = DemoStore.instance;
       final child = store.child;
-      String value(int metric, String fallback) => child == null
-          ? fallback
-          : '${store.latest(child['id'] as String, metric)?.toStringAsFixed(1) ?? '?'} ${metric == 0 ? 'kg' : 'cm'}';
-      String change(int metric, String fallback) {
-        if (child == null) return fallback;
+      String value(int metric) {
+        final measurement = child == null
+            ? null
+            : store.latest(child['id'] as String, metric);
+        return measurement == null
+            ? 'Chưa có số đo'
+            : '${measurement.toStringAsFixed(1)} ${metric == 0 ? 'kg' : 'cm'}';
+      }
+
+      String change(int metric) {
+        if (child == null) return 'Chưa có số đo';
         final records = store
             .records(child['id'] as String)
             .where((r) => r['v$metric'] != null)
             .toList();
+        if (records.isEmpty) return 'Chưa có số đo';
         if (records.length < 2) return 'Số đo đầu tiên';
         final delta =
             (records.last['v$metric'] as num) -
@@ -921,7 +1044,7 @@ class _GrowthCards extends StatelessWidget {
             .where((r) => r['v$metric'] != null)
             .map((r) => (r['v$metric'] as num).toDouble())
             .toList();
-        if (values.isEmpty) return [.5];
+        if (values.isEmpty) return [];
         final lo = values.reduce((a, b) => a < b ? a : b),
             hi = values.reduce((a, b) => a > b ? a : b);
         return values
@@ -932,17 +1055,19 @@ class _GrowthCards extends StatelessWidget {
       final cards = [
         _MetricCard(
           iconAsset: 'assets/images/scenery/icons/ui/bamboo_segment-solid.svg',
+          onTap: () => onTap(0),
           label: 'Cân nặng',
-          value: value(0, '12,5 kg'),
-          change: change(0, '↑ +0,3kg'),
-          trend: trend(0, [.25, .5, .65, .82]),
+          value: value(0),
+          change: change(0),
+          trend: trend(0, []),
         ),
         _MetricCard(
           iconAsset: 'assets/images/scenery/icons/ui/ruler-solid.svg',
+          onTap: () => onTap(1),
           label: 'Chiều cao',
-          value: value(1, '85 cm'),
-          change: change(1, '↑ +1,2cm'),
-          trend: trend(1, [.2, .42, .48, .75, .9]),
+          value: value(1),
+          change: change(1),
+          trend: trend(1, []),
         ),
       ];
       final stacked =
@@ -977,98 +1102,110 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.change,
     required this.trend,
+    required this.onTap,
   });
   final String iconAsset;
   final String label, value, change;
   final List<double> trend;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 126),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x09194C3C),
-          blurRadius: 12,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 19,
-              backgroundColor: AppColors.primarySoft,
-              child: iconAsset.endsWith('.svg')
-                  ? SvgPicture.asset(iconAsset, width: 24, height: 24)
-                  : Image.asset(iconAsset, width: 24, height: 24),
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(22),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 126),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x09194C3C),
+              blurRadius: 12,
+              offset: Offset(0, 3),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF183257),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.blueGrey),
           ],
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: AppLayout.smallGap,
-          runSpacing: AppLayout.smallGap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F4E4),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                change,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 19,
+                  backgroundColor: AppColors.primarySoft,
+                  child: iconAsset.endsWith('.svg')
+                      ? SvgPicture.asset(iconAsset, width: 24, height: 24)
+                      : Image.asset(iconAsset, width: 24, height: 24),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF183257),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Colors.blueGrey),
+              ],
             ),
-            SizedBox(
-              width: 58,
-              height: 30,
-              child: CustomPaint(painter: _SparkPainter(trend)),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppLayout.smallGap,
+              runSpacing: AppLayout.smallGap,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F4E4),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    change,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 58,
+                  height: 30,
+                  child: CustomPaint(painter: _SparkPainter(trend)),
+                ),
+              ],
+            ),
+            const Text(
+              'so với lần đo trước',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ],
         ),
-        const Text(
-          'so với tháng trước',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-        ),
-      ],
+      ),
     ),
   );
 }
@@ -1120,9 +1257,55 @@ int get _currentAgeMilestoneIndex {
       : 5;
 }
 
-class _TimelineCard extends StatelessWidget {
+class _TimelineCard extends StatefulWidget {
   const _TimelineCard({required this.onTap});
   final VoidCallback onTap;
+
+  @override
+  State<_TimelineCard> createState() => _TimelineCardState();
+}
+
+class _TimelineCardState extends State<_TimelineCard> {
+  final _milestoneScrollController = ScrollController();
+  Object? _lastScrollTarget;
+
+  @override
+  void dispose() {
+    _milestoneScrollController.dispose();
+    super.dispose();
+  }
+
+  void _revealCurrentMilestone(double viewportWidth, double itemWidth) {
+    final target = (
+      DemoStore.instance.child?['id'],
+      _currentAgeMilestoneIndex,
+      viewportWidth,
+      itemWidth,
+    );
+    if (target == _lastScrollTarget) return;
+    final initial = _lastScrollTarget == null;
+    _lastScrollTarget = target;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          target != _lastScrollTarget ||
+          !_milestoneScrollController.hasClients)
+        return;
+      final position = _milestoneScrollController.position;
+      final offset = (target.$2 * itemWidth + itemWidth / 2 - viewportWidth / 2)
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      if (initial || MediaQuery.disableAnimationsOf(context)) {
+        _milestoneScrollController.jumpTo(offset);
+      } else {
+        _milestoneScrollController.animateTo(
+          offset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
   static const ages = [
     '0–3 tháng',
     '4–6 tháng',
@@ -1161,10 +1344,10 @@ class _TimelineCard extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: onTap,
+              onPressed: widget.onTap,
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
               child: const Text(
-                'Xem tất cả  ›',
+                'Tổng quan  ›',
                 style: TextStyle(color: AppColors.primary, fontSize: 12),
               ),
             ),
@@ -1172,60 +1355,71 @@ class _TimelineCard extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppLayout.mediumGap),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < ages.length; i++)
-                  SizedBox(
-                    width: MediaQuery.textScalerOf(context)
-                        .scale(72)
-                        .clamp(72.0, 144.0),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 8,
-                          child: i == _currentAgeMilestoneIndex
-                              ? const Center(
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: SizedBox.square(dimension: 6),
-                                  ),
-                                )
-                              : null,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = MediaQuery.textScalerOf(context)
+                  .scale(72)
+                  .clamp(72.0, 144.0)
+                  .toDouble();
+              _revealCurrentMilestone(constraints.maxWidth, itemWidth);
+              return SingleChildScrollView(
+                key: const ValueKey('home-milestones-scroll'),
+                controller: _milestoneScrollController,
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < ages.length; i++)
+                      SizedBox(
+                        key: ValueKey('home-milestone-$i'),
+                        width: itemWidth,
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 8,
+                              child: i == _currentAgeMilestoneIndex
+                                  ? const Center(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: SizedBox.square(dimension: 6),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            Image.asset(
+                              _ageMilestoneAssets[i][i ==
+                                      _currentAgeMilestoneIndex
+                                  ? 1
+                                  : 0],
+                              width: 58,
+                              height: 72,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.bottomCenter,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ages[i],
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: i == _currentAgeMilestoneIndex
+                                    ? AppColors.primaryDark
+                                    : AppColors.textSecondary,
+                                fontWeight: i == _currentAgeMilestoneIndex
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
                         ),
-                        Image.asset(
-                          _ageMilestoneAssets[i][i == _currentAgeMilestoneIndex
-                              ? 1
-                              : 0],
-                          width: 58,
-                          height: 72,
-                          fit: BoxFit.contain,
-                          alignment: Alignment.bottomCenter,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          ages[i],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: i == _currentAgeMilestoneIndex
-                                ? AppColors.primaryDark
-                                : AppColors.textSecondary,
-                            fontWeight: i == _currentAgeMilestoneIndex
-                                ? FontWeight.w700
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         Container(
@@ -1246,7 +1440,9 @@ class _TimelineCard extends StatelessWidget {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  DemoStore.instance.child == null ? 'Bé đang ở những tháng đầu đời. Ba mẹ cùng theo dõi từng bước phát triển nhé!' : 'Bé đang ở giai đoạn ${DemoStore.instance.ageLabel(DemoStore.instance.child!)}. Cùng theo dõi từng bước phát triển nhé!',
+                  DemoStore.instance.child == null
+                      ? 'Bé đang ở những tháng đầu đời. Ba mẹ cùng theo dõi từng bước phát triển nhé!'
+                      : 'Bé đang ở giai đoạn ${DemoStore.instance.ageLabel(DemoStore.instance.child!)}. Cùng theo dõi từng bước phát triển nhé!',
                   style: TextStyle(fontSize: 12, color: Color(0xFF41584D)),
                 ),
               ),
@@ -1320,7 +1516,7 @@ class _JournalCard extends StatelessWidget {
             TextButton(
               onPressed: onTap,
               child: const Text(
-                'Xem tất cả  ›',
+                'Xem gần đây  ›',
                 style: TextStyle(color: AppColors.primary, fontSize: 12),
               ),
             ),
@@ -1351,7 +1547,7 @@ class _JournalCard extends StatelessWidget {
                     Text(
                       (DemoStore.instance.child?['journal'] as Map?)?['title']
                               as String? ??
-                          'Bé ăn ngon hơn',
+                          'Chưa có nhật ký',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -1361,7 +1557,7 @@ class _JournalCard extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       DemoStore.instance.child == null
-                          ? 'Hôm nay, 08:30   ·   Dinh dưỡng'
+                          ? 'Chọn hồ sơ để xem nhật ký'
                           : '${(DemoStore.instance.child?['journal'] as Map?)?['date']?.toString().split('T').first ?? '—'} · ${(DemoStore.instance.child?['journal'] as Map?)?['category'] ?? 'Nhật ký'}',
                       style: TextStyle(
                         fontSize: 11,
@@ -1371,7 +1567,7 @@ class _JournalCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.more_horiz_rounded, color: Colors.blueGrey),
+              const Icon(Icons.chevron_right_rounded, color: Colors.blueGrey),
             ],
           ),
         ),

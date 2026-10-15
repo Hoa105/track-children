@@ -21,15 +21,11 @@ class AppBottomNavigationBar extends StatefulWidget {
 }
 
 class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
-  bool _addSelected = false;
-
   void _onNavigationTap(String destination) {
-    if (_addSelected) setState(() => _addSelected = false);
     widget.onTap(destination);
   }
 
   void _onAddTap() {
-    setState(() => _addSelected = true);
     widget.onTap('Tạo ghi chép');
   }
 
@@ -72,7 +68,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
                     customBorder: const CircleBorder(),
                     onTap: _onAddTap,
                     child: SvgPicture.asset(
-                      '${AppBottomNavigationBar._iconsPath}${_addSelected || widget.selected == 'Tạo ghi chép' ? 'nav-add-solid.svg' : 'nav-add-outline.svg'}',
+                      '${AppBottomNavigationBar._iconsPath}${widget.selected == 'Tạo ghi chép' ? 'nav-add-solid.svg' : 'nav-add-outline.svg'}',
                       width: 54,
                       height: 54,
                       semanticsLabel: 'Tạo ghi chép',
