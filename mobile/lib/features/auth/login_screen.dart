@@ -1,3 +1,5 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
@@ -22,7 +24,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   static const _demoEmail = 'demo@trackchildren.vn';
-  static const _demoPassword = 'TreXanh123';
+  static const _demoPassword = DemoStore.password;
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController(text: _demoEmail);
   final _passwordController = TextEditingController(text: _demoPassword);
@@ -62,8 +64,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    if (_accountController.text.trim().toLowerCase() == _demoEmail &&
-        _passwordController.text == _demoPassword) {
+    bool valid = false;
+    try {
+      valid = await DemoStore.instance.login(
+        _accountController.text,
+        _passwordController.text,
+      );
+    } catch (_) {
+      /* Error remains visible in the form. */
+    }
+    if (!mounted) return;
+    if (valid) {
+      setState(() => _isLoading = false);
       widget.onLoginSuccess?.call();
       if (widget.onLoginSuccess != null) return;
     }
@@ -205,7 +217,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         activeColor: AppColors.primary,
                                         visualDensity: VisualDensity.compact,
                                       ),
-                                      const Text('Ghi nhớ đăng nhập'),
+                                      const Flexible(
+                                        child: Text('Ghi nhớ đăng nhập'),
+                                      ),
                                     ],
                                   ),
                                   TextButton(

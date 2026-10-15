@@ -1,3 +1,5 @@
+import '../../services/demo_store.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
@@ -102,12 +104,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
       builder: (_) => OtpDialog(phone: _phoneController.text),
     );
     if (!mounted) return;
-    setState(() {
-      _isSubmitting = false;
-      if (otpVerified == true) {
-        _previewMessage = 'Mã OTP mẫu đã được xác nhận. Tạo tài khoản sẽ khả dụng khi kết nối dịch vụ đăng ký.';
+    setState(() => _isSubmitting = false);
+    if (otpVerified != true) return;
+    try {
+      await DemoStore.instance.register({
+        'fullName': _nameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+        'role': _parentRole.name,
+      });
+      if (mounted) widget.onChildProfilePreview();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _previewMessage =
+              'Chưa tạo được tài khoản test. Email có thể đã được dùng.',
+        );
       }
-    });
+    }
   }
 
   @override
