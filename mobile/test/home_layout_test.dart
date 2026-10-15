@@ -121,9 +121,13 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(item);
           await tester.pumpAndSettle();
-          expect(find.text('$label sẽ được làm ở bước sau.'), findsOneWidget);
-          ScaffoldMessenger.of(tester.element(find.byType(HomeScreen)))
-              .hideCurrentSnackBar();
+          expect(
+            find.text(
+              'Thông tin tổng quan. Tính năng ghi chép và chi tiết mục này chưa khả dụng.',
+            ),
+            findsOneWidget,
+          );
+          await tester.tap(find.text('Đóng'));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         }
