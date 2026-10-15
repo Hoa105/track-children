@@ -172,6 +172,10 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (sheetContext) => SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -205,6 +209,10 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         top: false,
@@ -314,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final topInset = MediaQuery.paddingOf(context).top;
-                      final widthBasedHeight = (constraints.maxWidth * .78)
-                          .clamp(248.0, 320.0)
+                      final widthBasedHeight = (constraints.maxWidth * .66)
+                          .clamp(208.0, 272.0)
                           .toDouble();
                       final heroHeight =
                           widthBasedHeight * AppLayout.homeHeroHeightFactor;
@@ -369,14 +377,20 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                                 AppLayout.homeHeroCharacterWidthFraction *
                                 preview.characterScale,
                             child: IgnorePointer(
-                              child: Image.asset(
-                                preview.characterAsset,
-                                key: const ValueKey('home-hero-character'),
-                                fit: BoxFit.contain,
-                                alignment: preview.characterOnLeft
-                                    ? Alignment.bottomLeft
-                                    : Alignment.bottomRight,
-                                excludeFromSemantics: true,
+                              child: _HomeReveal(
+                                identity: (
+                                  active?['id'],
+                                  preview.characterAsset,
+                                ),
+                                child: Image.asset(
+                                  preview.characterAsset,
+                                  key: const ValueKey('home-hero-character'),
+                                  fit: BoxFit.contain,
+                                  alignment: preview.characterOnLeft
+                                      ? Alignment.bottomLeft
+                                      : Alignment.bottomRight,
+                                  excludeFromSemantics: true,
+                                ),
                               ),
                             ),
                           ),
@@ -429,11 +443,11 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
               sliver: SliverList.list(
                 children: [
                   _GrowthCards(onTap: (metric) => _openGrowth(metric: metric)),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   _TimelineCard(
                     onTap: () => _showOverview('Hành trình lớn khôn'),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   _JournalCard(onTap: () => _showOverview('Nhật ký')),
                 ],
               ),
@@ -452,6 +466,10 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
           } else if (label == 'Khám phá') {
             _showOverview('Hành trình lớn khôn');
           } else if (label == 'Trang chủ') {
+            if (MediaQuery.disableAnimationsOf(context)) {
+              _scrollController.jumpTo(0);
+              return;
+            }
             _scrollController.animateTo(
               0,
               duration: const Duration(milliseconds: 250),
@@ -460,6 +478,27 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
           }
         },
       ),
+    );
+  }
+}
+
+/// Fade in only the new artwork; never retain another child's content.
+class _HomeReveal extends StatelessWidget {
+  const _HomeReveal({required this.identity, required this.child});
+  final Object identity;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(identity),
+      tween: Tween(begin: .35, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      child: child,
+      builder: (context, opacity, child) =>
+          Opacity(opacity: opacity, child: child),
     );
   }
 }
@@ -504,12 +543,20 @@ class _HomeTopSection extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final message = _HeroBanner(preview: preview);
+            final message = FractionallySizedBox(
+              widthFactor: .765,
+              alignment: preview.characterOnLeft
+                  ? Alignment.topRight
+                  : Alignment.topLeft,
+              child: _HomeReveal(
+                identity: (DemoStore.instance.child?['id'], preview.ageLabel),
+                child: _HeroBanner(preview: preview),
+              ),
+            );
             // Keep content sizing independent of the artwork painted below it.
-            final characterSpace =
-                (constraints.maxWidth * preview.characterWidthFraction)
-                    .clamp(0.0, heroHeight)
-                    .toDouble();
+            final characterSpace = (constraints.maxWidth * .45)
+                .clamp(0.0, heroHeight)
+                .toDouble();
             final textInset = characterSpace + AppLayout.smallGap;
             // Stack only when a side-by-side message would be too narrow.
             final stacked =
@@ -534,7 +581,8 @@ class _HomeTopSection extends StatelessWidget {
                 minHeight:
                     heroHeight +
                     AppLayout.minimumTouchTarget +
-                    AppLayout.smallGap,
+                    AppLayout.sectionGap +
+                    AppLayout.mediumGap,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,14 +620,18 @@ class _HomeTopBackdrop extends StatelessWidget {
         child: AnimatedBuilder(
           animation: scale,
           builder: (context, child) => Transform.scale(
-            scale: scale.value,
+            key: const ValueKey('home-background-scale'),
+            scale: MediaQuery.disableAnimationsOf(context) ? 1 : scale.value,
             alignment: Alignment.topCenter,
             child: child,
           ),
-          child: Image.asset(
-            preview.backgroundAsset,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
+          child: _HomeReveal(
+            identity: preview.backgroundAsset,
+            child: Image.asset(
+              preview.backgroundAsset,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
           ),
         ),
       ),
@@ -797,7 +849,7 @@ class _HeroBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            preview.headline,
+            preview.headline.replaceAll('\n', ' '),
             style: TextStyle(
               color: AppColors.primaryDark,
               fontSize: compact
@@ -937,66 +989,48 @@ class _CareItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-      child: SizedBox(
-        width: AppLayout.homeCareIconSize + AppLayout.smallGap * 2,
+  Widget build(BuildContext context) => SizedBox(
+    width: AppLayout.homeCareIconSize + AppLayout.smallGap * 2,
+    child: Semantics(
+      label: item.label,
+      button: true,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Tooltip(
-              message: '${item.label}: ${item.status}',
-              child: Semantics(
-                label: '${item.label}, ${item.status}',
-                button: true,
-                child: Material(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: onTap,
-                    overlayColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.pressed) ||
-                          states.contains(WidgetState.hovered) ||
-                          states.contains(WidgetState.focused)) {
-                        return AppColors.primary.withValues(alpha: .32);
-                      }
-                      return null;
-                    }),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppLayout.smallGap),
-                      child: Image.asset(
-                        'assets/images/scenery/icons/care/${item.iconAsset}',
-                        width: AppLayout.homeCareIconSize,
-                        height: AppLayout.homeCareIconSize,
-                        fit: BoxFit.contain,
-                        excludeFromSemantics: true,
-                      ),
-                    ),
+            Material(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+                splashColor: AppColors.primary.withValues(alpha: .14),
+                highlightColor: AppColors.primary.withValues(alpha: .08),
+                hoverColor: AppColors.primary.withValues(alpha: .08),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppLayout.smallGap),
+                  child: Image.asset(
+                    'assets/images/scenery/icons/care/${item.iconAsset}',
+                    width: AppLayout.homeCareIconSize * .8,
+                    height: AppLayout.homeCareIconSize * .8,
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: AppLayout.smallGap),
+            const SizedBox(height: 8),
             Text(
               item.label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF173052),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.status,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
@@ -1111,23 +1145,15 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(22),
+    borderRadius: BorderRadius.circular(24),
+    elevation: 1,
+    shadowColor: const Color(0x18194C3C),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: 126),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x09194C3C),
-              blurRadius: 12,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -1187,7 +1213,7 @@ class _MetricCard extends StatelessWidget {
                     change,
                     style: const TextStyle(
                       color: AppColors.primary,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1201,7 +1227,7 @@ class _MetricCard extends StatelessWidget {
             ),
             const Text(
               'so với lần đo trước',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
           ],
         ),
@@ -1288,8 +1314,9 @@ class _TimelineCardState extends State<_TimelineCard> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
           target != _lastScrollTarget ||
-          !_milestoneScrollController.hasClients)
+          !_milestoneScrollController.hasClients) {
         return;
+      }
       final position = _milestoneScrollController.position;
       final offset = (target.$2 * itemWidth + itemWidth / 2 - viewportWidth / 2)
           .clamp(position.minScrollExtent, position.maxScrollExtent)
@@ -1404,7 +1431,7 @@ class _TimelineCardState extends State<_TimelineCard> {
                               ages[i],
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 color: i == _currentAgeMilestoneIndex
                                     ? AppColors.primaryDark
                                     : AppColors.textSecondary,
@@ -1560,7 +1587,7 @@ class _JournalCard extends StatelessWidget {
                           ? 'Chọn hồ sơ để xem nhật ký'
                           : '${(DemoStore.instance.child?['journal'] as Map?)?['date']?.toString().split('T').first ?? '—'} · ${(DemoStore.instance.child?['journal'] as Map?)?['category'] ?? 'Nhật ký'}',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),

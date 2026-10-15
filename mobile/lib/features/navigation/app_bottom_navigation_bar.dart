@@ -30,11 +30,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: Colors.white,
-      border: Border(top: BorderSide(color: AppColors.border)),
-    ),
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: const Border(top: BorderSide(color: AppColors.border)),
     child: SafeArea(
       top: false,
       child: ConstrainedBox(
@@ -139,8 +137,8 @@ class _NavigationItem extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9,
-                color: selected ? AppColors.primary : const Color(0xFF858B95),
+                fontSize: 11,
+                color: selected ? AppColors.primary : const Color(0xFF59695F),
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
