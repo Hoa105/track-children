@@ -12,6 +12,62 @@ import '../settings/settings_screen.dart';
 import 'who_bmi_card.dart';
 import 'growth_chart.dart';
 
+Future<Map<String, dynamic>?> showMeasurementSheet(
+  BuildContext context, {
+  required List<Map<String, dynamic>> records,
+  required bool isPreview,
+}) => showModalBottomSheet<Map<String, dynamic>>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  backgroundColor: AppColors.background,
+  showDragHandle: true,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+  ),
+  builder: (_) => _MeasurementSheet(records: records, isPreview: isPreview),
+);
+
+Future<void> openMeasurementFromHome(
+  BuildContext context, {
+  required String childName,
+}) async {
+  final childId = DemoStore.instance.child?['id'] as String?;
+  final key = 'growth_v1_$childName';
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final records = childId == null
+        ? (jsonDecode(prefs.getString(key) ?? '[]') as List)
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList()
+        : DemoStore.instance.records(childId);
+    if (!context.mounted) return;
+    final record = await showMeasurementSheet(
+      context,
+      records: records,
+      isPreview: false,
+    );
+    if (record == null || !context.mounted) return;
+    if (childId != null) {
+      await DemoStore.instance.addRecord(childId, record);
+    } else {
+      final next = [...records, record]
+        ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+      if (!await prefs.setString(key, jsonEncode(next))) {
+        throw StateError('save failed');
+      }
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Đã lưu số đo của bé')));
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Chưa lưu được số đo. Vui lòng thử lại.')),
+    );
+  }
+}
+
 class GrowthScreen extends StatefulWidget {
   const GrowthScreen({
     required this.childName,
@@ -151,17 +207,10 @@ class _GrowthScreenState extends State<GrowthScreen> {
 
   Future<void> _update() async {
     if (_loading || _loadError != null) return;
-    final record = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.background,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) =>
-          _MeasurementSheet(records: _records, isPreview: _isPreview),
+    final record = await showMeasurementSheet(
+      context,
+      records: _records,
+      isPreview: _isPreview,
     );
     if (record == null || !mounted) return;
     final next = [if (!_isPreview) ..._records, record]

@@ -7,6 +7,40 @@ import 'package:track_children/features/growth/growth_screen.dart';
 import 'package:track_children/services/demo_store.dart';
 
 void main() {
+  testWidgets('home shortcut opens the form and saves without a growth route', (
+    tester,
+  ) async {
+    DemoStore.resetInstanceForTesting();
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () =>
+                  openMeasurementFromHome(context, childName: 'Test'),
+              child: const Text('Add measurement'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Add measurement'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GrowthScreen), findsNothing);
+    expect(find.byType(TextFormField), findsNWidgets(3));
+    await tester.enterText(find.byType(TextFormField).first, '9.1');
+    await tester.tap(find.text('Lưu số đo'));
+    await tester.pumpAndSettle();
+    final prefs = await SharedPreferences.getInstance();
+    final records = jsonDecode(prefs.getString('growth_v1_Test')!) as List;
+    expect(records.single['v0'], 9.1);
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.byType(GrowthScreen), findsNothing);
+    expect(find.text('Add measurement'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   setUp(() {
     DemoStore.resetInstanceForTesting();
     SharedPreferences.setMockInitialValues({

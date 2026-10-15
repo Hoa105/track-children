@@ -289,7 +289,14 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
       ),
     );
     if (!mounted) return;
-    if (action == 'growth') _openGrowth(openMeasurement: true);
+    if (action == 'growth') {
+      await openMeasurementFromHome(
+        context,
+        childName:
+            DemoStore.instance.child?['full_name'] as String? ??
+            widget.childName,
+      );
+    }
   }
 
   void _openSettings() {
@@ -305,12 +312,11 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     );
   }
 
-  void _openGrowth({int metric = 0, bool openMeasurement = false}) {
+  void _openGrowth({int metric = 0}) {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => GrowthScreen(
           initialMetric: metric,
-          openMeasurement: openMeasurement,
           childName:
               DemoStore.instance.child?['full_name'] as String? ??
               widget.childName,
