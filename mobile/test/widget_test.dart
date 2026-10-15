@@ -1,202 +1,208 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:track_children/features/auth/login_screen.dart';
+import 'package:track_children/features/auth/sign_up_screen.dart';
 import 'package:track_children/features/home/home_screen.dart';
+import 'package:track_children/features/splash/start_screen.dart';
 import 'package:track_children/main.dart';
+import 'package:track_children/services/demo_store.dart';
+
+Future<void> openIntroduction(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(const TrackChildrenApp());
+  await tester.runAsync(
+    () => precacheImage(
+      const AssetImage('assets/images/scenery/backgrounds/start_screen.png'),
+      tester.element(find.byType(StartScreen)),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 2));
+  await tester.pumpAndSettle();
+}
 
 void main() {
-  testWidgets('first launch can skip onboarding and open welcome', (
-    WidgetTester tester,
-  ) async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
-
-    await tester.pumpWidget(const TrackChildrenApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Chăm sóc bé dễ dàng hơn'), findsOneWidget);
-    await tester.tap(find.text('Bỏ qua'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Cùng con lớn lên\nmỗi ngày'), findsOneWidget);
-    expect(find.text('Đăng nhập'), findsOneWidget);
-    expect(find.text('Tạo tài khoản'), findsOneWidget);
+    DemoStore.resetInstanceForTesting();
   });
-
-  testWidgets('completed onboarding stays complete after app restart', (
-    WidgetTester tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-
-    await tester.pumpWidget(const TrackChildrenApp());
-    await tester.pumpAndSettle();
+  testWidgets('startup introduction completes into login', (tester) async {
+    await openIntroduction(tester);
+    expect(find.text('Chăm sóc bé dễ dàng hơn'), findsOneWidget);
+    await tester.ensureVisible(find.text('Tiếp tục'));
     await tester.tap(find.text('Tiếp tục'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tiếp tục'));
-    await tester.pumpAndSettle();
+    expect(find.text('Đồng hành cùng bé mỗi ngày'), findsOneWidget);
+    await tester.ensureVisible(find.text('Bắt đầu'));
     await tester.tap(find.text('Bắt đầu'));
     await tester.pumpAndSettle();
-
-    expect(find.text('Cùng con lớn lên\nmỗi ngày'), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(const TrackChildrenApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Cùng con lớn lên\nmỗi ngày'), findsOneWidget);
-    expect(find.text('Chăm sóc bé dễ dàng hơn'), findsNothing);
+    expect(find.text('Chào mừng bạn trở lại'), findsOneWidget);
   });
-
   testWidgets(
-    'welcome opens login and login validates without authenticating',
-    (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({
-        'track_children_onboarding_completed': true,
-      });
-
-      await tester.pumpWidget(const TrackChildrenApp());
+    'completion persists while introduction remains visible on restart',
+    (tester) async {
+      await openIntroduction(tester);
+      await tester.ensureVisible(find.text('Tiếp tục'));
+      await tester.tap(find.text('Tiếp tục'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Đăng nhập'));
-      await tester.tap(find.text('Đăng nhập'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Chào mừng bạn trở lại'), findsOneWidget);
-      expect(find.text('Email hoặc số điện thoại'), findsOneWidget);
-
-      await tester.ensureVisible(find.text('Đăng nhập'));
-      await tester.tap(find.text('Đăng nhập'));
+      await tester.ensureVisible(find.text('Bắt đầu'));
+      await tester.tap(find.text('Bắt đầu'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Vui lòng nhập email hoặc số điện thoại.'),
-        findsOneWidget,
+        (await SharedPreferences.getInstance()).getBool(
+          'track_children_onboarding_completed',
+        ),
+        true,
       );
-
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        'parent@example.com',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        'sample-password',
-      );
-      await tester.ensureVisible(find.text('Đăng nhập'));
-      await tester.tap(find.text('Đăng nhập'));
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Đăng nhập chưa được kết nối trong bản xem trước giao diện.'),
-        findsOneWidget,
-      );
+      await tester.pumpWidget(const SizedBox());
+      await openIntroduction(tester);
+      expect(find.text('Chăm sóc bé dễ dàng hơn'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
     },
   );
-
-  testWidgets(
-    'sign up keeps choices blank and hides parent question for caregiver',
-    (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({
-        'track_children_onboarding_completed': true,
-      });
-
-      await tester.pumpWidget(const TrackChildrenApp());
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Tạo tài khoản'));
-      await tester.tap(find.text('Tạo tài khoản'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Bạn là người đồng hành nào?'), findsOneWidget);
-      expect(find.text('Đây có phải lần đầu bạn có con?'), findsNothing);
-      expect(find.text('Vui lòng chọn mối quan hệ.'), findsNothing);
-
-      await tester.tap(find.text('Mẹ'));
-      await tester.pumpAndSettle();
-      expect(find.text('Đây có phải lần đầu bạn có con?'), findsOneWidget);
-      expect(find.text('Vui lòng chọn Có hoặc Không.'), findsNothing);
-
-      await tester.tap(find.text('Bảo mẫu'));
-      await tester.pumpAndSettle();
-      expect(find.text('Đây có phải lần đầu bạn có con?'), findsNothing);
-    },
-  );
-
-  testWidgets('valid sign up preview opens child profile form', (
-    WidgetTester tester,
+  testWidgets('login validates and authenticates shared parent fixture', (
+    tester,
   ) async {
-    SharedPreferences.setMockInitialValues({
-      'track_children_onboarding_completed': true,
-    });
-
-    await tester.pumpWidget(const TrackChildrenApp());
-    await tester.pumpAndSettle();
-    final welcomeSignUpButton = find.widgetWithText(
-      OutlinedButton,
-      'Tạo tài khoản',
+    var loggedIn = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(
+          onSignUp: () {},
+          onBack: () {},
+          onLoginSuccess: () => loggedIn = true,
+        ),
+      ),
     );
-    await tester.ensureVisible(welcomeSignUpButton);
-    await tester.tap(welcomeSignUpButton);
     await tester.pumpAndSettle();
-
-    final createAccountButton = find.widgetWithText(
-      FilledButton,
-      'Tạo tài khoản',
-    );
-    await tester.tap(find.text('Bảo mẫu'));
-    await tester.enterText(find.byType(TextFormField).at(0), 'Người chăm bé');
-    await tester.enterText(find.byType(TextFormField).at(1), '0912345678');
+    final button = find.widgetWithText(FilledButton, 'Đăng nhập');
+    await tester.enterText(find.byType(TextFormField).first, '');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.text('Vui lòng nhập email.'), findsOneWidget);
     await tester.enterText(
-      find.byType(TextFormField).at(3),
-      'preview-password',
+      find.byType(TextFormField).first,
+      'demo@trackchildren.vn',
     );
-    await tester.ensureVisible(createAccountButton);
-    await tester.tap(createAccountButton);
+    await tester.enterText(find.byType(TextFormField).at(1), 'wrong');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text('Xem giao diện hồ sơ bé'));
-    await tester.tap(find.text('Xem giao diện hồ sơ bé'));
+    expect(loggedIn, false);
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      DemoStore.password,
+    );
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
-
-    expect(find.text('Thêm hồ sơ bé mới'), findsOneWidget);
-    expect(find.text('Tên bé'), findsOneWidget);
-    expect(find.text('Ngày sinh'), findsOneWidget);
-    expect(find.text('Giới tính'), findsOneWidget);
+    expect(loggedIn, true);
+    expect(DemoStore.instance.parent['email'], 'demo@trackchildren.vn');
   });
-
-  testWidgets('home presents preview data and shortcuts', (
-    WidgetTester tester,
+  testWidgets('signup role selection uses current parent roles', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Người giám hộ khác'));
+    expect(
+      tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Mẹ')).selected,
+      true,
+    );
+    await tester.tap(find.text('Người giám hộ khác'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.widgetWithText(ChoiceChip, 'Người giám hộ khác'),
+          )
+          .selected,
+      true,
+    );
+    expect(find.text('Đây có phải lần đầu bạn có con?'), findsNothing);
+  });
+  testWidgets('signup OTP creates local account and requests child form', (
+    tester,
+  ) async {
+    var openChild = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SignUpScreen(
+          onLogin: () {},
+          onChildProfilePreview: () => openChild = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final values = [
+      'Phụ huynh thử',
+      'parent_test',
+      'new.parent@example.test',
+      '0900000003',
+      'Testing123',
+      'Testing123',
+    ];
+    for (var i = 0; i < values.length; i++) {
+      await tester.enterText(find.byType(TextFormField).at(i), values[i]);
+    }
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Đăng ký'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Đăng ký'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Xác thực OTP'), findsOneWidget);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      '123456',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Xác nhận'));
+    await tester.pumpAndSettle();
+    expect(openChild, true);
+    expect(DemoStore.instance.parent['email'], 'new.parent@example.test');
+    expect(DemoStore.instance.children, isEmpty);
+  });
+  testWidgets('standalone Home presents its preview and shortcuts', (
+    tester,
   ) async {
     await tester.pumpWidget(
       const MaterialApp(home: HomeScreen(childName: 'An')),
     );
-
+    await tester.pumpAndSettle();
     expect(find.text('An'), findsOneWidget);
-    expect(find.text('Lượng sữa'), findsOneWidget);
-    expect(find.text('Tiêm chủng'), findsOneWidget);
-    expect(find.text('Mọc răng'), findsOneWidget);
-    expect(find.text('Hoạt động'), findsOneWidget);
-    expect(find.text('Nhật ký'), findsNWidgets(2));
-    expect(find.text('Dữ liệu xem trước'), findsOneWidget);
-    final scrollable = find.byType(Scrollable).last;
+    for (final label in [
+      'Lượng sữa',
+      'Tiêm chủng',
+      'Mọc răng',
+      'Hoạt động',
+      'Nhật ký',
+    ]) {
+      expect(find.text(label), findsWidgets);
+    }
     await tester.scrollUntilVisible(
       find.text('Cân nặng'),
-      250,
-      scrollable: scrollable,
+      200,
+      scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Cân nặng'), findsOneWidget);
-    expect(find.text('Chiều cao'), findsOneWidget);
-    expect(find.text('8,1 kg', findRichText: true), findsOneWidget);
+    expect(find.text('12,5 kg'), findsOneWidget);
+    expect(find.text('85 cm'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Búp măng khép kín'),
-      250,
-      scrollable: scrollable,
+      find.text('Bé ăn ngon hơn'),
+      200,
+      scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Búp măng khép kín'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Cữ sữa buổi sáng'),
-      250,
-      scrollable: scrollable,
-    );
-    expect(find.text('Cữ sữa buổi sáng'), findsOneWidget);
-    expect(find.text('Cùng bé nghe nhạc'), findsOneWidget);
-    expect(find.text('15 kg'), findsNothing);
+    expect(find.text('Bé ăn ngon hơn'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

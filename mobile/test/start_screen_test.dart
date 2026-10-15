@@ -27,10 +27,9 @@ void main() {
       });
       await tester.pump();
       final image = tester.widget<Image>(find.byType(Image));
-      expect(image.fit, BoxFit.contain);
+      expect(image.fit, BoxFit.cover);
       final rect = tester.getRect(find.byType(Image));
-      expect(rect.top, 24);
-      expect(rect.bottom, 776);
+      expect(rect, Rect.fromLTWH(0, 0, width, 800));
       expect(find.byType(SplashScreen), findsNothing);
       await tester.pump(const Duration(seconds: 2));
       expect(find.byType(SplashScreen), findsOneWidget);
