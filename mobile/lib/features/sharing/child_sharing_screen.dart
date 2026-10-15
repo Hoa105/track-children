@@ -1,9 +1,29 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app_colors.dart';
+import '../../services/demo_store.dart';
 
 enum AccessLevel { none, view, edit }
+
+Map<String, dynamic>? _demoSharingChild(String? id) =>
+    id == null ? DemoStore.instance.child : DemoStore.instance.childById(id);
+String _demoSharingCode(String? id) =>
+    id == null ? 'AN-4K9P-72' : 'DEMO-${id.toUpperCase()}';
+
+List<SharingMember> demoSharingMembers(String id) => [
+  for (final m in DemoStore.instance.childById(id)?['members'] as List? ?? [])
+    SharingMember(
+      name: m['name'] as String,
+      role: m['role'] as String,
+      contact: m['contact'] as String,
+      avatar: m['avatar'] as String,
+      permissions: (m['permissions'] as Map).map(
+        (k, v) => MapEntry(k as String, AccessLevel.values.byName(v as String)),
+      ),
+    ),
+];
 
 class SharingMember {
   SharingMember({
@@ -34,7 +54,13 @@ const _modules = <String>[
 ];
 
 class ChildSharingScreen extends StatefulWidget {
-  const ChildSharingScreen({super.key, this.members, this.pending});
+  const ChildSharingScreen({
+    super.key,
+    this.members,
+    this.pending,
+    this.childId,
+  });
+  final String? childId;
 
   final List<SharingMember>? members;
   final List<String>? pending;
@@ -44,8 +70,10 @@ class ChildSharingScreen extends StatefulWidget {
 }
 
 class _ChildSharingScreenState extends State<ChildSharingScreen> {
+  late final String? _childId =
+      widget.childId ?? DemoStore.instance.child?['id'] as String?;
   late final _members =
-      widget.members ??
+      (_childId != null ? demoSharingMembers(_childId) : widget.members) ??
       <SharingMember>[
         SharingMember(
           name: 'Bà Nguyễn Thị Mai',
@@ -67,7 +95,29 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         ),
       ];
 
-  late final _pending = widget.pending ?? <String>[];
+  late final _pending = _childId != null
+      ? List<String>.from(
+          DemoStore.instance.childById(_childId)?['pending'] as List? ?? [],
+        )
+      : widget.pending ?? <String>[];
+
+  Future<void> _persist() async {
+    if (_childId == null) return;
+    try {
+      await DemoStore.instance.saveSharing(_childId, [
+        for (final m in _members)
+          {
+            'name': m.name,
+            'role': m.role,
+            'contact': m.contact,
+            'avatar': m.avatar,
+            'permissions': m.permissions.map((k, v) => MapEntry(k, v.name)),
+          },
+      ], _pending);
+    } catch (_) {
+      if (mounted) _toast('Chưa lưu được dữ liệu chia sẻ test.');
+    }
+  }
 
   Future<void> _openPermissions(SharingMember member) async {
     await Navigator.of(context).push<void>(
@@ -76,12 +126,14 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           member: member,
           onRevoke: () {
             setState(() => _members.remove(member));
+            _persist();
             Navigator.of(context).pop();
             _toast('Đã thu hồi quyền truy cập của ${member.name}.');
           },
         ),
       ),
     );
+    await _persist();
     if (mounted) setState(() {});
   }
 
@@ -99,8 +151,10 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => InviteMemberScreen(
+          childId: _childId,
           onSendInvite: (contact) {
             setState(() => _pending.add('Lời mời · $contact'));
+            _persist();
           },
         ),
       ),
@@ -126,7 +180,12 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
-    appBar: _sharingAppBar(context, 'Chia sẻ hồ sơ bé'),
+    appBar: _sharingAppBar(
+      context,
+      _childId == null
+          ? 'Chia sẻ hồ sơ bé'
+          : 'Chia sẻ · ${DemoStore.instance.childById(_childId)?['full_name'] ?? 'Hồ sơ bé'}',
+    ),
     body: SafeArea(
       top: false,
       child: ListView(
@@ -157,6 +216,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
                   onTap: () => Navigator.of(context).push<void>(
                     MaterialPageRoute(
                       builder: (_) => InviteMemberScreen(
+                        childId: _childId,
                         startWithCode: true,
                         onSendInvite: (_) {},
                       ),
@@ -177,6 +237,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
               entries: _pending,
               onCancel: (entry) {
                 setState(() => _pending.remove(entry));
+                _persist();
                 _toast('Đã hủy lời mời.');
               },
             ),
@@ -357,12 +418,14 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
 
 class InviteMemberScreen extends StatefulWidget {
   const InviteMemberScreen({
+    this.childId,
     required this.onSendInvite,
     this.startWithCode = false,
     super.key,
   });
 
   final ValueChanged<String> onSendInvite;
+  final String? childId;
   final bool startWithCode;
 
   @override
@@ -433,9 +496,21 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
           const SizedBox(height: 14),
           if (_codeMode)
             _InviteCodeCard(
-              onCopy: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã sao chép mã mời: AN-4K9P-72')),
-              ),
+              childId: widget.childId,
+              onCopy: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: _demoSharingCode(widget.childId)),
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Đã sao chép mã test: ${_demoSharingCode(widget.childId)}',
+                      ),
+                    ),
+                  );
+                }
+              },
             )
           else ...[
             _SurfaceCard(
@@ -518,7 +593,9 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(builder: (_) => const AcceptInvitationScreen()),
+              MaterialPageRoute(
+                builder: (_) => AcceptInvitationScreen(childId: widget.childId),
+              ),
             ),
             icon: const Icon(Icons.mark_email_unread_outlined),
             label: const Text('Xem thử giao diện nhận lời mời'),
@@ -540,7 +617,8 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
 }
 
 class AcceptInvitationScreen extends StatefulWidget {
-  const AcceptInvitationScreen({super.key});
+  const AcceptInvitationScreen({super.key, this.childId});
+  final String? childId;
 
   @override
   State<AcceptInvitationScreen> createState() => _AcceptInvitationScreenState();
@@ -573,8 +651,8 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Bạn được mời cùng chăm sóc bé An',
+          Text(
+            'Bạn được mời cùng chăm sóc ${_demoSharingChild(widget.childId)?['full_name'] ?? 'bé An'}',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 21,
@@ -584,13 +662,13 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Nguyễn Minh Anh đã chia sẻ hồ sơ của bé với bạn.',
+          Text(
+            '${DemoStore.instance.signedIn ? DemoStore.instance.parent['fullName'] : 'Nguyễn Minh Anh'} · lời mời mô phỏng cục bộ.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 20),
-          const _InviteDetailsCard(),
+          _InviteDetailsCard(childId: widget.childId),
           const SizedBox(height: 12),
           const _InfoBanner(
             icon: Icons.lock_outline_rounded,
@@ -601,7 +679,11 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
             onPressed: () {
               setState(() => _accepted = true);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã tham gia hồ sơ bé An.')),
+                const SnackBar(
+                  content: Text(
+                    'Đã xem thử trạng thái chấp nhận lời mời. Chưa cấp quyền qua dịch vụ.',
+                  ),
+                ),
               );
             },
             style: _primaryButtonStyle(),
@@ -679,7 +761,7 @@ class SharedProfileSwitcherScreen extends StatefulWidget {
 
 class _SharedProfileSwitcherScreenState
     extends State<SharedProfileSwitcherScreen> {
-  int _selected = 1;
+  int _selected = 0;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -695,7 +777,14 @@ class _SharedProfileSwitcherScreenState
             text: 'Chọn hồ sơ bé bạn muốn mở. Quyền truy cập sẽ theo hồ sơ được chọn.',
           ),
           const SizedBox(height: 16),
-          for (var i = 0; i < 2; i++)
+          for (
+            var i = 0;
+            i <
+                (DemoStore.instance.signedIn
+                    ? DemoStore.instance.children.length
+                    : 2);
+            i++
+          )
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: InkWell(
@@ -726,7 +815,12 @@ class _SharedProfileSwitcherScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              i == 1 ? 'Bé An' : 'Bé Na',
+                              DemoStore.instance.signedIn
+                                  ? DemoStore.instance.children[i]['full_name']
+                                        as String
+                                  : i == 1
+                                  ? 'Bé An'
+                                  : 'Bé Na',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -735,7 +829,11 @@ class _SharedProfileSwitcherScreenState
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              i == 1
+                              DemoStore.instance.signedIn
+                                  ? DemoStore.instance.ageLabel(
+                                      DemoStore.instance.children[i],
+                                    )
+                                  : i == 1
                                   ? 'Được chia sẻ với bạn · 24 tháng'
                                   : 'Hồ sơ của bạn · 3 tuổi',
                               style: const TextStyle(
@@ -760,9 +858,29 @@ class _SharedProfileSwitcherScreenState
             ),
           const SizedBox(height: 12),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () async {
+              if (DemoStore.instance.signedIn &&
+                  DemoStore.instance.children.isNotEmpty) {
+                await DemoStore.instance.selectChild(
+                  DemoStore.instance.children[_selected]['id'] as String,
+                );
+                if (context.mounted) {
+                  Navigator.of(context).popUntil(
+                    (route) => route.settings.name == '/home' || route.isFirst,
+                  );
+                }
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
             style: _primaryButtonStyle(),
-            child: Text('Mở ${_selected == 1 ? 'Bé An' : 'Bé Na'}'),
+            child: Text(
+              'Mở ${DemoStore.instance.signedIn && DemoStore.instance.children.isNotEmpty
+                  ? DemoStore.instance.children[_selected]['full_name']
+                  : _selected == 1
+                  ? 'Bé An'
+                  : 'Bé Na'}',
+            ),
           ),
         ],
       ),
@@ -1033,14 +1151,24 @@ class _OwnerCard extends StatelessWidget {
   Widget build(BuildContext context) => _SurfaceCard(
     child: Row(
       children: [
-        const _AvatarBadge(initial: 'A', owner: true),
+        _AvatarBadge(
+          initial: DemoStore.instance.signedIn
+              ? (DemoStore.instance.parent['fullName'] as String).substring(
+                  0,
+                  1,
+                )
+              : 'A',
+          owner: true,
+        ),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nguyễn Minh Anh',
+                DemoStore.instance.signedIn
+                    ? DemoStore.instance.parent['fullName'] as String
+                    : 'Nguyễn Minh Anh',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -1787,7 +1915,8 @@ class _StaticPill extends StatelessWidget {
 }
 
 class _InviteCodeCard extends StatelessWidget {
-  const _InviteCodeCard({required this.onCopy});
+  const _InviteCodeCard({required this.onCopy, this.childId});
+  final String? childId;
   final VoidCallback onCopy;
 
   @override
@@ -1800,8 +1929,8 @@ class _InviteCodeCard extends StatelessWidget {
           color: AppColors.primaryDark,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Mã mời hồ sơ bé An',
+        Text(
+          'Mã mời test · ${_demoSharingChild(childId)?['full_name'] ?? 'Bé An'}',
           style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 10),
@@ -1811,8 +1940,8 @@ class _InviteCodeCard extends StatelessWidget {
             color: const Color(0xFFF5F7EF),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Text(
-            'AN-4K9P-72',
+          child: Text(
+            _demoSharingCode(childId),
             style: TextStyle(
               fontSize: 22,
               letterSpacing: 2,
@@ -1877,22 +2006,27 @@ class _InfoBanner extends StatelessWidget {
 }
 
 class _InviteDetailsCard extends StatelessWidget {
-  const _InviteDetailsCard();
+  const _InviteDetailsCard({this.childId});
+  final String? childId;
 
   @override
-  Widget build(BuildContext context) => const _SurfaceCard(
+  Widget build(BuildContext context) => _SurfaceCard(
     child: Column(
       children: [
         _DetailLine(
           icon: Icons.child_care_rounded,
           label: 'Hồ sơ được chia sẻ',
-          value: 'Bé An · 24 tháng',
+          value: _demoSharingChild(childId) == null
+              ? 'Bé An · 24 tháng'
+              : '${_demoSharingChild(childId)!['full_name']} · ${DemoStore.instance.ageLabel(_demoSharingChild(childId)!)}',
         ),
         Divider(height: 20, color: AppColors.border),
         _DetailLine(
           icon: Icons.person_outline_rounded,
           label: 'Người mời',
-          value: 'Nguyễn Minh Anh',
+          value: DemoStore.instance.signedIn
+              ? DemoStore.instance.parent['fullName'] as String
+              : 'Nguyễn Minh Anh',
         ),
         Divider(height: 20, color: AppColors.border),
         _DetailLine(
