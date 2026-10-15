@@ -8,9 +8,9 @@ import '../auth/parent_role.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({
-    this.fullName = 'Nguyễn Thị Hoa',
-    this.username = 'mai_nguyen',
-    this.email = 'ban@email.com',
+    this.fullName = 'Trần Lạc Quan',
+    this.username = 'quan_tran',
+    this.email = 'quan@email.com',
     this.phone = '0912345678',
     this.role = ParentRole.mother,
     super.key,
