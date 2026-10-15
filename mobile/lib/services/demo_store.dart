@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'who_bmi_reference.dart';
+import '../models/tooth.dart';
 
 /// Local, fictional test database. Never authenticates against a real service.
 class DemoStore extends ChangeNotifier {
@@ -199,6 +200,80 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
+  Map<String, DateTime> teeth(String id) => {
+    for (final r in (childById(id)?['teeth'] ?? []) as List)
+      r['toothId'] as String: DateTime.parse(r['date'] as String),
+  };
+
+  List<Map<String, dynamic>> vaccinations(String id) =>
+      ((childById(id)?['vaccinations'] ?? []) as List)
+          .map((r) => _copy(r as Map))
+          .toList();
+
+  Future<void> saveVaccination(String id, Map<String, dynamic> record) {
+    return saveVaccinations(id, [record]);
+  }
+
+  Future<void> saveVaccinations(String id, List<Map<String, dynamic>> records) {
+    final child = childById(id);
+    if (child == null) throw StateError('Không có quyền sửa hồ sơ');
+    final dob = DateTime.parse(child['date_of_birth'] as String);
+    final now = DateTime.now();
+    final ids = <String>{};
+    for (final record in records) {
+      if (!ids.add(record['id'] as String)) {
+        throw ArgumentError('Mũi tiêm bị trùng');
+      }
+      final date = DateTime.parse(record['date'] as String);
+      if (date.isBefore(DateTime(dob.year, dob.month, dob.day)) ||
+          (record['given'] == true &&
+              date.isAfter(DateTime(now.year, now.month, now.day)))) {
+        throw ArgumentError('Ngày tiêm không hợp lệ');
+      }
+    }
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      final list = c.putIfAbsent('vaccinations', () => <dynamic>[]) as List;
+      list.removeWhere((r) => ids.contains(r['id']));
+      list.addAll(records.map((record) => Map<String, dynamic>.from(record)));
+    });
+  }
+
+  Future<void> removeVaccination(String id, String doseId) {
+    if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      (c['vaccinations'] as List?)?.removeWhere((r) => r['id'] == doseId);
+    });
+  }
+
+  Future<void> saveTooth(String id, String toothId, DateTime date) {
+    final child = childById(id);
+    if (child == null) throw StateError('Không có quyền sửa hồ sơ');
+    final day = DateTime(date.year, date.month, date.day);
+    final now = DateTime.now();
+    final dob = DateTime.parse(child['date_of_birth'] as String);
+    if (!PrimaryTooth.all.any((t) => t.id == toothId) ||
+        day.isBefore(DateTime(dob.year, dob.month, dob.day)) ||
+        day.isAfter(DateTime(now.year, now.month, now.day))) {
+      throw ArgumentError('Ngày mọc hoặc vị trí răng không hợp lệ');
+    }
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      final records = c.putIfAbsent('teeth', () => <dynamic>[]) as List;
+      records.removeWhere((r) => r['toothId'] == toothId);
+      records.add({'toothId': toothId, 'date': day.toIso8601String()});
+    });
+  }
+
+  Future<void> removeTooth(String id, String toothId) {
+    if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      (c['teeth'] as List?)?.removeWhere((r) => r['toothId'] == toothId);
+    });
+  }
+
   Future<void> saveSharing(
     String id,
     List<Map<String, dynamic>> members,
@@ -246,6 +321,18 @@ class DemoStore extends ChangeNotifier {
         'date_of_birth': birth.toIso8601String(),
         'gestational_weeks': 40,
         'birth_weight_kg': 3.2,
+        'teeth': [
+          for (final t in PrimaryTooth.all)
+            if (t.eruptionMonths.$1 <= months)
+              {
+                'toothId': t.id,
+                'date': DateTime(
+                  birth.year,
+                  birth.month + t.eruptionMonths.$1,
+                  birth.day,
+                ).toIso8601String(),
+              },
+        ],
         'care': {
           'Lượng sữa': months < 12 ? '3/5 bữa' : '2/3 bữa',
           'Tiêm chủng': months < 12 ? 'Còn 1 mũi' : 'Đã cập nhật',

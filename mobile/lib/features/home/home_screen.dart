@@ -13,6 +13,8 @@ import '../navigation/app_bottom_navigation_bar.dart';
 import '../settings/settings_screen.dart';
 import '../child/child_profile_screen.dart';
 import '../growth/growth_screen.dart';
+import '../teething/teething_screen.dart';
+import '../vaccination/vaccination_screen.dart';
 
 class _HomeHeroPreview {
   const _HomeHeroPreview({
@@ -153,6 +155,22 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
 
   Future<void> _showOverview(String label) async {
     final child = DemoStore.instance.child;
+    if (label == 'Tiêm chủng' && child != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => VaccinationScreen(childId: child['id'] as String),
+        ),
+      );
+      return;
+    }
+    if (label == 'Mọc răng' && child != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => TeethingScreen(childId: child['id'] as String),
+        ),
+      );
+      return;
+    }
     final care = child?['care'] as Map?;
     final journal = child?['journal'] as Map?;
     final message = switch (label) {
@@ -969,9 +987,14 @@ class _CareCard extends StatelessWidget {
               _CareItem(
                 item: _Shortcut(
                   item.label,
-                  (DemoStore.instance.child?['care'] as Map?)?[item.label]
-                          as String? ??
-                      item.status,
+                  item.label == 'Tiêm chủng' && DemoStore.instance.child != null
+                      ? 'Đã tiêm ${DemoStore.instance.vaccinations(DemoStore.instance.child!['id'] as String).where((r) => r['given'] == true).length} mũi'
+                      : item.label == 'Mọc răng' &&
+                            DemoStore.instance.child != null
+                      ? 'Đã mọc ${DemoStore.instance.teeth(DemoStore.instance.child!['id'] as String).length}/20 răng'
+                      : (DemoStore.instance.child?['care'] as Map?)?[item.label]
+                                as String? ??
+                            item.status,
                   item.iconAsset,
                 ),
                 onTap: () => onTap(item.label),

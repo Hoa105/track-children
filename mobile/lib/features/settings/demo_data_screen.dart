@@ -40,7 +40,7 @@ class DemoDataScreen extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       Text(
-                        'ID: ${c['id']}\nNgày sinh: ${c['date_of_birth'].toString().split('T').first}\nGiới tính: ${c['gender'] == 'male' ? 'Bé trai' : 'Bé gái'}\nSố đo: ${store.records(c['id'] as String).length} lần\nThành viên: ${(c['members'] as List).length} · Lời mời: ${(c['pending'] as List).length}',
+                        'ID: ${c['id']}\nNgày sinh: ${c['date_of_birth'].toString().split('T').first}\nGiới tính: ${c['gender'] == 'male' ? 'Bé trai' : 'Bé gái'}\nSố đo: ${store.records(c['id'] as String).length} lần\nRăng đã mọc: ${store.teeth(c['id'] as String).length}/20\nThành viên: ${(c['members'] as List).length} · Lời mời: ${(c['pending'] as List).length}',
                       ),
                     ],
                   ),
@@ -52,7 +52,7 @@ class DemoDataScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Dữ liệu lưu cục bộ trên thiết bị. OTP, gửi lời mời, chuyển quyền, xóa tài khoản và sinh trắc chưa nối dịch vụ thật. Các mục chăm sóc/nhật ký trên Home hiện chỉ có dữ liệu tổng quan mẫu.',
+              'Dữ liệu lưu cục bộ trên thiết bị. OTP, gửi lời mời, chuyển quyền, xóa tài khoản và sinh trắc chưa nối dịch vụ thật. Mọc răng đã hỗ trợ ghi chép cục bộ; các mục chăm sóc khác/nhật ký hiện có dữ liệu tổng quan mẫu.',
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
