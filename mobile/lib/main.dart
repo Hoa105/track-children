@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'services/demo_store.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
@@ -8,7 +9,11 @@ import 'features/home/home_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/splash/start_screen.dart';
 
-void main() => runApp(const TrackChildrenApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DemoStore.instance.initialize();
+  runApp(const TrackChildrenApp());
+}
 
 class TrackChildrenApp extends StatefulWidget {
   const TrackChildrenApp({super.key});
@@ -21,6 +26,9 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
   void _showLoginAfterSplash() {
+    if (DemoStore.instance.signedIn) {
+      DemoStore.instance.logout();
+    }
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => AuthScreen(
@@ -47,6 +55,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       MaterialPageRoute<void>(
         builder: (_) =>
             HomeScreen(childName: childName, onLogout: _showLoginAfterSplash),
+        settings: const RouteSettings(name: '/home'),
       ),
       (_) => false,
     );
@@ -78,6 +87,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       MaterialPageRoute<void>(
         builder: (_) =>
             HomeScreen(childName: childName, onLogout: _showLoginAfterSplash),
+        settings: const RouteSettings(name: '/home'),
       ),
     );
   }
