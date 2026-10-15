@@ -7,7 +7,7 @@ Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu, kịch bả
 ## 1. Cài đặt
 
 ```powershell
-cd mobile_2
+cd mobile
 flutter pub get
 ```
 
@@ -26,8 +26,8 @@ flutter devices
 
 - **Chạy chỉ định thiết bị cụ thể:**
   ```powershell
-  # Chạy trên Android:
-  flutter run -d <android-device-id>
+  # Chạy trên Android, cài và mở app cho Owner (user 0):
+  flutter run -d <android-device-id> --device-user 0
 
   # Preview nhanh trên trình duyệt Chrome:
   flutter run -d chrome
@@ -49,6 +49,8 @@ flutter devices
 ## 3. Kiểm thử & Phân tích
 
 ### Android báo `Error type 3: Activity class ...MainActivity does not exist`
+
+Khi chạy trên máy thật bằng VS Code, chọn cấu hình **Mobile Android (user 0)** rồi nhấn F5. Cấu hình có sẵn khi mở thư mục gốc hoặc riêng thư mục `mobile`, và truyền `--device-user 0` cho Flutter để kiểm tra, cài đặt và mở app cho cùng một user, kể cả sau khi gỡ app rồi cài lại. Chọn thiết bị Android trước khi chạy cấu hình này. Với terminal, luôn dùng `flutter run -d <android-device-id> --device-user 0`; lệnh `flutter run` không kèm user vẫn có thể gặp lại lỗi trên máy nhiều user.
 
 Nếu thiết bị có nhiều user (Owner/Khách), APK có thể được cài cho user khác với user đang chạy. Kiểm tra bằng:
 

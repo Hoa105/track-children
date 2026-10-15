@@ -1,5 +1,19 @@
 # Bộ dữ liệu test đồng bộ
 
+## Hoạt động
+
+Trang khám phá mới ưu tiên thẻ “Hôm nay chơi gì?” với minh họa nhiều lớp, nền chuyển sắc, nút đổi gợi ý và “Cùng bé chơi”. Gợi ý nổi bật chỉ lấy hoạt động đã có nội dung riêng, sắp theo khoảng tuổi gần bé nhất. Bên dưới có chọn nhanh 5/10/15 phút, tối đa 4 gợi ý theo tuổi, các ô nhóm màu riêng và tối đa 3 trò đã từng thử. Danh sách đã thử chưa phải lịch sử theo ngày. Không đặt tỷ lệ hoàn thành toàn thư viện ở đầu trang.
+
+Thẻ phản hồi nhấn bằng thu nhẹ, trang đầu hiện bằng mờ/trượt, đổi gợi ý dùng AnimatedSwitcher, minh họa nổi bật nối sang chi tiết bằng Hero. Yêu thích có phản hồi co giãn, ghi nhận đổi biểu tượng xác nhận. Các hiệu ứng tùy chỉnh tắt khi hệ thống yêu cầu giảm chuyển động. Minh họa dùng asset khối đồ chơi có sẵn và icon vector nhiều lớp; không thêm phụ thuộc hoặc tải ảnh qua mạng.
+
+Home → Hoạt động mở thư viện 6 nhóm theo ID bé đang chọn. Gồm tổng quan tiến độ, danh sách nhóm, bộ lọc trạng thái/độ tuổi 0–36 tháng/thời lượng và sắp xếp theo tuổi bé hoặc chưa thực hiện trước. Mục có thời lượng “Theo bữa” chỉ xuất hiện khi không lọc thời lượng. Phù hợp tuổi ưu tiên khoảng tuổi chứa tuổi bé, sau đó khoảng gần nhất. Khoảng lọc tuổi lấy các hoạt động có khoảng tuổi giao nhau.
+
+Chi tiết có yêu thích và đánh dấu/bỏ đánh dấu; nút ghi nhận cố định dưới màn hình. Tiến độ lưu trong `completedActivities` theo ID bé, yêu thích trong `favoriteActivities` theo tài khoản. Dữ liệu cũ thiếu trường được coi là rỗng; Home hiển thị số đã thực hiện thực tế. Không tự hoàn thành theo tuổi, không tự tạo nhật ký. Chỉ hồ sơ tài khoản hiện tại được cập nhật; luồng nhận hồ sơ chia sẻ liên tài khoản chưa có trong DemoStore.
+
+Giao diện kế thừa phông ứng dụng, AppColors/AppLayout, nền kem, thẻ trắng bo góc 24; tiêu đề gần đen 700, số ghi nhận xanh đậm 700, trạng thái xanh 600 và thông tin phụ xám xanh. Chưa có phát âm thanh. Có nội dung riêng cho xếp khối, Con cò bé bé, Thỏ con đi chợ; các hoạt động khác ghi rõ hướng dẫn chi tiết đang được bổ sung, không dùng hướng dẫn xếp khối cho mọi loại như bản mẫu.
+
+Kiểm tra: `flutter test test/activities_test.dart test/home_actions_test.dart test/home_layout_test.dart test/demo_sync_test.dart`.
+
 Chạy app từ `mobile`. Dữ liệu hư cấu được tạo một lần, lưu trong SharedPreferences với khóa `synchronized_demo_v1`. Các lần mở sau giữ lại thay đổi; các khóa dữ liệu tăng trưởng cũ ngoài bộ test không bị xóa. Tuổi mẫu được tính theo ngày tạo dữ liệu, không đổi ngày sinh sau mỗi lần mở app.
 
 ## Đăng nhập
@@ -38,7 +52,21 @@ OTP trong luồng đăng ký/đổi số điện thoại dùng `123456`; không 
 
 Kho test phục vụ đồng bộ trên **một thiết bị**, chưa đồng bộ qua backend hoặc giữa hai máy. Các thao tác gửi email/SMS, chấp nhận lời mời để cấp quyền tài khoản khác, chuyển quyền sở hữu, xóa tài khoản thật, đăng nhập mạng xã hội, nhắc lịch hệ điều hành và khóa sinh trắc chưa được kết nối dịch vụ. Các màn hình xem thử của chúng không xác nhận tính đúng đắn của dịch vụ thật. Tùy chọn sinh trắc hiện chỉ lưu trạng thái mô phỏng.
 
-Lượng sữa, hoạt động và nhật ký trên Home mở bảng tổng quan theo bé; các trang ghi chép và chi tiết chức năng này chưa được triển khai. Bảng ghi rõ giới hạn. Tiêm chủng mở Sổ tiêm chủng riêng (xem bên dưới). Nút cộng mở bảng thao tác nhanh: “Thêm số đo” đi thẳng đến biểu mẫu tăng trưởng; ghi sữa và viết nhật ký hiện “Chưa khả dụng”. Thẻ cân nặng/chiều cao mở đúng tab theo dõi; mức thay đổi so với lần đo trước. Thông báo hiện trạng thái rỗng vì chưa kết nối nhắc lịch. Tab Khám phá hiện chỉ mở tổng quan giai đoạn tuổi.
+Lượng sữa trên Home mở công cụ ước tính theo cân nặng (xem bên dưới). Hoạt động mở danh sách nhóm theo bé. Nhật ký mở danh sách và các chức năng ghi chép, chi tiết. Tiêm chủng mở Sổ tiêm chủng riêng. Nút cộng mở bảng thao tác nhanh: “Thêm số đo” đi đến biểu mẫu tăng trưởng; “Viết nhật ký” mở biểu mẫu nhật ký; ghi sữa hiện “Chưa khả dụng”. Thẻ cân nặng/chiều cao mở đúng tab theo dõi; mức thay đổi so với lần đo trước. Chuông thông báo mở trung tâm nhắc lịch trong ứng dụng.
+
+## Thông báo trong ứng dụng
+
+Lấy lịch tiêm dự kiến từ cùng dữ liệu với sổ tiêm, gồm mũi bổ sung đã hẹn. Hiển thị lịch trong 7 ngày tới và lịch đã qua không quá 30 ngày chưa ghi nhận tiêm; không coi thiếu lịch sử là khẳng định bé chưa tiêm. Mũi đã ghi nhận tiêm không còn hiển thị. Lọc Tất cả/Chưa đọc, đọc tất cả và chạm mở sổ tiêm đúng bé. Trạng thái đọc lưu theo tài khoản; ID chứa bé, mũi, ngày hẹn và giai đoạn sắp tới/hôm nay/đã qua để lịch thay đổi có thể nhắc lại. Công tắc Thông báo & nhắc nhở trong Cài đặt tắt/bật danh sách và số chưa đọc trên chuông. Chưa tích hợp push hoặc nhắc lịch hệ điều hành khi ứng dụng đóng.
+
+## Lượng sữa
+
+Màn hình ban đầu hiển thị mức đặt sẵn **60 mL/cữ** (thể tích sữa sau pha, không phải khuyến nghị chung). Bấm **Tính theo cân nặng** mở màn hình nhập riêng cho cân nặng, số cữ và điều kiện áp dụng. Bấm **Tính lượng sữa** với dữ liệu hợp lệ sẽ quay về Lượng sữa và cập nhật thẻ chính bằng mL/cữ, tổng mL/ngày và số cữ. Quay lại khi chưa tính giữ nguyên kết quả trước đó. **Dùng mức mặc định** xóa kết quả tính thử và quay về 60 mL/cữ. Kết quả chỉ giữ trong phiên màn hình hiện tại.
+
+Home → Lượng sữa mở màn hình theo ID bé, điền cân nặng gần nhất có ngày đo. Sửa cân nặng chỉ để tính thử, không lưu số đo. Người dùng xác nhận bé đủ tháng/khỏe mạnh và hoàn toàn bú bình; nhập số cữ (mặc định 8). Kết quả = kg × 150 mL/ngày, chia số cữ, làm tròn hiển thị đến mL; không tính muỗng hoặc nước pha. Sửa đầu vào xóa kết quả cũ.
+
+Phạm vi công cụ: đủ 7 ngày đến dưới 6 tháng, từ 2,5 kg. Trường hợp ngoài phạm vi, sinh non/có bệnh/chưa rõ sức khỏe hoặc bú mẹ trực tiếp không xuất kết quả. Nguồn hệ số: WHO 2021, Infant and young child feeding, trang 51 (https://iris.who.int/handle/10665/346568). Giới hạn tuổi là phạm vi sản phẩm, tham khảo NHS (https://derbyshirefamilyhealthservice.nhs.uk/our-services/0-5-years/infant-feeding-and-nutrition/formula-feeding), không gán cho WHO. Công cụ không kê lượng sữa bắt buộc, không tính sữa bổ sung khi bú mẹ trực tiếp.
+
+Chữ theo Theo dõi: tiêu đề gần đen 700, số nhập xanh đậm 700, số ước tính tím, lựa chọn xanh 600, thông tin phụ xám xanh. Kiểm tra: `flutter test test/milk_calculator_test.dart test/milk_calculator_screen_test.dart test/home_actions_test.dart test/home_layout_test.dart`.
 
 Thông tin đăng nhập được lưu dạng rõ **chỉ trong kho test hư cấu này**, không phải kiến trúc xác thực để dùng thật. Không nhập dữ liệu thật vào bộ test.
 
@@ -83,3 +111,7 @@ Ghi nhận mũi có sẵn bằng cách chạm mũi trong Theo tuổi/Vắc-xin �
 Trường `vaccinations` lưu theo ID bé trong SharedPreferences; dữ liệu cũ thiếu trường được coi là rỗng, không suy diễn lịch sử tiêm từ chuỗi tổng quan. Home hiển thị số mũi thực tế đã ghi nhận. Lịch mẫu kế thừa từ `mobile_1`, tính ngày dự kiến theo ngày sinh; cần đối chiếu với cơ sở tiêm chủng trước khi sử dụng thực tế. Nhắc lịch hệ điều hành chưa được triển khai.
 
 Kiểm tra: `flutter test test/vaccination_test.dart test/vaccination_history_test.dart test/home_actions_test.dart test/home_layout_test.dart test/demo_sync_test.dart`.
+
+## Nhật ký
+
+Nhật ký lưu trong `journalEntries` theo ID bé. Dữ liệu cũ từ `journal` được chuyển tiếp khi đọc; sau mỗi lần lưu/xóa, `journal` được cập nhật bằng bản ghi mới nhất để đồng bộ Trang chủ. Xóa hết sẽ giữ danh sách rỗng. Chỉ hồ sơ thuộc tài khoản hiện tại được truy cập; chưa có luồng nhận hồ sơ chia sẻ liên tài khoản. Danh sách hỗ trợ lọc ngày, thêm, xem, sửa, xóa có xác nhận. Nút Viết nhật ký trong ghi chép nhanh mở biểu mẫu. Ảnh camera/thư viện lưu cục bộ cùng bản ghi; cần kiểm tra quyền trên thiết bị thật.
