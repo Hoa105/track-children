@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'who_bmi_reference.dart';
 import '../models/tooth.dart';
+import '../models/activity.dart';
 
 /// Local, fictional test database. Never authenticates against a real service.
 class DemoStore extends ChangeNotifier {
@@ -197,6 +198,117 @@ class DemoStore extends ChangeNotifier {
                 (b['_sequence'] ?? 0) as int,
               );
       });
+    });
+  }
+
+  List<Map<String, dynamic>> journalEntries(String childId) {
+    final child = childById(childId);
+    if (child == null) return [];
+    final saved = child['journalEntries'] as List?;
+    final legacy = child['journal'] as Map?;
+    final entries = saved != null
+        ? saved.map((e) => _copy(e as Map)).toList()
+        : legacy == null
+        ? <Map<String, dynamic>>[]
+        : [
+            {
+              ..._copy(legacy),
+              'id': 'legacy_$childId',
+              'note': legacy['title'] ?? '',
+              'mood': 'Vui vẻ',
+              'domains': <String>[],
+            },
+          ];
+    entries.sort(
+      (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+    );
+    return entries;
+  }
+
+  Future<void> saveJournalEntry(String childId, Map<String, dynamic> entry) {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    final entries = journalEntries(childId);
+    final value = {...entry, 'childId': childId};
+    final index = entries.indexWhere((e) => e['id'] == entry['id']);
+    if (index < 0) {
+      entries.add(value);
+    } else {
+      entries[index] = value;
+    }
+    return _saveJournalEntries(childId, entries);
+  }
+
+  Future<void> deleteJournalEntry(String childId, String entryId) {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    return _saveJournalEntries(
+      childId,
+      journalEntries(childId)..removeWhere((e) => e['id'] == entryId),
+    );
+  }
+
+  Future<void> _saveJournalEntries(
+    String childId,
+    List<Map<String, dynamic>> entries,
+  ) {
+    entries.sort(
+      (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+    );
+    return saveChild(childId, {
+      'journalEntries': entries,
+      'journal': entries.isEmpty
+          ? null
+          : {
+              ...entries.first,
+              'title': entries.first['note'],
+              'category':
+                  (entries.first['domains'] as List?)?.join(' · ') ?? 'Nhật ký',
+            },
+    }).then((_) {});
+  }
+
+  Set<String> completedActivities(String childId) => Set<String>.from(
+    childById(childId)?['completedActivities'] as List? ?? [],
+  );
+
+  Set<String> get favoriteActivities =>
+      Set<String>.from(parent['favoriteActivities'] as List? ?? []);
+
+  Future<void> setActivityDone(String childId, String activityId, bool done) {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa hồ sơ');
+    }
+    if (!activityCatalog.any((a) => a.id == activityId)) {
+      throw ArgumentError('Hoạt động không tồn tại');
+    }
+    return _write((d) {
+      final child = (d['children'] as List).firstWhere(
+        (c) => c['id'] == childId,
+      );
+      final ids = Set<String>.from(child['completedActivities'] as List? ?? []);
+      done ? ids.add(activityId) : ids.remove(activityId);
+      child['completedActivities'] = ids.toList();
+    });
+  }
+
+  Future<void> setActivityFavorite(String activityId, bool favorite) {
+    if (!signedIn) throw StateError('Vui lòng đăng nhập');
+    if (!activityCatalog.any((a) => a.id == activityId)) {
+      throw ArgumentError('Hoạt động không tồn tại');
+    }
+    final parentId = parent['id'];
+    return _write((d) {
+      final account = (d['parents'] as List).firstWhere(
+        (p) => p['id'] == parentId,
+      );
+      final ids = Set<String>.from(
+        account['favoriteActivities'] as List? ?? [],
+      );
+      favorite ? ids.add(activityId) : ids.remove(activityId);
+      account['favoriteActivities'] = ids.toList();
     });
   }
 
