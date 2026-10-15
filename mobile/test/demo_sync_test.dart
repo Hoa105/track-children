@@ -67,8 +67,8 @@ void main() {
     await store.login('demo@trackchildren.vn', DemoStore.password);
     await store.selectChild('child_an');
     await store.saveParent({
-      'fullName': 'Mẹ Hoa đã sửa',
-      'email': 'hoa.changed@example.test',
+      'fullName': 'Mẹ Quan đã sửa',
+      'email': 'quan.changed@example.test',
       'password': 'Changed123',
       'notifications': false,
     });
@@ -77,7 +77,7 @@ void main() {
     expect(store.childById('child_linh'), other);
     final restored = DemoStore();
     await restored.initialize();
-    expect(restored.parent['fullName'], 'Mẹ Hoa đã sửa');
+    expect(restored.parent['fullName'], 'Mẹ Quan đã sửa');
     expect(restored.parent['notifications'], false);
     expect(restored.childById('child_an')!['pending'], [
       'Lời mời · test@example.test',
@@ -88,7 +88,7 @@ void main() {
       false,
     );
     expect(
-      await restored.login('hoa.changed@example.test', 'Changed123'),
+      await restored.login('quan.changed@example.test', 'Changed123'),
       true,
     );
     final snapshot = restored.parent;
@@ -184,9 +184,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
       expect(find.text('demo@trackchildren.vn'), findsOneWidget);
-      await store.saveParent({'fullName': 'Mẹ Hoa cập nhật'});
+      await store.saveParent({'fullName': 'Mẹ Quan cập nhật'});
       await tester.pumpAndSettle();
-      expect(find.text('Mẹ Hoa cập nhật'), findsOneWidget);
+      expect(find.text('Mẹ Quan cập nhật'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await store.logout();

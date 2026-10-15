@@ -80,7 +80,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('quick action opens measurement form and dismisses cleanly', (
+  testWidgets('home plus opens measurement form directly', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -89,16 +89,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Tạo ghi chép'));
     await tester.pumpAndSettle();
-    expect(find.text('Ghi chép nhanh'), findsOneWidget);
-    expect(
-      tester
-          .widget<ListTile>(find.widgetWithText(ListTile, 'Ghi lượng sữa'))
-          .enabled,
-      isFalse,
-    );
-    await tester.tap(find.text('Thêm số đo'));
-    await tester.pumpAndSettle();
-    expect(find.byType(GrowthScreen), findsOneWidget);
+    expect(find.text('Ghi chép nhanh'), findsNothing);
+    expect(find.byType(GrowthScreen), findsNothing);
     expect(find.byType(TextFormField), findsWidgets);
     expect(tester.takeException(), isNull);
   });

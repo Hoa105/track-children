@@ -31,7 +31,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Hồ sơ bé'), findsOneWidget);
-        await tester.tap(find.text('✎ Sửa'));
+        await tester.tap(find.text('Sửa'));
         await tester.pumpAndSettle();
         expect(
           tester.widget<TextField>(find.byType(TextField).first).readOnly,
@@ -60,7 +60,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('✎ Sửa'));
+    await tester.tap(find.text('Sửa'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, ' ');
     await tester.tap(find.text('Lưu'));
@@ -88,7 +88,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('✎ Sửa'));
+    await tester.tap(find.text('Sửa'));
     await tester.pumpAndSettle();
     final weeks = find.byType(TextFormField).at(1);
     await tester.ensureVisible(weeks);
@@ -107,7 +107,7 @@ void main() {
     expect(saved?['gestational_weeks'], 36);
     expect(saved?['birth_weight_kg'], 2.85);
     expect(saved?['date_of_birth'], '2025-04-02');
-    expect(find.text('✎ Sửa'), findsOneWidget);
+    expect(find.text('Sửa'), findsOneWidget);
     await tester.ensureVisible(find.text('Người cùng theo dõi'));
     await tester.tap(find.text('Người cùng theo dõi'));
     await tester.pumpAndSettle();
