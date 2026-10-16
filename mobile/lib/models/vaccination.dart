@@ -2,11 +2,11 @@ enum VaccineStatus { done, due, overdue, upcoming }
 
 extension VaccineStatusX on VaccineStatus {
   String get label => switch (this) {
-        VaccineStatus.done => 'Đã tiêm',
-        VaccineStatus.due => 'Đến lịch',
-        VaccineStatus.overdue => 'Quá hạn',
-        VaccineStatus.upcoming => 'Sắp tới',
-      };
+    VaccineStatus.done => 'Đã tiêm',
+    VaccineStatus.due => 'Đến lịch',
+    VaccineStatus.overdue => 'Quá hạn',
+    VaccineStatus.upcoming => 'Sắp tới',
+  };
 }
 
 /// One dose in the vaccination schedule (a template row from the national
@@ -33,6 +33,7 @@ class VaccineDose {
 
   /// Custom doses only: where the appointment is (before it's given).
   final String appointmentPlace;
+  final String? groupId;
 
   const VaccineDose({
     required this.id,
@@ -44,13 +45,18 @@ class VaccineDose {
     this.note,
     this.scheduledDate,
     this.appointmentPlace = '',
+    this.groupId,
   });
 
   bool get isCustom => scheduledDate != null;
 
   /// Whole months from [dob] to [date], never negative — the [ageMonths] of a custom dose.
   static int monthsBetween(DateTime dob, DateTime date) {
-    final m = (date.year - dob.year) * 12 + date.month - dob.month - (date.day < dob.day ? 1 : 0);
+    final m =
+        (date.year - dob.year) * 12 +
+        date.month -
+        dob.month -
+        (date.day < dob.day ? 1 : 0);
     return m < 0 ? 0 : m;
   }
 
@@ -62,23 +68,28 @@ class VaccineDose {
     String? note,
     DateTime? scheduledDate,
     String? appointmentPlace,
-  }) =>
-      VaccineDose(
-        id: id,
-        name: name ?? this.name,
-        prevents: prevents ?? this.prevents,
-        doseLabel: doseLabel ?? this.doseLabel,
-        ageMonths: ageMonths ?? this.ageMonths,
-        offsetDays: offsetDays,
-        note: note ?? this.note,
-        scheduledDate: scheduledDate ?? this.scheduledDate,
-        appointmentPlace: appointmentPlace ?? this.appointmentPlace,
-      );
+  }) => VaccineDose(
+    id: id,
+    name: name ?? this.name,
+    prevents: prevents ?? this.prevents,
+    doseLabel: doseLabel ?? this.doseLabel,
+    ageMonths: ageMonths ?? this.ageMonths,
+    offsetDays: offsetDays,
+    note: note ?? this.note,
+    scheduledDate: scheduledDate ?? this.scheduledDate,
+    appointmentPlace: appointmentPlace ?? this.appointmentPlace,
+    groupId: groupId,
+  );
 
   String get ageLabel => ageMonths == 0 ? 'Sơ sinh' : '$ageMonths tháng';
 
   DateTime dueDate(DateTime dob) =>
-      scheduledDate ?? DateTime(dob.year, dob.month + ageMonths, dob.day).add(Duration(days: offsetDays));
+      scheduledDate ??
+      DateTime(
+        dob.year,
+        dob.month + ageMonths,
+        dob.day,
+      ).add(Duration(days: offsetDays));
 }
 
 /// A dose the parent has marked as given.
@@ -117,11 +128,19 @@ class ScheduledVaccine {
   });
 
   /// "Đến lịch" from 14 days before the due date, "Quá hạn" after 30 days.
-  static VaccineStatus statusFor(DateTime dueDate, VaccinationRecord? record, DateTime now) {
+  static VaccineStatus statusFor(
+    DateTime dueDate,
+    VaccinationRecord? record,
+    DateTime now,
+  ) {
     if (record != null) return VaccineStatus.done;
     final today = DateTime(now.year, now.month, now.day);
-    if (today.isAfter(dueDate.add(const Duration(days: 30)))) return VaccineStatus.overdue;
-    if (!today.isBefore(dueDate.subtract(const Duration(days: 14)))) return VaccineStatus.due;
+    if (today.isAfter(dueDate.add(const Duration(days: 30)))) {
+      return VaccineStatus.overdue;
+    }
+    if (!today.isBefore(dueDate.subtract(const Duration(days: 14)))) {
+      return VaccineStatus.due;
+    }
     return VaccineStatus.upcoming;
   }
 }

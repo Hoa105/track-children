@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "track_children" "\0"
+            VALUE "FileDescription", "Bé Lớn Khôn" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "track_children" "\0"
+            VALUE "InternalName", "Be Lon Khon" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "track_children.exe" "\0"
-            VALUE "ProductName", "track_children" "\0"
+            VALUE "OriginalFilename", "Be Lon Khon.exe" "\0"
+            VALUE "ProductName", "Bé Lớn Khôn" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
