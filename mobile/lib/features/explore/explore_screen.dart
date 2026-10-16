@@ -67,7 +67,10 @@ class ExploreScreen extends StatelessWidget {
                 ),
               );
             } else if (label == 'Tạo ghi chép') {
-              _open(context, JournalEditorScreen(childId: id));
+              openMeasurementFromHome(
+                context,
+                childName: child!['full_name'] as String,
+              );
             }
           },
         ),
