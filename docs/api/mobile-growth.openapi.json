@@ -1,0 +1,673 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Track Children - Mobile Growth API",
+    "version": "0.1.0",
+    "description": "Implemented growth contract; updated 2026-10-18. See mobile-growth.md for setup and mobile-growth-test-results.md for verification and limitations. Requires mobile authentication and child-profile APIs. JSON uses camelCase, UUID identifiers, YYYY-MM-DD measurement dates and UTC ISO 8601 timestamps. Fixed units: kg, cm and kg/m2. Resolve children by childId, never by name. Never upload demo data automatically. Owners have edit access; active members require growth view/edit permission. Validate both JWT and current session/account state using existing auth. Z-scores, percentiles, nutritional classification, offline sync and WHO-reference management are outside this version. BMI rounds to two decimals using ROUND_HALF_UP. Active measurement ages are recalculated when the owner updates birth date; a birth date after an active measurement is rejected."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1",
+      "description": "Local backend; growth routes are a design only"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Growth",
+      "description": "Weight, height/length, head circumference and derived BMI"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/children/{childId}/growth": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "operationId": "getChildGrowth",
+        "summary": "Read growth history and latest measurements",
+        "description": "Requires growth view/edit access or ownership. days is ordered by date ascending, with at least one active measurement per day. Deleted measurements are excluded. from/to are inclusive; an omitted bound is unbounded. Returns all records in range for charting without pagination in this version. summary is the latest active value per metric across ALL history, independent of the date filter; latest BMI is the latest same-day pair. Empty data returns days=[] and null summary entries. WHO reference curves are supplied by existing mobile assets, not this endpoint. Measurement unit must match metric: weight=kg, height/head_circumference=cm.",
+        "parameters": [
+          {
+            "name": "childId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Growth history, child metadata and latest summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/children/{childId}/growth/days/{date}": {
+      "put": {
+        "tags": [
+          "Growth"
+        ],
+        "operationId": "saveChildGrowthDay",
+        "summary": "Create or update measurements for one day",
+        "description": "Requires growth edit access or ownership. Atomically upsert supplied metrics by (childId, metric, date). This PUT explicitly updates only supplied metrics rather than replacing the entire day; omitted metrics remain unchanged. Repeating the same payload never creates duplicates. If a previous measurement was soft-deleted, create a new active record. Compute ageInDays from birth date and measurement date; never accept client age. BMI = weightKg / (heightCm / 100)^2 using active measurements from the SAME day only; round returned BMI to 2 decimals. Never combine different days. No manual BMI, automatic position conversion or nutritional classification. Return all active measurements for the day after saving; bmi=null if the pair is incomplete. Serialize concurrent writes; the last write in database serialization order wins for the same metric. HTTP response arrival order is not the database write order. Client reloads history/summary after writes. An optional note affects supplied metrics only; omit to preserve existing notes, null to clear. Missing permission is 404 for no view access and 403 for view-only access.",
+        "parameters": [
+          {
+            "name": "childId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGrowthDay"
+              },
+              "example": {
+                "weightKg": 8.4,
+                "height": {
+                  "value": 69.5,
+                  "measurePosition": "lying"
+                },
+                "headCircumferenceCm": 43.7,
+                "note": "Measured at home"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; both creation and update return 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthDay"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/children/{childId}/growth/measurements/{measurementId}": {
+      "delete": {
+        "tags": [
+          "Growth"
+        ],
+        "operationId": "deleteChildGrowthMeasurement",
+        "summary": "Soft-delete one measurement",
+        "description": "Requires growth edit access or ownership. Verify measurement belongs to childId. Set deleted_at/deleted_by in storage. Removing weight or height removes the derived BMI for that day when the pair becomes incomplete. Repeating deletion of an already deleted measurement belonging to this child returns 204; nonexistent or other-child IDs return 404. Client reloads history and summary. No view permission returns 404; view-only permission returns 403.",
+        "parameters": [
+          {
+            "name": "childId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "measurementId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted; no response body"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "ACCESS_TOKEN_INVALID, ACCESS_TOKEN_EXPIRED, SESSION_EXPIRED or SESSION_REVOKED; includes WWW-Authenticate: Bearer.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "WWW-Authenticate": {
+            "schema": {
+              "type": "string",
+              "const": "Bearer"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "ACCOUNT_UNAVAILABLE, or GROWTH_WRITE_FORBIDDEN for a member with view-only access.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "CHILD_NOT_FOUND or MEASUREMENT_NOT_FOUND. Deleted children and children without view access return 404 to avoid disclosing profiles.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Validation": {
+        "description": "VALIDATION_ERROR: invalid UUID/date, measurement before birth or after today in Asia/Ho_Chi_Minh, from > to, out-of-range value or missing height measurement position.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "DATABASE_UNAVAILABLE or AUTH_NOT_CONFIGURED (AUTH_SECRET must have at least 32 characters).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message",
+              "fields",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "Measurement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "metric",
+          "value",
+          "unit",
+          "measurePosition",
+          "measuredAt",
+          "ageInDays",
+          "note",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "weight",
+              "height",
+              "head_circumference"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "kg",
+              "cm"
+            ]
+          },
+          "measurePosition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "lying",
+              "standing",
+              null
+            ]
+          },
+          "measuredAt": {
+            "type": "string",
+            "format": "date"
+          },
+          "ageInDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BmiPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "measuredAt",
+          "value",
+          "unit",
+          "weightMeasurementId",
+          "heightMeasurementId"
+        ],
+        "properties": {
+          "measuredAt": {
+            "type": "string",
+            "format": "date"
+          },
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "const": "kg/m2"
+          },
+          "weightMeasurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "heightMeasurementId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GrowthDay": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "measuredAt",
+          "measurements",
+          "bmi"
+        ],
+        "properties": {
+          "measuredAt": {
+            "type": "string",
+            "format": "date"
+          },
+          "measurements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Measurement"
+            },
+            "maxItems": 3
+          },
+          "bmi": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BmiPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ChildContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "fullName",
+          "dateOfBirth",
+          "gender",
+          "growthAccess"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female"
+            ]
+          },
+          "growthAccess": {
+            "type": "string",
+            "enum": [
+              "view",
+              "edit"
+            ]
+          }
+        }
+      },
+      "LatestSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "weight",
+          "height",
+          "headCircumference",
+          "bmi"
+        ],
+        "properties": {
+          "weight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Measurement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "height": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Measurement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headCircumference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Measurement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bmi": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BmiPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "GrowthResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "child",
+          "range",
+          "days",
+          "summary"
+        ],
+        "properties": {
+          "child": {
+            "$ref": "#/components/schemas/ChildContext"
+          },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              }
+            }
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrowthDay"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/LatestSummary"
+          }
+        }
+      },
+      "HeightInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "measurePosition"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 250,
+            "multipleOf": 0.01
+          },
+          "measurePosition": {
+            "type": "string",
+            "enum": [
+              "lying",
+              "standing"
+            ]
+          }
+        }
+      },
+      "SaveGrowthDay": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "weightKg": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 200,
+            "multipleOf": 0.01
+          },
+          "height": {
+            "$ref": "#/components/schemas/HeightInput"
+          },
+          "headCircumferenceCm": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "multipleOf": 0.01
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "weightKg"
+            ]
+          },
+          {
+            "required": [
+              "height"
+            ]
+          },
+          {
+            "required": [
+              "headCircumferenceCm"
+            ]
+          }
+        ],
+        "description": "At least one measurement is required. Omitted measurements remain unchanged; measurement fields cannot be null. note applies only to supplied measurements: omit to preserve, null to clear. Maximum values mirror current UI input limits and are technical validation limits, not clinical thresholds."
+      }
+    }
+  }
+}

@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _accountController = TextEditingController(text: _demoEmail);
   final _passwordController = TextEditingController(text: _demoPassword);
   bool _obscurePassword = true;
-  bool _rememberMe = true;
   bool _isLoading = false;
   String? _previewError;
 
@@ -69,9 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
       valid = await DemoStore.instance.login(
         _accountController.text,
         _passwordController.text,
+        useServer: true,
       );
-    } catch (_) {
-      /* Error remains visible in the form. */
+    } catch (e) {
+      if (mounted) setState(() => _previewError = e.toString());
     }
     if (!mounted) return;
     if (valid) {
@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() {
       _isLoading = false;
-      _previewError = 'Thông tin chưa khớp tài khoản demo. Hãy dùng email và mật khẩu mẫu bên dưới.';
+      _previewError ??= 'Thông tin đăng nhập chưa đúng. Vui lòng kiểm tra lại.';
     });
   }
 
@@ -206,22 +206,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 alignment: WrapAlignment.spaceBetween,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (value) => setState(
-                                          () => _rememberMe = value ?? false,
-                                        ),
-                                        activeColor: AppColors.primary,
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                      const Flexible(
-                                        child: Text('Ghi nhớ đăng nhập'),
-                                      ),
-                                    ],
-                                  ),
                                   TextButton(
                                     onPressed: () =>
                                         _showUnavailable('Khôi phục mật khẩu'),

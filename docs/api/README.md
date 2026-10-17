@@ -2,6 +2,12 @@
 
 API contracts and integration documentation.
 
+## Mobile growth
+
+[Setup and API usage](mobile-growth.md), [OpenAPI JSON](mobile-growth.openapi.json),
+[test plan](mobile-growth-test-plan.md), [test results](mobile-growth-test-results.md).
+Tracks weight, height/length, head circumference and same-day BMI per child.
+
 ## Admin auth (`/admin/auth/*`)
 
 Web admin đang dùng bản mock có cùng chữ ký (`admin-web/src/core/authApi.js`). Khi backend

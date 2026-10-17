@@ -1,4 +1,12 @@
 # Miscellaneous
+.env
+.env.*
+!.env.example
+.venv/
+.test-deps/
+.auth-test-logs/
+.pytest_cache/
+__pycache__/
 *.class
 *.log
 *.pyc
@@ -62,3 +70,6 @@ node_modules/
 # Thư mục Flutter thừa ở gốc (app nằm trong mobile/)
 /android/
 /ios/
+
+.vscode/
+mobile_1/

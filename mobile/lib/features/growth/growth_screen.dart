@@ -1,4 +1,6 @@
 import '../../services/demo_store.dart';
+import '../../services/growth_api.dart';
+import '../../services/who_bmi_reference.dart';
 
 import 'dart:convert';
 import 'dart:math' as math;
@@ -17,6 +19,7 @@ Future<Map<String, dynamic>?> showMeasurementSheet(
   BuildContext context, {
   required List<Map<String, dynamic>> records,
   required bool isPreview,
+  Future<void> Function(Map<String, dynamic>)? onSave,
 }) => showModalBottomSheet<Map<String, dynamic>>(
   context: context,
   isScrollControlled: true,
@@ -26,7 +29,8 @@ Future<Map<String, dynamic>?> showMeasurementSheet(
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
   ),
-  builder: (_) => _MeasurementSheet(records: records, isPreview: isPreview),
+  builder: (_) =>
+      _MeasurementSheet(records: records, isPreview: isPreview, onSave: onSave),
 );
 
 Future<void> openMeasurementFromHome(
@@ -34,6 +38,13 @@ Future<void> openMeasurementFromHome(
   required String childName,
 }) async {
   final childId = DemoStore.instance.child?['id'] as String?;
+  if (GrowthApi.instance.signedIn &&
+      DemoStore.instance.child?['growthAccess'] != 'edit') {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bạn chỉ có quyền xem số đo của bé.')),
+    );
+    return;
+  }
   final key = 'growth_v1_$childName';
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -47,10 +58,15 @@ Future<void> openMeasurementFromHome(
       context,
       records: records,
       isPreview: false,
+      onSave: GrowthApi.instance.signedIn && childId != null
+          ? (r) => DemoStore.instance.addRecord(childId, r)
+          : null,
     );
     if (record == null || !context.mounted) return;
     if (childId != null) {
-      await DemoStore.instance.addRecord(childId, record);
+      if (!GrowthApi.instance.signedIn) {
+        await DemoStore.instance.addRecord(childId, record);
+      }
     } else {
       final next = [...records, record]
         ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
@@ -104,6 +120,26 @@ class _GrowthScreenState extends State<GrowthScreen> {
   bool _isPreview = false;
   String? _loadError;
   String get _key => 'growth_v1_${widget.childName}';
+  bool get _canEdit =>
+      !GrowthApi.instance.signedIn ||
+      DemoStore.instance.childById(_childId ?? '')?['growthAccess'] == 'edit';
+
+  bool _referenceAllowed(Map<String, dynamic> r) {
+    if (!GrowthApi.instance.signedIn) return true;
+    final birth = DateTime.tryParse(
+      DemoStore.instance
+              .childById(_childId ?? '')?['date_of_birth']
+              ?.toString() ??
+          '',
+    );
+    if (birth == null) return false;
+    final age = WhoBmiReference.ageMonths(
+      birth,
+      DateTime.parse(r['date'] as String),
+    );
+    return r['measurePosition'] == (age < 24 ? 'lying' : 'standing');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -141,14 +177,20 @@ class _GrowthScreenState extends State<GrowthScreen> {
   }
 
   Future<void> _load() async {
+    final childId = _childId;
     try {
+      if (childId != null && GrowthApi.instance.signedIn) {
+        await DemoStore.instance.refreshGrowth(childId);
+        if (!mounted || _childId != childId) return;
+      }
       final prefs = await SharedPreferences.getInstance();
       final data = _childId == null
           ? jsonDecode(prefs.getString(_key) ?? '[]') as List
           : DemoStore.instance.records(_childId!);
       if (mounted) {
         setState(() {
-          _isPreview = _childId == null && data.isEmpty;
+          _isPreview =
+              !GrowthApi.instance.signedIn && _childId == null && data.isEmpty;
           _records = _isPreview
               ? _previewRecords()
               : data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -201,26 +243,33 @@ class _GrowthScreenState extends State<GrowthScreen> {
 
   double? _value(Map<String, dynamic> r) {
     if (_tab < 3) return (r['v$_tab'] as num?)?.toDouble();
+    if (r.containsKey('bmi')) return (r['bmi'] as num?)?.toDouble();
     final w = (r['v0'] as num?)?.toDouble();
     final h = (r['v1'] as num?)?.toDouble();
     return w == null || h == null ? null : w / math.pow(h / 100, 2);
   }
 
   Future<void> _update() async {
-    if (_loading || _loadError != null) return;
+    if (_loading || _loadError != null || !_canEdit) return;
+    final childId = _childId;
     final record = await showMeasurementSheet(
       context,
       records: _records,
       isPreview: _isPreview,
+      onSave: GrowthApi.instance.signedIn && childId != null
+          ? (r) => DemoStore.instance.addRecord(childId, r)
+          : null,
     );
-    if (record == null || !mounted) return;
+    if (record == null || !mounted || childId != _childId) return;
     final next = [if (!_isPreview) ..._records, record]
       ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
     try {
       final prefs = await SharedPreferences.getInstance();
       bool saved;
       if (_childId != null) {
-        await DemoStore.instance.addRecord(_childId!, record);
+        if (!GrowthApi.instance.signedIn) {
+          await DemoStore.instance.addRecord(_childId!, record);
+        }
         saved = true;
       } else {
         saved = await prefs.setString(_key, jsonEncode(next));
@@ -294,6 +343,43 @@ class _GrowthScreenState extends State<GrowthScreen> {
     }
   }
 
+  Future<void> _deleteRecord(Map<String, dynamic> record) async {
+    final childId = _childId;
+    final measurementId = record['id$_tab'] as String?;
+    if (childId == null || measurementId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa số đo?'),
+        content: const Text('Số đo này sẽ được xóa khỏi lịch sử.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await DemoStore.instance.deleteMeasurement(childId, measurementId);
+      if (mounted && childId == _childId) {
+        setState(() {
+          _selected = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
   Duration get _motion => MediaQuery.disableAnimationsOf(context)
       ? Duration.zero
       : const Duration(milliseconds: 220);
@@ -353,7 +439,9 @@ class _GrowthScreenState extends State<GrowthScreen> {
             child: Tooltip(
               message: 'Cập nhật số đo',
               child: FilledButton(
-                onPressed: _loading || _loadError != null ? null : _update,
+                onPressed: _loading || _loadError != null || !_canEdit
+                    ? null
+                    : _update,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -405,7 +493,24 @@ class _GrowthScreenState extends State<GrowthScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
-          ? Center(child: Text(_loadError!))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_loadError!),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _loading = true;
+                        _loadError = null;
+                      });
+                      _load();
+                    },
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            )
           : ListView(
               controller: _scroll,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
@@ -721,6 +826,9 @@ class _GrowthScreenState extends State<GrowthScreen> {
                             ][_tab],
                             childName: widget.childName,
                             childId: _childId,
+                            allowReference:
+                                (_tab != 1 && _tab != 3) ||
+                                visible.every(_referenceAllowed),
                             preview: _isPreview,
                             unit: units[_tab],
                             rangeStart: _customRange?.start,
@@ -784,6 +892,10 @@ class _GrowthScreenState extends State<GrowthScreen> {
                 ),
                 const SizedBox(height: 14),
                 WhoBmiCard(
+                  allowReference:
+                      _tab != 3 ||
+                      current == null ||
+                      _referenceAllowed(current),
                   previewAnchor: all.isEmpty
                       ? null
                       : DateTime.parse(all.last['date'] as String),
@@ -870,6 +982,16 @@ class _GrowthScreenState extends State<GrowthScreen> {
                                       ),
                                     )
                                   : null,
+                              leading:
+                                  GrowthApi.instance.signedIn &&
+                                      _canEdit &&
+                                      _tab < 3
+                                  ? IconButton(
+                                      tooltip: 'Xóa số đo',
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () => _deleteRecord(r),
+                                    )
+                                  : null,
                               trailing: Text(
                                 '${_value(r)!.toStringAsFixed(1)} ${units[_tab]}',
                                 style: const TextStyle(
@@ -938,7 +1060,12 @@ String _date(String raw) {
 }
 
 class _MeasurementSheet extends StatefulWidget {
-  const _MeasurementSheet({required this.records, required this.isPreview});
+  const _MeasurementSheet({
+    required this.records,
+    required this.isPreview,
+    this.onSave,
+  });
+  final Future<void> Function(Map<String, dynamic>)? onSave;
   final List<Map<String, dynamic>> records;
   final bool isPreview;
   @override
@@ -950,6 +1077,33 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
   final _controllers = List.generate(3, (_) => TextEditingController());
   DateTime _day = DateTime.now();
   String? _error;
+  String? _position;
+  bool _saving = false;
+  final Set<int> _dirty = {};
+
+  void _fillDay() {
+    _dirty.clear();
+    final match = widget.isPreview || widget.onSave == null
+        ? null
+        : widget.records
+              .where(
+                (r) =>
+                    r['date'].toString().substring(0, 10) ==
+                    _day.toIso8601String().substring(0, 10),
+              )
+              .firstOrNull;
+    for (var i = 0; i < 3; i++) {
+      _controllers[i].text = match?['v$i']?.toString() ?? '';
+    }
+    _position = match?['measurePosition'] as String?;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fillDay();
+  }
+
   @override
   void dispose() {
     for (final c in _controllers) {
@@ -958,18 +1112,47 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     if (!_form.currentState!.validate()) return;
     if (_controllers.every((c) => c.text.trim().isEmpty)) {
       setState(() => _error = 'Nhập ít nhất một số đo nhé.');
       return;
     }
-    Navigator.pop(context, <String, dynamic>{
+    if (widget.onSave != null &&
+        _controllers[1].text.trim().isNotEmpty &&
+        _dirty.contains(1) &&
+        _position == null) {
+      setState(() => _error = 'Chọn tư thế đo chiều cao.');
+      return;
+    }
+    final record = <String, dynamic>{
       'date': DateTime(_day.year, _day.month, _day.day).toIso8601String(),
       for (int i = 0; i < 3; i++)
-        if (_controllers[i].text.trim().isNotEmpty)
+        if (_controllers[i].text.trim().isNotEmpty &&
+            (widget.onSave == null || _dirty.contains(i)))
           'v$i': double.parse(_controllers[i].text.trim().replaceAll(',', '.')),
+      if (_position != null) 'measurePosition': _position,
+    };
+    if (!record.keys.any((k) => k.startsWith('v'))) {
+      setState(() => _error = 'Thay đổi ít nhất một số đo để lưu.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
     });
+    try {
+      await widget.onSave?.call(record);
+      if (mounted) Navigator.pop(context, record);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = e.toString();
+        });
+      }
+    }
   }
 
   Map<String, dynamic>? _latest(int metric) {
@@ -1090,7 +1273,11 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
             textInputAction: i < 2
                 ? TextInputAction.next
                 : TextInputAction.done,
-            onChanged: (_) => setState(() => _error = null),
+            enabled: !_saving,
+            onChanged: (_) => setState(() {
+              _dirty.add(i);
+              _error = null;
+            }),
             onFieldSubmitted: i == 2 ? (_) => _save() : null,
             decoration: InputDecoration(
               labelText: '${_GrowthScreenState.labels[i]} mới',
@@ -1118,6 +1305,7 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
               final v = double.tryParse(raw.trim().replaceAll(',', '.'));
               if (v == null ||
                   !v.isFinite ||
+                  (v * 100 - (v * 100).round()).abs() > 0.000001 ||
                   v <= 0 ||
                   v > [200, 250, 100][i]) {
                 return 'Vui lòng nhập số đo hợp lệ';
@@ -1212,12 +1400,39 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
                               lastDate: DateTime.now(),
                             );
                             if (day != null && mounted) {
-                              setState(() => _day = day);
+                              setState(() {
+                                _day = day;
+                                _fillDay();
+                              });
                             }
                           },
                         ),
                         const SizedBox(height: 16),
                         for (var i = 0; i < 3; i++) _input(i),
+                        if (widget.onSave != null)
+                          DropdownButtonFormField<String>(
+                            key: ValueKey('position-$_day'),
+                            initialValue: _position,
+                            decoration: const InputDecoration(
+                              labelText: 'Tư thế đo chiều cao',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'lying',
+                                child: Text('Đo nằm'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'standing',
+                                child: Text('Đo đứng'),
+                              ),
+                            ],
+                            onChanged: _saving
+                                ? null
+                                : (value) => setState(() {
+                                    _position = value;
+                                    _dirty.add(1);
+                                  }),
+                          ),
                         AnimatedSwitcher(
                           duration: _motion,
                           layoutBuilder: _switcherLayout,

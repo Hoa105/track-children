@@ -45,6 +45,8 @@ services:
       - ./backend/.env.example
     environment:
       DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     depends_on:
       db:
         condition: service_healthy

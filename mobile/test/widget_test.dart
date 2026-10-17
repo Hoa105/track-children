@@ -195,14 +195,15 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('12,5 kg'), findsOneWidget);
-    expect(find.text('85 cm'), findsOneWidget);
+    expect(find.text('Chưa có số đo'), findsWidgets);
+    expect(find.text('12,5 kg'), findsNothing);
+    expect(find.text('85 cm'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Bé ăn ngon hơn'),
+      find.text('Chưa có nhật ký'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Bé ăn ngon hơn'), findsOneWidget);
+    expect(find.text('Chưa có nhật ký'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

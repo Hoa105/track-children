@@ -13,6 +13,7 @@ class WhoBmiCard extends StatefulWidget {
     this.measurementLabel,
     this.childId,
     this.compact = false,
+    this.allowReference = true,
     this.onProfileChanged,
     required this.childName,
     required this.preview,
@@ -25,6 +26,7 @@ class WhoBmiCard extends StatefulWidget {
   final DateTime? previewAnchor;
   final String? childId;
   final bool compact;
+  final bool allowReference;
   final VoidCallback? onProfileChanged;
   final bool preview;
   final DateTime? measured;
@@ -107,6 +109,14 @@ class _WhoBmiCardState extends State<WhoBmiCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.allowReference) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'Chưa đối chiếu BMI với WHO: kiểm tra tư thế đo chiều cao.',
+        ),
+      );
+    }
     // Preview always uses a separate, explicit example rather than real metadata.
     final sex = widget.preview ? 'boys' : _sex;
     final anchor = widget.previewAnchor;

@@ -16,6 +16,7 @@ class GrowthChart extends StatefulWidget {
     this.rangeEnd,
     this.previewAnchor,
     this.childId,
+    this.allowReference = true,
     required this.values,
     required this.dates,
     required this.metric,
@@ -25,6 +26,7 @@ class GrowthChart extends StatefulWidget {
     super.key,
   });
   final String? childId;
+  final bool allowReference;
   final int? selectedIndex, highlightIndex;
   final ValueChanged<int>? onSelected;
   final DateTime? rangeStart, rangeEnd, previewAnchor;
@@ -91,7 +93,10 @@ class _GrowthChartState extends State<GrowthChart> {
   @override
   Widget build(BuildContext context) {
     final samples = <WhoChartReferencePoint>[];
-    if (_birth != null && _sex != null && _reference != null) {
+    if (widget.allowReference &&
+        _birth != null &&
+        _sex != null &&
+        _reference != null) {
       final first = widget.rangeStart ?? widget.dates.first;
       final last = widget.rangeEnd ?? widget.dates.last;
       final dates = <DateTime>{first, last};
@@ -134,6 +139,11 @@ class _GrowthChartState extends State<GrowthChart> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!widget.allowReference)
+          const Text(
+            'Chưa đối chiếu WHO: kiểm tra tư thế đo chiều cao.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
         SizedBox(
           height: 220,
           child: LayoutBuilder(

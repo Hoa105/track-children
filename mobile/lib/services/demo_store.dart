@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'who_bmi_reference.dart';
+import 'growth_api.dart';
 import '../models/tooth.dart';
 import '../models/activity.dart';
 
@@ -23,6 +24,7 @@ class DemoStore extends ChangeNotifier {
   bool _loaded = false;
   Future<void>? _loading;
   Future<void>? _queue;
+  final Map<String, int> _growthRevisions = {};
   Map<String, dynamic> _copy(Map value) =>
       Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
   List<Map<String, dynamic>> get _parents =>
@@ -95,14 +97,55 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
-  Future<bool> login(String email, String pass) async {
+  Future<bool> login(
+    String email,
+    String pass, {
+    bool useServer = false,
+  }) async {
     await initialize();
     final matches = _parents.where(
       (p) =>
           (p['email'] as String).toLowerCase() == email.trim().toLowerCase() &&
           p['password'] == pass,
     );
-    if (matches.isEmpty) return false;
+    if (matches.isEmpty) {
+      if (!useServer) return false;
+      if (_parents.any(
+        (p) =>
+            p.containsKey('password') &&
+            p['email'].toString().toLowerCase() == email.trim().toLowerCase(),
+      )) {
+        return false;
+      }
+      await GrowthApi.instance.login(email, pass);
+      final api = GrowthApi.instance;
+      final owner = api.user!['id'] as String;
+      final result = await api.request('GET', '/children');
+      final profiles = (result['children'] as List)
+          .map(
+            (c) => GrowthApi.childFromApi(
+              Map<String, dynamic>.from(c as Map),
+              owner,
+            ),
+          )
+          .toList();
+      await _write((d) {
+        (d['parents'] as List).removeWhere((p) => p['id'] == owner);
+        (d['parents'] as List).add({
+          'id': owner,
+          'fullName': api.user!['fullName'],
+          'email': email,
+          'notifications': true,
+          'biometric': false,
+        });
+        (d['children'] as List).removeWhere((c) => c['parentId'] == owner);
+        (d['children'] as List).addAll(profiles);
+        d['parentId'] = owner;
+        d['childId'] = null;
+      });
+      return true;
+    }
+    GrowthApi.instance.clear();
     final id = matches.first['id'];
     await _write((d) {
       d['parentId'] = id;
@@ -111,15 +154,25 @@ class DemoStore extends ChangeNotifier {
     return true;
   }
 
-  Future<void> logout() => _write((d) {
-    d['parentId'] = null;
-    d['childId'] = null;
-  });
-  Future<void> selectChild(String id) {
+  Future<void> logout() async {
+    final logout = GrowthApi.instance.logout().catchError((_) {});
+    await _write((d) {
+      d['parentId'] = null;
+      d['childId'] = null;
+    });
+    try {
+      await logout;
+    } catch (_) {
+      /* Local session is already cleared. */
+    }
+  }
+
+  Future<void> selectChild(String id) async {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
     }
-    return _write((d) => d['childId'] = id);
+    if (GrowthApi.instance.signedIn) await refreshGrowth(id);
+    await _write((d) => d['childId'] = id);
   }
 
   Future<void> saveParent(Map<String, Object?> fields) => _write((d) {
@@ -155,6 +208,39 @@ class DemoStore extends ChangeNotifier {
     d['childId'] = null;
   });
   Future<String> saveChild(String? id, Map<String, Object?> fields) async {
+    if (id != null &&
+        childById(id)?['server'] == true &&
+        !GrowthApi.instance.signedIn) {
+      throw GrowthApiException('SESSION_EXPIRED');
+    }
+    if (GrowthApi.instance.signedIn) {
+      if (_data['parentId'] != GrowthApi.instance.user?['id']) {
+        throw GrowthApiException('SESSION_CHANGED');
+      }
+      final owner = _data['parentId'];
+      final result = await GrowthApi.instance.request(
+        id == null ? 'POST' : 'PUT',
+        id == null ? '/children' : '/children/$id',
+        {
+          'fullName': fields['full_name'],
+          'dateOfBirth': fields['date_of_birth'],
+          'gender': fields['gender'],
+          'gestationalWeeks': fields['gestational_weeks'],
+          'birthWeightKg': fields['birth_weight_kg'],
+        },
+      );
+      final next = GrowthApi.childFromApi(result, owner as String);
+      await _write((d) {
+        if (d['parentId'] != owner) return;
+        final list = d['children'] as List;
+        final old = list.where((c) => c['id'] == result['id']).firstOrNull;
+        if (old != null) next['records'] = old['records'];
+        list.removeWhere((c) => c['id'] == result['id']);
+        list.add(next);
+        if (id == null) d['childId'] = result['id'];
+      });
+      return result['id'] as String;
+    }
     final childId = id ?? 'child_${DateTime.now().microsecondsSinceEpoch}';
     if (id != null && childById(id) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
@@ -182,9 +268,60 @@ class DemoStore extends ChangeNotifier {
       ((childById(id)?['records'] ?? []) as List)
           .map((r) => _copy(r as Map))
           .toList();
-  Future<void> addRecord(String id, Map<String, dynamic> record) {
+  Future<void> refreshGrowth(String id) async {
+    if (!GrowthApi.instance.signedIn) return;
+    final owner = _data['parentId'];
+    final key = '$owner:$id';
+    final revision = (_growthRevisions[key] ?? 0) + 1;
+    _growthRevisions[key] = revision;
+    final result = await GrowthApi.instance.request(
+      'GET',
+      '/children/$id/growth',
+    );
+    await _write((d) {
+      if (d['parentId'] != owner || _growthRevisions[key] != revision) return;
+      final profiles = d['children'] as List;
+      final c = profiles
+          .where((c) => c['id'] == id && c['parentId'] == owner)
+          .firstOrNull;
+      if (c == null) return;
+      c.addAll({
+        'records': GrowthApi.recordsFromApi(result),
+        'full_name': result['child']['fullName'],
+        'gender': result['child']['gender'],
+        'date_of_birth': result['child']['dateOfBirth'],
+        'growthAccess': result['child']['growthAccess'],
+      });
+    });
+  }
+
+  Future<void> deleteMeasurement(String childId, String measurementId) async {
+    await GrowthApi.instance.request(
+      'DELETE',
+      '/children/$childId/growth/measurements/$measurementId',
+    );
+    await refreshGrowth(childId);
+  }
+
+  Future<void> addRecord(String id, Map<String, dynamic> record) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa số đo');
-    return _write((d) {
+    if (childById(id)?['server'] == true && !GrowthApi.instance.signedIn) {
+      throw GrowthApiException('SESSION_EXPIRED');
+    }
+    if (GrowthApi.instance.signedIn) {
+      if (childById(id)?['server'] != true ||
+          _data['parentId'] != GrowthApi.instance.user?['id']) {
+        throw GrowthApiException('SESSION_CHANGED');
+      }
+      await GrowthApi.instance.request(
+        'PUT',
+        '/children/$id/growth/days/${record['date'].toString().substring(0, 10)}',
+        GrowthApi.dayPayload(record),
+      );
+      await refreshGrowth(id);
+      return;
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       (c['records'] as List).add({
         ...record,

@@ -20,6 +20,24 @@ class ChildProfileSelectionScreen extends StatefulWidget {
 
 class _SelectionState extends State<ChildProfileSelectionScreen>
     with DemoStoreBinding {
+  bool _selecting = false;
+
+  Future<void> _select(Map<String, dynamic> child) async {
+    if (_selecting) return;
+    setState(() => _selecting = true);
+    try {
+      await DemoStore.instance.selectChild(child['id'] as String);
+      if (mounted) widget.onSelectChild(child['full_name'] as String);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _selecting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -48,6 +66,7 @@ class _SelectionState extends State<ChildProfileSelectionScreen>
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 24),
+                  if (_selecting) const LinearProgressIndicator(),
                   if (!DemoStore.instance.signedIn)
                     _ChildProfileCard(
                       onTap: () => widget.onSelectChild('Bé An'),
@@ -58,14 +77,7 @@ class _SelectionState extends State<ChildProfileSelectionScreen>
                       child: _ChildProfileCard(
                         name: child['full_name'] as String,
                         age: DemoStore.instance.ageLabel(child),
-                        onTap: () async {
-                          await DemoStore.instance.selectChild(
-                            child['id'] as String,
-                          );
-                          if (context.mounted) {
-                            widget.onSelectChild(child['full_name'] as String);
-                          }
-                        },
+                        onTap: () => _select(child),
                       ),
                     ),
                   const SizedBox(height: 12),
