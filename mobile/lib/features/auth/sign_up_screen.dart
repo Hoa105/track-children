@@ -1,4 +1,4 @@
-import '../../services/demo_store.dart';
+import '../../services/auth_service.dart';
 
 import 'package:flutter/material.dart';
 
@@ -48,19 +48,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  String? _validateName(String? value) => (value?.trim().isNotEmpty ?? false)
+  String? _validateName(String? value) => (value?.trim().isNotEmpty ?? false) && value!.trim().length <= 150
       ? null
-      : 'Vui lòng nhập tên hiển thị.';
+      : 'Tên hiển thị cần có 1–150 ký tự.';
 
   String? _validateUsername(String? value) =>
-      (value?.trim().isNotEmpty ?? false)
+      RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch((value ?? '').trim().toLowerCase())
       ? null
-      : 'Vui lòng nhập tên đăng nhập.';
+      : 'Tên người dùng gồm 3–30 ký tự: a-z, 0-9, _ hoặc dấu chấm.';
 
   String? _validatePhone(String? value) {
-    final phone = (value ?? '').replaceAll(RegExp(r'[\s()-]'), '');
+    var phone = (value ?? '').replaceAll(RegExp(r'[\s()-]'), '');
     if (phone.isEmpty) return 'Vui lòng nhập số điện thoại.';
-    if (!RegExp(r'^\+?\d{9,15}$').hasMatch(phone)) {
+    if (phone.startsWith('0')) phone = '+84${phone.substring(1)}';
+    if (!RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(phone)) {
       return 'Số điện thoại chưa đúng định dạng.';
     }
     return null;
@@ -69,7 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Vui lòng nhập email.';
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+    if (email.length > 254 || !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
       return 'Email chưa đúng định dạng.';
     }
     return null;
@@ -77,7 +78,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu.';
-    if (value.length < 6) return 'Mật khẩu cần có ít nhất 6 ký tự.';
+    if (value.length < 10 || value.length > 128) {
+      return 'Mật khẩu cần có 10–128 ký tự.';
+    }
     return null;
   }
 
@@ -88,6 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     FocusScope.of(context).unfocus();
     final isFormValid = _formKey.currentState!.validate();
     setState(() {
@@ -98,31 +102,68 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!isFormValid) return;
 
     setState(() => _isSubmitting = true);
-    final otpVerified = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => OtpDialog(phone: _phoneController.text),
-    );
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    if (otpVerified != true) return;
     try {
-      await DemoStore.instance.register({
+      final docs = await AuthService.instance.documents();
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Điều khoản và chính sách'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final doc in docs)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      '${doc['docType']} — ${doc['version']}\n${doc['content']}',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Đồng ý điều khoản bắt buộc'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true) return;
+      if (!mounted) return;
+      setState(() => _isSubmitting = true);
+      final challenge = await AuthService.instance.register({
         'fullName': _nameController.text.trim(),
         'username': _usernameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
         'password': _passwordController.text,
-        'role': _parentRole.name,
+        'relationship': _parentRole.name,
+        'consents': [
+          for (final doc in docs.where((d) => d['isRequired'] == true))
+            {'documentId': doc['id'], 'isAccepted': true},
+        ],
       });
-      if (mounted) widget.onChildProfilePreview();
-    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      final verified = await showOtpVerificationDialog(
+        context,
+        challenge: challenge,
+      );
+      if (mounted && verified == true) widget.onChildProfilePreview();
+    } catch (e) {
       if (mounted) {
-        setState(
-          () => _previewMessage =
-              'Chưa tạo được tài khoản test. Email có thể đã được dùng.',
-        );
+        setState(() => _previewMessage = e.toString());
       }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
