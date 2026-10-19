@@ -173,7 +173,7 @@ void main() {
     expect(DemoStore.instance.parent['email'], 'new.parent@example.test');
     expect(DemoStore.instance.children, isEmpty);
   });
-  testWidgets('standalone Home presents its preview and shortcuts', (
+  testWidgets('standalone Home shows empty data and shortcuts without a child', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -195,14 +195,16 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('12,5 kg'), findsOneWidget);
-    expect(find.text('85 cm'), findsOneWidget);
+    expect(find.text('Chưa có số đo'), findsWidgets);
+    expect(find.text('12,5 kg'), findsNothing);
+    expect(find.text('85 cm'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Bé ăn ngon hơn'),
+      find.text('Chưa có nhật ký'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Bé ăn ngon hơn'), findsOneWidget);
+    expect(find.text('Chọn hồ sơ để xem nhật ký'), findsOneWidget);
+    expect(find.text('Bé ăn ngon hơn'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

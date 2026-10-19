@@ -31,7 +31,7 @@ class VaccinationTabs extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFECEEE8),
+        color: AppColors.primarySoft,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -39,7 +39,7 @@ class VaccinationTabs extends StatelessWidget {
           for (final (i, text) in ['Theo tuổi', 'Vắc-xin', 'Đã tiêm'].indexed)
             Expanded(
               child: Material(
-                color: index == i ? Colors.white : Colors.transparent,
+                color: index == i ? AppColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -63,8 +63,8 @@ class VaccinationTabs extends StatelessWidget {
                                 ?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: index == i
-                                      ? AppColors.primaryDark
-                                      : AppColors.textSecondary,
+                                      ? Colors.white
+                                      : AppColors.primaryDark,
                                 ),
                           ),
                         ),
