@@ -1,4 +1,5 @@
 import '../../services/demo_store.dart';
+import '../../services/auth_service.dart';
 
 import 'package:flutter/material.dart';
 
@@ -37,6 +38,10 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
   }
 
   Future<void> _changePassword() async {
+    if (AuthService.instance.signedIn) {
+      _toast('Đổi mật khẩu chưa được hỗ trợ trong phiên bản này.');
+      return;
+    }
     final changed = await showDialog<String>(
       context: context,
       builder: (_) => const _ChangePasswordDialog(),

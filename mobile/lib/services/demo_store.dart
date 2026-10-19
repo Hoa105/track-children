@@ -125,6 +125,29 @@ class DemoStore extends ChangeNotifier {
     d['parentId'] = null;
     d['childId'] = null;
   });
+
+  /// Local feature cache for a server-authenticated user, without credentials.
+  Future<void> bindAuthenticatedUser(Map<String, dynamic> user) => _write((d) {
+    final parents = d['parents'] as List;
+    final existing = parents.where((p) => p['id'] == user['id']).firstOrNull;
+    parents.removeWhere((p) => p['id'] == user['id']);
+    parents.add(<String, dynamic>{
+      ...?existing,
+      ...user,
+      'role': user['relationship'] ?? 'guardian',
+      'notifications': existing?['notifications'] ?? true,
+      'biometric': existing?['biometric'] ?? false,
+    });
+    d['parentId'] = user['id'];
+    d['childId'] = null;
+  });
+
+  Future<void> clearAuthenticatedCache() => _write((d) {
+    // Child features are still local: do not delete authored data on logout.
+    // Clear active selections; reads remain scoped to the authenticated owner.
+    d['parentId'] = null;
+    d['childId'] = null;
+  });
   Future<void> selectChild(String id) {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');

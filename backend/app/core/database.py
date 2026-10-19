@@ -1,6 +1,10 @@
 """PostgreSQL connection pool (psycopg2) shared by API features."""
 
+from contextlib import contextmanager
 from collections.abc import Iterator
+
+import psycopg
+from psycopg.rows import dict_row
 from threading import Lock
 
 from psycopg2.extensions import connection as Connection
@@ -32,3 +36,12 @@ def get_db() -> Iterator[Connection]:
     finally:
         conn.rollback()  # đóng transaction đọc còn mở trước khi trả về pool
         pool.putconn(conn)
+
+
+# Auth uses psycopg 3 transactions, separate from the existing feature pool.
+@contextmanager
+def transaction():
+    with psycopg.connect(
+        settings.database_url, row_factory=dict_row, connect_timeout=5
+    ) as conn:
+        yield conn

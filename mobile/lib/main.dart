@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'services/demo_store.dart';
+<<<<<<< HEAD
+import 'services/auth_service.dart';
+=======
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
+>>>>>>> origin/develop
 import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
@@ -14,6 +18,10 @@ import 'features/splash/start_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DemoStore.instance.initialize();
+<<<<<<< HEAD
+  await DemoStore.instance.logout();
+  await AuthService.instance.restore();
+=======
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
   // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.
@@ -22,6 +30,7 @@ Future<void> main() async {
   for (final child in DemoStore.instance.children) {
     DemoStore.instance.syncVaccinations(child['id'] as String);
   }
+>>>>>>> origin/develop
   runApp(const TrackChildrenApp());
 }
 
@@ -35,9 +44,30 @@ class TrackChildrenApp extends StatefulWidget {
 class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
-  void _showLoginAfterSplash() {
-    if (DemoStore.instance.signedIn) {
-      DemoStore.instance.logout();
+  Future<void> _logout() async {
+    final revocation = AuthService.instance.logout();
+    await DemoStore.instance.clearAuthenticatedCache();
+    if (!mounted) return;
+    await _showLoginAfterSplash();
+    final revoked = await revocation;
+    if (!revoked && mounted) {
+      final context = _navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Đã đăng xuất trên máy. Chưa thu hồi được phiên trên máy chủ do lỗi kết nối.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showLoginAfterSplash() async {
+    if (AuthService.instance.signedIn) {
+      await _showChildProfileSelection();
+      return;
     }
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
@@ -63,15 +93,20 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
   void _showDemoHome(String childName) {
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            HomeScreen(childName: childName, onLogout: _showLoginAfterSplash),
+        builder: (_) => HomeScreen(childName: childName, onLogout: _logout),
         settings: const RouteSettings(name: '/home'),
       ),
       (_) => false,
     );
   }
 
-  void _showChildProfileSelection() {
+  Future<void> _showChildProfileSelection() async {
+    if (AuthService.instance.user != null) {
+      await DemoStore.instance.bindAuthenticatedUser(
+        AuthService.instance.user!,
+      );
+    }
+    if (!mounted) return;
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => ChildProfileSelectionScreen(
@@ -83,7 +118,13 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
     );
   }
 
-  void _showChildProfilePreview() {
+  Future<void> _showChildProfilePreview() async {
+    if (AuthService.instance.user != null) {
+      await DemoStore.instance.bindAuthenticatedUser(
+        AuthService.instance.user!,
+      );
+    }
+    if (!mounted) return;
     _navigatorKey.currentState?.push(
       MaterialPageRoute<void>(
         builder: (_) =>
@@ -95,8 +136,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
   void _showHomePreview(String childName) {
     _navigatorKey.currentState?.push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            HomeScreen(childName: childName, onLogout: _showLoginAfterSplash),
+        builder: (_) => HomeScreen(childName: childName, onLogout: _logout),
         settings: const RouteSettings(name: '/home'),
       ),
     );

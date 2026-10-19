@@ -37,3 +37,7 @@ def require_child_access(
     if level == "edit" and row["access"] != "edit":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn chỉ có quyền xem mục này")
     return row
+
+
+# Compatibility exports for existing protected mobile routes.
+from app.features.auth.dependencies import AuthenticationRequired, require_user

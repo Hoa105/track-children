@@ -1,20 +1,60 @@
-"""Authentication helpers.
-
-Chưa có đăng nhập thật cho phụ huynh lẫn admin (docs/api/README.md). Khi
-DEV_AUTH=true backend tạm tin header do client gửi:
-  - X-User-Id: uuid trong account.users (mobile)
-  - X-Admin-Role: mã vai trò trong admin.roles (web admin)
-Khi làm xong JWT chỉ cần thay thân hai dependency bên dưới.
-"""
-
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, status
 from psycopg2.extensions import connection as Connection
+from app.core.database import get_db
+
+import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 
 from app.core.config import settings
-from app.core.database import get_db
+
+password_hasher = PasswordHasher()
+dummy_hash = password_hasher.hash(secrets.token_urlsafe(32))
+
+
+def now():
+    return datetime.now(timezone.utc)
+
+
+def secret_hash(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def otp_hash(value: str, verification_id: str) -> str:
+    return hmac.new(
+        settings.auth_secret.encode(),
+        f"{verification_id}:{value}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def verify_password(value: str, hashed: str) -> bool:
+    try:
+        return password_hasher.verify(hashed, value)
+    except (VerificationError, InvalidHashError):
+        return False
+
+
+def access_token(user_id, session_id, expires):
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "sid": str(session_id),
+            "iat": now(),
+            "exp": expires,
+            "iss": settings.auth_issuer,
+            "aud": settings.auth_audience,
+        },
+        settings.auth_secret,
+        algorithm="HS256",
+    )
 
 
 def _require_dev_auth() -> None:
@@ -29,7 +69,9 @@ def current_user_id(
     try:
         return UUID(x_user_id or "")
     except ValueError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Thiếu hoặc sai X-User-Id") from None
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "Thiếu hoặc sai X-User-Id"
+        ) from None
 
 
 def require_admin(permission: str):
@@ -53,7 +95,9 @@ def require_admin(permission: str):
                 (x_admin_role, permission),
             )
             if cur.fetchone() is None:
-                raise HTTPException(status.HTTP_403_FORBIDDEN, f"Cần quyền {permission}")
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, f"Cần quyền {permission}"
+                )
         return x_admin_role
 
     return dependency
