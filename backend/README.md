@@ -57,6 +57,40 @@ The dependency checks both JWT claims and the current PostgreSQL session/user.
 
 ## Auth tests
 
+### Local testing without SMS/OTP
+
+Set `APP_ENV=local` and `AUTH_SKIP_OTP=true` in `backend/.env`, then restart
+the Python backend. Registration returns `requiresOtp: false`; the mobile app
+logs in immediately without opening the OTP dialog. Pending accounts can also
+log in with their correct password. Phone verification timestamps remain null.
+OTP remains enabled by default; bypass configuration is rejected outside local.
+Set `AUTH_SKIP_OTP=false` and restart to restore OTP for new/pending accounts.
+Accounts already activated locally remain active.
+
+Optional sample migration (Git Bash, from repository root):
+
+```bash
+cd backend
+PYTHONPATH="../.test-deps;." python -m app.seed.local_auth
+```
+
+This applies `migrations/local/008_auth_samples.sql`, creating ten active local
+accounts `parent01@example.com` through `parent10@example.com`, password `Ab12!x`.
+Existing conflicting accounts are preserved. These are auth accounts only;
+they do not contain child profiles. Local seed data is excluded from normal
+schema migrations and requires `APP_ENV=local`.
+
+Docker Compose (Git Bash, repository root):
+
+```bash
+export APP_ENV=local AUTH_SKIP_OTP=true
+export AUTH_SECRET="$(sed -n 's/^AUTH_SECRET=//p' backend/.env)"
+docker compose up -d --build backend
+docker compose exec backend python -m app.seed.local_auth
+```
+
+The local legal documents can be imported separately as documented above.
+
 ```powershell
 python -m pip install -r backend/requirements-dev.txt
 .\scripts\test-auth.ps1

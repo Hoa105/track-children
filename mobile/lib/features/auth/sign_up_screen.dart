@@ -48,7 +48,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  String? _validateName(String? value) => (value?.trim().isNotEmpty ?? false) && value!.trim().length <= 150
+  String? _validateName(String? value) =>
+      (value?.trim().isNotEmpty ?? false) && value!.trim().length <= 150
       ? null
       : 'Tên hiển thị cần có 1–150 ký tự.';
 
@@ -70,7 +71,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Vui lòng nhập email.';
-    if (email.length > 254 || !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+    if (email.length > 254 ||
+        !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
       return 'Email chưa đúng định dạng.';
     }
     return null;
@@ -78,8 +80,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu.';
-    if (value.length < 10 || value.length > 128) {
-      return 'Mật khẩu cần có 10–128 ký tự.';
+    if (value.length < 6 || value.length > 128) {
+      return 'Mật khẩu cần có 6–128 ký tự.';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value) ||
+        !RegExp(r'[A-Z]').hasMatch(value) ||
+        !RegExp(r'[0-9]').hasMatch(value) ||
+        !RegExp(r'[^a-zA-Z0-9\s]').hasMatch(value)) {
+      return 'Mật khẩu cần có chữ thường, chữ hoa, chữ số và ký tự đặc biệt.';
     }
     return null;
   }
@@ -153,6 +161,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       });
       if (!mounted) return;
       setState(() => _isSubmitting = false);
+      if (challenge['requiresOtp'] == false) {
+        widget.onChildProfilePreview();
+        return;
+      }
       final verified = await showOtpVerificationDialog(
         context,
         challenge: challenge,

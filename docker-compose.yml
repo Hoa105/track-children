@@ -46,6 +46,8 @@ services:
     environment:
       DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
       AUTH_SECRET: ${AUTH_SECRET:-}
+      APP_ENV: ${APP_ENV:-production}
+      AUTH_SKIP_OTP: ${AUTH_SKIP_OTP:-false}
       SMS_WEBHOOK_URL: ${SMS_WEBHOOK_URL:-}
       SMS_WEBHOOK_TOKEN: ${SMS_WEBHOOK_TOKEN:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-[]}

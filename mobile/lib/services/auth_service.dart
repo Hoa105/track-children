@@ -14,6 +14,17 @@ class AuthException implements Exception {
   final Map<String, dynamic> details;
   @override
   String toString() => switch (code) {
+    'VALIDATION_ERROR' =>
+      'Thông tin chưa hợp lệ. Vui lòng kiểm tra: ${((details['fields'] as Map?)?.keys ?? ['thông tin đã nhập']).map((field) => switch (field.toString().split('.').first) {
+        'password' => 'mật khẩu (6–128 ký tự, có chữ thường, chữ hoa, chữ số và ký tự đặc biệt)',
+        'email' => 'email',
+        'phone' => 'số điện thoại',
+        'username' => 'tên người dùng',
+        'fullName' => 'họ tên',
+        'consents' => 'điều khoản',
+        'code' => 'mã OTP',
+        _ => field.toString(),
+      }).join(', ')}.',
     'INVALID_CREDENTIALS' => 'Email hoặc mật khẩu chưa đúng.',
     'ACCOUNT_CONFLICT' =>
       'Email, số điện thoại hoặc tên người dùng đã được dùng.',
@@ -39,7 +50,7 @@ class AuthService {
        _storage = storage ?? const FlutterSecureStorage();
   static const demoEnabled = bool.fromEnvironment(
     'DEMO_MODE',
-    defaultValue: true,
+    defaultValue: false,
   );
   static AuthService instance = AuthService(demoMode: demoEnabled);
   final bool demoMode;
@@ -91,7 +102,10 @@ class AuthService {
         }
         throw AuthException(
           error['code'] as String? ?? 'HTTP_${response.statusCode}',
-          Map<String, dynamic>.from(error['details'] as Map? ?? {}),
+          {
+            ...Map<String, dynamic>.from(error['details'] as Map? ?? {}),
+            if (error['fields'] is Map) 'fields': error['fields'],
+          },
         );
       }
       return result;
@@ -123,7 +137,7 @@ class AuthService {
   }
 
   Future<List<Map<String, dynamic>>> documents() async {
-    if (demoMode)
+    if (demoMode) {
       return [
         {
           'id': 'demo-terms',
@@ -133,6 +147,7 @@ class AuthService {
           'isRequired': true,
         },
       ];
+    }
     final data = await _request('/legal-documents?context=registration');
     return (data['documents'] as List).cast<Map<String, dynamic>>();
   }
@@ -152,7 +167,11 @@ class AuthService {
       _pendingRegistration = Map<String, dynamic>.from(data);
       return _demoChallenge();
     }
-    return _request('/auth/register', body: data);
+    final result = await _request('/auth/register', body: data);
+    if (result['requiresOtp'] == false) {
+      await login(data['email'] as String, data['password'] as String);
+    }
+    return result;
   }
 
   Future<Map<String, dynamic>> resend(Map<String, dynamic> challenge) async =>
@@ -171,8 +190,9 @@ class AuthService {
     bool remember = true,
   }) async {
     if (demoMode) {
-      if (_pendingRegistration == null)
+      if (_pendingRegistration == null) {
         throw AuthException('REGISTRATION_CHALLENGE_INVALID', {});
+      }
       if (DateTime.parse(challenge['expiresAt'] as String)
           .isBefore(DateTime.now())) {
         throw AuthException('OTP_EXPIRED', {});

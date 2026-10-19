@@ -34,6 +34,30 @@ void main() {
   });
 
   test(
+    'local registration without OTP logs in and accepts the server session',
+    () async {
+      final calls = <String>[];
+      final service = AuthService(
+        client: MockClient((r) async {
+          calls.add(r.url.path);
+          if (r.url.path.endsWith('/register')) {
+            return jsonResponse({'requiresOtp': false, 'user': profile}, 201);
+          }
+          return jsonResponse(tokens('local'));
+        }),
+      );
+      final result = await service.register({
+        'email': 'parent@example.com',
+        'password': 'Ab12!x',
+      });
+      expect(result['requiresOtp'], false);
+      expect(service.signedIn, true);
+      expect(service.user!['id'], profile['id']);
+      expect(calls, ['/api/v1/auth/register', '/api/v1/auth/login']);
+    },
+  );
+
+  test(
     'rememberMe saves only refresh secret and restore verifies server identity',
     () async {
       final calls = <String>[];
@@ -189,21 +213,24 @@ void main() {
     );
   });
 
-  test('server cache has no password and logout isolates child data by owner', () async {
-    final store = DemoStore();
-    await store.initialize();
-    await store.bindAuthenticatedUser(profile);
-    expect(store.parent.containsKey('password'), isFalse);
-    await store.saveChild(null, {
-      'full_name': 'Private Child',
-      'date_of_birth': '2025-01-01',
-      'gender': 'female',
-    });
-    expect(store.children, isNotEmpty);
-    await store.clearAuthenticatedCache();
-    await store.bindAuthenticatedUser({...profile, 'id': 'different-user'});
-    expect(store.children, isEmpty);
-    await store.bindAuthenticatedUser(profile);
-    expect(store.children, hasLength(1));
-  });
+  test(
+    'server cache has no password and logout isolates child data by owner',
+    () async {
+      final store = DemoStore();
+      await store.initialize();
+      await store.bindAuthenticatedUser(profile);
+      expect(store.parent.containsKey('password'), isFalse);
+      await store.saveChild(null, {
+        'full_name': 'Private Child',
+        'date_of_birth': '2025-01-01',
+        'gender': 'female',
+      });
+      expect(store.children, isNotEmpty);
+      await store.clearAuthenticatedCache();
+      await store.bindAuthenticatedUser({...profile, 'id': 'different-user'});
+      expect(store.children, isEmpty);
+      await store.bindAuthenticatedUser(profile);
+      expect(store.children, hasLength(1));
+    },
+  );
 }

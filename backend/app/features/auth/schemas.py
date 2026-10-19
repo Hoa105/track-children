@@ -25,9 +25,17 @@ class Register(Input):
     username: str = Field(pattern=r'^[a-z0-9_.]{3,30}$')
     email: EmailStr = Field(max_length=254)
     phone: str
-    password: str = Field(min_length=10, max_length=128)
+    password: str = Field(min_length=6, max_length=128)
     relationship: Literal['mother', 'father', 'guardian']
     consents: list[Consent]
+
+    @field_validator('password')
+    @classmethod
+    def password_complexity(cls, value):
+        if not all(re.search(pattern, value) for pattern in
+                   (r'[a-z]', r'[A-Z]', r'[0-9]', r'[^a-zA-Z0-9\s]')):
+            raise ValueError('Password must include lowercase, uppercase, digit and special character')
+        return value
 
     @field_validator('fullName', 'username', 'email', mode='before')
     @classmethod

@@ -19,7 +19,18 @@ flutter devices
 
 ## 2. Chạy ứng dụng
 
-Hiện mặc định bật **chế độ demo**, không gọi API xác thực và không cần backend.
+Hiện mặc định dùng **API xác thực thật**, cần backend tại cổng `8000`.
+Android emulator dùng `http://10.0.2.2:8000/api/v1`. Với Android thật kết nối USB,
+chạy `adb reverse tcp:8000 tcp:8000`, sau đó:
+
+```powershell
+flutter run --device-user 0 --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+Backend cần migration, `AUTH_SECRET`, tài liệu pháp lý và webhook SMS để đăng ký/OTP.
+Xem [hướng dẫn backend](../backend/README.md).
+
+Để dùng **chế độ demo**, chạy `flutter run --dart-define=DEMO_MODE=true`.
 Đăng nhập `demo@trackchildren.vn` / `TreXanh123` để xem Bảo An và Gia Linh;
 hoặc `bo@trackchildren.vn` / `TreXanh123` để xem Minh Khang.
 Đăng ký mới lưu cục bộ, OTP mẫu là `123456`; tài khoản mới chưa có hồ sơ bé.

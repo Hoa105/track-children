@@ -7,6 +7,25 @@ from app.main import app
 from app.core.security import password_hasher,verify_password
 
 
+@pytest.mark.parametrize('password,valid', [
+    ('Aa1!aa', True), ('Aa1!' + 'a' * 124, True),
+    ('Aa1!a', False), ('Aa1!' + 'a' * 125, False),
+    ('AA1!AA', False), ('aa1!aa', False), ('Aaa!aa', False),
+    ('Aa1234', False), ('Aa1   ', False),
+])
+def test_registration_password_policy(password, valid):
+    from pydantic import ValidationError
+    from app.features.auth.schemas import Register
+    body = dict(fullName='Test Parent', username='parent_test',
+                email='parent@example.com', phone='0912345678',
+                password=password, relationship='mother', consents=[])
+    if valid:
+        assert Register(**body).password == password
+    else:
+        with pytest.raises(ValidationError):
+            Register(**body)
+
+
 def test_password_hash():
     hashed=password_hasher.hash('real-password-123')
     assert verify_password('real-password-123',hashed)

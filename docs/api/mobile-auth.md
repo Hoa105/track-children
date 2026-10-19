@@ -164,6 +164,12 @@ phiên bản hiện hành. Nếu thiếu văn bản bắt buộc do cấu hình 
 
 `POST /api/v1/auth/register`
 
+Chỉ ở môi trường local với `APP_ENV=local` và `AUTH_SKIP_OTP=true`, đăng ký trả
+`201 {"requiresOtp": false, "user": ...}` thay cho challenge OTP. Mobile gọi
+login bằng thông tin vừa đăng ký rồi vào ứng dụng. Số điện thoại không được
+đánh dấu đã xác minh. Mặc định vẫn yêu cầu OTP; cấu hình bỏ OTP ngoài local
+bị từ chối khi khởi động. Chi tiết dữ liệu mẫu: `backend/README.md`.
+
 ```json
 {
   "fullName": "Nguyễn Thị Lan",
@@ -190,7 +196,7 @@ bắt buộc đang hiệu lực từ endpoint điều khoản.
 | `username` | Bắt buộc, trim và lowercase, regex `^[a-z0-9_.]{3,30}$`, duy nhất |
 | `email` | Bắt buộc, email hợp lệ, trim, tối đa 254 ký tự, duy nhất không phân biệt hoa thường |
 | `phone` | Bắt buộc, chuẩn hóa số Việt Nam về E.164; chấp nhận số quốc tế hợp lệ, duy nhất |
-| `password` | Bắt buộc, đề xuất 10–128 ký tự; không trim/biến đổi |
+| `password` | Bắt buộc, 6–128 ký tự, có chữ thường, chữ hoa, chữ số và ký tự đặc biệt; không trim/biến đổi |
 | `relationship` | Bắt buộc, enum như User |
 | `consents` | Không trùng document ID; chấp nhận đủ phiên bản bắt buộc đang hiệu lực |
 
@@ -469,7 +475,7 @@ không dùng OTP register để vượt qua luồng recovery.
 
 1. Giữ cả email và SĐT bắt buộc theo UI, xác minh SĐT trước khi kích hoạt.
 2. Chỉ đăng nhập bằng email ở phiên bản đầu; username là tên công khai.
-3. Mật khẩu tối thiểu 10 ký tự; phiên 24 giờ/30 ngày; access token 15 phút.
+3. Mật khẩu tối thiểu 6 ký tự, có chữ thường, chữ hoa, chữ số và ký tự đặc biệt; phiên 24 giờ/30 ngày; access token 15 phút.
 4. Đăng nhập đúng mật khẩu tự hủy yêu cầu xóa còn chờ theo migration hiện có.
 5. Dùng registration secret riêng và lịch sử refresh để hỗ trợ tiếp tục đăng ký,
    chống gửi OTP trái phép và phát hiện refresh token bị dùng lại.

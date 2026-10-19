@@ -147,6 +147,9 @@ def register(db, data, ip):
     for c in data.consents:
         db.execute('INSERT INTO account.user_consents(user_id,document_id,is_accepted,ip_address) VALUES (%s,%s,%s,%s)',
                    (u['id'],c.documentId,c.isAccepted,ip))
+    if settings.auth_skip_otp and settings.app_env == 'local':
+        u = one(db,"UPDATE account.users SET status='active' WHERE id=%s RETURNING *",(u['id'],))
+        return {'requiresOtp':False, 'user':public_user(u)},None
     delivery = otp_delivery(db,u,ip)
     if isinstance(delivery,JSONResponse):
         # Preserve quota counters but do not strand a newly created pending user.
@@ -215,6 +218,8 @@ def login(db,data,ip):
     # Reset identifier throttle on successful password verification, but never SMS quota.
     db.execute('DELETE FROM account.auth_rate_limits WHERE key=%s',('login-id:'+sec.secret_hash(str(data.email).lower()),))
     db.execute('UPDATE account.users SET failed_login_attempts=0,locked_until=NULL WHERE id=%s',(u['id'],))
+    if u['status']=='pending' and settings.auth_skip_otp and settings.app_env == 'local':
+        u=one(db,"UPDATE account.users SET status='active' WHERE id=%s RETURNING *",(u['id'],))
     if u['status']=='pending':
         delivery=otp_delivery(db,u,ip,allow_deferred=True)
         if isinstance(delivery,JSONResponse):return delivery,None

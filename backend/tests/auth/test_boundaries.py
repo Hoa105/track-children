@@ -17,10 +17,10 @@ from .test_auth import bearer,code,login,parallel
 @pytest.mark.parametrize('field,size,valid',[
     ('fullName',1,True),('fullName',150,True),('fullName',151,False),
     ('username',3,True),('username',30,True),('username',31,False),
-    ('password',9,False),('password',10,True),('password',128,True),('password',129,False)])
+    ('password',5,False),('password',6,True),('password',128,True),('password',129,False)])
 def test_length_boundaries(env,payload,field,size,valid):
     c,_,_=env
-    payload[field]='a'*size
+    payload[field]=('Aa1!'+'a'*(size-4)) if field=='password' else 'a'*size
     assert c.post('/api/v1/auth/register',json=payload).status_code==(201 if valid else 422)
 
 

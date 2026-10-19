@@ -94,7 +94,7 @@ Các đường dẫn dưới đây có prefix `/api/v1`. Với lỗi cần kiể
 |---|---|---|---|
 | REG-01 | P0 | Register hợp lệ, SMS thành công | 201 challenge; user pending, consent đúng document ID, OTP register chưa dùng; chưa có session |
 | REG-02 | P1 | Tên có khoảng trắng; username uppercase; SĐT Việt Nam 0… | Trim/lowercase đúng; SĐT lưu E.164; không biến đổi password |
-| REG-03 | P1 | Tham số hóa fullName 0/1/150/151, username 2/3/30/31 và ký tự cấm, password 9/10/128/129 | Chấp nhận đúng biên theo contract sau chuẩn hóa |
+| REG-03 | P1 | Tham số hóa fullName 0/1/150/151, username 2/3/30/31 và ký tự cấm, password 5/6/128/129 v? thi?u t?ng nh?m k? t? | Chấp nhận đúng biên theo contract sau chuẩn hóa |
 | REG-04 | P1 | Email sai/quá 254; SĐT không hợp lệ; relationship ngoài enum | 422 và fields phù hợp; không ghi dữ liệu |
 | REG-05 | P0 | Trùng email khác hoa thường, SĐT tương đương sau chuẩn hóa, username | 409 ACCOUNT_CONFLICT; không cập nhật user cũ |
 | REG-06 | P0 | Register lại tài khoản pending với mật khẩu khác | 409; password hash, consent và OTP không bị ghi đè |
