@@ -19,6 +19,19 @@ flutter devices
 
 ## 2. Chạy ứng dụng
 
+Hiện mặc định bật **chế độ demo**, không gọi API xác thực và không cần backend.
+Đăng nhập `demo@trackchildren.vn` / `TreXanh123` để xem Bảo An và Gia Linh;
+hoặc `bo@trackchildren.vn` / `TreXanh123` để xem Minh Khang.
+Đăng ký mới lưu cục bộ, OTP mẫu là `123456`; tài khoản mới chưa có hồ sơ bé.
+Mỗi lần khởi động app cần đăng nhập lại. Các chỉnh sửa dữ liệu vẫn lưu trên thiết bị.
+Nếu đã sửa bộ mẫu, dùng **Cài đặt → Dữ liệu kiểm thử → Khôi phục bộ dữ liệu test**.
+
+Để bật lại xác thực API:
+```powershell
+flutter run --dart-define=DEMO_MODE=false --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+Sau khi đổi chế độ, dừng và chạy lại ứng dụng.
+
 - **Chạy trên thiết bị mặc định (hoặc máy ảo đang mở):**
   ```powershell
   flutter run

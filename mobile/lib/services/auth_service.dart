@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'demo_store.dart';
+
 class AuthException implements Exception {
   AuthException(this.code, this.details);
   final String code;
@@ -29,10 +31,19 @@ class AuthException implements Exception {
 }
 
 class AuthService {
-  AuthService({http.Client? client, FlutterSecureStorage? storage})
-    : _client = client ?? http.Client(),
-      _storage = storage ?? const FlutterSecureStorage();
-  static AuthService instance = AuthService();
+  AuthService({
+    http.Client? client,
+    FlutterSecureStorage? storage,
+    this.demoMode = false,
+  }) : _client = client ?? http.Client(),
+       _storage = storage ?? const FlutterSecureStorage();
+  static const demoEnabled = bool.fromEnvironment(
+    'DEMO_MODE',
+    defaultValue: true,
+  );
+  static AuthService instance = AuthService(demoMode: demoEnabled);
+  final bool demoMode;
+  Map<String, dynamic>? _pendingRegistration;
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8000/api/v1',
@@ -112,25 +123,69 @@ class AuthService {
   }
 
   Future<List<Map<String, dynamic>>> documents() async {
+    if (demoMode)
+      return [
+        {
+          'id': 'demo-terms',
+          'docType': 'Điều khoản mẫu',
+          'version': 'demo',
+          'content': 'Chế độ dữ liệu mẫu, thông tin chỉ lưu trên thiết bị.',
+          'isRequired': true,
+        },
+      ];
     final data = await _request('/legal-documents?context=registration');
     return (data['documents'] as List).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> register(Map<String, dynamic> data) =>
-      _request('/auth/register', body: data);
-  Future<Map<String, dynamic>> resend(Map<String, dynamic> challenge) =>
-      _request(
-        '/auth/register/resend',
-        body: {
-          'verificationId': challenge['verificationId'],
-          'registrationToken': challenge['registrationToken'],
-        },
-      );
+  Map<String, dynamic> _demoChallenge() => {
+    'verificationId': 'demo-registration',
+    'registrationToken': 'demo',
+    'targetMasked': 'thiết bị này (OTP mẫu: 123456)',
+    'expiresAt': DateTime.now()
+        .add(const Duration(minutes: 5))
+        .toIso8601String(),
+    'resendAvailableAt': DateTime.now().toIso8601String(),
+  };
+
+  Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+    if (demoMode) {
+      _pendingRegistration = Map<String, dynamic>.from(data);
+      return _demoChallenge();
+    }
+    return _request('/auth/register', body: data);
+  }
+
+  Future<Map<String, dynamic>> resend(Map<String, dynamic> challenge) async =>
+      demoMode
+      ? _demoChallenge()
+      : _request(
+          '/auth/register/resend',
+          body: {
+            'verificationId': challenge['verificationId'],
+            'registrationToken': challenge['registrationToken'],
+          },
+        );
   Future<void> verify(
     Map<String, dynamic> challenge,
     String code, {
     bool remember = true,
   }) async {
+    if (demoMode) {
+      if (_pendingRegistration == null)
+        throw AuthException('REGISTRATION_CHALLENGE_INVALID', {});
+      if (DateTime.parse(challenge['expiresAt'] as String)
+          .isBefore(DateTime.now())) {
+        throw AuthException('OTP_EXPIRED', {});
+      }
+      if (code != '123456') throw AuthException('OTP_INVALID', {});
+      final fields = Map<String, Object?>.from(_pendingRegistration!);
+      fields['role'] = fields.remove('relationship') ?? 'guardian';
+      fields.remove('consents');
+      await DemoStore.instance.register(fields);
+      _setDemoUser();
+      _pendingRegistration = null;
+      return;
+    }
     final data = await _request(
       '/auth/register/verify',
       body: {
@@ -149,6 +204,13 @@ class AuthService {
     String password, {
     bool remember = true,
   }) async {
+    if (demoMode) {
+      if (!await DemoStore.instance.login(email, password)) {
+        throw AuthException('INVALID_CREDENTIALS', {});
+      }
+      _setDemoUser();
+      return;
+    }
     final data = await _request(
       '/auth/login',
       body: {
@@ -159,6 +221,11 @@ class AuthService {
       },
     );
     await _accept(data, remember);
+  }
+
+  void _setDemoUser() {
+    user = DemoStore.instance.parent..remove('password');
+    user!['relationship'] = user!['role'];
   }
 
   Future<void> _accept(Map<String, dynamic> data, bool remember) async {
@@ -177,6 +244,11 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> currentUser() async {
+    if (demoMode) {
+      if (!signedIn) throw AuthException('SESSION_EXPIRED', {});
+      _setDemoUser();
+      return user!;
+    }
     final result = await _request('/auth/me', authorized: true);
     user = result;
     return result;
@@ -185,6 +257,10 @@ class AuthService {
   Future<void> refresh() =>
       _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
   Future<void> _doRefresh() async {
+    if (demoMode) {
+      await currentUser();
+      return;
+    }
     final generation = _generation;
     if (_refresh == null) throw AuthException('SESSION_EXPIRED', {});
     try {
@@ -201,6 +277,7 @@ class AuthService {
   }
 
   Future<bool> restore() async {
+    if (demoMode) return false;
     _refresh = await _storage.read(key: 'auth.refresh');
     if (_refresh == null) return false;
     try {
@@ -214,6 +291,10 @@ class AuthService {
   }
 
   Future<bool> logout() async {
+    if (demoMode) {
+      await clear();
+      return true;
+    }
     // Invalidate memory immediately; an old token can revoke its rotated session.
     final pending = _refreshing;
     final token = _refresh;
@@ -237,6 +318,11 @@ class AuthService {
     _access = null;
     _refresh = null;
     user = null;
+    if (demoMode) {
+      _pendingRegistration = null;
+      await DemoStore.instance.logout();
+      return;
+    }
     await _storage.delete(key: 'auth.refresh');
   }
 }
