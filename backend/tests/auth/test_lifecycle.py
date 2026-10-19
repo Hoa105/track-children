@@ -10,6 +10,7 @@ import pytest
 from app.core import security as sec
 from app.core.config import settings
 from app.features.auth import service
+from app.features.auth import sms as sms_gateway
 from .conftest import DEVICE,register_and_verify
 from .test_auth import bearer,code,login,parallel
 
@@ -154,7 +155,7 @@ def test_ip_limit_shared_clients(env,payload):
 
 
 def test_provider_adapter(monkeypatch):
-    from app.features.auth import service
+    from app.features.auth import sms as sms_gateway
     monkeypatch.setattr(settings,'sms_webhook_url','https://sms.example.com/otp')
     monkeypatch.setattr(settings,'sms_webhook_token','secret-for-test')
     class Client:
@@ -165,7 +166,7 @@ def test_provider_adapter(monkeypatch):
             assert kwargs['headers']['Authorization']=='Bearer secret-for-test'
             assert kwargs['json']['to']=='+84912345678'
             return type('Result',(),{'status_code':202})()
-    monkeypatch.setattr(service.httpx,'Client',Client)
-    assert service.send_sms('+84912345678','345678')
+    monkeypatch.setattr(sms_gateway.httpx,'Client',Client)
+    assert sms_gateway.send_sms('+84912345678','345678')
     monkeypatch.setattr(settings,'sms_webhook_url','http://unsafe.example.com')
-    assert not service.send_sms('+84912345678','345678')
+    assert not sms_gateway.send_sms('+84912345678','345678')

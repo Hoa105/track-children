@@ -10,6 +10,7 @@ from psycopg.rows import dict_row
 
 from app.core.config import settings
 from app.features.auth import service
+from app.features.auth import sms as sms_gateway
 from app.main import app
 
 
@@ -34,7 +35,7 @@ def env(database_url,monkeypatch):
     monkeypatch.setattr(settings,'database_url',database_url)
     monkeypatch.setattr(settings,'auth_secret','test-secret-only-not-for-production-123456789')
     sms=[]
-    monkeypatch.setattr(service,'send_sms',lambda phone,code: sms.append((phone,code)) or True)
+    monkeypatch.setattr(sms_gateway,'send_sms',lambda phone,code: sms.append((phone,code)) or True)
     with psycopg.connect(database_url,row_factory=dict_row,autocommit=True) as db:
         # CASCADE is restricted to the dedicated *_test database guarded above.
         db.execute('TRUNCATE account.users,account.legal_documents,account.auth_rate_limits CASCADE')

@@ -13,6 +13,7 @@ import uvicorn
 from app.core.config import settings
 from app.core.database import transaction
 from app.features.auth import service
+from app.features.auth import sms as sms_gateway
 from app.main import app
 
 
@@ -29,7 +30,7 @@ def main():
         temporary.write_text(json.dumps({'phone':phone,'code':code}),encoding='utf-8')
         temporary.replace(sms_file)
         return True
-    service.send_sms=fake_sms
+    sms_gateway.send_sms=fake_sms
     with transaction() as db:
         for kind in ['terms','privacy','data_policy']:
             db.execute("""INSERT INTO account.legal_documents(doc_type,version,content,effective_at)

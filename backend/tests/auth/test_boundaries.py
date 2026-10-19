@@ -10,6 +10,7 @@ from pathlib import Path
 from app.core import security as sec
 from app.core.config import settings
 from app.features.auth import service
+from app.features.auth import sms as sms_gateway
 from .conftest import DEVICE,register_and_verify
 from .test_auth import bearer,code,login,parallel
 
@@ -51,11 +52,9 @@ def test_each_unique_identifier_independently(env,payload,field,value):
 
 
 def test_registration_rolls_back_after_insert(env,payload,monkeypatch):
-    original=service.one
-    def broken(db,sql,args=()):
-        if 'INSERT INTO account.verification_codes' in sql:raise RuntimeError('test rollback')
-        return original(db,sql,args)
-    monkeypatch.setattr(service,'one',broken)
+    def broken(db, parameters):
+        raise RuntimeError('test rollback')
+    monkeypatch.setattr(service.repository, 'create_registration_code', broken)
     with pytest.raises(RuntimeError,match='test rollback'):
         env[0].post('/api/v1/auth/register',json=payload)
     assert not env[1].execute('SELECT id FROM account.users').fetchone()
@@ -102,7 +101,7 @@ def test_cross_user_challenge(env,payload):
 
 def test_send_quota_and_failed_delivery_count(env,payload,monkeypatch):
     c,db,_=env
-    monkeypatch.setattr(service,'send_sms',lambda *_:False)
+    monkeypatch.setattr(sms_gateway,'send_sms',lambda *_:False)
     ch=c.post('/api/v1/auth/register',json=payload).json()
     start=sec.now()
     for i in range(1,5):

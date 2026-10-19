@@ -34,6 +34,30 @@ def test_password_hash():
     assert not verify_password('anything','!deleted')
 
 
+def test_auth_setup_preserves_other_features_validation():
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from app.features.auth.setup import install_auth
+
+    isolated_app = FastAPI()
+    install_auth(isolated_app)
+
+    class OtherRequest(BaseModel):
+        value: int
+
+    @isolated_app.post('/other-feature')
+    def other_feature(data: OtherRequest):
+        return data
+
+    client = TestClient(isolated_app)
+    response = client.post('/other-feature', json={})
+    assert response.status_code == 422
+    assert 'detail' in response.json() and 'error' not in response.json()
+    auth_response = client.post('/api/v1/auth/register', json={})
+    assert auth_response.status_code == 422
+    assert auth_response.json()['error']['code'] == 'VALIDATION_ERROR'
+
+
 def test_openapi_document():
     from openapi_spec_validator import validate
     doc=json.loads((Path(__file__).parents[2]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))

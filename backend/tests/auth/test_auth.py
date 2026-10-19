@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.core import security as sec
 from app.features.auth import service
+from app.features.auth import sms as sms_gateway
 from app.main import app
 from .conftest import DEVICE,register_and_verify
 
@@ -102,7 +103,7 @@ def test_challenge_secret_and_resend_limit(env,payload):
 
 def test_pending_login_continues_and_sms_failure(env,payload,monkeypatch):
     c,db,_=env
-    monkeypatch.setattr(service,'send_sms',lambda *_:False)
+    monkeypatch.setattr(sms_gateway,'send_sms',lambda *_:False)
     ch=c.post('/api/v1/auth/register',json=payload).json()
     assert ch['deliveryStatus']=='failed'
     r=login(c,payload)
