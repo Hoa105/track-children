@@ -23,25 +23,23 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     final childId = child['id'] as String;
     final dob = DateTime.tryParse(child['date_of_birth'] as String? ?? '');
     if (dob == null) continue;
-    final records = store.vaccinations(childId);
-    final done = records
-        .where((r) => r['given'] == true)
-        .map((r) => r['id'])
-        .toSet();
-    final upcoming = <({String id, String name, DateTime date})>[
-      for (final dose in tcmrSchedule)
-        if (!done.contains(dose.id))
+    // Same schedule as the vaccination book: TCMR + dịch vụ the child follows,
+    // due dates counted from earlier doses, and the parent's own appointments.
+    final upcoming = [
+      for (final v in buildVaccinationSchedule(
+        childId: childId,
+        dob: dob,
+        entries: store.vaccinations(childId),
+        plans: store.vaccinePlans(childId),
+        today: today,
+      ))
+        if (v.record == null)
           (
-            id: dose.id,
-            name: '${dose.name} · ${dose.doseLabel}',
-            date: dose.dueDate(dob),
-          ),
-      for (final record in records)
-        if (record['custom'] == true && record['given'] != true)
-          (
-            id: record['id'] as String,
-            name: '${record['name']} · ${record['doseLabel']}',
-            date: DateTime.parse(record['date'] as String),
+            id: v.dose.id,
+            name: '${v.dose.name} · ${v.dose.doseLabel}',
+            date: v.dueDate,
+            booked: v.hasAppointment,
+            place: v.appointmentPlace,
           ),
     ];
     for (final dose in upcoming) {
@@ -54,18 +52,20 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
           : days == 0
           ? 'today'
           : 'soon';
+      // Có lịch hẹn bố mẹ đã đặt thì nhắc theo ngày hẹn
+      final kind = dose.booked ? 'Lịch hẹn' : 'Lịch dự kiến';
       final status = days < 0
-          ? 'Lịch dự kiến đã qua'
+          ? '$kind đã qua'
           : days == 0
-          ? 'Lịch dự kiến hôm nay'
-          : 'Lịch dự kiến sắp tới';
+          ? '$kind hôm nay'
+          : '$kind sắp tới';
       result.add(
         CareNotification(
           id: '$childId:${dose.id}:${date.toIso8601String()}:$phase',
           childId: childId,
           title: '${child['full_name']} · $status',
           message:
-              '${dose.name}\nNgày ${date.day}/${date.month}/${date.year}. Xem sổ tiêm để kiểm tra và cập nhật.',
+              '${dose.name}\n${dose.booked ? 'Hẹn' : 'Ngày'} ${date.day}/${date.month}/${date.year}${dose.place.isEmpty ? '' : ' · ${dose.place}'}. Xem sổ tiêm để kiểm tra và cập nhật.',
           date: date,
         ),
       );

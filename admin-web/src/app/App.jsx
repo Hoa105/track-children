@@ -17,6 +17,7 @@ import ReportsPage from "../features/community/ReportsPage.jsx";
 import AdminsPage from "../features/admins/AdminsPage.jsx";
 import AdminDetailPage from "../features/admins/AdminDetailPage.jsx";
 import AccountPage from "../features/account/AccountPage.jsx";
+import VaccinationPage from "../features/health/VaccinationPage.jsx";
 import ModulePage from "../features/modules/ModulePage.jsx";
 
 const pages = {
@@ -27,6 +28,7 @@ const pages = {
   "/ai/candidates": CandidateCriteriaPage,
   "/ai/chatbot": ChatbotMonitorPage,
   "/community/reports": ReportsPage,
+  "/health": VaccinationPage,
   "/admins": AdminsPage,
   "/account": AccountPage,
 };

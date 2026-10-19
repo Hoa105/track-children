@@ -435,7 +435,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Lịch hẹn thử nghiệm').last);
     await tester.pumpAndSettle();
-    expect(find.text('Sửa lịch hẹn'), findsWidgets);
+    expect(find.text('Sửa thông tin'), findsWidgets);
     final appointmentId = DemoStore.instance
         .vaccinations('child_an')
         .single['id'];

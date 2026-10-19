@@ -25,6 +25,7 @@ const paths = {
   edit: <><path d="m14 5 5 5M4 20l4.2-1 10.1-10.1a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" /></>,
   flag: <><path d="M5 21V4M5 5c5-3 9 3 14 0v9c-5 3-9-3-14 0" /></>,
   close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+  plus: <><path d="M12 5v14M5 12h14" /></>,
   download: <><path d="M12 3v12M7 10l5 5 5-5M4 21h16" /></>,
   upload: <><path d="M12 21V9M7 14l5-5 5 5M4 3h16" /></>,
   refresh: <><path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4" /></>,
