@@ -12,6 +12,7 @@ from app.core.security import password_hasher,verify_password
     ('Aa1!a', False), ('Aa1!' + 'a' * 125, False),
     ('AA1!AA', False), ('aa1!aa', False), ('Aaa!aa', False),
     ('Aa1234', False), ('Aa1   ', False),
+    ('123456', False), ('abcdef', False), ('12345', False), ('', False),
 ])
 def test_registration_password_policy(password, valid):
     from pydantic import ValidationError
