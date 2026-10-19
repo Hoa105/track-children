@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'services/demo_store.dart';
+import 'services/vaccination_api.dart';
+import 'services/vaccination_schedule.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
@@ -12,6 +14,14 @@ import 'features/splash/start_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DemoStore.instance.initialize();
+  final vaccinationApi = VaccinationApi();
+  DemoStore.vaccinationRemote = vaccinationApi;
+  // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.
+  vaccinationApi.fetchSchedule().then(applyVaccineCatalog).catchError((_) {});
+  // Gửi lên backend các mũi đang chỉ lưu trên máy (vd thêm khi chưa có mạng).
+  for (final child in DemoStore.instance.children) {
+    DemoStore.instance.syncVaccinations(child['id'] as String);
+  }
   runApp(const TrackChildrenApp());
 }
 

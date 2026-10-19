@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../../models/vaccination.dart';
+import '../../services/vaccination_schedule.dart';
 
 String _date(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
@@ -15,8 +16,12 @@ class VaccineDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = vaccine;
     final record = v.record;
-    final place = record?.place ?? v.dose.appointmentPlace;
+    final place = record?.place ?? v.appointmentPlace;
+    final late = record?.daysFromSchedule;
     final note = record?.note ?? v.dose.note ?? '';
+    final product = vaccineCatalog
+        .vaccine(v.dose.vaccineCode)
+        ?.product(record?.product ?? v.plannedProduct);
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * .85,
@@ -67,6 +72,14 @@ class VaccineDetailSheet extends StatelessWidget {
                                 ),
                               ),
                               _Status(vaccine: v),
+                              if (!v.dose.isCustom)
+                                Text(
+                                  v.dose.isTcmr ? 'TCMR · miễn phí' : 'Dịch vụ',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: VaccinationColors.secondary,
+                                  ),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -84,7 +97,7 @@ class VaccineDetailSheet extends StatelessWidget {
                                 child: Text(
                                   '${record != null
                                       ? "Ngày tiêm"
-                                      : v.dose.isCustom
+                                      : v.hasAppointment
                                       ? "Ngày hẹn"
                                       : "Dự kiến"} · ${_date(record?.date ?? v.dueDate)}',
                                   style: TextStyle(
@@ -101,8 +114,27 @@ class VaccineDetailSheet extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (record?.scheduledDate != null ||
+                        (v.hasAppointment && !v.dose.isCustom)) ...[
+                      const SizedBox(height: 10),
+                      _Card(
+                        child: _Info(
+                          icon: Icons.event_outlined,
+                          text: record != null
+                              ? 'Ngày hẹn: ${_date(record.scheduledDate!)}'
+                                    '${record.appointmentPlace.isEmpty ? '' : ' · ${record.appointmentPlace}'}'
+                                    ' · ${late == 0
+                                        ? 'tiêm đúng hẹn'
+                                        : late! > 0
+                                        ? 'tiêm trễ $late ngày'
+                                        : 'tiêm sớm ${-late} ngày'}'
+                              : 'Ngày dự kiến theo lịch: ${_date(v.expectedDate ?? v.dueDate)}',
+                        ),
+                      ),
+                    ],
                     if (place.isNotEmpty ||
                         record != null ||
+                        product != null ||
                         v.dose.prevents.isNotEmpty ||
                         note.isNotEmpty) ...[
                       const SizedBox(height: 10),
@@ -118,6 +150,13 @@ class VaccineDetailSheet extends StatelessWidget {
                               ),
                             if (place.isNotEmpty && record != null)
                               const SizedBox(height: 10),
+                            if (product != null) ...[
+                              _Info(
+                                icon: Icons.vaccines_outlined,
+                                text: 'Loại vắc-xin: ${product.name}',
+                              ),
+                              const SizedBox(height: 10),
+                            ],
                             if (record != null)
                               _Info(
                                 icon: Icons.favorite_border_rounded,
@@ -198,7 +237,14 @@ class VaccineDetailSheet extends StatelessWidget {
                   if (record == null && v.dose.isCustom)
                     TextButton(
                       onPressed: () => Navigator.pop(context, 'edit'),
-                      child: const Text('Sửa lịch hẹn'),
+                      child: const Text('Sửa thông tin'),
+                    ),
+                  if (record == null && !v.dose.isCustom)
+                    TextButton.icon(
+                      key: const ValueKey('vaccine-appointment'),
+                      onPressed: () => Navigator.pop(context, 'appointment'),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Sửa thông tin'),
                     ),
                 ],
               ),
@@ -342,7 +388,7 @@ class VaccineDosesSheet extends StatelessWidget {
                                       Text(
                                         '${v.record != null
                                             ? "Đã tiêm"
-                                            : v.dose.isCustom
+                                            : v.hasAppointment
                                             ? "Ngày hẹn"
                                             : "Dự kiến"} · ${_date(v.record?.date ?? v.dueDate)}',
                                         style: TextStyle(
@@ -466,7 +512,7 @@ class _Status extends StatelessWidget {
       child: Text(
         vaccine.record != null
             ? 'Đã ghi nhận'
-            : vaccine.dose.isCustom
+            : vaccine.hasAppointment
             ? 'Lịch hẹn đã lưu'
             : review
             ? 'Chưa ghi nhận'
