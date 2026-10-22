@@ -11,6 +11,11 @@ app = FastAPI(title="Track Children API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=(
+        r"http://(localhost|127\.0\.0\.1)(:[0-9]+)?"
+        if settings.app_env == "local"
+        else None
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
 )

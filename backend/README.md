@@ -41,3 +41,6 @@ Mobile gọi `http://10.0.2.2:8000` trên Android emulator, `http://localhost:80
 
 Sau khi đổi seed lịch tiêm, xuất lại bản dự phòng offline cho mobile:
 `python -m app.seed.export_mobile_schedule`.
+
+`/dev/profiles` ch? b?t khi `APP_ENV=local` v? `DEV_AUTH=true`, y?u c?u JWT
+c?a ch?nh ph? huynh trong request; endpoint n?y kh?ng t?o t?i kho?n.

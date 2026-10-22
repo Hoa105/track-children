@@ -20,8 +20,13 @@ attempt counters and refresh revocations are committed; unexpected exceptions
 still roll back. Preserve lock ordering: user before challenge, code or session.
 
 `shared/access.py` re-exports the auth dependency for compatibility and retains
-the existing child-access policy. The psycopg2 pool and existing development
-header dependencies remain available for other features. Auth retains its
+the existing child-access policy. Protected mobile APIs use `require_user` / `current_user_id` with Bearer JWT
+and live account sessions. Admin APIs require an admin-audience JWT backed by
+`admin.admin_sessions` and assigned database permissions. `X-User-Id` and
+`X-Admin-Role` are ignored. Admin token issuance/login is not implemented yet;
+mobile tokens cannot authorize admin requests. The `/dev/profiles` helper is
+local-only and requires a mobile JWT matching the parent ID.
+The psycopg2 pool remains available for existing features. Auth retains its
 psycopg 3 transaction context.
 
 Run auth regression tests against a dedicated `*_test` database:

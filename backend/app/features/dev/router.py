@@ -1,9 +1,4 @@
-"""Đăng ký tài khoản + hồ sơ trẻ của mobile lên backend khi chưa có đăng nhập thật.
-
-Mobile (DemoStore) tạo tài khoản và hồ sơ trẻ trên máy; trước khi đồng bộ sổ tiêm,
-nó gọi PUT /dev/profiles để backend có dòng account.users + child.children cùng
-uuid. Chỉ bật khi DEV_AUTH=true — production dùng API đăng ký / hồ sơ trẻ thật.
-"""
+"""Local child-profile helper for authenticated parents; never provisions accounts."""
 
 import datetime as dt
 from typing import Literal
@@ -16,12 +11,10 @@ from pydantic import Field
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.features.auth.dependencies import require_user
 from app.features.vaccination.schema import CamelModel
 
 router = APIRouter(prefix="/dev", tags=["dev"])
-
-# Chỉ để thỏa NOT NULL — tài khoản dev chưa đăng nhập bằng mật khẩu ở backend
-_PASSWORD_HASH = "!dev-profile-no-password"
 
 
 class DevParent(CamelModel):
@@ -43,24 +36,28 @@ class DevProfile(CamelModel):
 
 
 def _require_dev() -> None:
-    if not settings.dev_auth:
+    if not settings.dev_auth or settings.app_env != "local":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
 
 
-@router.put("/profiles", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(_require_dev)])
-def put_profile(body: DevProfile, conn: Connection = Depends(get_db)) -> None:
+@router.put(
+    "/profiles",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(_require_dev)],
+)
+def put_profile(
+    body: DevProfile,
+    user: dict = Depends(require_user),
+    conn: Connection = Depends(get_db),
+) -> None:
     """Tạo (hoặc cập nhật tên / ngày sinh) phụ huynh + bé theo uuid do mobile sinh."""
     parent, child = body.parent, body.child
+    if parent.id != UUID(str(user["id"])):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Profile must belong to authenticated user"
+        )
     try:
         with conn, conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO account.users (id, email, password_hash, full_name, status)
-                VALUES (%s, %s, %s, %s, 'active')
-                ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name
-                """,
-                (str(parent.id), parent.email.strip().lower(), _PASSWORD_HASH, parent.full_name),
-            )
             cur.execute(
                 """
                 INSERT INTO child.children (id, owner_user_id, full_name, date_of_birth, gender)
@@ -71,10 +68,19 @@ def put_profile(body: DevProfile, conn: Connection = Depends(get_db)) -> None:
                 WHERE child.children.owner_user_id = EXCLUDED.owner_user_id
                 RETURNING id
                 """,
-                {"id": str(child.id), "owner": str(parent.id), "name": child.full_name,
-                 "dob": child.date_of_birth, "gender": child.gender},
+                {
+                    "id": str(child.id),
+                    "owner": str(parent.id),
+                    "name": child.full_name,
+                    "dob": child.date_of_birth,
+                    "gender": child.gender,
+                },
             )
             if cur.fetchone() is None:
-                raise HTTPException(status.HTTP_403_FORBIDDEN, "Hồ sơ trẻ thuộc tài khoản khác")
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, "Hồ sơ trẻ thuộc tài khoản khác"
+                )
     except errors.UniqueViolation:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Email đã thuộc tài khoản khác") from None
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Email đã thuộc tài khoản khác"
+        ) from None

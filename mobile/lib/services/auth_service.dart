@@ -57,7 +57,9 @@ class AuthService {
   Map<String, dynamic>? _pendingRegistration;
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
+    defaultValue: kIsWeb
+        ? 'http://localhost:8000/api/v1'
+        : 'http://10.0.2.2:8000/api/v1',
   );
   final http.Client _client;
   final FlutterSecureStorage _storage;

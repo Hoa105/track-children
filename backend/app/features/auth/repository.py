@@ -257,3 +257,26 @@ def record_failed_login(db, parameters):
         "UPDATE account.users SET failed_login_attempts=%s,locked_until=%s WHERE id=%s",
         parameters,
     )
+
+
+def find_admin_access_identity(db, parameters):
+    return db.execute(
+        """SELECT u.*, s.expires_at AS session_expiry,
+                  s.revoked_at AS session_revoked
+        FROM admin.admin_users u
+        JOIN admin.admin_sessions s ON s.admin_user_id = u.id
+        WHERE u.id = %s AND s.id = %s""",
+        parameters,
+    ).fetchone()
+
+
+def find_admin_permission(db, parameters):
+    return db.execute(
+        """SELECT r.code FROM admin.admin_user_roles ur
+        JOIN admin.roles r ON r.id = ur.role_id
+        JOIN admin.role_permissions rp ON rp.role_id = r.id
+        JOIN admin.permissions p ON p.id = rp.permission_id
+        WHERE ur.admin_user_id = %s AND p.code = %s
+        ORDER BY r.code LIMIT 1""",
+        parameters,
+    ).fetchone()

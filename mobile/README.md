@@ -19,6 +19,18 @@ flutter devices
 
 ## 2. Chạy ứng dụng
 
+### Auth trên Chrome
+
+Auth trên web mặc định gọi `http://localhost:8000/api/v1`. Backend cần
+`APP_ENV=local` và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Chọn **Mobile Chrome (API)** trong VS Code hoặc chạy trong thư mục `mobile`:
+
+```bash
+flutter run -d chrome --web-port 5174 --dart-define=DEMO_MODE=false
+```
+
+Sau khi đổi cấu hình, dừng và chạy lại app.
+
 Hiện mặc định dùng **API xác thực thật**, cần backend tại cổng `8000`.
 Android emulator dùng `http://10.0.2.2:8000/api/v1`. Với Android thật kết nối USB,
 chạy `adb reverse tcp:8000 tcp:8000`, sau đó:

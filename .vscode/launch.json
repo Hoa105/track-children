@@ -26,6 +26,19 @@
         "--dart-define=DEMO_MODE=false",
         "--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
       ]
+    },
+    {
+      "name": "Mobile Chrome (API)",
+      "type": "dart",
+      "request": "launch",
+      "deviceId": "chrome",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "toolArgs": [
+        "--web-port",
+        "5174",
+        "--dart-define=DEMO_MODE=false"
+      ],
+      "cwd": "${workspaceFolder}/mobile"
     }
   ]
 }

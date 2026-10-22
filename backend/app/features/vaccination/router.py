@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from psycopg2.extensions import connection as Connection
 
 from app.core.database import get_db
-from app.core.security import current_user_id, require_admin
+from app.features.auth.dependencies import current_user_id, require_admin
 from app.features.vaccination import service
 from app.features.vaccination.schema import (
     AdminProduct,

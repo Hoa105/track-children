@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     sms_webhook_token: str = ""
     auth_issuer: str = "track-children"
     auth_audience: str = "track-children-mobile"
+    auth_admin_audience: str = "track-children-admin"
     cors_origins: list[str] = []
     app_env: str = "production"
     auth_skip_otp: bool = False
