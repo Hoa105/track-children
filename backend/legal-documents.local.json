@@ -1,0 +1,23 @@
+[
+  {
+    "docType": "terms",
+    "version": "local-test-1",
+    "content": "Điều khoản thử nghiệm nội bộ. Chỉ dùng để kiểm thử, không phải điều khoản sử dụng chính thức.",
+    "isRequired": true,
+    "effectiveAt": "2026-01-01T00:00:00+07:00"
+  },
+  {
+    "docType": "privacy",
+    "version": "local-test-1",
+    "content": "Chính sách quyền riêng tư thử nghiệm nội bộ. Chỉ sử dụng dữ liệu giả khi kiểm thử.",
+    "isRequired": true,
+    "effectiveAt": "2026-01-01T00:00:00+07:00"
+  },
+  {
+    "docType": "data_policy",
+    "version": "local-test-1",
+    "content": "Chính sách dữ liệu thử nghiệm nội bộ. Dữ liệu test có thể được xóa sau kiểm thử.",
+    "isRequired": true,
+    "effectiveAt": "2026-01-01T00:00:00+07:00"
+  }
+]

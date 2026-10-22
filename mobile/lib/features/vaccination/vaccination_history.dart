@@ -337,7 +337,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '${v.dose.doseLabel}${v.record!.reaction.isEmpty ? '' : '\nPhản ứng: ${v.record!.reaction}'}',
+                                  '${v.dose.doseLabel}${_schedule(v.record!)}${v.record!.reaction.isEmpty ? '' : '\nPhản ứng: ${v.record!.reaction}'}',
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -409,4 +409,17 @@ class _FilterButton extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// " · Hẹn 20/11 · trễ 2 ngày" — trống nếu mũi không có ngày hẹn.
+String _schedule(VaccinationRecord record) {
+  final days = record.daysFromSchedule;
+  if (days == null) return '';
+  final d = record.scheduledDate!;
+  final diff = days == 0
+      ? 'đúng hẹn'
+      : days > 0
+      ? 'trễ $days ngày'
+      : 'sớm ${-days} ngày';
+  return ' · Hẹn ${d.day}/${d.month} · $diff';
 }

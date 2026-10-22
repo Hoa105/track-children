@@ -1,4 +1,10 @@
 # Miscellaneous
+.test-deps/
+.auth-test-pg/
+.auth-test-logs/
+.env
+.env.*
+!.env.example
 *.class
 *.log
 *.pyc
@@ -62,3 +68,6 @@ node_modules/
 # Thư mục Flutter thừa ở gốc (app nằm trong mobile/)
 /android/
 /ios/
+
+# Biến môi trường cục bộ (mẫu nằm ở .env.example)
+.env

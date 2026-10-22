@@ -1,4 +1,5 @@
-import '../../services/demo_store.dart';
+import '../../services/auth_service.dart';
+import 'otp_dialog.dart';
 
 import 'package:flutter/material.dart';
 
@@ -23,11 +24,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static const _demoEmail = 'demo@trackchildren.vn';
-  static const _demoPassword = DemoStore.password;
   final _formKey = GlobalKey<FormState>();
-  final _accountController = TextEditingController(text: _demoEmail);
-  final _passwordController = TextEditingController(text: _demoPassword);
+  final _accountController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _isLoading = false;
@@ -55,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isLoading) return;
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -62,16 +62,31 @@ class _LoginScreenState extends State<LoginScreen> {
       _previewError = null;
     });
 
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
     bool valid = false;
     try {
-      valid = await DemoStore.instance.login(
+      await AuthService.instance.login(
         _accountController.text,
         _passwordController.text,
+        remember: _rememberMe,
       );
-    } catch (_) {
-      /* Error remains visible in the form. */
+      valid = true;
+    } on AuthException catch (e) {
+      if (e.code == 'VERIFICATION_REQUIRED' && mounted) {
+        setState(() => _isLoading = false);
+        valid =
+            await showOtpVerificationDialog(
+              context,
+              challenge: Map<String, dynamic>.from(
+                e.details['registration'] as Map,
+              ),
+              remember: _rememberMe,
+            ) ==
+            true;
+      } else {
+        if (mounted) setState(() => _previewError = e.toString());
+      }
+    } catch (e) {
+      if (mounted) setState(() => _previewError = e.toString());
     }
     if (!mounted) return;
     if (valid) {
@@ -81,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() {
       _isLoading = false;
-      _previewError = 'Thông tin chưa khớp tài khoản demo. Hãy dùng email và mật khẩu mẫu bên dưới.';
+      _previewError ??= 'Chưa hoàn tất đăng nhập.';
     });
   }
 
@@ -325,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 4),
                     Center(
                       child: Text(
-                        'Tài khoản mẫu: $_demoEmail · $_demoPassword',
+                        'Đăng nhập bằng tài khoản đã đăng ký.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall
                             ?.copyWith(color: AppColors.textSecondary),

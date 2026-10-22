@@ -3,7 +3,7 @@ import '../../services/demo_store.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
-import '../auth/otp_dialog.dart';
+import '../../services/auth_service.dart';
 import '../auth/parent_role.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   late String _savedPhone = widget.phone;
   late ParentRole _role = widget.role;
   bool _isEditing = false;
-  bool _isSaving = false;
+  final bool _isSaving = false;
 
   @override
   void dispose() {
@@ -67,19 +67,27 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   }
 
   Future<void> _save() async {
+    if (AuthService.instance.signedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cập nhật tài khoản chưa được hỗ trợ trong phiên bản này.',
+          ),
+        ),
+      );
+      return;
+    }
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     final newPhone = _phoneController.text.trim();
     if (newPhone != _savedPhone) {
-      setState(() => _isSaving = true);
-      final verified = await showOtpVerificationDialog(
-        context,
-        phone: newPhone,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đổi số điện thoại chưa được kết nối dịch vụ.'),
+        ),
       );
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      if (verified != true) return;
+      return;
     }
 
     if (DemoStore.instance.signedIn) {
