@@ -8,7 +8,7 @@ from app.features.auth import sms as sms_gateway
 
 
 def output(result, status=200, sms=None):
-    if sms and not sms_gateway.send_sms(*sms):
+    if sms and not (sms_gateway.send_code(*sms) if len(sms) == 3 else sms_gateway.send_sms(*sms)):
         if isinstance(result, AuthFailure):
             result.details["registration"]["deliveryStatus"] = "failed"
         else:

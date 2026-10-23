@@ -10,50 +10,34 @@ class Input(BaseModel):
 
 
 class Device(Input):
-    deviceId: str = Field(min_length=1, max_length=100)
+    deviceId: str | None = Field(default=None, min_length=1, max_length=100)
     deviceName: str | None = Field(default=None, max_length=100)
     platform: Literal["android", "ios", "web"]
 
 
-class Consent(Input):
-    documentId: UUID
-    isAccepted: StrictBool
-
-
 class Register(Input):
-    fullName: str = Field(min_length=1, max_length=150)
-    username: str = Field(pattern=r"^[a-z0-9_.]{3,30}$")
-    email: EmailStr = Field(max_length=254)
-    phone: str
-    password: str = Field(min_length=6, max_length=128)
-    relationship: Literal["mother", "father", "guardian"]
-    consents: list[Consent]
+    displayName: str = Field(default="Phụ huynh", max_length=150)
+    email: EmailStr | None = Field(default=None, max_length=254)
+    phone: str | None = None
+    password: str = Field(min_length=8, max_length=64)
+    defaultRelationship: Literal["mother", "father", "grandfather", "grandmother", "other_guardian"] = "mother"
+    acceptedTerms: StrictBool
 
-    @field_validator("password")
-    @classmethod
-    def password_complexity(cls, value):
-        if not all(
-            re.search(pattern, value)
-            for pattern in (r"[a-z]", r"[A-Z]", r"[0-9]", r"[^a-zA-Z0-9\s]")
-        ):
-            raise ValueError(
-                "Password must include lowercase, uppercase, digit and special character"
-            )
-        return value
-
-    @field_validator("fullName", "username", "email", mode="before")
+    @field_validator("displayName", "email", mode="before")
     @classmethod
     def trim(cls, value):
         return value.strip() if isinstance(value, str) else value
 
-    @field_validator("username", mode="before")
+    @field_validator("displayName")
     @classmethod
-    def lower(cls, value):
-        return value.strip().lower() if isinstance(value, str) else value
+    def default_display_name(cls, value):
+        return value or "Phụ huynh"
 
     @field_validator("phone")
     @classmethod
     def phone_format(cls, value):
+        if value is None:
+            return None
         value = re.sub(r"[\s()-]", "", value)
         if value.startswith("0"):
             value = "+84" + value[1:]
@@ -61,12 +45,11 @@ class Register(Input):
             raise ValueError("Invalid E.164 phone number")
         return value
 
-    @field_validator("consents")
-    @classmethod
-    def unique_consents(cls, value):
-        if len({c.documentId for c in value}) != len(value):
-            raise ValueError("Duplicate documentId")
-        return value
+    @model_validator(mode="after")
+    def require_identifier(self):
+        if (self.email is None) == (self.phone is None):
+            raise ValueError("Provide exactly one of email or phone")
+        return self
 
 
 class Challenge(Input):
@@ -110,3 +93,15 @@ class Login(Input):
 
 class Refresh(Input):
     refreshToken: str = Field(min_length=1, max_length=512)
+
+
+class SocialRegister(Input):
+    provider: Literal['google', 'apple']
+    idToken: str = Field(min_length=1, max_length=16000)
+    authorizationCode: str | None = Field(default=None, max_length=4096)
+    challenge: str | None = Field(default=None, max_length=2048)
+    displayName: str = Field(default='Phụ huynh', max_length=150)
+    defaultRelationship: Literal['mother','father','grandfather','grandmother','other_guardian'] = 'mother'
+    acceptedTerms: StrictBool
+    rememberMe: StrictBool = True
+    device: Device

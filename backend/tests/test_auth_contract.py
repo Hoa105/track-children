@@ -8,18 +8,14 @@ from app.core.security import password_hasher,verify_password
 
 
 @pytest.mark.parametrize('password,valid', [
-    ('Aa1!aa', True), ('Aa1!' + 'a' * 124, True),
-    ('Aa1!a', False), ('Aa1!' + 'a' * 125, False),
-    ('AA1!AA', False), ('aa1!aa', False), ('Aaa!aa', False),
-    ('Aa1234', False), ('Aa1   ', False),
-    ('123456', False), ('abcdef', False), ('12345', False), ('', False),
+    ('abcdefgh', True), ('a' * 64, True), ('a password 123', True),
+    ('a' * 7, False), ('a' * 65, False), ('', False),
 ])
 def test_registration_password_policy(password, valid):
     from pydantic import ValidationError
     from app.features.auth.schemas import Register
-    body = dict(fullName='Test Parent', username='parent_test',
-                email='parent@example.com', phone='0912345678',
-                password=password, relationship='mother', consents=[])
+    body = dict(displayName='Test Parent', email='parent@example.com',
+                password=password, defaultRelationship='mother', acceptedTerms=True)
     if valid:
         assert Register(**body).password == password
     else:
@@ -73,3 +69,22 @@ def test_validation_envelope(path):
     assert r.status_code==422
     assert r.json()['error']['code']=='VALIDATION_ERROR'
     assert isinstance(r.json()['error']['fields'],dict)
+
+
+@pytest.mark.parametrize('status,accepted',[(202,True),(500,False)])
+def test_email_adapter_payload_and_failure(monkeypatch,status,accepted):
+    import httpx
+    from app.core.config import settings
+    from app.features.auth import sms
+    monkeypatch.setattr(settings,'email_provider','webhook')
+    monkeypatch.setattr(settings,'email_webhook_url','https://example.com/otp')
+    monkeypatch.setattr(settings,'email_webhook_token','test-token')
+    original=httpx.Client
+    def receive(request):
+        assert request.headers['Authorization']=='Bearer test-token'
+        body=json.loads(request.content)
+        assert body['to']=='parent@example.com' and '123456' in body['message']
+        assert body['subject']
+        return httpx.Response(status)
+    monkeypatch.setattr(sms.httpx,'Client',lambda **kwargs: original(transport=httpx.MockTransport(receive),**kwargs))
+    assert sms.send_code('email','parent@example.com','123456') is accepted

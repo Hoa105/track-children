@@ -1,6 +1,7 @@
-"""Import reviewed legal content, never seed placeholder consent in production.
+"""Deploy reviewed legal JSON, without the removed legal_documents DB table.
 
 python -m app.seed.legal_documents path/to/reviewed-documents.json
+Set LEGAL_DOCUMENTS_PATH to the destination file before invoking this command.
 Input: [{"docType":"terms", "version":"1.0", "content":"...",
          "effectiveAt":"2026-10-17T00:00:00Z", "isRequired":true}, ...]
 """
@@ -12,7 +13,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, TypeAdapter
 
-from app.core.database import transaction
 
 
 class Document(BaseModel):
@@ -32,12 +32,14 @@ def main():
         raise ValueError('Supply terms, privacy and data_policy')
     if any(d.effectiveAt.tzinfo is None for d in docs):
         raise ValueError('effectiveAt must have a timezone')
-    with transaction() as db:
-        for d in docs:
-            db.execute('''INSERT INTO account.legal_documents(doc_type,version,content,is_required,effective_at)
-                VALUES (%s,%s,%s,%s,%s) ON CONFLICT(doc_type,version) DO NOTHING''',
-                (d.docType,d.version,d.content,d.isRequired,d.effectiveAt))
-    print('Legal document versions imported; existing versions were preserved.')
+    from app.core.config import settings
+    if not settings.legal_documents_path:
+        raise ValueError('Set LEGAL_DOCUMENTS_PATH to the deployed JSON file location')
+    destination = Path(settings.legal_documents_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps([d.model_dump(mode='json') for d in docs], ensure_ascii=False, indent=2), encoding='utf-8')
+    print('Reviewed legal content exported to configured file; no database changes.')
+
 
 
 if __name__=='__main__':main()

@@ -9,21 +9,12 @@ cân nặng, chiều cao, vòng đầu và BMI. Có API đọc lịch sử/tổn
 theo ngày và xóa mềm từng chỉ số. Import vào Swagger Editor hoặc Postman.
 Trạng thái: **thiết kế, chưa triển khai backend**; phụ thuộc API hồ sơ trẻ.
 
-[Kế hoạch kiểm thử Theo dõi tăng trưởng](mobile-growth-test-plan.md) — ca API,
-database, BMI, phân quyền, mobile, đồng thời và tiêu chí nghiệm thu.
-
 ## Mobile auth
 
 [OpenAPI 3.1 JSON](mobile-auth.openapi.json) — import vào Swagger Editor hoặc Postman.
 
-[Kế hoạch kiểm thử Mobile Auth](mobile-auth-test-plan.md) — ca API/database/mobile,
-transaction, request đồng thời và tiêu chí nghiệm thu.
-
 [API xác thực phụ huynh](mobile-auth.md): đăng ký, SMS OTP, đăng nhập, refresh,
 đăng xuất và thông tin tài khoản. Đã triển khai với migration `007_mobile_auth.sql`.
-
-[Kết quả kiểm thử auth](mobile-auth-test-results.md): kết quả tự động hóa và phần
-staging/provider thực tế chưa được xác nhận.
 
 ## Admin auth (`/admin/auth/*`)
 
