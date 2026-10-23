@@ -62,3 +62,7 @@ node_modules/
 # Thư mục Flutter thừa ở gốc (app nằm trong mobile/)
 /android/
 /ios/
+
+.auth-test-logs/
+.test-deps/
+backend/.env
