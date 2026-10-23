@@ -69,5 +69,6 @@ node_modules/
 /android/
 /ios/
 
-# Biến môi trường cục bộ (mẫu nằm ở .env.example)
-.env
+.auth-test-logs/
+.test-deps/
+backend/.env

@@ -158,7 +158,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
           seedColor: AppColors.primary,
           surface: AppColors.surface,
         ),
-        fontFamily: 'Be Vietnam Pro',
+        fontFamily: 'Nunito',
         textTheme: const TextTheme(
           displayLarge: TextStyle(
             fontSize: 30,

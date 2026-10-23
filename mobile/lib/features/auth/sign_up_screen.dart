@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../../services/auth_service.dart';
 
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'auth_entrance_animation.dart';
 import 'otp_dialog.dart';
 import 'parent_role.dart';
 import 'social_provider_icon.dart';
+import 'auth_form_style.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({
@@ -25,13 +28,17 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _usernameController = TextEditingController();
+  // Compatibility with the current API; no username input is required.
+  final _accountId =
+      'parent_${List.generate(16, (_) => Random.secure().nextInt(16).toRadixString(16)).join()}';
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   ParentRole _parentRole = ParentRole.mother;
   bool _obscurePassword = true;
+  bool? _emailSelected;
+  bool get _useEmail => _emailSelected ?? true;
   bool _isSubmitting = false;
   bool _attemptedSubmit = false;
   bool _acceptedTerms = false;
@@ -40,7 +47,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _usernameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -48,15 +54,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  String? _validateName(String? value) =>
-      (value?.trim().isNotEmpty ?? false) && value!.trim().length <= 150
+  String? _validateName(String? value) => (value?.trim().length ?? 0) <= 150
       ? null
-      : 'Tên hiển thị cần có 1–150 ký tự.';
-
-  String? _validateUsername(String? value) =>
-      RegExp(r'^[a-z0-9_.]{3,30}$').hasMatch((value ?? '').trim().toLowerCase())
-      ? null
-      : 'Tên người dùng gồm 3–30 ký tự: a-z, 0-9, _ hoặc dấu chấm.';
+      : 'T\u00ean hi\u1ec3n th\u1ecb t\u1ed1i \u0111a 150 k\u00fd t\u1ef1.';
 
   String? _validatePhone(String? value) {
     var phone = (value ?? '').replaceAll(RegExp(r'[\s()-]'), '');
@@ -80,14 +80,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu.';
-    if (value.length < 6 || value.length > 128) {
-      return 'Mật khẩu cần có 6–128 ký tự.';
-    }
-    if (!RegExp(r'[a-z]').hasMatch(value) ||
-        !RegExp(r'[A-Z]').hasMatch(value) ||
-        !RegExp(r'[0-9]').hasMatch(value) ||
-        !RegExp(r'[^a-zA-Z0-9\s]').hasMatch(value)) {
-      return 'Mật khẩu cần có chữ thường, chữ hoa, chữ số và ký tự đặc biệt.';
+    if (value.runes.length < 8 || value.runes.length > 64) {
+      return 'M\u1eadt kh\u1ea9u c\u1ea7n c\u00f3 8\u201364 k\u00fd t\u1ef1.';
     }
     return null;
   }
@@ -148,12 +142,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = true);
       final challenge = await AuthService.instance.register({
-        'fullName': _nameController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
+        'fullName': _nameController.text.trim().isEmpty
+            ? 'Ph\u1ee5 huynh'
+            : _nameController.text.trim(),
+        'username': _accountId,
+        if (_useEmail)
+          'email': _emailController.text.trim()
+        else
+          'phone': _phoneController.text.trim(),
         'password': _passwordController.text,
-        'relationship': _parentRole.name,
+        'relationship': _parentRole.registrationValue,
         'consents': [
           for (final doc in docs.where((d) => d['isRequired'] == true))
             {'documentId': doc['id'], 'isAccepted': true},
@@ -162,7 +160,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       if (challenge['requiresOtp'] == false) {
-        widget.onChildProfilePreview();
+        setState(
+          () => _previewMessage = 'C\u1ea7n x\u00e1c minh OTP tr\u01b0\u1edbc khi ho\u00e0n t\u1ea5t \u0111\u0103ng k\u00fd.',
+        );
         return;
       }
       final verified = await showOtpVerificationDialog(
@@ -197,7 +197,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      height: 48,
+                      height: 52,
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
@@ -214,7 +214,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: Text(
                         'Tạo tài khoản',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -249,7 +250,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionLabel('Họ và tên'),
+                              const _SectionLabel(
+                                'Tên hiển thị (không bắt buộc)',
+                              ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _nameController,
@@ -257,52 +260,79 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 textInputAction: TextInputAction.next,
                                 autofillHints: const [AutofillHints.name],
                                 validator: _validateName,
-                                decoration: _signUpInput(
-                                  hint: 'Nguyễn Thị A',
+                                decoration: authInputDecoration(
+                                  hint: 'Tên bạn muốn hiển thị',
                                   icon: Icons.badge_outlined,
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              const _SectionLabel('Tên đăng nhập'),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _usernameController,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: const [AutofillHints.username],
-                                validator: _validateUsername,
-                                decoration: _signUpInput(
-                                  hint: 'mai_nguyen',
-                                  icon: Icons.alternate_email_rounded,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const _SectionLabel('Email'),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: const [AutofillHints.email],
-                                validator: _validateEmail,
-                                decoration: _signUpInput(
-                                  hint: 'ban@email.com',
-                                  icon: Icons.mail_outline_rounded,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const _SectionLabel('Số điện thoại'),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: const [
-                                  AutofillHints.telephoneNumber,
+                              Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 12,
+                                children: [
+                                  _SectionLabel(
+                                    _useEmail
+                                        ? 'Email'
+                                        : 'S\u1ed1 \u0111i\u1ec7n tho\u1ea1i',
+                                  ),
+                                  TextButton(
+                                    key: const ValueKey(
+                                      'registration-method-selector',
+                                    ),
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : () {
+                                            FocusScope.of(context).unfocus();
+                                            setState(() {
+                                              _emailSelected = !_useEmail;
+                                              _previewMessage = null;
+                                            });
+                                          },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontFamily: 'Nunito',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _useEmail
+                                          ? 'D\u00f9ng s\u1ed1 \u0111i\u1ec7n tho\u1ea1i'
+                                          : 'D\u00f9ng email',
+                                    ),
+                                  ),
                                 ],
-                                validator: _validatePhone,
-                                decoration: _signUpInput(
-                                  hint: '09xxxxxxxx',
-                                  icon: Icons.phone_outlined,
+                              ),
+                              const SizedBox(height: 4),
+                              TextFormField(
+                                key: ValueKey(_useEmail),
+                                controller: _useEmail
+                                    ? _emailController
+                                    : _phoneController,
+                                keyboardType: _useEmail
+                                    ? TextInputType.emailAddress
+                                    : TextInputType.phone,
+                                textInputAction: TextInputAction.next,
+                                autofillHints: [
+                                  _useEmail
+                                      ? AutofillHints.email
+                                      : AutofillHints.telephoneNumber,
+                                ],
+                                validator: _useEmail
+                                    ? _validateEmail
+                                    : _validatePhone,
+                                decoration: authInputDecoration(
+                                  hint: _useEmail
+                                      ? 'ban@email.com'
+                                      : '09xxxxxxxx',
+                                  icon: _useEmail
+                                      ? Icons.mail_outline_rounded
+                                      : Icons.phone_outlined,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -317,8 +347,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ],
                                 validator: _validatePassword,
                                 decoration:
-                                    _signUpInput(
-                                      hint: 'Tối thiểu 6 ký tự',
+                                    authInputDecoration(
+                                      hint: 'Có ít nhất 8 ký tự',
                                       icon: Icons.lock_outline_rounded,
                                     ).copyWith(
                                       suffixIcon: IconButton(
@@ -348,7 +378,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ],
                                 validator: _validateConfirmPassword,
                                 onFieldSubmitted: (_) => _submit(),
-                                decoration: _signUpInput(
+                                decoration: authInputDecoration(
                                   hint: 'Nhập lại mật khẩu',
                                   icon: Icons.lock_outline_rounded,
                                 ),
@@ -420,16 +450,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               if (_previewMessage != null) ...[
                                 const SizedBox(height: 16),
                                 _PreviewNotice(message: _previewMessage!),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton.icon(
-                                    onPressed: widget.onChildProfilePreview,
-                                    icon: const Icon(
-                                      Icons.arrow_forward_rounded,
-                                    ),
-                                    label: const Text('Xem giao diện hồ sơ bé'),
-                                  ),
-                                ),
                               ],
                               const SizedBox(height: 22),
                               SizedBox(
@@ -460,32 +480,86 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: Text(
-                        'Hoặc tiếp tục với',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                    const SizedBox(height: 24),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(color: AppColors.border)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Ho\u1eb7c ti\u1ebfp t\u1ee5c v\u1edbi',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: AppColors.border)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    for (final provider in const [
+                      SocialProvider.google,
+                      SocialProvider.apple,
+                    ]) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _isSubmitting
+                              ? null
+                              : () {
+                                  final name = provider == SocialProvider.google
+                                      ? 'Google'
+                                      : 'Apple';
+                                  ScaffoldMessenger.of(context)
+                                    ..hideCurrentSnackBar()
+                                    ..showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '\u0110\u0103ng nh\u1eadp v\u1edbi $name ch\u01b0a \u0111\u01b0\u1ee3c k\u1ebft n\u1ed1i.',
+                                        ),
+                                      ),
+                                    );
+                                },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
+                            backgroundColor: AppColors.surface,
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ExcludeSemantics(
+                                child: SocialProviderIcon(provider: provider),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  'Ti\u1ebfp t\u1ee5c v\u1edbi ${provider == SocialProvider.google ? 'Google' : 'Apple'}',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _SocialAuthButton(
-                      label: 'Tiếp tục với Google',
-                      provider: SocialProvider.google,
-                      onPressed: () => _showUnavailable('Google'),
-                    ),
-                    const SizedBox(height: 8),
-                    _SocialAuthButton(
-                      label: 'Tiếp tục với Apple',
-                      provider: SocialProvider.apple,
-                      onPressed: () => _showUnavailable('Apple'),
-                    ),
-                    const SizedBox(height: 8),
-                    _SocialAuthButton(
-                      label: 'Tiếp tục với Facebook',
-                      provider: SocialProvider.facebook,
-                      onPressed: () => _showUnavailable('Facebook'),
-                    ),
-                    const SizedBox(height: 18),
+                      const SizedBox(height: 10),
+                    ],
+                    const SizedBox(height: 20),
                     Center(
                       child: Wrap(
                         alignment: WrapAlignment.center,
@@ -493,7 +567,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         children: [
                           Text(
                             'Đã có tài khoản? ',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 14,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           TextButton(
                             onPressed: widget.onLogin,
@@ -517,51 +595,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
     );
   }
-
-  void _showUnavailable(String provider) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$provider chưa được kết nối trong bản xem trước.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-  }
-}
-
-class _SocialAuthButton extends StatelessWidget {
-  const _SocialAuthButton({
-    required this.label,
-    required this.provider,
-    required this.onPressed,
-  });
-
-  final String label;
-  final SocialProvider provider;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    height: 48,
-    child: OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textPrimary,
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SocialProviderIcon(provider: provider),
-          const SizedBox(width: 10),
-          Text(label),
-        ],
-      ),
-    ),
-  );
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -570,11 +603,7 @@ class _SectionLabel extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Text(
-    label,
-    style: Theme.of(context).textTheme.labelLarge
-        ?.copyWith(color: AppColors.textPrimary),
-  );
+  Widget build(BuildContext context) => Text(label, style: authFieldLabelStyle);
 }
 
 class _InlineError extends StatelessWidget {
@@ -616,36 +645,6 @@ class _PreviewNotice extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium
             ?.copyWith(color: AppColors.primaryDark),
       ),
-    ),
-  );
-}
-
-InputDecoration _signUpInput({required String hint, required IconData icon}) {
-  return InputDecoration(
-    hintText: hint,
-    prefixIcon: Icon(icon, size: 21),
-    filled: true,
-    fillColor: const Color(0xFFFCFBF8),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFB94D4D)),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFB94D4D), width: 1.5),
     ),
   );
 }

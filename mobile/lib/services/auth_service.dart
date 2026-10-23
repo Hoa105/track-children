@@ -25,7 +25,7 @@ class AuthException implements Exception {
         'code' => 'mã OTP',
         _ => field.toString(),
       }).join(', ')}.',
-    'INVALID_CREDENTIALS' => 'Email hoặc mật khẩu chưa đúng.',
+    'INVALID_CREDENTIALS' => 'Email, số điện thoại hoặc mật khẩu chưa đúng.',
     'ACCOUNT_CONFLICT' =>
       'Email, số điện thoại hoặc tên người dùng đã được dùng.',
     'OTP_INVALID' => 'Mã OTP chưa đúng.',
@@ -222,12 +222,12 @@ class AuthService {
   }
 
   Future<void> login(
-    String email,
+    String account,
     String password, {
     bool remember = true,
   }) async {
     if (demoMode) {
-      if (!await DemoStore.instance.login(email, password)) {
+      if (!await DemoStore.instance.login(account, password)) {
         throw AuthException('INVALID_CREDENTIALS', {});
       }
       _setDemoUser();
@@ -236,7 +236,10 @@ class AuthService {
     final data = await _request(
       '/auth/login',
       body: {
-        'email': email.trim(),
+        if (account.contains('@'))
+          'email': account.trim()
+        else
+          'phone': account.trim(),
         'password': password,
         'rememberMe': remember,
         'device': await device(),

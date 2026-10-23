@@ -66,3 +66,16 @@ def test_sample_migration_rejected_outside_local(monkeypatch):
     monkeypatch.setattr(settings, 'app_env', 'production')
     with pytest.raises(RuntimeError, match='APP_ENV=local'):
         seed(None)
+
+
+@pytest.mark.parametrize("phone", ["0912345678", "+84912345678", "091 234 5678"])
+def test_login_with_registered_phone(env, payload, monkeypatch, phone):
+    local_mode(monkeypatch)
+    client, db, sms = env
+    payload['password'] = SAMPLE_PASSWORD
+    assert client.post('/api/v1/auth/register', json=payload).status_code == 201
+    body = dict(phone=phone, password=SAMPLE_PASSWORD, device=DEVICE)
+    assert client.post('/api/v1/auth/login', json={**body, 'password': 'wrong'}).status_code == 401
+    response = client.post('/api/v1/auth/login', json=body)
+    assert response.status_code == 200
+    assert response.json()['user']['email'] == payload['email']
