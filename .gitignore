@@ -1,4 +1,10 @@
 # Miscellaneous
+.test-deps/
+.auth-test-pg/
+.auth-test-logs/
+.env
+.env.*
+!.env.example
 *.class
 *.log
 *.pyc

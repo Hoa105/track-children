@@ -3,16 +3,22 @@ enum Jaw { upper, lower }
 enum JawSide { right, left }
 
 /// The 5 primary tooth types, ordered from the midline outwards.
-enum ToothType { centralIncisor, lateralIncisor, canine, firstMolar, secondMolar }
+enum ToothType {
+  centralIncisor,
+  lateralIncisor,
+  canine,
+  firstMolar,
+  secondMolar,
+}
 
 extension ToothTypeX on ToothType {
   String get label => switch (this) {
-        ToothType.centralIncisor => 'Răng cửa giữa',
-        ToothType.lateralIncisor => 'Răng cửa bên',
-        ToothType.canine => 'Răng nanh',
-        ToothType.firstMolar => 'Răng hàm thứ nhất',
-        ToothType.secondMolar => 'Răng hàm thứ hai',
-      };
+    ToothType.centralIncisor => 'Răng cửa giữa',
+    ToothType.lateralIncisor => 'Răng cửa bên',
+    ToothType.canine => 'Răng nanh',
+    ToothType.firstMolar => 'Răng hàm thứ nhất',
+    ToothType.secondMolar => 'Răng hàm thứ hai',
+  };
 }
 
 /// One of the 20 primary (milk) teeth.
@@ -30,17 +36,17 @@ class PrimaryTooth {
 
   /// Typical eruption window in months (ADA primary-teeth chart).
   (int, int) get eruptionMonths => switch ((jaw, type)) {
-        (Jaw.upper, ToothType.centralIncisor) => (8, 12),
-        (Jaw.upper, ToothType.lateralIncisor) => (9, 13),
-        (Jaw.upper, ToothType.canine) => (16, 22),
-        (Jaw.upper, ToothType.firstMolar) => (13, 19),
-        (Jaw.upper, ToothType.secondMolar) => (25, 33),
-        (Jaw.lower, ToothType.centralIncisor) => (6, 10),
-        (Jaw.lower, ToothType.lateralIncisor) => (10, 16),
-        (Jaw.lower, ToothType.canine) => (17, 23),
-        (Jaw.lower, ToothType.firstMolar) => (14, 18),
-        (Jaw.lower, ToothType.secondMolar) => (23, 31),
-      };
+    (Jaw.upper, ToothType.centralIncisor) => (8, 12),
+    (Jaw.upper, ToothType.lateralIncisor) => (9, 13),
+    (Jaw.upper, ToothType.canine) => (16, 22),
+    (Jaw.upper, ToothType.firstMolar) => (13, 19),
+    (Jaw.upper, ToothType.secondMolar) => (25, 33),
+    (Jaw.lower, ToothType.centralIncisor) => (6, 10),
+    (Jaw.lower, ToothType.lateralIncisor) => (10, 16),
+    (Jaw.lower, ToothType.canine) => (17, 23),
+    (Jaw.lower, ToothType.firstMolar) => (14, 18),
+    (Jaw.lower, ToothType.secondMolar) => (23, 31),
+  };
 
   String get eruptionLabel => '${eruptionMonths.$1}–${eruptionMonths.$2} tháng';
 
@@ -56,5 +62,9 @@ class ToothRecord {
   final String toothId;
   final DateTime eruptedDate;
 
-  const ToothRecord({required this.childId, required this.toothId, required this.eruptedDate});
+  const ToothRecord({
+    required this.childId,
+    required this.toothId,
+    required this.eruptedDate,
+  });
 }
