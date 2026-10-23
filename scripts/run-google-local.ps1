@@ -4,6 +4,8 @@ param(
     [string]$ApiBaseUrl = 'http://127.0.0.1:8000/api/v1',
     [string]$GoogleServerClientId = '',
     [switch]$BuildOnly,
+    [switch]$PrepareOnly,
+    [switch]$ConnectUsb,
     [switch]$NoResident
 )
 
@@ -12,7 +14,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $python = Join-Path $repoRoot '.venv/Scripts/python.exe'
 $definitions = Join-Path $repoRoot '.auth-test-logs/google-dart-defines.json'
 
-if (-not $BuildOnly) {
+if (-not $BuildOnly -and (-not $PrepareOnly -or $ConnectUsb)) {
     $adb = Get-Command adb -ErrorAction SilentlyContinue
     if (-not $adb) { throw 'adb was not found. Add Android SDK platform-tools to PATH.' }
     if (-not $DeviceId) {
@@ -54,10 +56,25 @@ if chosen not in s.google_client_ids or not chosen.endswith('.apps.googleusercon
 out = root / '.auth-test-logs/google-dart-defines.json'
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({'GOOGLE_SERVER_CLIENT_ID': chosen, 'API_BASE_URL': sys.argv[2], 'DEMO_MODE': False}), encoding='utf-8')
+mobile_config = root / 'mobile/lib/config/google_oauth_config.dart'
+mobile_config.parent.mkdir(parents=True, exist_ok=True)
+mobile_config.write_text(
+    '// Public OAuth client ID only. Regenerate with scripts/run-google-local.ps1 -PrepareOnly.\n'
+    '// Client secrets must never be placed in the mobile app.\n'
+    'const googleOAuthServerClientId = ' + json.dumps(chosen) + ';\n',
+    encoding='utf-8',
+)
+backend_config = root / 'mobile/lib/config/local_backend_config.dart'
+backend_config.write_text(
+    '// Local development API URL. Regenerate with scripts/run-google-local.ps1 -PrepareOnly.\n'
+    'const localMobileApiBaseUrl = ' + json.dumps(sys.argv[2]) + ';\n',
+    encoding='utf-8',
+)
 print('Prepared Google client ID and API URL for Flutter; backend secrets were not exported.')
 '@
 & $python -c $prepare $repoRoot $ApiBaseUrl $GoogleServerClientId
 if ($LASTEXITCODE -ne 0) { throw 'Could not prepare Google configuration.' }
+if ($PrepareOnly) { return }
 
 Push-Location (Join-Path $repoRoot 'mobile')
 try {

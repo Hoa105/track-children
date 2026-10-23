@@ -78,9 +78,7 @@ void main() {
     await tester.tap(google);
     await tester.pumpAndSettle();
     expect(
-      find.text(
-        'Chưa đăng nhập được. Kiểm tra mạng và thử lại.',
-      ),
+      find.text('Chưa đăng nhập được. Kiểm tra mạng và thử lại.'),
       findsOneWidget,
     );
   });
@@ -100,6 +98,7 @@ void main() {
           expect(request.url.path, '/api/v1/auth/social');
           expect(body['idToken'], 'provider-signed-token');
           expect(body['acceptedTerms'], true);
+          expect(body['defaultRelationship'], 'father');
           expect(body.containsKey('password'), false);
           return response({...result, 'isNewUser': true});
         }),
@@ -117,10 +116,31 @@ void main() {
       await tester.tap(google);
       await tester.pumpAndSettle();
       expect(calls, 0);
-      await tester.ensureVisible(find.byType(Checkbox));
-      await tester.tap(find.byType(Checkbox));
-      await tester.ensureVisible(google);
-      await tester.tap(google);
+      final consent = find.byKey(const ValueKey('social-consent'));
+      expect(consent, findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Tiếp tục'))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(consent);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Tiếp tục'));
+      await tester.pumpAndSettle();
+      expect(calls, 0);
+      expect(find.text('Chọn vai trò với bé'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Hoàn tất đăng ký'),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Bố').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Hoàn tất đăng ký'));
       await tester.pumpAndSettle();
       expect(calls, 1);
       expect(opened, true);

@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../config/google_oauth_config.dart';
+
 class SocialIdentityException implements Exception {
   const SocialIdentityException(this.code);
   final String code;
@@ -11,6 +13,7 @@ class SocialIdentity {
   static Future<void>? _googleInitialization;
   static const googleServerId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: googleOAuthServerClientId,
   );
   static const googleIosId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
   static const appleServiceId = String.fromEnvironment('APPLE_SERVICE_ID');
@@ -27,7 +30,7 @@ class SocialIdentity {
     }
     if (provider == 'google') {
       if (googleServerId.isEmpty) {
-        throw const SocialIdentityException('SOCIAL_AUTH_NOT_CONFIGURED');
+        throw const SocialIdentityException('GOOGLE_CLIENT_ID_MISSING');
       }
       _googleInitialization ??= GoogleSignIn.instance.initialize(
         serverClientId: googleServerId,
@@ -38,6 +41,8 @@ class SocialIdentity {
         throw const SocialIdentityException('SOCIAL_PLATFORM_UNSUPPORTED');
       }
       try {
+        // Clear the provider's cached selection so a new tap can choose an account.
+        await GoogleSignIn.instance.signOut();
         final account = await GoogleSignIn.instance.authenticate();
         final token = account.authentication.idToken;
         if (token == null) {
@@ -47,6 +52,7 @@ class SocialIdentity {
         return {
           'idToken': token,
           'displayName': account.displayName ?? 'Phụ huynh',
+          'email': account.email,
         };
       } on GoogleSignInException catch (e) {
         if (kDebugMode) {
@@ -55,7 +61,7 @@ class SocialIdentity {
         }
         if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
             e.code == GoogleSignInExceptionCode.providerConfigurationError) {
-          throw const SocialIdentityException('SOCIAL_AUTH_NOT_CONFIGURED');
+          throw const SocialIdentityException('GOOGLE_OAUTH_CONFIGURATION_ERROR');
         }
         if (e.code == GoogleSignInExceptionCode.canceled) {
           throw const SocialIdentityException('SOCIAL_CANCELLED');
@@ -93,6 +99,7 @@ class SocialIdentity {
       return {
         'idToken': credential.identityToken,
         'authorizationCode': credential.authorizationCode,
+        'email': credential.email,
         'displayName': [
           credential.givenName,
           credential.familyName,

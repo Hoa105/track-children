@@ -8,6 +8,7 @@ import 'otp_dialog.dart';
 import 'parent_role.dart';
 import 'auth_form_style.dart';
 import 'social_provider_icon.dart';
+import 'social_registration_dialog.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({
@@ -34,13 +35,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   ParentRole _parentRole = ParentRole.mother;
   bool _obscurePassword = true;
+  bool _obscureConfirmation = true;
   bool? _emailSelected;
   bool get _useEmail => _emailSelected ?? true;
   bool _isSubmitting = false;
+  bool _isVerifyingOtp = false;
+  bool _isCompletingSocial = false;
   bool _attemptedSubmit = false;
   bool _acceptedTerms = false;
   String? _previewMessage;
   final Map<String, String> _serverErrors = {};
+  Map<String, dynamic>? _pendingChallenge;
+  Map<String, dynamic>? _pendingPayload;
+
+  Map<String, dynamic> get _registrationPayload => {
+    'displayName': _nameController.text.trim().isEmpty
+        ? 'Phụ huynh'
+        : _nameController.text.trim(),
+    if (_useEmail)
+      'email': _emailController.text.trim()
+    else
+      'phone': _phoneController.text.trim(),
+    'password': _passwordController.text,
+    'defaultRelationship': _parentRole.registrationValue,
+    'acceptedTerms': _acceptedTerms,
+  };
 
   @override
   void dispose() {
@@ -111,7 +130,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
-                        '${doc['docType']} — ${doc['version']}\n${doc['content']}',
+                        '${switch (doc['docType']) {
+                          'terms' => 'Điều khoản sử dụng',
+                          'privacy' => 'Chính sách quyền riêng tư',
+                          'data_policy' => 'Chính sách dữ liệu',
+                          _ => doc['docType'],
+                        }} — ${doc['version']}\n${doc['content']}',
                       ),
                     ),
                 ],
@@ -122,6 +146,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Đóng'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() => _acceptedTerms = true);
+                Navigator.pop(context);
+              },
+              child: const Text('Đồng ý'),
             ),
           ],
         ),
@@ -147,25 +178,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final challenge = await AuthService.instance.register({
-        'displayName': _nameController.text.trim().isEmpty
-            ? 'Ph\u1ee5 huynh'
-            : _nameController.text.trim(),
-        if (_useEmail)
-          'email': _emailController.text.trim()
-        else
-          'phone': _phoneController.text.trim(),
-        'password': _passwordController.text,
-        'defaultRelationship': _parentRole.registrationValue,
-        'acceptedTerms': _acceptedTerms,
-      });
+      final payload = _registrationPayload;
+      final unchanged =
+          _pendingPayload != null &&
+          payload.entries.every(
+            (entry) => _pendingPayload![entry.key] == entry.value,
+          ) &&
+          payload.length == _pendingPayload!.length;
+      final challenge = unchanged && _pendingChallenge != null
+          ? _pendingChallenge!
+          : await AuthService.instance.register(payload);
+      _pendingPayload = payload;
+      _pendingChallenge = challenge;
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
+      setState(() => _isVerifyingOtp = true);
       final verified = await showOtpVerificationDialog(
         context,
         challenge: challenge,
+        onChallengeChanged: (value) => _pendingChallenge = value,
       );
-      if (mounted && verified == true) widget.onChildProfilePreview();
+      if (mounted && verified == true) {
+        _pendingChallenge = null;
+        _pendingPayload = null;
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        widget.onChildProfilePreview();
+      }
     } on AuthException catch (e) {
       if (mounted) {
         setState(() {
@@ -186,23 +224,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() => _previewMessage = e.toString());
       }
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _isVerifyingOtp = false;
+        });
+      }
     }
   }
 
   Future<void> _socialRegister(SocialProvider provider) async {
     if (_isSubmitting) return;
     setState(() {
-      _attemptedSubmit = true;
       _previewMessage = null;
     });
-    if (!_acceptedTerms) return;
     setState(() => _isSubmitting = true);
     try {
       final created = await AuthService.instance.socialRegister(
         provider.name,
-        acceptedTerms: _acceptedTerms,
-        relationship: _parentRole.registrationValue,
+        acceptedTerms: false,
+        displayName: _nameController.text,
+        requestConsent: (account) async {
+          if (!mounted) return null;
+          setState(() => _isCompletingSocial = true);
+          try {
+            return await showDialog<SocialRegistrationConsent>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => SocialRegistrationDialog(
+                providerName: provider == SocialProvider.google
+                    ? 'Google'
+                    : 'Apple',
+                account: account,
+              ),
+            );
+          } finally {
+            if (mounted) setState(() => _isCompletingSocial = false);
+          }
+        },
       );
       if (mounted) {
         (created
@@ -210,6 +269,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             : widget.onExistingAccount ?? widget.onChildProfilePreview)();
       }
     } on AuthException catch (e) {
+      if (e.code == 'SOCIAL_CANCELLED') return;
       if (mounted) {
         setState(() => _previewMessage = e.toString());
       }
@@ -292,6 +352,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         child: Form(
                           key: _formKey,
+                          autovalidateMode: _attemptedSubmit
+                              ? AutovalidateMode.onUserInteraction
+                              : AutovalidateMode.disabled,
+                          onChanged: () {
+                            if (_serverErrors.isNotEmpty) {
+                              setState(() => _serverErrors.clear());
+                            }
+                          },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -300,6 +368,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
+                                enabled: !_isSubmitting,
                                 controller: _nameController,
                                 textCapitalization: TextCapitalization.words,
                                 textInputAction: TextInputAction.next,
@@ -355,6 +424,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               const SizedBox(height: 4),
                               TextFormField(
+                                enabled: !_isSubmitting,
                                 key: ValueKey(_useEmail),
                                 controller: _useEmail
                                     ? _emailController
@@ -384,6 +454,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               const _SectionLabel('Mật khẩu'),
                               const SizedBox(height: 8),
                               TextFormField(
+                                enabled: !_isSubmitting,
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.next,
@@ -400,9 +471,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         tooltip: _obscurePassword
                                             ? 'Hiện mật khẩu'
                                             : 'Ẩn mật khẩu',
-                                        onPressed: () => setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        }),
+                                        onPressed: _isSubmitting
+                                            ? null
+                                            : () => setState(() {
+                                                _obscurePassword =
+                                                    !_obscurePassword;
+                                              }),
                                         icon: Icon(
                                           _obscurePassword
                                               ? Icons.visibility_outlined
@@ -415,18 +489,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               const _SectionLabel('Xác nhận mật khẩu'),
                               const SizedBox(height: 8),
                               TextFormField(
+                                enabled: !_isSubmitting,
                                 controller: _confirmPasswordController,
-                                obscureText: true,
+                                obscureText: _obscureConfirmation,
                                 textInputAction: TextInputAction.done,
                                 autofillHints: const [
                                   AutofillHints.newPassword,
                                 ],
                                 validator: _validateConfirmPassword,
                                 onFieldSubmitted: (_) => _submit(),
-                                decoration: authInputDecoration(
-                                  hint: 'Nhập lại mật khẩu',
-                                  icon: Icons.lock_outline_rounded,
-                                ),
+                                decoration:
+                                    authInputDecoration(
+                                      hint: 'Nhập lại mật khẩu',
+                                      icon: Icons.lock_outline_rounded,
+                                    ).copyWith(
+                                      suffixIcon: IconButton(
+                                        tooltip: _obscureConfirmation
+                                            ? 'Hiện xác nhận mật khẩu'
+                                            : 'Ẩn xác nhận mật khẩu',
+                                        onPressed: _isSubmitting
+                                            ? null
+                                            : () => setState(() {
+                                                _obscureConfirmation =
+                                                    !_obscureConfirmation;
+                                              }),
+                                        icon: Icon(
+                                          _obscureConfirmation
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                        ),
+                                      ),
+                                    ),
                               ),
                               const SizedBox(height: 16),
                               const _SectionLabel('Vai trò với bé'),
@@ -514,7 +607,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
-                                  child: _isSubmitting
+                                  child:
+                                      _isSubmitting &&
+                                          !_isVerifyingOtp &&
+                                          !_isCompletingSocial
                                       ? const SizedBox.square(
                                           dimension: 20,
                                           child: CircularProgressIndicator(

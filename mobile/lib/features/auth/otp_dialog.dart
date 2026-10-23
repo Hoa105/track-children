@@ -10,17 +10,28 @@ Future<bool?> showOtpVerificationDialog(
   BuildContext context, {
   required Map<String, dynamic> challenge,
   bool remember = true,
+  ValueChanged<Map<String, dynamic>?>? onChallengeChanged,
 }) => showDialog<bool>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => OtpDialog(challenge: challenge, remember: remember),
+  builder: (_) => OtpDialog(
+    challenge: challenge,
+    remember: remember,
+    onChallengeChanged: onChallengeChanged,
+  ),
 );
 
 class OtpDialog extends StatefulWidget {
-  const OtpDialog({required this.challenge, this.remember = true, super.key});
+  const OtpDialog({
+    required this.challenge,
+    this.remember = true,
+    this.onChallengeChanged,
+    super.key,
+  });
 
   final Map<String, dynamic> challenge;
   final bool remember;
+  final ValueChanged<Map<String, dynamic>?>? onChallengeChanged;
 
   @override
   State<OtpDialog> createState() => _OtpDialogState();
@@ -32,8 +43,7 @@ class _OtpDialogState extends State<OtpDialog> {
   late Map<String, dynamic> _challenge;
   bool _busy = false;
   int _attemptsRemaining = 5;
-  int _resendCount = 0;
-  static const _maxResends = 5;
+  bool _invalidChallenge = false;
   DateTime? _localResendAt;
   int get _secondsLeft =>
       (DateTime.parse(_challenge['expiresAt'] as String)
@@ -42,7 +52,11 @@ class _OtpDialogState extends State<OtpDialog> {
               1000)
           .ceil()
           .clamp(0, 300);
-  bool get _canConfirm => !_busy && _secondsLeft > 0 && _attemptsRemaining > 0;
+  bool get _canConfirm =>
+      !_busy &&
+      !_invalidChallenge &&
+      _secondsLeft > 0 &&
+      _attemptsRemaining > 0;
   Timer? _timer;
   int get _wait =>
       (_localResendAt ??
@@ -57,6 +71,10 @@ class _OtpDialogState extends State<OtpDialog> {
   void initState() {
     super.initState();
     _challenge = widget.challenge;
+    _attemptsRemaining = (_challenge['attemptsRemaining'] as int? ?? 5).clamp(
+      0,
+      5,
+    );
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -103,6 +121,16 @@ class _OtpDialogState extends State<OtpDialog> {
               ..._challenge,
               'expiresAt': DateTime.now().toIso8601String(),
             };
+          } else if (e.code == 'REGISTRATION_CHALLENGE_INVALID') {
+            _invalidChallenge = true;
+            widget.onChallengeChanged?.call(null);
+          }
+          if (!_invalidChallenge) {
+            _challenge = {
+              ..._challenge,
+              'attemptsRemaining': _attemptsRemaining,
+            };
+            widget.onChallengeChanged?.call(_challenge);
           }
           _error = e.toString();
         });
@@ -115,7 +143,7 @@ class _OtpDialogState extends State<OtpDialog> {
   }
 
   Future<void> _resend() async {
-    if (_busy || _resendWait > 0 || _resendCount >= _maxResends) return;
+    if (_busy || _invalidChallenge || _resendWait > 0) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -124,15 +152,34 @@ class _OtpDialogState extends State<OtpDialog> {
       final value = await AuthService.instance.resend(_challenge);
       if (mounted) {
         setState(() {
-          _resendCount++;
-          _localResendAt = DateTime.now().add(const Duration(seconds: 60));
+          _localResendAt = null;
           _challenge = value;
+          widget.onChallengeChanged?.call(value);
           _codeController.clear();
           _attemptsRemaining = 5;
           if (value['deliveryStatus'] == 'failed') {
             _error = 'Chưa gửi được mã mới. Vui lòng thử lại sau 60 giây.';
             return;
           }
+        });
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          final retry = e.details['retryAfter'];
+          if (retry is int && retry > 0) {
+            _localResendAt = DateTime.now().add(Duration(seconds: retry));
+            _challenge = {
+              ..._challenge,
+              'resendAvailableAt': _localResendAt!.toIso8601String(),
+            };
+            widget.onChallengeChanged?.call(_challenge);
+          }
+          if (e.code == 'REGISTRATION_CHALLENGE_INVALID') {
+            _invalidChallenge = true;
+            widget.onChallengeChanged?.call(null);
+          }
+          _error = e.toString();
         });
       }
     } catch (e) {
@@ -152,12 +199,16 @@ class _OtpDialogState extends State<OtpDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_challenge['deliveryStatus'] == 'preview'
-              ? 'Xác minh thử nghiệm cho ${_challenge['targetMasked']}.'
-              : 'Nhập mã OTP gửi đến ${_challenge['targetMasked']}.'),
+          Text(
+            _challenge['deliveryStatus'] == 'preview'
+                ? 'Xác minh thử nghiệm cho ${_challenge['targetMasked']}.'
+                : 'Nhập mã OTP gửi đến ${_challenge['targetMasked']}.',
+          ),
           if (_challenge['deliveryStatus'] == 'preview') ...[
             const SizedBox(height: 8),
-            Text('Chế độ thử nghiệm local — chưa gửi email/SMS.\nMã thử nghiệm: ${_challenge['devOtp']}'),
+            Text(
+              'Chế độ thử nghiệm local — chưa gửi email/SMS.\nMã thử nghiệm: ${_challenge['devOtp']}',
+            ),
           ],
           const SizedBox(height: 8),
           Text(
@@ -199,15 +250,11 @@ class _OtpDialogState extends State<OtpDialog> {
             ),
           ),
           TextButton(
-            onPressed: _busy || _resendWait > 0 || _resendCount >= _maxResends
+            onPressed: _busy || _invalidChallenge || _resendWait > 0
                 ? null
                 : _resend,
             child: Text(
-              _resendCount >= _maxResends
-                  ? 'Đã đạt giới hạn gửi lại'
-                  : _resendWait > 0
-                  ? 'Gửi lại sau $_resendWait giây'
-                  : 'Gửi lại OTP',
+              _resendWait > 0 ? 'Gửi lại sau $_resendWait giây' : 'Gửi lại OTP',
             ),
           ),
         ],

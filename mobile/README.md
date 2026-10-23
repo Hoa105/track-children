@@ -31,6 +31,35 @@ flutter run -d chrome --web-port 5174 --dart-define=DEMO_MODE=false
 
 Sau khi đổi cấu hình, dừng và chạy lại app.
 
+### Google trên Android
+
+Chọn **Mobile Android (user 0)** hoặc **Mobile Android Emulator (API)** trong VS Code
+và nhấn F5. Bước chuẩn bị tự đọc `GOOGLE_CLIENT_IDS` từ `backend/.env` rồi truyền
+`GOOGLE_SERVER_CLIENT_ID` vào bản build Flutter. Cần đúng một Web OAuth client ID
+trong danh sách; không xuất khóa bí mật backend sang app.
+
+App có client ID công khai dự phòng tại `lib/config/google_oauth_config.dart`,
+để nút Google vẫn nhận cấu hình khi chạy bằng `flutter run` không kèm dart define.
+`GOOGLE_SERVER_CLIENT_ID` truyền lúc build sẽ ghi đè giá trị dự phòng.
+Khi đổi OAuth project, chạy `scripts/run-google-local.ps1 -PrepareOnly` từ thư mục
+gốc để đồng bộ file này với backend. File chỉ chứa client ID công khai, không chứa
+client secret.
+
+URL backend dự phòng nằm trong `lib/config/local_backend_config.dart` và được
+script cập nhật cùng lúc với Google client ID. Chọn cấu hình Android thật sẽ
+dùng `127.0.0.1:8000` và tự thiết lập `adb reverse`; cấu hình emulator dùng
+`10.0.2.2:8000`. Không dùng địa chỉ emulator cho điện thoại thật.
+
+Nếu chạy bằng terminal từ thư mục gốc:
+
+```powershell
+.\scripts\run-google-local.ps1
+```
+
+Khi thay client ID hoặc vừa sửa lỗi thiếu cấu hình, **dừng app và chạy lại hoàn toàn**;
+hot reload/hot restart không cập nhật `--dart-define`. Cấu hình OAuth Android trên
+Google Cloud cần khớp package `com.example.track_children` và SHA-1 của khóa ký app.
+
 Hiện mặc định dùng **API xác thực thật**, cần backend tại cổng `8000`.
 Android emulator dùng `http://10.0.2.2:8000/api/v1`. Với Android thật kết nối USB,
 chạy `adb reverse tcp:8000 tcp:8000`, sau đó:

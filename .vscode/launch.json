@@ -3,11 +3,13 @@
   "configurations": [
     {
       "name": "Mobile Android (user 0)",
+      "preLaunchTask": "Prepare Google mobile configuration",
       "type": "dart",
       "request": "launch",
       "cwd": "${workspaceFolder}/mobile",
       "program": "${workspaceFolder}/mobile/lib/main.dart",
       "toolArgs": [
+        "--dart-define-from-file=${workspaceFolder}/.auth-test-logs/google-dart-defines.json",
         "--device-user",
         "0",
         "--dart-define=DEMO_MODE=false",
@@ -16,11 +18,13 @@
     },
     {
       "name": "Mobile Android Emulator (API)",
+      "preLaunchTask": "Prepare Google emulator configuration",
       "type": "dart",
       "request": "launch",
       "cwd": "${workspaceFolder}/mobile",
       "program": "${workspaceFolder}/mobile/lib/main.dart",
       "toolArgs": [
+        "--dart-define-from-file=${workspaceFolder}/.auth-test-logs/google-dart-defines.json",
         "--device-user",
         "0",
         "--dart-define=DEMO_MODE=false",

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import 'demo_store.dart';
 import 'social_identity.dart';
+import '../config/local_backend_config.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -43,6 +44,10 @@ class AuthException implements Exception {
       'Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.',
     'ACCOUNT_LOCKED' => 'Tài khoản đã bị khóa.',
     'SOCIAL_AUTH_NOT_CONFIGURED' => 'Đăng nhập Google/Apple chưa được cấu hình. Vui lòng liên hệ nhóm phát triển.',
+    'GOOGLE_CLIENT_ID_MISSING' =>
+      'App chưa có Google client ID. Vui lòng cấu hình và chạy lại app.',
+    'GOOGLE_OAUTH_CONFIGURATION_ERROR' =>
+      'Cấu hình Google OAuth chưa khớp. Cần kiểm tra Web client ID, package Android và SHA-1 của khóa ký app.',
     'SOCIAL_PLATFORM_UNSUPPORTED' =>
       'Phương thức này chưa được hỗ trợ trên nền tảng đang dùng.',
     'SOCIAL_CANCELLED' => 'Chưa đăng nhập được. Kiểm tra mạng và thử lại.',
@@ -54,7 +59,7 @@ class AuthException implements Exception {
       'Nhà cung cấp chưa xác nhận email của tài khoản này.',
     'SOCIAL_ACCOUNT_CONFLICT' =>
       'Email đã có tài khoản. Vui lòng đăng nhập bằng phương thức đã đăng ký.',
-    'NETWORK_ERROR' => 'Không thể kết nối. Kiểm tra mạng và thử lại.',
+    'NETWORK_ERROR' => 'Không thể kết nối máy chủ ứng dụng. Vui lòng thử lại sau.',
     'SERVER_RESPONSE_INVALID' => 'Máy chủ phản hồi lỗi. Vui lòng thử lại.',
     'RATE_LIMIT_UNAVAILABLE' ||
     'DATABASE_UNAVAILABLE' => 'Máy chủ tạm thời bận. Vui lòng thử lại.',
@@ -62,6 +67,12 @@ class AuthException implements Exception {
       'Máy chủ tạm thời lỗi. Vui lòng thử lại.',
     _ => 'Chưa thực hiện được yêu cầu ($code).',
   };
+}
+
+class SocialRegistrationConsent {
+  const SocialRegistrationConsent({required this.relationship});
+
+  final String relationship;
 }
 
 class AuthService {
@@ -88,7 +99,7 @@ class AuthService {
     'API_BASE_URL',
     defaultValue: kIsWeb
         ? 'http://localhost:8000/api/v1'
-        : 'http://10.0.2.2:8000/api/v1',
+        : localMobileApiBaseUrl,
   );
   final http.Client _client;
   final FlutterSecureStorage _storage;
@@ -153,6 +164,9 @@ class AuthService {
               ? error['code'] as String
               : 'HTTP_${response.statusCode}',
           {
+            if (int.tryParse(response.headers['retry-after'] ?? '')
+                case final int seconds)
+              'retryAfter': seconds,
             if (error['details'] is Map)
               ...Map<String, dynamic>.from(error['details'] as Map),
             if (error['fields'] is Map) 'fields': error['fields'],
@@ -228,9 +242,14 @@ class AuthService {
     String provider, {
     required bool acceptedTerms,
     String relationship = 'mother',
+    String? displayName,
     bool remember = true,
+    Future<SocialRegistrationConsent?> Function(Map<String, dynamic> account)?
+    requestConsent,
   }) async {
-    if (!acceptedTerms) throw AuthException('LEGAL_CONSENT_REQUIRED', {});
+    if (!acceptedTerms && requestConsent == null) {
+      throw AuthException('LEGAL_CONSENT_REQUIRED', {});
+    }
     Map<String, dynamic>? challenge;
     if (provider == 'apple') {
       challenge = await _request('/auth/social/apple/challenge', body: {});
@@ -240,11 +259,25 @@ class AuthService {
         provider,
         challenge?['nonce'] as String?,
       );
+      if (requestConsent != null) {
+        final consent = await requestConsent({
+          'displayName': credential['displayName'],
+          'email': credential['email'],
+        });
+        if (consent == null) throw AuthException('SOCIAL_CANCELLED', {});
+        relationship = consent.relationship;
+      }
       final result = await _request(
         '/auth/social',
         body: {
           'provider': provider,
-          ...credential,
+          'idToken': credential['idToken'],
+          if (credential['authorizationCode'] != null)
+            'authorizationCode': credential['authorizationCode'],
+          if (credential['displayName'] != null)
+            'displayName': credential['displayName'],
+          if (displayName != null && displayName.trim().isNotEmpty)
+            'displayName': displayName.trim(),
           if (challenge != null) 'challenge': challenge['challenge'],
           'defaultRelationship': relationship,
           'acceptedTerms': true,

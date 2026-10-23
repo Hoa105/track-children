@@ -12,7 +12,7 @@ Health check: `GET /health`. API docs: http://localhost:8000/docs — hợp đ�
 xem `docs/api/README.md`.
 
 Đăng ký theo schema 009 và cấu hình OTP local/email/SMS:
-[mobile-registration-v2.md](../docs/api/mobile-registration-v2.md).
+[mobile-registration.md](../docs/api/mobile-registration.md).
 
 Đăng ký/đăng nhập Google và Apple, migration bổ sung và cấu hình SDK:
 [mobile-social-auth.md](../docs/api/mobile-social-auth.md).

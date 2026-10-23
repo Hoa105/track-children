@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
+import '../config/local_backend_config.dart';
 
 /// Backend base URL. Override with `--dart-define=API_BASE_URL=http://<ip>:8000`
 /// (thiết bị thật cần IP LAN của máy chạy backend).
 String get apiBaseUrl {
   const configured = String.fromEnvironment('API_BASE_URL');
   if (configured.isNotEmpty) return configured;
-  // Android emulator reaches the host machine through 10.0.2.2.
+  // Match the auth endpoint prepared for the selected physical device/emulator.
   return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-      ? 'http://10.0.2.2:8000'
+      ? Uri.parse(localMobileApiBaseUrl).origin
       : 'http://localhost:8000';
 }
 
