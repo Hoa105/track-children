@@ -5,19 +5,23 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import 'auth_entrance_animation.dart';
+import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
+import 'auth_form_style.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     required this.onSignUp,
     required this.onBack,
     this.onLoginSuccess,
+    this.passwordRecovery,
     super.key,
   });
 
   final VoidCallback onSignUp;
   final VoidCallback onBack;
   final VoidCallback? onLoginSuccess;
+  final PasswordRecovery? passwordRecovery;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -41,9 +45,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateAccount(String? value) {
     final account = value?.trim() ?? '';
-    if (account.isEmpty) return 'Vui lòng nhập email.';
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(account)) {
-      return 'Email chưa đúng định dạng.';
+    if (account.isEmpty)
+      return 'Vui l\u00f2ng nh\u1eadp email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i.';
+    if (account.contains('@')) {
+      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(account)) {
+        return 'Email ch\u01b0a \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.';
+      }
+    } else {
+      var phone = account.replaceAll(RegExp(r'[\s()-]'), '');
+      if (phone.startsWith('0')) phone = '+84${phone.substring(1)}';
+      if (!RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(phone)) {
+        return 'S\u1ed1 \u0111i\u1ec7n tho\u1ea1i ch\u01b0a \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.';
+      }
     }
     return null;
   }
@@ -83,7 +96,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ) ==
             true;
       } else {
-        if (mounted) setState(() => _previewError = e.toString());
+        if (mounted) {
+          setState(
+            () => _previewError = e.code == 'INVALID_CREDENTIALS'
+                ? 'Email/s\u1ed1 \u0111i\u1ec7n tho\u1ea1i ho\u1eb7c m\u1eadt kh\u1ea9u kh\u00f4ng \u0111\u00fang'
+                : e.toString(),
+          );
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _previewError = e.toString());
@@ -111,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -127,26 +146,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: Text(
                         'Chào mừng bạn trở lại',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        'Đăng nhập để tiếp tục hành trình cùng bé.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge
-                            ?.copyWith(height: 1.5),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
                     const SizedBox(height: 24),
                     AuthEntranceCard(
                       child: Container(
@@ -169,11 +178,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _FieldLabel('Email'),
+                              const _FieldLabel(
+                                'Email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i',
+                              ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _accountController,
-                                keyboardType: TextInputType.emailAddress,
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 15,
+                                  color: Color(0xFF172B35),
+                                ),
+                                keyboardType: TextInputType.text,
                                 textInputAction: TextInputAction.next,
                                 autofillHints: const [
                                   AutofillHints.username,
@@ -181,23 +197,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                   AutofillHints.telephoneNumber,
                                 ],
                                 validator: _validateAccount,
-                                decoration: _inputDecoration(
-                                  hint: 'ban@email.com',
-                                  icon: Icons.mail_outline_rounded,
+                                decoration: authInputDecoration(
+                                  hint: 'Email / 09xx xxx xxx',
+                                  icon: Icons.person_outline_rounded,
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 16),
                               const _FieldLabel('Mật khẩu'),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _passwordController,
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 15,
+                                  color: Color(0xFF172B35),
+                                ),
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.done,
                                 autofillHints: const [AutofillHints.password],
                                 validator: _validatePassword,
                                 onFieldSubmitted: (_) => _submit(),
                                 decoration:
-                                    _inputDecoration(
+                                    authInputDecoration(
                                       hint: '••••••••',
                                       icon: Icons.lock_outline_rounded,
                                     ).copyWith(
@@ -238,9 +259,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ],
                                   ),
                                   TextButton(
-                                    onPressed: () =>
-                                        _showUnavailable('Khôi phục mật khẩu'),
-                                    child: const Text('Quên mật khẩu?'),
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () => showForgotPasswordSheet(
+                                            context,
+                                            recovery: widget.passwordRecovery,
+                                            initialAccount:
+                                                _accountController.text,
+                                          ),
+                                    child: const Text(
+                                      'Qu\u00ean m\u1eadt kh\u1ea9u?',
+                                    ),
                                   ),
                                 ],
                               ),
@@ -292,6 +321,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                   style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.primary,
                                     foregroundColor: Colors.white,
+                                    textStyle: const TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -312,41 +346,86 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    Center(
-                      child: Text(
-                        'Hoặc tiếp tục với',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                    const SizedBox(height: 24),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(color: AppColors.border)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Ho\u1eb7c ti\u1ebfp t\u1ee5c v\u1edbi',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: AppColors.border)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    for (final provider in const [
+                      SocialProvider.google,
+                      SocialProvider.apple,
+                    ]) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  final name = provider == SocialProvider.google
+                                      ? 'Google'
+                                      : 'Apple';
+                                  ScaffoldMessenger.of(context)
+                                    ..hideCurrentSnackBar()
+                                    ..showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '\u0110\u0103ng nh\u1eadp v\u1edbi $name ch\u01b0a \u0111\u01b0\u1ee3c k\u1ebft n\u1ed1i.',
+                                        ),
+                                      ),
+                                    );
+                                },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
+                            backgroundColor: AppColors.surface,
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ExcludeSemantics(
+                                child: SocialProviderIcon(provider: provider),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  'Ti\u1ebfp t\u1ee5c v\u1edbi ${provider == SocialProvider.google ? 'Google' : 'Apple'}',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _SocialLoginButton(
-                      label: 'Tiếp tục với Google',
-                      provider: SocialProvider.google,
-                      onPressed: () => _showUnavailable('Google'),
-                    ),
-                    const SizedBox(height: 8),
-                    _SocialLoginButton(
-                      label: 'Tiếp tục với Apple',
-                      provider: SocialProvider.apple,
-                      onPressed: () => _showUnavailable('Apple'),
-                    ),
-                    const SizedBox(height: 8),
-                    _SocialLoginButton(
-                      label: 'Tiếp tục với Facebook',
-                      provider: SocialProvider.facebook,
-                      onPressed: () => _showUnavailable('Facebook'),
-                    ),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: Text(
-                        'Đăng nhập bằng tài khoản đã đăng ký.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                    ],
+                    const SizedBox(height: 20),
                     Center(
                       child: Wrap(
                         alignment: WrapAlignment.center,
@@ -354,7 +433,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Text(
                             'Bạn chưa có tài khoản? ',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 14,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           TextButton(
                             onPressed: widget.onSignUp,
@@ -369,15 +452,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        'Thông tin của bạn được dùng để đồng hành cùng bé.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -387,17 +461,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
-  void _showUnavailable(String feature) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$feature chưa được kết nối trong bản xem trước.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-  }
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -406,76 +469,5 @@ class _FieldLabel extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Text(
-    label,
-    style: Theme.of(context).textTheme.labelLarge
-        ?.copyWith(color: AppColors.textPrimary),
-  );
-}
-
-InputDecoration _inputDecoration({
-  required String hint,
-  required IconData icon,
-}) {
-  return InputDecoration(
-    hintText: hint,
-    prefixIcon: Icon(icon, size: 21),
-    filled: true,
-    fillColor: const Color(0xFFFCFBF8),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.border),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFB94D4D)),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFB94D4D), width: 1.5),
-    ),
-  );
-}
-
-class _SocialLoginButton extends StatelessWidget {
-  const _SocialLoginButton({
-    required this.label,
-    required this.provider,
-    required this.onPressed,
-  });
-
-  final String label;
-  final SocialProvider provider;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    height: 48,
-    child: OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textPrimary,
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SocialProviderIcon(provider: provider),
-          const SizedBox(width: 10),
-          Flexible(child: Text(label, textAlign: TextAlign.center)),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => Text(label, style: authFieldLabelStyle);
 }

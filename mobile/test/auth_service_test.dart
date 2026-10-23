@@ -89,6 +89,19 @@ void main() {
     },
   );
 
+  test('phone login sends phone instead of email', () async {
+    final service = AuthService(
+      client: MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['phone'], '0912345678');
+        expect(body.containsKey('email'), isFalse);
+        return jsonResponse(tokens('phone'));
+      }),
+    );
+    await service.login('0912345678', 'password');
+    expect(service.signedIn, isTrue);
+  });
+
   test('rememberMe false does not survive restart', () async {
     final client = MockClient((_) async => jsonResponse(tokens('one')));
     final service = AuthService(client: client);

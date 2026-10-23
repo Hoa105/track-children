@@ -257,12 +257,16 @@ def login(db, data, ip):
         return err, None
     err = quota(
         db,
-        "login-id:" + sec.secret_hash(str(data.email).lower()),
+        "login-id:" + sec.secret_hash(data.identifier),
         5,
         900,
         "LOGIN_TEMPORARILY_LOCKED",
     )
-    u = repository.lock_user_by_email(db, (str(data.email),))
+    u = (
+        repository.lock_user_by_email(db, (str(data.email),))
+        if data.email is not None
+        else repository.lock_user_by_phone(db, (data.phone,))
+    )
     t = sec.now()
     if err:
         return err, None
@@ -296,7 +300,7 @@ def login(db, data, ip):
         return failure(401, "INVALID_CREDENTIALS"), None
     # Reset identifier throttle on successful password verification, but never SMS quota.
     repository.clear_identifier_throttle(
-        db, ("login-id:" + sec.secret_hash(str(data.email).lower()),)
+        db, ("login-id:" + sec.secret_hash(data.identifier),)
     )
     repository.reset_login_attempts(db, (u["id"],))
     if (

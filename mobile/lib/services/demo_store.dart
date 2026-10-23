@@ -107,9 +107,18 @@ class DemoStore extends ChangeNotifier {
 
   Future<bool> login(String email, String pass) async {
     await initialize();
+    String normalizePhone(String value) {
+      final phone = value.replaceAll(RegExp(r'[\s()-]'), '');
+      return phone.startsWith('0') ? '+84${phone.substring(1)}' : phone;
+    }
+
+    final account = email.trim();
     final matches = _parents.where(
       (p) =>
-          (p['email'] as String).toLowerCase() == email.trim().toLowerCase() &&
+          (account.contains('@')
+              ? (p['email'] as String).toLowerCase() == account.toLowerCase()
+              : normalizePhone(p['phone'] as String? ?? '') ==
+                    normalizePhone(account)) &&
           p['password'] == pass,
     );
     if (matches.isEmpty) return false;

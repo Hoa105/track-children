@@ -257,3 +257,9 @@ def record_failed_login(db, parameters):
         "UPDATE account.users SET failed_login_attempts=%s,locked_until=%s WHERE id=%s",
         parameters,
     )
+
+
+def lock_user_by_phone(db, parameters):
+    return db.execute(
+        "SELECT * FROM account.users WHERE phone=%s FOR UPDATE", parameters
+    ).fetchone()

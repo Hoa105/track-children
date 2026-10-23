@@ -2,7 +2,7 @@ import re
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, field_validator, model_validator
 
 
 class Input(BaseModel):
@@ -81,7 +81,8 @@ class Verify(Challenge):
 
 
 class Login(Input):
-    email: EmailStr = Field(max_length=254)
+    email: EmailStr | None = Field(default=None, max_length=254)
+    phone: str | None = None
     password: str = Field(min_length=1, max_length=128)
     rememberMe: StrictBool = True
     device: Device
@@ -90,6 +91,21 @@ class Login(Input):
     @classmethod
     def trim(cls, value):
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator("phone")
+    @classmethod
+    def phone_format(cls, value):
+        return Register.phone_format(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def require_identifier(self):
+        if (self.email is None) == (self.phone is None):
+            raise ValueError("Provide exactly one of email or phone")
+        return self
+
+    @property
+    def identifier(self):
+        return str(self.email).lower() if self.email is not None else self.phone
 
 
 class Refresh(Input):

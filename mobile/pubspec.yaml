@@ -38,7 +38,6 @@ dependencies:
   http: ^1.2.2
   flutter_svg: ^2.3.0
   image_picker: ^1.2.4
-  http: ^1.2.0
   flutter_secure_storage: ^9.2.0
 
 dev_dependencies:
@@ -62,6 +61,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 800
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
+          weight: 900
 
   assets:
     - assets/data/who_bmi.json

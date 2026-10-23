@@ -55,6 +55,11 @@ void main() {
             ],
           };
         } else if (request.url.path.endsWith('/register')) {
+          expect(
+            body.containsKey('email') != body.containsKey('phone'),
+            isTrue,
+          );
+
           result = {
             'verificationId': 'otp-id',
             'registrationToken': 'test-secret',
@@ -153,7 +158,12 @@ void main() {
     await tester.ensureVisible(button);
     await tester.tap(button);
     await tester.pumpAndSettle();
-    expect(find.text('Vui lòng nhập email.'), findsOneWidget);
+    expect(
+      find.text(
+        'Vui lòng nh\u1eadp email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i.',
+      ),
+      findsOneWidget,
+    );
     await tester.enterText(
       find.byType(TextFormField).first,
       'demo@trackchildren.vn',
@@ -216,11 +226,9 @@ void main() {
       await tester.pumpAndSettle();
       final values = [
         'Phụ huynh thử',
-        'parent_test',
         'new.parent@example.test',
-        '0900000003',
-        'Testing123',
-        'Testing123',
+        'abcdefgh',
+        'abcdefgh',
       ];
       for (var i = 0; i < values.length; i++) {
         await tester.enterText(find.byType(TextFormField).at(i), values[i]);
@@ -249,6 +257,33 @@ void main() {
       expect(openChild, true);
       expect(AuthService.instance.user!['email'], 'new.parent@example.test');
       expect(DemoStore.instance.children, isEmpty);
+    },
+  );
+  testWidgets(
+    'signup switches to phone without requiring email or display name',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final phoneOption = find.byKey(
+        const ValueKey('registration-method-selector'),
+      );
+      await tester.ensureVisible(phoneOption);
+      await tester.tap(phoneOption);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsNWidgets(4));
+      await tester.enterText(find.byType(TextFormField).at(1), '0912345678');
+      await tester.enterText(find.byType(TextFormField).at(2), 'abcdefgh');
+      await tester.enterText(find.byType(TextFormField).at(3), 'abcdefgh');
+      final form = tester.widget<Form>(find.byType(Form));
+      expect(
+        (form.key as GlobalKey<FormState>).currentState!.validate(),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
     },
   );
   testWidgets('standalone Home has shortcuts but no private measurements', (

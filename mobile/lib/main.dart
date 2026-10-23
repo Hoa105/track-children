@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'services/demo_store.dart';
-<<<<<<< HEAD
 import 'services/auth_service.dart';
-=======
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
->>>>>>> origin/develop
 import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
@@ -18,10 +15,8 @@ import 'features/splash/start_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DemoStore.instance.initialize();
-<<<<<<< HEAD
   await DemoStore.instance.logout();
   await AuthService.instance.restore();
-=======
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
   // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.
@@ -30,7 +25,6 @@ Future<void> main() async {
   for (final child in DemoStore.instance.children) {
     DemoStore.instance.syncVaccinations(child['id'] as String);
   }
->>>>>>> origin/develop
   runApp(const TrackChildrenApp());
 }
 
@@ -164,7 +158,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
           seedColor: AppColors.primary,
           surface: AppColors.surface,
         ),
-        fontFamily: 'Be Vietnam Pro',
+        fontFamily: 'Nunito',
         textTheme: const TextTheme(
           displayLarge: TextStyle(
             fontSize: 30,

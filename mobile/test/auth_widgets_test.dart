@@ -131,4 +131,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(loggedIn, isTrue);
   });
+  testWidgets('OTP blocks confirmation after five wrong attempts', (
+    tester,
+  ) async {
+    var calls = 0;
+    AuthService.instance = AuthService(
+      client: MockClient((request) async {
+        calls++;
+        return response({
+          'error': {'code': 'OTP_INVALID'},
+        }, 400);
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: OtpDialog(challenge: challenge('limited'))),
+    );
+    await tester.enterText(find.byType(TextField), '012345');
+    for (var i = 0; i < 5; i++) {
+      final button = find.byType(FilledButton);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+    expect(calls, 5);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('expired OTP cannot be submitted', (tester) async {
+    final expired = challenge('expired')
+      ..['expiresAt'] = DateTime.now()
+          .subtract(const Duration(seconds: 1))
+          .toIso8601String();
+    await tester.pumpWidget(MaterialApp(home: OtpDialog(challenge: expired)));
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
 }
