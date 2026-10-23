@@ -9,9 +9,6 @@ enum ParentRole {
 
   final String label;
 
-  // The current registration API accepts mother, father, or guardian.
-  String get registrationValue => switch (this) {
-    grandfather || grandmother => 'guardian',
-    _ => name,
-  };
+  String get registrationValue =>
+      this == ParentRole.guardian ? 'other_guardian' : name;
 }

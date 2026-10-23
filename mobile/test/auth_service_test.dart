@@ -33,27 +33,53 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  test('Apple binds provider nonce to backend challenge and accepts session', () async {
+    final calls = <String>[];
+    final service = AuthService(
+      socialIdentityProvider: (provider, nonce) async {
+        expect(provider, 'apple');
+        expect(nonce, 'server-nonce');
+        return {'idToken': 'apple-id-token', 'authorizationCode': 'one-time-code'};
+      },
+      client: MockClient((request) async {
+        calls.add(request.url.path);
+        if (request.url.path.endsWith('/challenge')) {
+          return jsonResponse({'nonce': 'server-nonce', 'challenge': 'signed-challenge'});
+        }
+        final body = jsonDecode(request.body) as Map;
+        expect(body['challenge'], 'signed-challenge');
+        expect(body['authorizationCode'], 'one-time-code');
+        expect(body['rememberMe'], false);
+        return jsonResponse({...tokens('apple'), 'isNewUser': true});
+      }),
+    );
+    expect(await service.socialRegister('apple', acceptedTerms: true, remember: false), true);
+    expect(service.signedIn, true);
+    expect(await const FlutterSecureStorage().read(key: 'auth.refresh'), isNull);
+    expect(calls, ['/api/v1/auth/social/apple/challenge', '/api/v1/auth/social']);
+  });
+
   test(
-    'local registration without OTP logs in and accepts the server session',
+    'registration waits for OTP and never logs in implicitly',
     () async {
       final calls = <String>[];
       final service = AuthService(
         client: MockClient((r) async {
           calls.add(r.url.path);
           if (r.url.path.endsWith('/register')) {
-            return jsonResponse({'requiresOtp': false, 'user': profile}, 201);
+            return jsonResponse({'requiresOtp': true, 'verificationId': 'pending'}, 201);
           }
           return jsonResponse(tokens('local'));
         }),
       );
       final result = await service.register({
         'email': 'parent@example.com',
-        'password': 'Ab12!x',
+        'password': 'a password 123',
+        'acceptedTerms': true,
       });
-      expect(result['requiresOtp'], false);
-      expect(service.signedIn, true);
-      expect(service.user!['id'], profile['id']);
-      expect(calls, ['/api/v1/auth/register', '/api/v1/auth/login']);
+      expect(result['requiresOtp'], true);
+      expect(service.signedIn, false);
+      expect(calls, ['/api/v1/auth/register']);
     },
   );
 

@@ -48,6 +48,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         key: const ValueKey('sign-up-screen'),
                         onLogin: _openLogin,
                         onChildProfilePreview: widget.onChildProfilePreview,
+                        onExistingAccount: widget.onLoginSuccess,
                       )
                     : LoginScreen(
                         key: const ValueKey('login-screen'),

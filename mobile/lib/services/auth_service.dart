@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import 'demo_store.dart';
+import 'social_identity.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -16,18 +17,23 @@ class AuthException implements Exception {
   String toString() => switch (code) {
     'VALIDATION_ERROR' =>
       'Thông tin chưa hợp lệ. Vui lòng kiểm tra: ${((details['fields'] as Map?)?.keys ?? ['thông tin đã nhập']).map((field) => switch (field.toString().split('.').first) {
-        'password' => 'mật khẩu (6–128 ký tự, có chữ thường, chữ hoa, chữ số và ký tự đặc biệt)',
+        'password' => 'mật khẩu (8–64 ký tự)',
         'email' => 'email',
         'phone' => 'số điện thoại',
         'username' => 'tên người dùng',
-        'fullName' => 'họ tên',
+        'fullName' || 'displayName' => 'tên hiển thị',
+        'acceptedTerms' => 'điều khoản',
         'consents' => 'điều khoản',
         'code' => 'mã OTP',
         _ => field.toString(),
       }).join(', ')}.',
     'INVALID_CREDENTIALS' => 'Email, số điện thoại hoặc mật khẩu chưa đúng.',
-    'ACCOUNT_CONFLICT' =>
-      'Email, số điện thoại hoặc tên người dùng đã được dùng.',
+    'ACCOUNT_CONFLICT' => 'Email hoặc số điện thoại đã được dùng.',
+    'OTP_DELIVERY_UNAVAILABLE' =>
+      'Kênh gửi mã xác minh chưa sẵn sàng. Vui lòng thử lại sau.',
+    'LEGAL_DOCUMENTS_UNAVAILABLE' =>
+      'Chưa tải được điều khoản. Vui lòng thử lại sau.',
+    'LEGAL_CONSENT_REQUIRED' => 'Vui lòng đồng ý với điều khoản và chính sách.',
     'OTP_INVALID' => 'Mã OTP chưa đúng.',
     'OTP_EXPIRED' => 'Mã OTP đã hết hạn. Vui lòng gửi lại.',
     'RATE_LIMITED' || 'LOGIN_TEMPORARILY_LOCKED' =>
@@ -36,7 +42,24 @@ class AuthException implements Exception {
     'REGISTRATION_CHALLENGE_INVALID' =>
       'Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.',
     'ACCOUNT_LOCKED' => 'Tài khoản đã bị khóa.',
-    'NETWORK_ERROR' => 'Không kết nối được máy chủ. Vui lòng thử lại.',
+    'SOCIAL_AUTH_NOT_CONFIGURED' => 'Đăng nhập Google/Apple chưa được cấu hình. Vui lòng liên hệ nhóm phát triển.',
+    'SOCIAL_PLATFORM_UNSUPPORTED' =>
+      'Phương thức này chưa được hỗ trợ trên nền tảng đang dùng.',
+    'SOCIAL_CANCELLED' => 'Chưa đăng nhập được. Kiểm tra mạng và thử lại.',
+    'SOCIAL_SIGN_IN_FAILED' || 'SOCIAL_TOKEN_INVALID' =>
+      'Không xác minh được Google/Apple. Vui lòng thử lại.',
+    'SOCIAL_PROVIDER_UNAVAILABLE' =>
+      'Chưa kết nối được Google/Apple. Vui lòng thử lại sau.',
+    'SOCIAL_EMAIL_NOT_VERIFIED' =>
+      'Nhà cung cấp chưa xác nhận email của tài khoản này.',
+    'SOCIAL_ACCOUNT_CONFLICT' =>
+      'Email đã có tài khoản. Vui lòng đăng nhập bằng phương thức đã đăng ký.',
+    'NETWORK_ERROR' => 'Không thể kết nối. Kiểm tra mạng và thử lại.',
+    'SERVER_RESPONSE_INVALID' => 'Máy chủ phản hồi lỗi. Vui lòng thử lại.',
+    'RATE_LIMIT_UNAVAILABLE' ||
+    'DATABASE_UNAVAILABLE' => 'Máy chủ tạm thời bận. Vui lòng thử lại.',
+    _ when code.startsWith('HTTP_5') =>
+      'Máy chủ tạm thời lỗi. Vui lòng thử lại.',
     _ => 'Chưa thực hiện được yêu cầu ($code).',
   };
 }
@@ -45,9 +68,15 @@ class AuthService {
   AuthService({
     http.Client? client,
     FlutterSecureStorage? storage,
+    Future<Map<String, dynamic>> Function(String, String?)?
+    socialIdentityProvider,
     this.demoMode = false,
   }) : _client = client ?? http.Client(),
-       _storage = storage ?? const FlutterSecureStorage();
+       _storage = storage ?? const FlutterSecureStorage(),
+       _socialIdentityProvider =
+           socialIdentityProvider ??
+           ((provider, nonce) =>
+               SocialIdentity.authenticate(provider, nonce: nonce));
   static const demoEnabled = bool.fromEnvironment(
     'DEMO_MODE',
     defaultValue: false,
@@ -63,6 +92,8 @@ class AuthService {
   );
   final http.Client _client;
   final FlutterSecureStorage _storage;
+  final Future<Map<String, dynamic>> Function(String, String?)
+  _socialIdentityProvider;
   String? _access;
   String? _refresh;
   bool _remember = true;
@@ -88,11 +119,26 @@ class AuthService {
                   ? _client.get(uri, headers: headers)
                   : _client.post(uri, headers: headers, body: jsonEncode(body)))
               .timeout(const Duration(seconds: 20));
-      final result = response.body.isEmpty
-          ? <String, dynamic>{}
-          : jsonDecode(response.body) as Map<String, dynamic>;
+      var result = <String, dynamic>{};
+      if (response.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map<String, dynamic>) throw const FormatException();
+          result = decoded;
+        } on FormatException {
+          throw AuthException(
+            response.statusCode >= 400
+                ? 'HTTP_${response.statusCode}'
+                : 'SERVER_RESPONSE_INVALID',
+            {},
+          );
+        }
+      }
       if (response.statusCode >= 400) {
-        final error = result['error'] as Map<String, dynamic>? ?? {};
+        final rawError = result['error'];
+        final error = rawError is Map<String, dynamic>
+            ? rawError
+            : <String, dynamic>{};
         if (authorized && retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
           await refresh();
           return await _request(
@@ -103,9 +149,12 @@ class AuthService {
           );
         }
         throw AuthException(
-          error['code'] as String? ?? 'HTTP_${response.statusCode}',
+          error['code'] is String
+              ? error['code'] as String
+              : 'HTTP_${response.statusCode}',
           {
-            ...Map<String, dynamic>.from(error['details'] as Map? ?? {}),
+            if (error['details'] is Map)
+              ...Map<String, dynamic>.from(error['details'] as Map),
             if (error['fields'] is Map) 'fields': error['fields'],
           },
         );
@@ -113,7 +162,9 @@ class AuthService {
       return result;
     } on AuthException {
       rethrow;
-    } catch (_) {
+    } on TimeoutException {
+      throw AuthException('NETWORK_ERROR', {});
+    } on http.ClientException {
       throw AuthException('NETWORK_ERROR', {});
     }
   }
@@ -170,10 +221,42 @@ class AuthService {
       return _demoChallenge();
     }
     final result = await _request('/auth/register', body: data);
-    if (result['requiresOtp'] == false) {
-      await login(data['email'] as String, data['password'] as String);
-    }
     return result;
+  }
+
+  Future<bool> socialRegister(
+    String provider, {
+    required bool acceptedTerms,
+    String relationship = 'mother',
+    bool remember = true,
+  }) async {
+    if (!acceptedTerms) throw AuthException('LEGAL_CONSENT_REQUIRED', {});
+    Map<String, dynamic>? challenge;
+    if (provider == 'apple') {
+      challenge = await _request('/auth/social/apple/challenge', body: {});
+    }
+    try {
+      final credential = await _socialIdentityProvider(
+        provider,
+        challenge?['nonce'] as String?,
+      );
+      final result = await _request(
+        '/auth/social',
+        body: {
+          'provider': provider,
+          ...credential,
+          if (challenge != null) 'challenge': challenge['challenge'],
+          'defaultRelationship': relationship,
+          'acceptedTerms': true,
+          'device': await device(),
+          'rememberMe': remember,
+        },
+      );
+      await _accept(result, remember);
+      return result['isNewUser'] == true;
+    } on SocialIdentityException catch (e) {
+      throw AuthException(e.code, {});
+    }
   }
 
   Future<Map<String, dynamic>> resend(Map<String, dynamic> challenge) async =>
@@ -201,7 +284,12 @@ class AuthService {
       }
       if (code != '123456') throw AuthException('OTP_INVALID', {});
       final fields = Map<String, Object?>.from(_pendingRegistration!);
-      fields['role'] = fields.remove('relationship') ?? 'guardian';
+      fields['role'] =
+          fields.remove('defaultRelationship') ??
+          fields.remove('relationship') ??
+          'other_guardian';
+      fields['fullName'] = fields.remove('displayName') ?? fields['fullName'];
+      fields.remove('acceptedTerms');
       fields.remove('consents');
       await DemoStore.instance.register(fields);
       _setDemoUser();
@@ -281,6 +369,16 @@ class AuthService {
 
   Future<void> refresh() =>
       _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+  bool _invalidSession(String code) => const {
+    'REFRESH_TOKEN_INVALID',
+    'REFRESH_TOKEN_REUSED',
+    'SESSION_REVOKED',
+    'SESSION_EXPIRED',
+    'ACCOUNT_UNAVAILABLE',
+    'ACCOUNT_LOCKED',
+    'ACCESS_TOKEN_INVALID',
+    'ACCESS_TOKEN_EXPIRED',
+  }.contains(code);
   Future<void> _doRefresh() async {
     if (demoMode) {
       await currentUser();
@@ -295,8 +393,8 @@ class AuthService {
       );
       if (generation != _generation) return;
       await _accept(data, _remember);
-    } catch (_) {
-      if (generation == _generation) await clear();
+    } on AuthException catch (e) {
+      if (generation == _generation && _invalidSession(e.code)) await clear();
       rethrow;
     }
   }
@@ -310,7 +408,7 @@ class AuthService {
       user = await _request('/auth/me', authorized: true);
       return true;
     } on AuthException catch (e) {
-      if (e.code != 'NETWORK_ERROR') await clear();
+      if (_invalidSession(e.code)) await clear();
       return false;
     }
   }

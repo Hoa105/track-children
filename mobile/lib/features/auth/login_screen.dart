@@ -45,8 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateAccount(String? value) {
     final account = value?.trim() ?? '';
-    if (account.isEmpty)
+    if (account.isEmpty) {
       return 'Vui l\u00f2ng nh\u1eadp email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i.';
+    }
     if (account.contains('@')) {
       if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(account)) {
         return 'Email ch\u01b0a \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.';
@@ -117,6 +118,34 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
       _previewError ??= 'Chưa hoàn tất đăng nhập.';
     });
+  }
+
+  Future<void> _socialLogin(SocialProvider provider) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _previewError = null;
+    });
+    try {
+      await AuthService.instance.socialRegister(
+        provider.name,
+        acceptedTerms: true,
+        remember: _rememberMe,
+      );
+      if (mounted) widget.onLoginSuccess?.call();
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _previewError = e.toString());
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _previewError = 'Chưa đăng nhập được. Vui lòng thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -374,20 +403,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: OutlinedButton(
                           onPressed: _isLoading
                               ? null
-                              : () {
-                                  final name = provider == SocialProvider.google
-                                      ? 'Google'
-                                      : 'Apple';
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '\u0110\u0103ng nh\u1eadp v\u1edbi $name ch\u01b0a \u0111\u01b0\u1ee3c k\u1ebft n\u1ed1i.',
-                                        ),
-                                      ),
-                                    );
-                                },
+                              : () => _socialLogin(provider),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 52),
                             padding: const EdgeInsets.symmetric(
@@ -425,6 +441,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
                     ],
+                    const Text(
+                      'Bằng việc tiếp tục với Google hoặc Apple, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Center(
                       child: Wrap(

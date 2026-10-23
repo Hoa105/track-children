@@ -18,18 +18,13 @@ void main() {
       final auth = AuthService(client: client);
       try {
         final nonce = DateTime.now().microsecondsSinceEpoch.toString();
-        final docs = await auth.documents();
+        await auth.documents();
         final challenge = await auth.register({
-          'fullName': 'Live Test Parent',
-          'username': 'live_$nonce',
+          'displayName': 'Live Test Parent',
           'email': 'live_$nonce@example.com',
-          'phone': '09${nonce.substring(nonce.length - 8)}',
           'password': 'LivePassword123!',
-          'relationship': 'mother',
-          'consents': [
-            for (final d in docs.where((d) => d['isRequired'] == true))
-              {'documentId': d['id'], 'isAccepted': true},
-          ],
+          'defaultRelationship': 'mother',
+          'acceptedTerms': true,
         });
         final sms = jsonDecode(
           await File('../.auth-test-logs/sms.json').readAsString(),
@@ -38,8 +33,8 @@ void main() {
         await auth.verify(challenge, sms['code'] as String);
         final user = await auth.currentUser();
         expect(user['email'], 'live_$nonce@example.com');
-        expect(user['phoneVerifiedAt'], isNotNull);
-        expect(user['emailVerifiedAt'], isNull);
+        expect(user['emailVerifiedAt'], isNotNull);
+        expect(user['phoneVerifiedAt'], isNull);
         await Future.wait([auth.refresh(), auth.refresh()]);
         expect((await auth.currentUser())['id'], user['id']);
         expect(await auth.logout(), isTrue);

@@ -6,8 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:track_children/features/auth/login_screen.dart';
+import 'package:track_children/features/auth/sign_up_screen.dart';
 import 'package:track_children/features/auth/otp_dialog.dart';
 import 'package:track_children/services/auth_service.dart';
+import 'package:track_children/services/social_identity.dart';
 
 Map<String, dynamic> challenge(String id) => {
   'verificationId': id,
@@ -30,6 +32,136 @@ Map<String, dynamic> get result => {
 void main() {
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
+  });
+  testWidgets('Google login goes directly to provider without a terms dialog', (
+    tester,
+  ) async {
+    var opened = false;
+    AuthService.instance = AuthService(
+      socialIdentityProvider: (_, _) async => {'idToken': 'signed-token'},
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/auth/social');
+        return response({...result, 'isNewUser': false});
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(
+          onSignUp: () {},
+          onBack: () {},
+          onLoginSuccess: () => opened = true,
+        ),
+      ),
+    );
+    final google = find.widgetWithText(OutlinedButton, 'Tiếp tục với Google');
+    await tester.ensureVisible(google);
+    await tester.tap(google);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(opened, true);
+  });
+  testWidgets('Google cancellation is visible instead of silently returning', (
+    tester,
+  ) async {
+    AuthService.instance = AuthService(
+      socialIdentityProvider: (_, _) async =>
+          throw const SocialIdentityException('SOCIAL_CANCELLED'),
+      client: MockClient((_) async => throw StateError('No request expected')),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(onSignUp: () {}, onBack: () {}),
+      ),
+    );
+    final google = find.widgetWithText(OutlinedButton, 'Tiếp tục với Google');
+    await tester.ensureVisible(google);
+    await tester.tap(google);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Chưa đăng nhập được. Kiểm tra mạng và thử lại.',
+      ),
+      findsOneWidget,
+    );
+  });
+  testWidgets(
+    'Google registration requires consent and opens child form after session',
+    (tester) async {
+      var calls = 0;
+      var opened = false;
+      AuthService.instance = AuthService(
+        socialIdentityProvider: (provider, nonce) async {
+          expect(provider, 'google');
+          return {'idToken': 'provider-signed-token'};
+        },
+        client: MockClient((request) async {
+          calls++;
+          final body = jsonDecode(request.body) as Map;
+          expect(request.url.path, '/api/v1/auth/social');
+          expect(body['idToken'], 'provider-signed-token');
+          expect(body['acceptedTerms'], true);
+          expect(body.containsKey('password'), false);
+          return response({...result, 'isNewUser': true});
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SignUpScreen(
+            onLogin: () {},
+            onChildProfilePreview: () => opened = true,
+          ),
+        ),
+      );
+      final google = find.widgetWithText(OutlinedButton, 'Tiếp tục với Google');
+      await tester.ensureVisible(google);
+      await tester.tap(google);
+      await tester.pumpAndSettle();
+      expect(calls, 0);
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.tap(find.byType(Checkbox));
+      await tester.ensureVisible(google);
+      await tester.tap(google);
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      expect(opened, true);
+      expect(AuthService.instance.signedIn, true);
+    },
+  );
+  testWidgets('local preview is visibly marked as a test code', (tester) async {
+    final preview = challenge('preview')
+      ..['deliveryStatus'] = 'preview'
+      ..['devOtp'] = '123456';
+    await tester.pumpWidget(MaterialApp(home: OtpDialog(challenge: preview)));
+    expect(find.textContaining('Mã thử nghiệm: 123456'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('failed resend still replaces the invalidated challenge', (
+    tester,
+  ) async {
+    String? submittedId;
+    AuthService.instance = AuthService(
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/resend')) {
+          return response(
+            challenge('replacement')..['deliveryStatus'] = 'failed',
+          );
+        }
+        submittedId =
+            (jsonDecode(request.body) as Map)['verificationId'] as String;
+        return response(result);
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: OtpDialog(challenge: challenge('original'))),
+    );
+    await tester.tap(find.text('Gửi lại OTP'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '123456');
+    await tester.tap(find.text('Xác nhận'));
+    await tester.pumpAndSettle();
+    expect(submittedId, 'replacement');
+    await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
     'OTP error, resend replacement and success use server challenge',

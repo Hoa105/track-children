@@ -126,13 +126,13 @@ class _OtpDialogState extends State<OtpDialog> {
         setState(() {
           _resendCount++;
           _localResendAt = DateTime.now().add(const Duration(seconds: 60));
+          _challenge = value;
+          _codeController.clear();
+          _attemptsRemaining = 5;
           if (value['deliveryStatus'] == 'failed') {
             _error = 'Chưa gửi được mã mới. Vui lòng thử lại sau 60 giây.';
             return;
           }
-          _challenge = value;
-          _codeController.clear();
-          _attemptsRemaining = 5;
         });
       }
     } catch (e) {
@@ -146,16 +146,23 @@ class _OtpDialogState extends State<OtpDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: AlertDialog(
+      scrollable: true,
       title: const Text('Xác thực OTP'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Nhập mã OTP gửi đến ${_challenge['targetMasked']}.'),
+          Text(_challenge['deliveryStatus'] == 'preview'
+              ? 'Xác minh thử nghiệm cho ${_challenge['targetMasked']}.'
+              : 'Nhập mã OTP gửi đến ${_challenge['targetMasked']}.'),
+          if (_challenge['deliveryStatus'] == 'preview') ...[
+            const SizedBox(height: 8),
+            Text('Chế độ thử nghiệm local — chưa gửi email/SMS.\nMã thử nghiệm: ${_challenge['devOtp']}'),
+          ],
           const SizedBox(height: 8),
           Text(
             _challenge['deliveryStatus'] == 'failed'
-                ? 'Chưa gửi được SMS. Vui lòng gửi lại.'
+                ? 'Chưa gửi được mã xác minh. Vui lòng gửi lại.'
                 : _secondsLeft == 0
                 ? 'Mã đã hết hạn. Vui lòng gửi lại.'
                 : 'Mã hết hạn sau ${_secondsLeft ~/ 60}:${(_secondsLeft % 60).toString().padLeft(2, '0')}.',

@@ -59,6 +59,9 @@ void main() {
             body.containsKey('email') != body.containsKey('phone'),
             isTrue,
           );
+          expect(body.containsKey('username'), isFalse);
+          expect(body['acceptedTerms'], isTrue);
+          expect(body['defaultRelationship'], isNotNull);
 
           result = {
             'verificationId': 'otp-id',
@@ -234,15 +237,17 @@ void main() {
         await tester.enterText(find.byType(TextFormField).at(i), values[i]);
       }
       await tester.ensureVisible(find.byType(Checkbox));
+      final termsLink = find.text('Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư');
+      await tester.ensureVisible(termsLink);
+      await tester.tap(termsLink);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Test terms'), findsOneWidget);
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(Checkbox));
       await tester.ensureVisible(find.widgetWithText(FilledButton, 'Đăng ký'));
       await tester.tap(find.widgetWithText(FilledButton, 'Đăng ký'));
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Test terms'), findsOneWidget);
-      await tester.tap(
-        find.widgetWithText(FilledButton, 'Đồng ý điều khoản bắt buộc'),
-      );
       await tester.pumpAndSettle();
       expect(find.text('Xác thực OTP'), findsOneWidget);
       await tester.enterText(
