@@ -1,14 +1,21 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_config.dart';
+import 'vaccination_remote.dart';
 import 'who_bmi_reference.dart';
 import 'growth_api.dart';
 import '../models/tooth.dart';
 import '../models/activity.dart';
 
+export 'vaccination_remote.dart';
+
 /// Local, fictional test database. Never authenticates against a real service.
+/// Vaccination records are the exception: with [vaccinationRemote] set they are
+/// saved to the backend first and cached here.
 class DemoStore extends ChangeNotifier {
   DemoStore({DateTime? today}) : _data = _fixture(today ?? DateTime.now());
   static DemoStore _instance = DemoStore();
@@ -17,6 +24,9 @@ class DemoStore extends ChangeNotifier {
   static void resetInstanceForTesting() {
     _instance = DemoStore();
   }
+
+  /// Set in main(); null (as in tests) keeps vaccination records local only.
+  static VaccinationRemote? vaccinationRemote;
 
   static const storageKey = 'synchronized_demo_v1';
   static const password = 'TreXanh123';
@@ -103,9 +113,18 @@ class DemoStore extends ChangeNotifier {
     bool useServer = false,
   }) async {
     await initialize();
+    String normalizePhone(String value) {
+      final phone = value.replaceAll(RegExp(r'[\s()-]'), '');
+      return phone.startsWith('0') ? '+84${phone.substring(1)}' : phone;
+    }
+
+    final account = email.trim();
     final matches = _parents.where(
       (p) =>
-          (p['email'] as String).toLowerCase() == email.trim().toLowerCase() &&
+          (account.contains('@')
+              ? (p['email'] as String).toLowerCase() == account.toLowerCase()
+              : normalizePhone(p['phone'] as String? ?? '') ==
+                    normalizePhone(account)) &&
           p['password'] == pass,
     );
     if (matches.isEmpty) {
@@ -154,20 +173,34 @@ class DemoStore extends ChangeNotifier {
     return true;
   }
 
-  Future<void> logout() async {
-    final logout = GrowthApi.instance.logout().catchError((_) {});
-    await _write((d) {
-      d['parentId'] = null;
-      d['childId'] = null;
-    });
-    try {
-      await logout;
-    } catch (_) {
-      /* Local session is already cleared. */
-    }
-  }
+  Future<void> logout() => _write((d) {
+    d['parentId'] = null;
+    d['childId'] = null;
+  });
 
-  Future<void> selectChild(String id) async {
+  /// Local feature cache for a server-authenticated user, without credentials.
+  Future<void> bindAuthenticatedUser(Map<String, dynamic> user) => _write((d) {
+    final parents = d['parents'] as List;
+    final existing = parents.where((p) => p['id'] == user['id']).firstOrNull;
+    parents.removeWhere((p) => p['id'] == user['id']);
+    parents.add(<String, dynamic>{
+      ...?existing,
+      ...user,
+      'role': user['relationship'] ?? 'guardian',
+      'notifications': existing?['notifications'] ?? true,
+      'biometric': existing?['biometric'] ?? false,
+    });
+    d['parentId'] = user['id'];
+    d['childId'] = null;
+  });
+
+  Future<void> clearAuthenticatedCache() => _write((d) {
+    // Child features are still local: do not delete authored data on logout.
+    // Clear active selections; reads remain scoped to the authenticated owner.
+    d['parentId'] = null;
+    d['childId'] = null;
+  });
+  Future<void> selectChild(String id) {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
     }
@@ -480,20 +513,184 @@ class DemoStore extends ChangeNotifier {
         throw ArgumentError('Ngày tiêm không hợp lệ');
       }
     }
-    return _write((d) {
-      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
-      final list = c.putIfAbsent('vaccinations', () => <dynamic>[]) as List;
-      list.removeWhere((r) => ids.contains(r['id']));
-      list.addAll(records.map((record) => Map<String, dynamic>.from(record)));
-    });
+    return _pushVaccinations(
+      id,
+      (remote, account) => remote.save(account, records),
+    ).then(
+      (_) => _write((d) {
+        final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+        final list = c.putIfAbsent('vaccinations', () => <dynamic>[]) as List;
+        list.removeWhere((r) => ids.contains(r['id']));
+        list.addAll(records.map((record) => Map<String, dynamic>.from(record)));
+      }),
+    );
   }
 
   Future<void> removeVaccination(String id, String doseId) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
-    return _write((d) {
-      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
-      (c['vaccinations'] as List?)?.removeWhere((r) => r['id'] == doseId);
+    return _pushVaccinations(
+      id,
+      (remote, account) => remote.remove(account, doseId),
+    ).then(
+      (_) => _write((d) {
+        final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+        (c['vaccinations'] as List?)?.removeWhere((r) => r['id'] == doseId);
+      }),
+    );
+  }
+
+  /// {vaccine code: followed?} — only vaccines whose default the parent changed.
+  Map<String, bool> vaccinePlans(String id) => {
+    for (final e in ((childById(id)?['vaccinePlans'] ?? {}) as Map).entries)
+      e.key as String: e.value as bool,
+  };
+
+  /// `null` resets a vaccine to its default.
+  Future<void> saveVaccinePlans(String id, Map<String, bool?> plans) {
+    if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    return _pushVaccinations(
+      id,
+      (remote, account) => remote.savePlans(account, plans),
+    ).then(
+      (_) => _write((d) {
+        final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+        final saved = Map<String, dynamic>.from(
+          c['vaccinePlans'] as Map? ?? {},
+        );
+        plans.forEach(
+          (code, value) =>
+              value == null ? saved.remove(code) : saved[code] = value,
+        );
+        c['vaccinePlans'] = saved;
+      }),
+    );
+  }
+
+  /// Backend uuids for local parent / child ids: the seeded demo ids, else a
+  /// uuid generated once on this device (registered via VaccinationRemote.link).
+  Future<Map<String, String>> _serverIds(List<String> localIds) async {
+    String? known(String id) =>
+        demoServerIds[id] ?? (_data['serverIds'] as Map?)?[id] as String?;
+    if (localIds.any((id) => known(id) == null)) {
+      await _write((d) {
+        final saved = Map<String, dynamic>.from(d['serverIds'] as Map? ?? {});
+        for (final id in localIds) {
+          if (demoServerIds[id] == null) saved[id] ??= _uuidV4();
+        }
+        d['serverIds'] = saved;
+      });
+    }
+    return {for (final id in localIds) id: known(id)!};
+  }
+
+  static String _uuidV4() {
+    final random = Random.secure();
+    final b = List<int>.generate(16, (_) => random.nextInt(256));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    final hex = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+  }
+
+  Future<VaccinationAccount?> _account(String childId) async {
+    final parentId = _data['parentId'] as String?;
+    final child = childById(childId);
+    if (parentId == null || child == null) return null;
+    final ids = await _serverIds([parentId, childId]);
+    return VaccinationAccount(
+      userId: ids[parentId]!,
+      childId: ids[childId]!,
+      parent: parent,
+      child: child,
+    );
+  }
+
+  /// Saves to the backend first, so a failed request leaves the local book unchanged.
+  Future<void> _pushVaccinations(
+    String childId,
+    Future<void> Function(VaccinationRemote remote, VaccinationAccount account)
+    push,
+  ) async {
+    final remote = vaccinationRemote;
+    if (remote == null) return;
+    final account = await _account(childId);
+    if (account == null) return;
+    await remote.link(account);
+    await push(remote, account);
+  }
+
+  /// Replaces the cached vaccination book and plans with the backend copy.
+  ///
+  /// The first sync of a child on this device uploads what was saved only
+  /// locally (before the backend was reachable). Records the backend rejects
+  /// stay on the device (`localOnly`). Returns false when offline (the cache is kept).
+  Future<bool> syncVaccinations(String childId) async {
+    final remote = vaccinationRemote;
+    if (remote == null) return false;
+    final account = await _account(childId);
+    if (account == null) return false;
+    final parentId = _data['parentId'];
+    final firstSync = !((_data['vaccinationSynced'] as List?) ?? const [])
+        .contains(childId);
+    final kept = <Map<String, dynamic>>[];
+    List<Map<String, dynamic>> records;
+    Map<String, bool> plans;
+    try {
+      await remote.link(account);
+      (records, plans) = await (
+        remote.fetch(account),
+        remote.fetchPlans(account),
+      ).wait;
+      if (firstSync) {
+        final onServer = {for (final r in records) r['id']};
+        final localOnly = vaccinations(childId)
+            .where((r) => !onServer.contains(r['id']))
+            .toList();
+        for (final record in localOnly) {
+          try {
+            await remote.save(account, [record]);
+          } on ApiException catch (e) {
+            if (!e.rejected) rethrow;
+            kept.add({...record, 'localOnly': true});
+          }
+        }
+        final localPlans = {
+          for (final e in vaccinePlans(childId).entries)
+            if (!plans.containsKey(e.key)) e.key: e.value,
+        };
+        if (localPlans.isNotEmpty) await remote.savePlans(account, localPlans);
+        if (localOnly.isNotEmpty || localPlans.isNotEmpty) {
+          (records, plans) = await (
+            remote.fetch(account),
+            remote.fetchPlans(account),
+          ).wait;
+        }
+      }
+    } catch (_) {
+      return false;
+    }
+    if (_data['parentId'] != parentId || childById(childId) == null) {
+      return false;
+    }
+    await _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == childId);
+      final stayLocal = [
+        ...(c['vaccinations'] as List? ?? const []).where(
+          (r) => r['localOnly'] == true,
+        ),
+        ...kept,
+      ];
+      final serverIds = {for (final r in records) r['id']};
+      c['vaccinations'] = [
+        ...records,
+        ...stayLocal.where((r) => !serverIds.contains(r['id'])),
+      ];
+      c['vaccinePlans'] = plans;
+      final synced = Set<String>.from(d['vaccinationSynced'] as List? ?? []);
+      d['vaccinationSynced'] = (synced..add(childId)).toList();
     });
+    return true;
   }
 
   Future<void> saveTooth(String id, String toothId, DateTime date) {

@@ -12,7 +12,7 @@ Chi tiết có yêu thích và đánh dấu/bỏ đánh dấu; nút ghi nhận c
 
 Giao diện kế thừa phông ứng dụng, AppColors/AppLayout, nền kem, thẻ trắng bo góc 24; tiêu đề gần đen 700, số ghi nhận xanh đậm 700, trạng thái xanh 600 và thông tin phụ xám xanh. Chưa có phát âm thanh. Có nội dung riêng cho xếp khối, Con cò bé bé, Thỏ con đi chợ; các hoạt động khác ghi rõ hướng dẫn chi tiết đang được bổ sung, không dùng hướng dẫn xếp khối cho mọi loại như bản mẫu.
 
-Kiểm tra: `flutter test test/activities_test.dart test/home_actions_test.dart test/home_layout_test.dart test/demo_sync_test.dart`.
+
 
 Chạy app từ `mobile`. Dữ liệu hư cấu được tạo một lần, lưu trong SharedPreferences với khóa `synchronized_demo_v1`. Các lần mở sau giữ lại thay đổi; các khóa dữ liệu tăng trưởng cũ ngoài bộ test không bị xóa. Tuổi mẫu được tính theo ngày tạo dữ liệu, không đổi ngày sinh sau mỗi lần mở app.
 
@@ -36,18 +36,6 @@ OTP trong luồng đăng ký/đổi số điện thoại dùng `123456`; không 
 - Chia sẻ từ hồ sơ bé hoặc Cài đặt: cùng danh sách thành viên/quyền/lời mời theo ID bé. Sửa quyền, thu hồi, tạo/hủy lời mời được lưu cục bộ.
 - Ảnh bé chọn trong hồ sơ được lưu trong bộ test dạng base64 và hiển thị khi mở lại hồ sơ/Home.
 
-## Kịch bản kiểm tra
-
-1. Đăng nhập mẹ Hoa, chọn Bảo An. Đối chiếu tên, tuổi, giới tính, số đo mới nhất ở hồ sơ, Home và bốn tab Theo dõi.
-2. Dùng mũi tên cạnh tên bé ở Home để chọn Gia Linh. Kiểm tra số đo/tuổi và đường WHO chuyển sang dữ liệu của bé gái.
-3. Nhập số đo mới cho Gia Linh; quay về Home kiểm tra thẻ số đo, mức thay đổi và đường xu hướng. Bảo An phải giữ nguyên dữ liệu.
-4. Sửa tên, ngày sinh, giới tính và ảnh bé ở hồ sơ. Kiểm tra Home, danh sách hồ sơ và WHO; lịch sử số đo không được mất khi sửa tên.
-5. Sửa thông tin phụ huynh tại Cài đặt tài khoản; quay lại Cài đặt kiểm tra tên/email. Đổi mật khẩu test và đăng nhập lại bằng thông tin mới.
-6. Tạo/hủy lời mời hoặc sửa quyền chia sẻ; mở lại từ lối vào khác và kiểm tra cùng danh sách. Bé khác phải giữ nguyên quyền/lời mời.
-7. Tạo thêm bé mới; bé xuất hiện ở danh sách và có lịch sử rỗng. Nhập số đo đầu tiên, kiểm tra Home không hiện số liệu của bé khác.
-8. Đăng xuất, đăng nhập bố Đức: chỉ thấy Minh Khang. Đăng nhập lại mẹ Hoa hoặc khởi động lại app: dữ liệu đã sửa vẫn còn.
-9. Vào **Cài đặt → Dữ liệu kiểm thử** để xem ID, ngày sinh, số lượng bản ghi và khôi phục bộ mẫu qua hộp xác nhận.
-
 ## Phạm vi mô phỏng
 
 Kho test phục vụ đồng bộ trên **một thiết bị**, chưa đồng bộ qua backend hoặc giữa hai máy. Các thao tác gửi email/SMS, chấp nhận lời mời để cấp quyền tài khoản khác, chuyển quyền sở hữu, xóa tài khoản thật, đăng nhập mạng xã hội, nhắc lịch hệ điều hành và khóa sinh trắc chưa được kết nối dịch vụ. Các màn hình xem thử của chúng không xác nhận tính đúng đắn của dịch vụ thật. Tùy chọn sinh trắc hiện chỉ lưu trạng thái mô phỏng.
@@ -66,19 +54,9 @@ Home → Lượng sữa mở màn hình theo ID bé, điền cân nặng gần n
 
 Phạm vi công cụ: đủ 7 ngày đến dưới 6 tháng, từ 2,5 kg. Trường hợp ngoài phạm vi, sinh non/có bệnh/chưa rõ sức khỏe hoặc bú mẹ trực tiếp không xuất kết quả. Nguồn hệ số: WHO 2021, Infant and young child feeding, trang 51 (https://iris.who.int/handle/10665/346568). Giới hạn tuổi là phạm vi sản phẩm, tham khảo NHS (https://derbyshirefamilyhealthservice.nhs.uk/our-services/0-5-years/infant-feeding-and-nutrition/formula-feeding), không gán cho WHO. Công cụ không kê lượng sữa bắt buộc, không tính sữa bổ sung khi bú mẹ trực tiếp.
 
-Chữ theo Theo dõi: tiêu đề gần đen 700, số nhập xanh đậm 700, số ước tính tím, lựa chọn xanh 600, thông tin phụ xám xanh. Kiểm tra: `flutter test test/milk_calculator_test.dart test/milk_calculator_screen_test.dart test/home_actions_test.dart test/home_layout_test.dart`.
+Chữ theo Theo dõi: tiêu đề gần đen 700, số nhập xanh đậm 700, số ước tính tím, lựa chọn xanh 600, thông tin phụ xám xanh.
 
 Thông tin đăng nhập được lưu dạng rõ **chỉ trong kho test hư cấu này**, không phải kiến trúc xác thực để dùng thật. Không nhập dữ liệu thật vào bộ test.
-
-## Kiểm thử tự động
-
-```powershell
-flutter test test/demo_sync_test.dart
-flutter test test/home_actions_test.dart test/home_layout_test.dart
-flutter test test/growth_screen_test.dart test/who_growth_chart_test.dart test/who_bmi_reference_test.dart
-```
-
-Các kiểm tra bao gồm lưu/đọc lại, sửa tên giữ ID, tách dữ liệu giữa bé và gia đình, cập nhật thông tin đăng nhập, chặn email trùng, ghi đồng thời, tạo hồ sơ rỗng và luồng giao diện Home → đổi bé → Theo dõi → lưu số đo → Home → Cài đặt.
 
 ## Mọc răng
 
@@ -86,9 +64,7 @@ Home → Mọc răng mở trang theo dõi của bé đang chọn: sơ đồ 20 r
 
 Dữ liệu cũ thiếu trường `teeth` được coi là rỗng, không suy diễn từ chuỗi tổng quan cũ. Bộ mẫu mới/khôi phục có các răng theo mốc tuổi tham khảo; không tự thêm răng khi bé lớn lên. Nguồn mốc tuổi: https://www.mouthhealthy.org/all-topics-a-z/eruption-charts ; thông tin tham khảo: https://www.mouthhealthy.org/all-topics-a-z/teething . Đây không phải chẩn đoán.
 
-Kiểm tra: thêm/sửa/xóa một răng → quay Home đối chiếu số đếm → đổi bé → đăng xuất/đăng nhập tài khoản bố → mở lại app. Bản ghi phải giữ nguyên và không lẫn bé/gia đình. Bé mới bắt đầu 0/20; ghi nhận đủ 20 thì nút thêm bị khóa.
 
-Chạy: `flutter test test/teething_test.dart test/home_actions_test.dart test/home_layout_test.dart test/demo_sync_test.dart`.
 
 ## Sổ tiêm chủng
 
@@ -110,7 +86,7 @@ Ghi nhận mũi có sẵn bằng cách chạm mũi trong Theo tuổi/Vắc-xin �
 
 Trường `vaccinations` lưu theo ID bé trong SharedPreferences; dữ liệu cũ thiếu trường được coi là rỗng, không suy diễn lịch sử tiêm từ chuỗi tổng quan. Home hiển thị số mũi thực tế đã ghi nhận. Lịch mẫu kế thừa từ `mobile_1`, tính ngày dự kiến theo ngày sinh; cần đối chiếu với cơ sở tiêm chủng trước khi sử dụng thực tế. Nhắc lịch hệ điều hành chưa được triển khai.
 
-Kiểm tra: `flutter test test/vaccination_test.dart test/vaccination_history_test.dart test/home_actions_test.dart test/home_layout_test.dart test/demo_sync_test.dart`.
+
 
 ## Nhật ký
 

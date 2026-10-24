@@ -10,6 +10,7 @@ import 'vaccination_widgets.dart';
 import 'vaccination_details.dart';
 import 'vaccination_history.dart';
 import 'supplement_vaccine_editor.dart';
+import 'vaccine_appointment_sheet.dart';
 
 String _date(DateTime d) => '${d.day}/${d.month}/${d.year}';
 DateTime get _today {
@@ -21,48 +22,20 @@ List<ScheduledVaccine> vaccinationSchedule(String childId) {
   final store = DemoStore.instance;
   final child = store.childById(childId);
   if (child == null) return [];
-  final dob = DateTime.parse(child['date_of_birth'] as String);
-  final entries = store.vaccinations(childId);
-  final doses = [...tcmrSchedule];
-  for (final r in entries.where((r) => r['custom'] == true)) {
-    doses.add(
-      VaccineDose(
-        id: r['id'] as String,
-        name: r['name'] as String,
-        prevents: r['prevents'] as String,
-        doseLabel: r['doseLabel'] as String,
-        ageMonths: VaccineDose.monthsBetween(
-          dob,
-          DateTime.parse(r['date'] as String),
-        ),
-        scheduledDate: DateTime.parse(r['date'] as String),
-        note: r['note'] as String?,
-        appointmentPlace: r['place'] as String? ?? '',
-        groupId: r['groupId'] as String?,
-      ),
-    );
-  }
-  final result = doses.map((dose) {
-    final entry = entries.where((r) => r['id'] == dose.id).firstOrNull;
-    final record = entry?['given'] == true
-        ? VaccinationRecord(
-            childId: childId,
-            doseId: dose.id,
-            date: DateTime.parse(entry!['date'] as String),
-            place: entry['place'] as String? ?? '',
-            reaction: entry['reaction'] as String? ?? '',
-            note: entry['note'] as String? ?? '',
-          )
-        : null;
-    final due = dose.dueDate(dob);
-    return ScheduledVaccine(
-      dose: dose,
-      dueDate: due,
-      record: record,
-      status: ScheduledVaccine.statusFor(due, record, _today),
-    );
-  }).toList()..sort((a, b) => a.dueDate.compareTo(b.dueDate));
-  return result;
+  return buildVaccinationSchedule(
+    childId: childId,
+    dob: DateTime.parse(child['date_of_birth'] as String),
+    entries: store.vaccinations(childId),
+    plans: store.vaccinePlans(childId),
+    today: _today,
+  );
+}
+
+/// Age of the child in the same units as [VaccineDose.ageKey] (≈ days, months × 30).
+int _childAgeKey(DateTime dob) {
+  final months = VaccineDose.monthsBetween(dob, _today);
+  final anniversary = DateTime(dob.year, dob.month + months, dob.day);
+  return months * 30 + _today.difference(anniversary).inDays.clamp(0, 29);
 }
 
 class VaccinationScreen extends StatefulWidget {
@@ -72,12 +45,20 @@ class VaccinationScreen extends StatefulWidget {
   State<VaccinationScreen> createState() => _VaccinationScreenState();
 }
 
-class _VaccinationScreenState extends State<VaccinationScreen> {
+class _VaccinationScreenState extends State<VaccinationScreen>
+    with DemoStoreBinding {
   String get _childId => widget.childId;
   int _view = 0;
   int? _selectedAge;
   bool _compactAdd = false;
   double _scrollTravel = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lấy sổ tiêm mới nhất từ backend (người chăm sóc khác có thể đã cập nhật).
+    DemoStore.instance.syncVaccinations(_childId);
+  }
 
   bool _onScroll(ScrollNotification notification) {
     if (notification.depth != 0 || notification is! ScrollUpdateNotification) {
@@ -110,6 +91,19 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
       builder: (context) => VaccineDetailSheet(vaccine: v),
     );
     if (action == null || !mounted) return;
+    if (action == 'appointment') {
+      await showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: AppColors.background,
+        constraints: const BoxConstraints(maxWidth: 640),
+        builder: (context) =>
+            VaccineAppointmentSheet(childId: _childId, vaccine: v),
+      );
+      return;
+    }
     await _open(vaccine: v, markGiven: action == 'mark');
   }
 
@@ -233,7 +227,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       selected: selected == group.key,
                       selectedColor: AppColors.primaryDark,
                       title: Text(
-                        group.key == 0 ? 'Sơ sinh' : '${group.key} tháng',
+                        VaccineDose.ageLabelFor(group.key),
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
@@ -399,9 +393,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
       final schedule = vaccinationSchedule(_childId);
       final records = schedule.where((v) => v.record != null).toList()
         ..sort((a, b) => b.record!.date.compareTo(a.record!.date));
-      final appointments = schedule
-          .where((v) => v.record == null && v.dose.isCustom)
-          .toList();
+      final appointments = schedule.where((v) => v.hasAppointment).toList();
       final reference = schedule.where((v) => !v.dose.isCustom).toList();
       final due = reference.where((v) => !v.dueDate.isAfter(_today)).toList();
       final done = due.where((v) => v.record != null).length;
@@ -428,18 +420,21 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
       active.addAll(completed);
       final ageGroups = <int, List<ScheduledVaccine>>{};
       for (final v in reference) {
-        ageGroups.putIfAbsent(v.dose.ageMonths, () => []).add(v);
+        ageGroups.putIfAbsent(v.dose.ageKey, () => []).add(v);
       }
-      final ages = ageGroups.keys.toList()..sort();
-      final childAge = VaccineDose.monthsBetween(
-        DateTime.parse(child['date_of_birth'] as String),
-        _today,
+      final sortedGroups = Map.fromEntries(
+        ageGroups.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
       );
-      final selectedAge =
-          _selectedAge ??
-          ages.where((age) => age <= childAge).lastOrNull ??
-          ages.first;
-      final selectedDoses = ageGroups[selectedAge]!;
+      final ages = sortedGroups.keys.toList();
+      final dob = DateTime.parse(child['date_of_birth'] as String);
+      final childAge = VaccineDose.monthsBetween(dob, _today);
+      final childAgeKey = _childAgeKey(dob);
+      final selectedAge = ageGroups.containsKey(_selectedAge)
+          ? _selectedAge!
+          : ages.where((age) => age <= childAgeKey).lastOrNull ??
+                ages.firstOrNull;
+      final selectedDoses =
+          ageGroups[selectedAge] ?? const <ScheduledVaccine>[];
       final future = reference
           .where((v) => v.record == null && v.dueDate.isAfter(_today))
           .firstOrNull;
@@ -669,7 +664,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                   const SizedBox(height: 12),
                                   if (priority != null) ...[
                                     Material(
-                                      color: priority.dose.isCustom
+                                      color: priority.hasAppointment
                                           ? AppColors.purpleSurfaceLight
                                           : VaccinationColors.plannedSoft,
                                       borderRadius: BorderRadius.circular(20),
@@ -682,7 +677,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           TextSpan(
                                             children: [
                                               TextSpan(
-                                                text: priority.dose.isCustom
+                                                text: priority.hasAppointment
                                                     ? 'Lịch hẹn'
                                                     : priority.dueDate.isAfter(
                                                         _today,
@@ -690,7 +685,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                     ? 'Dự kiến'
                                                     : 'Cần kiểm tra',
                                               ),
-                                              if (priority.dose.isCustom ||
+                                              if (priority.hasAppointment ||
                                                   priority.dueDate.isAfter(
                                                     _today,
                                                   ))
@@ -755,9 +750,9 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           OverflowBarAlignment.start,
                                       children: [
                                         Text(
-                                          selectedAge == 0
-                                              ? 'Mốc sơ sinh'
-                                              : 'Mốc $selectedAge tháng',
+                                          selectedAge == null
+                                              ? 'Chưa có mốc'
+                                              : 'Mốc ${VaccineDose.ageLabelFor(selectedAge).toLowerCase()}',
                                           style: const TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,
@@ -768,8 +763,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           key: const ValueKey(
                                             'all-age-milestones',
                                           ),
-                                          onPressed: () =>
-                                              _pickAge(ageGroups, selectedAge),
+                                          onPressed: selectedAge == null
+                                              ? null
+                                              : () => _pickAge(
+                                                  sortedGroups,
+                                                  selectedAge,
+                                                ),
                                           icon: const Icon(
                                             Icons.tune_rounded,
                                             size: 18,
@@ -959,7 +958,7 @@ class _DoseEntry extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${v.dose.doseLabel}${pending ? " · ${v.dose.isCustom ? 'Hẹn' : 'Dự kiến'} ${_date(v.dueDate)}" : ""}',
+                  '${v.dose.doseLabel}${v.dose.isCustom || v.dose.isTcmr ? "" : " · Dịch vụ"}${pending ? " · ${v.hasAppointment ? 'Hẹn' : 'Dự kiến'} ${_date(v.dueDate)}" : ""}',
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
@@ -1060,6 +1059,9 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
       _note;
   late DateTime _selected;
   late bool _given;
+
+  /// [VaccineProduct.code] for a scheduled dose; null = chưa chọn.
+  String? _product;
   late bool _editing;
   bool _saving = false;
   bool _confirmingClose = false;
@@ -1073,6 +1075,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
     _note.text,
     _selected.toIso8601String(),
     _given.toString(),
+    _product ?? '',
   ].map((s) => '${s.length}:$s').join();
   bool get _dirty => _snapshot != _initialSnapshot;
 
@@ -1108,6 +1111,11 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
 
   bool get _custom => widget.vaccine == null || widget.vaccine!.dose.isCustom;
 
+  List<VaccineProduct> get _products => _custom
+      ? const []
+      : vaccineCatalog.vaccine(widget.vaccine!.dose.vaccineCode)?.products ??
+            const [];
+
   @override
   void initState() {
     super.initState();
@@ -1116,10 +1124,11 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
     _prevents = TextEditingController(text: v?.dose.prevents);
     _dose = TextEditingController(text: v?.dose.doseLabel ?? 'Mũi 1');
     _place = TextEditingController(
-      text: v?.record?.place ?? v?.dose.appointmentPlace,
+      text: v?.record?.place ?? v?.appointmentPlace,
     );
     _reaction = TextEditingController(text: v?.record?.reaction);
     _note = TextEditingController(text: v?.record?.note ?? v?.dose.note);
+    _product = v?.record?.product ?? v?.plannedProduct;
     _given = v == null
         ? widget.initiallyGiven
         : widget.markAsGiven || v.record != null || !v.dose.isCustom;
@@ -1171,7 +1180,18 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
         'prevents': _prevents.text.trim(),
         'doseLabel': _dose.text.trim().isEmpty ? 'Mũi tiêm' : _dose.text.trim(),
         'given': _given,
+        if (!_custom && _product != null) 'product': _product,
         'date': _selected.toIso8601String(),
+        // Đã tiêm: giữ ngày hẹn; chưa từng hẹn thì lưu ngày dự kiến làm ngày hẹn
+        if (_given && widget.vaccine?.plannedDate != null)
+          'scheduledDate': DateUtils.dateOnly(widget.vaccine!.plannedDate!)
+              .toIso8601String(),
+        if (_given && widget.vaccine != null)
+          if ((widget.vaccine!.record?.appointmentPlace ??
+                  widget.vaccine!.appointmentPlace)
+              case final String appointmentPlace
+              when appointmentPlace.isNotEmpty)
+            'appointmentPlace': appointmentPlace,
         'place': _place.text.trim(),
         'reaction': _given ? _reaction.text.trim() : '',
         'note': _note.text.trim(),
@@ -1316,7 +1336,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                     child: Text(
                       widget.vaccine == null
                           ? (_given ? 'Thêm vắc-xin bổ sung' : 'Thêm lịch hẹn')
-                          : (_given ? 'Sửa mũi tiêm' : 'Sửa lịch hẹn'),
+                          : (_given ? 'Sửa mũi tiêm' : 'Sửa thông tin'),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1401,6 +1421,45 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
+                      if (_products.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: DropdownButtonFormField<String?>(
+                            key: const ValueKey('vaccine-product'),
+                            initialValue: _product,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: 'Loại vắc-xin (tùy chọn)',
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text('Chưa rõ'),
+                              ),
+                              for (final p in _products)
+                                DropdownMenuItem(
+                                  value: p.code,
+                                  child: Text(
+                                    [
+                                      p.name,
+                                      if (p.origin != null) p.origin!,
+                                      if (p.doseCount != null)
+                                        '${p.doseCount} liều',
+                                    ].join(' · '),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            onChanged: _editing && !_saving
+                                ? (value) => setState(() => _product = value)
+                                : null,
+                          ),
+                        ),
                     ],
                     Material(
                       color: AppColors.primarySoft,

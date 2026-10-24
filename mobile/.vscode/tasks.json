@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Prepare Google emulator configuration",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/../scripts/run-google-local.ps1", "-PrepareOnly", "-ApiBaseUrl", "http://10.0.2.2:8000/api/v1"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Prepare Google mobile configuration",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/../scripts/run-google-local.ps1", "-PrepareOnly", "-ConnectUsb"],
+      "problemMatcher": []
+    }
+  ]
+}

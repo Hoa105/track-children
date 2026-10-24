@@ -2,20 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app_colors.dart';
+import '../../services/auth_service.dart';
+
+import 'dart:async';
 
 Future<bool?> showOtpVerificationDialog(
   BuildContext context, {
-  required String phone,
+  required Map<String, dynamic> challenge,
+  bool remember = true,
+  ValueChanged<Map<String, dynamic>?>? onChallengeChanged,
 }) => showDialog<bool>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => OtpDialog(phone: phone),
+  builder: (_) => OtpDialog(
+    challenge: challenge,
+    remember: remember,
+    onChallengeChanged: onChallengeChanged,
+  ),
 );
 
 class OtpDialog extends StatefulWidget {
-  const OtpDialog({required this.phone, super.key});
+  const OtpDialog({
+    required this.challenge,
+    this.remember = true,
+    this.onChallengeChanged,
+    super.key,
+  });
 
-  final String phone;
+  final Map<String, dynamic> challenge;
+  final bool remember;
+  final ValueChanged<Map<String, dynamic>?>? onChallengeChanged;
 
   @override
   State<OtpDialog> createState() => _OtpDialogState();
@@ -24,58 +40,235 @@ class OtpDialog extends StatefulWidget {
 class _OtpDialogState extends State<OtpDialog> {
   final _codeController = TextEditingController();
   String? _error;
+  late Map<String, dynamic> _challenge;
+  bool _busy = false;
+  int _attemptsRemaining = 5;
+  bool _invalidChallenge = false;
+  DateTime? _localResendAt;
+  int get _secondsLeft =>
+      (DateTime.parse(_challenge['expiresAt'] as String)
+                  .difference(DateTime.now())
+                  .inMilliseconds /
+              1000)
+          .ceil()
+          .clamp(0, 300);
+  bool get _canConfirm =>
+      !_busy &&
+      !_invalidChallenge &&
+      _secondsLeft > 0 &&
+      _attemptsRemaining > 0;
+  Timer? _timer;
+  int get _wait =>
+      (_localResendAt ??
+                  DateTime.parse(_challenge['resendAvailableAt'] as String))
+              .difference(DateTime.now())
+              .inMilliseconds ~/
+          1000 +
+      1;
+  int get _resendWait => _wait.clamp(0, 3600);
+
+  @override
+  void initState() {
+    super.initState();
+    _challenge = widget.challenge;
+    _attemptsRemaining = (_challenge['attemptsRemaining'] as int? ?? 5).clamp(
+      0,
+      5,
+    );
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     _codeController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _confirm() {
-    if (_codeController.text == '123456') {
-      Navigator.of(context).pop(true);
+  Future<void> _confirm() async {
+    if (!_canConfirm) return;
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(_codeController.text)) {
+      setState(() => _error = 'Vui lòng nhập đủ 6 chữ số.');
       return;
     }
-    setState(() => _error = 'Mã OTP chưa đúng.');
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await AuthService.instance.verify(
+        _challenge,
+        _codeController.text,
+        remember: widget.remember,
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          if (e.code == 'OTP_INVALID') {
+            final serverRemaining = e.details['attemptsRemaining'] as int?;
+            _attemptsRemaining = (_attemptsRemaining - 1).clamp(0, 5);
+            if (serverRemaining != null &&
+                serverRemaining < _attemptsRemaining) {
+              _attemptsRemaining = serverRemaining.clamp(0, 5);
+            }
+          } else if (e.code == 'OTP_ATTEMPTS_EXCEEDED') {
+            _attemptsRemaining = 0;
+          } else if (e.code == 'OTP_EXPIRED') {
+            _challenge = {
+              ..._challenge,
+              'expiresAt': DateTime.now().toIso8601String(),
+            };
+          } else if (e.code == 'REGISTRATION_CHALLENGE_INVALID') {
+            _invalidChallenge = true;
+            widget.onChallengeChanged?.call(null);
+          }
+          if (!_invalidChallenge) {
+            _challenge = {
+              ..._challenge,
+              'attemptsRemaining': _attemptsRemaining,
+            };
+            widget.onChallengeChanged?.call(_challenge);
+          }
+          _error = e.toString();
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    if (_busy || _invalidChallenge || _resendWait > 0) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final value = await AuthService.instance.resend(_challenge);
+      if (mounted) {
+        setState(() {
+          _localResendAt = null;
+          _challenge = value;
+          widget.onChallengeChanged?.call(value);
+          _codeController.clear();
+          _attemptsRemaining = 5;
+          if (value['deliveryStatus'] == 'failed') {
+            _error = 'Chưa gửi được mã mới. Vui lòng thử lại sau 60 giây.';
+            return;
+          }
+        });
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          final retry = e.details['retryAfter'];
+          if (retry is int && retry > 0) {
+            _localResendAt = DateTime.now().add(Duration(seconds: retry));
+            _challenge = {
+              ..._challenge,
+              'resendAvailableAt': _localResendAt!.toIso8601String(),
+            };
+            widget.onChallengeChanged?.call(_challenge);
+          }
+          if (e.code == 'REGISTRATION_CHALLENGE_INVALID') {
+            _invalidChallenge = true;
+            widget.onChallengeChanged?.call(null);
+          }
+          _error = e.toString();
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Xác thực OTP'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Nhập mã OTP đã gửi đến số ${widget.phone}.'),
-        const SizedBox(height: 8),
-        const Text(
-          'Bản xem trước dùng mã 123456; hiện chưa gửi SMS.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _codeController,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          textInputAction: TextInputAction.done,
-          maxLength: 6,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onSubmitted: (_) => _confirm(),
-          decoration: InputDecoration(
-            hintText: '••••••',
-            errorText: _error,
-            counterText: '',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_busy,
+    child: AlertDialog(
+      scrollable: true,
+      title: const Text('Xác thực OTP'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _challenge['deliveryStatus'] == 'preview'
+                ? 'Xác minh thử nghiệm cho ${_challenge['targetMasked']}.'
+                : 'Nhập mã OTP gửi đến ${_challenge['targetMasked']}.',
           ),
+          if (_challenge['deliveryStatus'] == 'preview') ...[
+            const SizedBox(height: 8),
+            Text(
+              'Chế độ thử nghiệm local — chưa gửi email/SMS.\nMã thử nghiệm: ${_challenge['devOtp']}',
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            _challenge['deliveryStatus'] == 'failed'
+                ? 'Chưa gửi được mã xác minh. Vui lòng gửi lại.'
+                : _secondsLeft == 0
+                ? 'Mã đã hết hạn. Vui lòng gửi lại.'
+                : 'Mã hết hạn sau ${_secondsLeft ~/ 60}:${(_secondsLeft % 60).toString().padLeft(2, '0')}.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            enabled: _canConfirm,
+            controller: _codeController,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            maxLength: 6,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onSubmitted: (_) => _confirm(),
+            decoration: InputDecoration(
+              hintText: '••••••',
+              errorText: _error,
+              counterText: '',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _attemptsRemaining == 0
+                ? 'Đã nhập sai 5 lần. Vui lòng yêu cầu mã mới.'
+                : 'Còn $_attemptsRemaining lần nhập mã.',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          TextButton(
+            onPressed: _busy || _invalidChallenge || _resendWait > 0
+                ? null
+                : _resend,
+            child: Text(
+              _resendWait > 0 ? 'Gửi lại sau $_resendWait giây' : 'Gửi lại OTP',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: _canConfirm ? _confirm : null,
+          child: Text(_busy ? 'Đang xử lý…' : 'Xác nhận'),
         ),
       ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(false),
-        child: const Text('Hủy'),
-      ),
-      FilledButton(onPressed: _confirm, child: const Text('Xác nhận')),
-    ],
   );
 }

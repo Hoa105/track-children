@@ -1,12 +1,10 @@
 # Miscellaneous
+.test-deps/
+.auth-test-pg/
+.auth-test-logs/
 .env
 .env.*
 !.env.example
-.venv/
-.test-deps/
-.auth-test-logs/
-.pytest_cache/
-__pycache__/
 *.class
 *.log
 *.pyc
@@ -71,5 +69,7 @@ node_modules/
 /android/
 /ios/
 
-.vscode/
-mobile_1/
+.auth-test-logs/
+.test-deps/
+backend/.env
+backend/.runtime/

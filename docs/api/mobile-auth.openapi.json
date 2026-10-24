@@ -1,0 +1,1414 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Track Children - Mobile Auth API",
+    "version": "2.0.0",
+    "description": "# Đăng ký App với schema 009\n\nCập nhật 23/10/2026. Tài liệu này thay thế phần đăng ký/OTP/phiên trong hợp đồng auth cũ.\nLuồng đăng nhập bằng mật khẩu và web admin sẽ được đồng bộ trong hạng mục tiếp theo."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1",
+      "description": "Local backend"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Mobile Auth"
+    }
+  ],
+  "paths": {
+    "/legal-documents": {
+      "get": {
+        "operationId": "get_legal_documents",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Lấy điều khoản đăng ký",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentsResult"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; LEGAL_DOCUMENTS_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "context",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "registration"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "post_auth_register",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Đăng ký",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationChallenge"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ACCOUNT_CONFLICT; LEGAL_CONSENT_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED; LEGAL_DOCUMENTS_UNAVAILABLE; OTP_DELIVERY_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/verify": {
+      "post": {
+        "operationId": "post_auth_register_verify",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Xác thực OTP đăng ký",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "OTP_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "REGISTRATION_CHALLENGE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OTP_ALREADY_USED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "OTP_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "OTP_ATTEMPTS_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register/resend": {
+      "post": {
+        "operationId": "post_auth_register_resend",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Gửi lại OTP",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationChallenge"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "REGISTRATION_CHALLENGE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED; OTP_DELIVERY_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "post_auth_login",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Đăng nhập",
+        "description": "Password login still requires migration to schema 009.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "VERIFICATION_REQUIRED; ACCOUNT_LOCKED; ACCOUNT_DELETION_IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "LOGIN_TEMPORARILY_LOCKED; RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "post_auth_refresh",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Làm mới phiên",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResult"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "REFRESH_TOKEN_INVALID; SESSION_EXPIRED; SESSION_REVOKED; REFRESH_TOKEN_REUSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "post_auth_logout",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Đăng xuất",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "No content; idempotent logout."
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "get_auth_me",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "summary": "Lấy người dùng hiện tại",
+        "description": "Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ACCESS_TOKEN_INVALID; ACCESS_TOKEN_EXPIRED; SESSION_EXPIRED; SESSION_REVOKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "Bearer"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/social": {
+      "post": {
+        "operationId": "social_register",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "description": "Google/Apple verified sign-in. See docs/api/mobile-social-auth.md. No automatic email linking.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "App session and isNewUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "SOCIAL_TOKEN_INVALID"
+          },
+          "403": {
+            "description": "Unverified email or unavailable account"
+          },
+          "409": {
+            "description": "SOCIAL_ACCOUNT_CONFLICT"
+          },
+          "503": {
+            "description": "Provider not configured or unavailable"
+          }
+        }
+      }
+    },
+    "/auth/social/apple/challenge": {
+      "post": {
+        "operationId": "apple_social_challenge",
+        "tags": [
+          "Mobile Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Ten-minute signed challenge and nonce"
+          },
+          "503": {
+            "description": "SOCIAL_AUTH_NOT_CONFIGURED"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "phone",
+          "fullName",
+          "relationship",
+          "status",
+          "emailVerifiedAt",
+          "phoneVerifiedAt",
+          "displayName",
+          "defaultRelationship"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 254
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "grandfather",
+              "grandmother",
+              "other_guardian"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          "emailVerifiedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "phoneVerifiedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "defaultRelationship": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "grandfather",
+              "grandmother",
+              "other_guardian"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
+      "Device": {
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deviceid"
+          },
+          "deviceName": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Devicename"
+          },
+          "platform": {
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ],
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform"
+        ],
+        "title": "Device",
+        "type": "object"
+      },
+      "AuthResult": {
+        "type": "object",
+        "required": [
+          "tokenType",
+          "accessToken",
+          "expiresIn",
+          "refreshToken",
+          "sessionExpiresAt",
+          "user"
+        ],
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "deletionRequestCancelled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "fields",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "registration": {
+                    "$ref": "#/components/schemas/RegistrationChallenge"
+                  },
+                  "attemptsRemaining": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "LegalDocumentsResult": {
+        "type": "object",
+        "required": [
+          "documents"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "docType",
+                "version",
+                "content",
+                "isRequired",
+                "effectiveAt"
+              ],
+              "properties": {
+                "docType": {
+                  "type": "string",
+                  "enum": [
+                    "terms",
+                    "privacy",
+                    "data_policy"
+                  ]
+                },
+                "version": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "isRequired": {
+                  "type": "boolean"
+                },
+                "effectiveAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RegisterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "default": "Phụ huynh",
+            "maxLength": 150,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Phone"
+          },
+          "password": {
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Password",
+            "type": "string"
+          },
+          "defaultRelationship": {
+            "default": "mother",
+            "enum": [
+              "mother",
+              "father",
+              "grandfather",
+              "grandmother",
+              "other_guardian"
+            ],
+            "title": "Defaultrelationship",
+            "type": "string"
+          },
+          "acceptedTerms": {
+            "title": "Acceptedterms",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "password",
+          "acceptedTerms"
+        ],
+        "title": "Register",
+        "type": "object"
+      },
+      "RegistrationChallenge": {
+        "type": "object",
+        "required": [
+          "verificationId",
+          "registrationToken",
+          "targetMasked",
+          "expiresAt",
+          "resendAvailableAt",
+          "deliveryStatus"
+        ],
+        "properties": {
+          "verificationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "registrationToken": {
+            "type": "string"
+          },
+          "targetMasked": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resendAvailableAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveryStatus": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "failed",
+              "preview"
+            ]
+          },
+          "requiresOtp": {
+            "type": "boolean",
+            "const": true
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          },
+          "devOtp": {
+            "type": "string",
+            "description": "Local preview only"
+          }
+        }
+      },
+      "VerifyRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "verificationId": {
+            "format": "uuid",
+            "title": "Verificationid",
+            "type": "string"
+          },
+          "registrationToken": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Registrationtoken",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "rememberMe": {
+            "default": true,
+            "title": "Rememberme",
+            "type": "boolean"
+          },
+          "device": {
+            "$ref": "#/components/schemas/Device"
+          }
+        },
+        "required": [
+          "verificationId",
+          "registrationToken",
+          "code",
+          "device"
+        ],
+        "title": "Verify",
+        "type": "object"
+      },
+      "ResendRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "verificationId": {
+            "format": "uuid",
+            "title": "Verificationid",
+            "type": "string"
+          },
+          "registrationToken": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Registrationtoken",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verificationId",
+          "registrationToken"
+        ],
+        "title": "Challenge",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Phone"
+          },
+          "password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "rememberMe": {
+            "default": true,
+            "title": "Rememberme",
+            "type": "boolean"
+          },
+          "device": {
+            "$ref": "#/components/schemas/Device"
+          }
+        },
+        "required": [
+          "password",
+          "device"
+        ],
+        "title": "Login",
+        "type": "object"
+      },
+      "RefreshRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Refreshtoken",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "title": "Refresh",
+        "type": "object"
+      },
+      "TokenResult": {
+        "type": "object",
+        "required": [
+          "tokenType",
+          "accessToken",
+          "expiresIn",
+          "refreshToken",
+          "sessionExpiresAt"
+        ],
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LogoutRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "refreshToken": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Refreshtoken",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "title": "Refresh",
+        "type": "object"
+      },
+      "SocialRegisterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "enum": [
+              "google",
+              "apple"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "idToken": {
+            "maxLength": 16000,
+            "minLength": 1,
+            "title": "Idtoken",
+            "type": "string"
+          },
+          "authorizationCode": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Authorizationcode"
+          },
+          "challenge": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Challenge"
+          },
+          "displayName": {
+            "default": "Phụ huynh",
+            "maxLength": 150,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "defaultRelationship": {
+            "default": "mother",
+            "enum": [
+              "mother",
+              "father",
+              "grandfather",
+              "grandmother",
+              "other_guardian"
+            ],
+            "title": "Defaultrelationship",
+            "type": "string"
+          },
+          "acceptedTerms": {
+            "title": "Acceptedterms",
+            "type": "boolean"
+          },
+          "rememberMe": {
+            "default": true,
+            "title": "Rememberme",
+            "type": "boolean"
+          },
+          "device": {
+            "$ref": "#/components/schemas/Device"
+          }
+        },
+        "required": [
+          "provider",
+          "idToken",
+          "acceptedTerms",
+          "device"
+        ],
+        "title": "SocialRegister",
+        "type": "object"
+      }
+    }
+  },
+  "x-status": "registration-implemented; password-login-pending-schema-009",
+  "x-implementation-notes": "# Đăng ký App với schema 009\n\nCập nhật 23/10/2026. Tài liệu này thay thế phần đăng ký/OTP/phiên trong hợp đồng auth cũ.\nLuồng đăng nhập bằng mật khẩu và web admin sẽ được đồng bộ trong hạng mục tiếp theo.\n\n## API\n\nBase path: `/api/v1`. Gửi JSON, nhận lỗi dạng `error.code`, `error.fields`, `error.details`.\n\n`GET /legal-documents?context=registration` đọc 3 nội dung đã triển khai trong file\n`LEGAL_DOCUMENTS_PATH`: `terms`, `privacy`, `data_policy`. Định dạng file giống\n`backend/legal-documents.local.json`. File mẫu chỉ dành cho thử nghiệm local.\nThiếu nội dung hợp lệ/đang có hiệu lực trả `503 LEGAL_DOCUMENTS_UNAVAILABLE`.\nKhông sử dụng các bảng legal/consent đã xóa; DB chỉ ghi `consented_at`.\n\n`POST /auth/register`:\n\n```json\n{\n  \"displayName\": \"Ngọc Anh\",\n  \"email\": \"anh@example.com\",\n  \"password\": \"a password 123\",\n  \"defaultRelationship\": \"mother\",\n  \"acceptedTerms\": true\n}\n```\n\nChỉ cung cấp một trong `email` hoặc `phone`. SĐT đầu `0` được đổi sang `+84`.\nTên không bắt buộc, mặc định `Phụ huynh`, tối đa 150 ký tự. Mật khẩu 8–64 ký tự,\ngiữ nguyên khoảng trắng. Quan hệ nhận `mother`, `father`, `grandfather`,\n`grandmother`, `other_guardian`. Không nhận `username` hoặc danh sách consent cũ.\n\nThành công `201`: `requiresOtp=true`, `verificationId`, `registrationToken`,\n`channel`, `targetMasked`, `expiresAt`, `resendAvailableAt`, `deliveryStatus`.\nMã được băm HMAC trong `account.auth_codes`, purpose `verify_contact`.\nChallenge là JWT có chữ ký và audience riêng, ràng buộc user/code, hiệu lực 30 phút.\nOTP có 6 số, hiệu lực 5 phút, tối đa 5 lần nhập sai. Gửi lại sau 60 giây,\ntối đa 5 mã/liên hệ/giờ và 100 mã/toàn hệ thống/giờ. Giới hạn này dùng PostgreSQL\nvà khóa transaction, áp dụng chung giữa các worker; không phải giới hạn theo IP.\nGiới hạn IP tại reverse proxy cần được cấu hình trước khi mở dịch vụ công khai.\n\nTài khoản đang pending chỉ được tiếp tục với cùng mật khẩu; thông tin đã lưu không\nbị ghi đè. Tài khoản active hoặc mật khẩu khác trả `409 ACCOUNT_CONFLICT`.\nTrong thời gian chờ gửi lại trả `429 RATE_LIMITED`, header `Retry-After`.\n\n`POST /auth/register/resend`: gửi `verificationId`, `registrationToken`.\nNhận challenge mới và vô hiệu mã trước. App phải thay challenge ngay cả khi\n`deliveryStatus=failed`, vì mã trước đã bị vô hiệu.\n\n`POST /auth/register/verify`: gửi hai trường challenge, `code`,\n`device: {\"platform\":\"android\"}`, `rememberMe` (mặc định true).\n`platform` nhận android/ios/web; metadata device cũ được chấp nhận nhưng không lưu.\nSai mã ghi nhận lượt thử ngay cả khi API trả lỗi. Hết hạn trả `OTP_EXPIRED`,\nhết lượt trả `OTP_ATTEMPTS_EXCEEDED`, challenge cũ/đã dùng trả\n`REGISTRATION_CHALLENGE_INVALID`.\n\nXác minh thành công: user active, ghi `email_verified_at` hoặc `phone_verified_at`,\ncode có `verified_at` và `consumed_at`, tạo session và trả token cùng user.\nApp lưu refresh token trong secure storage rồi chuyển sang màn hình tạo hồ sơ bé.\nKhông tạo hồ sơ bé tự động. Xác minh đồng thời/nhắc lại không tạo thêm session.\n\n`GET /auth/me`, `POST /auth/refresh`, `POST /auth/logout` sử dụng được với phiên mới.\nAccess token 15 phút; session 30 ngày nếu remember=true, 24 giờ nếu false.\nSchema 009 chỉ giữ một refresh hash/session: refresh secret ổn định đến khi hết hạn\nhoặc thu hồi, không có cơ chế xoay token/lịch sử phát hiện replay của schema cũ.\n`fullName` và `relationship` trong user vẫn là alias cho các màn hình App hiện có;\nđồng thời trả `displayName`, `defaultRelationship`. Không trả username/avatar cũ.\n\n## Chạy local khi chưa có nhà cung cấp\n\nTrong `backend/.env`:\n\n```dotenv\nAPP_ENV=local\nAUTH_SKIP_OTP=false\nAUTH_OTP_PREVIEW=true\nLEGAL_DOCUMENTS_PATH=legal-documents.local.json\n```\n\nKhởi động backend từ thư mục `backend` để đường dẫn tương đối đúng. Cần\n`AUTH_SECRET` ít nhất 32 ký tự và `DATABASE_URL` trỏ DB mới.\nChế độ preview không gửi email/SMS; response có `deliveryStatus=preview`,\n`devOtp` và App hiển thị rõ mã thử nghiệm. Cấu hình preview bị từ chối khi\nAPP_ENV khác local. Không cần thay DB hoặc chạy lại migration 009.\n\n## Gửi thật\n\n### SMTP2GO (đang chọn)\n\nBackend tích hợp API SMTP2GO trực tiếp. Trong SMTP2GO, vào\n`Sending > Verified Senders > Single sender emails`, thêm mail sinh viên và\nmở thư xác minh. Tạo API key tại `Sending > API Keys`, rồi điền `backend/.env`:\n\n```dotenv\nEMAIL_PROVIDER=smtp2go\nSMTP2GO_API_KEY=your-private-api-key\nSMTP2GO_SENDER_EMAIL=your-verified-student-email\nSMTP2GO_SENDER_NAME=Track Children\nAUTH_OTP_PREVIEW=false\nAUTH_SKIP_OTP=false\n```\n\nKhông dùng API key Brevo làm key SMTP2GO. Không cần mật khẩu hộp thư sinh viên.\nChỉ tắt preview sau khi có key và sender đã xác minh, rồi khởi động lại backend.\nKhi preview còn bật ở local, API vẫn trả mã thử nghiệm và không gọi nhà cung cấp.\n\nAdapter gọi `POST https://api.smtp2go.com/v3/email/send` với header\n`X-Smtp2go-Api-Key`, payload sender/to/subject/text_body. Chỉ coi là tiếp nhận\nthành công khi HTTP 200 và `data.succeeded=1`, `data.failed=0`, không có lỗi.\nKhông tự retry vì có thể gửi trùng. Timeout, response không hợp lệ hoặc provider\ntừ chối được chuyển thành `deliveryStatus=failed`; App cho phép gửi lại theo cooldown.\nXem [API chính thức](https://developers.smtp2go.com/docs/send-an-email).\n\n`.env` local đã chọn SMTP2GO; các giá trị key/sender hiện có được giữ nguyên,\nbiến chưa có được thêm rỗng. Không tự chuyển key hoặc địa chỉ sender từ Brevo.\nDocker nhận các biến SMTP2GO tương ứng từ môi trường Compose.\n\n### Brevo với email sinh viên\n\nAdapter Brevo đã tích hợp trực tiếp, không cần webhook trung gian.\nTạo tài khoản Brevo, thêm email sinh viên làm sender và hoàn tất xác minh hộp thư.\nViệc Brevo cho phép gửi phụ thuộc trạng thái tài khoản/sender; nhóm không có quyền\nDNS của trường nên không thể tự xác thực tên miền trường. Brevo có thể thay địa chỉ gửi.\n\nSau khi sender sẵn sàng, tạo API key và điền vào `backend/.env` (không commit key):\n\n```dotenv\nEMAIL_PROVIDER=brevo\nBREVO_API_KEY=your-private-api-key\nBREVO_SENDER_EMAIL=your-student-email\nBREVO_SENDER_NAME=Track Children\nAUTH_OTP_PREVIEW=false\nAUTH_SKIP_OTP=false\n```\n\nKhởi động lại backend. Adapter gọi `POST https://api.brevo.com/v3/smtp/email`,\nheader `api-key`, body gồm sender/to/subject/textContent. Chỉ trả thành công\nkhi Brevo trả 201; lỗi quyền, hết quota hoặc timeout trả trạng thái gửi thất bại.\nChưa cấu hình key/sender thì đăng ký email báo OTP_DELIVERY_UNAVAILABLE.\nKhông cần mật khẩu hộp thư sinh viên. Khi tắt preview, SMS cũng cần dịch vụ gửi\nthật riêng; nếu chưa cấu hình, đăng ký bằng SĐT báo chưa sẵn sàng.\n\n### Webhook chung\n\nTắt preview, cấu hình `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_TOKEN` và/hoặc\n`SMS_WEBHOOK_URL`, `SMS_WEBHOOK_TOKEN`. Webhook phải dùng HTTPS, nhận Bearer token\nvà JSON `{to, message}`; email có thêm `subject`. Trả 2xx khi tiếp nhận gửi.\nAdapter timeout 10 giây, không theo redirect, không ghi mã hoặc token vào log.\nThiếu cấu hình trả `503 OTP_DELIVERY_UNAVAILABLE` trước khi tạo user.\nGửi thất bại sau commit trả `deliveryStatus=failed`; người dùng có thể gửi lại.\n2xx chỉ xác nhận nhà cung cấp đã tiếp nhận, không chứng minh người dùng đã nhận thư.\n\nVới Docker, mount file legal đã duyệt vào container rồi đặt `LEGAL_DOCUMENTS_PATH`\ntheo đường dẫn trong container. Không đưa nội dung thử nghiệm local vào production.\nGoogle/Apple đã được nối theo [luồng xác thực xã hội](mobile-social-auth.md),\ncần cấu hình nhà cung cấp riêng và không dùng chế độ OTP demo.\n\nKết quả 23/10/2026: 34 kiểm thử backend đăng ký/hợp đồng/adapter đạt; toàn bộ Flutter\n183 đạt, 1 live test bỏ qua, 6 lỗi ở `home_layout_test.dart` (ngoài màn hình đăng ký).\nNhóm kiểm thử đăng ký/auth chạy riêng đạt 25/25. Phân tích toàn App còn\n9 thông báo ở login/forgot-password/sharing; các file đăng ký được kiểm tra riêng.\n"
+}

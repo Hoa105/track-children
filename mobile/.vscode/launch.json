@@ -3,10 +3,43 @@
   "configurations": [
     {
       "name": "Mobile Android (user 0)",
+      "preLaunchTask": "Prepare Google mobile configuration",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "toolArgs": ["--device-user", "0"]
+      "toolArgs": [
+        "--dart-define-from-file=${workspaceFolder}/../.auth-test-logs/google-dart-defines.json",
+        "--device-user",
+        "0",
+        "--dart-define=DEMO_MODE=false",
+        "--dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1"
+      ]
+    },
+    {
+      "name": "Mobile Android Emulator (API)",
+      "preLaunchTask": "Prepare Google emulator configuration",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=${workspaceFolder}/../.auth-test-logs/google-dart-defines.json",
+        "--device-user",
+        "0",
+        "--dart-define=DEMO_MODE=false",
+        "--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
+      ]
+    },
+    {
+      "name": "Mobile Chrome (API)",
+      "type": "dart",
+      "request": "launch",
+      "deviceId": "chrome",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--web-port",
+        "5174",
+        "--dart-define=DEMO_MODE=false"
+      ]
     }
   ]
 }

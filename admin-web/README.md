@@ -22,10 +22,10 @@ src/
 └── features/<feature>/   # Mỗi màn hình một thư mục
 ```
 
-- Đăng nhập: `#/login`, quên mật khẩu `#/forgot-password`, kích hoạt lời mời `#/invite?token=…`,
-  đặt lại mật khẩu `#/reset-password?token=…`. Không có trang tự đăng ký — admin được mời.
-  Xác thực hiện là mock (`core/authApi.js`), hợp đồng API thật ở `docs/api/README.md`.
-  Tài khoản mock: `lan@trackchildren.vn` / `MatKhau@2026`.
+- Authentication uses backend `/admin/auth/*` through `/api/backend`.
+  OpenAPI contract: `docs/api/admin-auth.openapi.json`; setup: `docs/api/admin-auth.md`.
+  No demo account can log in. Create an actual super admin after migration 011.
+  Password-reset/invitation screens are not connected and show an explicit error.
 - Mục menu chỉ hiển thị khi admin có `permission` tương ứng (mã trong `admin.permissions`).
 - Mục chưa có màn riêng dùng `features/modules/ModulePage.jsx`, hiển thị bảng DB và danh sách
   chức năng lấy từ `navigation.js`. Dựng màn thật thì thêm component vào `pages` trong `App.jsx`.

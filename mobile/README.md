@@ -2,7 +2,7 @@
 
 Ứng dụng Flutter cho phụ huynh và người chăm sóc trẻ.
 
-Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu, kịch bản kiểm tra và phạm vi mô phỏng](docs/demo-data.md). Trong app, mở **Cài đặt → Dữ liệu kiểm thử** để xem hoặc khôi phục bộ mẫu.
+Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu và phạm vi mô phỏng](docs/demo-data.md). Trong app, mở **Cài đặt → Dữ liệu kiểm thử** để xem hoặc khôi phục bộ mẫu.
 
 ## 1. Cài đặt
 
@@ -18,6 +18,71 @@ flutter devices
 ```
 
 ## 2. Chạy ứng dụng
+
+### Auth trên Chrome
+
+Auth trên web mặc định gọi `http://localhost:8000/api/v1`. Backend cần
+`APP_ENV=local` và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Chọn **Mobile Chrome (API)** trong VS Code hoặc chạy trong thư mục `mobile`:
+
+```bash
+flutter run -d chrome --web-port 5174 --dart-define=DEMO_MODE=false
+```
+
+Sau khi đổi cấu hình, dừng và chạy lại app.
+
+### Google trên Android
+
+Chọn **Mobile Android (user 0)** hoặc **Mobile Android Emulator (API)** trong VS Code
+và nhấn F5. Bước chuẩn bị tự đọc `GOOGLE_CLIENT_IDS` từ `backend/.env` rồi truyền
+`GOOGLE_SERVER_CLIENT_ID` vào bản build Flutter. Cần đúng một Web OAuth client ID
+trong danh sách; không xuất khóa bí mật backend sang app.
+
+App có client ID công khai dự phòng tại `lib/config/google_oauth_config.dart`,
+để nút Google vẫn nhận cấu hình khi chạy bằng `flutter run` không kèm dart define.
+`GOOGLE_SERVER_CLIENT_ID` truyền lúc build sẽ ghi đè giá trị dự phòng.
+Khi đổi OAuth project, chạy `scripts/run-google-local.ps1 -PrepareOnly` từ thư mục
+gốc để đồng bộ file này với backend. File chỉ chứa client ID công khai, không chứa
+client secret.
+
+URL backend dự phòng nằm trong `lib/config/local_backend_config.dart` và được
+script cập nhật cùng lúc với Google client ID. Chọn cấu hình Android thật sẽ
+dùng `127.0.0.1:8000` và tự thiết lập `adb reverse`; cấu hình emulator dùng
+`10.0.2.2:8000`. Không dùng địa chỉ emulator cho điện thoại thật.
+
+Nếu chạy bằng terminal từ thư mục gốc:
+
+```powershell
+.\scripts\run-google-local.ps1
+```
+
+Khi thay client ID hoặc vừa sửa lỗi thiếu cấu hình, **dừng app và chạy lại hoàn toàn**;
+hot reload/hot restart không cập nhật `--dart-define`. Cấu hình OAuth Android trên
+Google Cloud cần khớp package `com.example.track_children` và SHA-1 của khóa ký app.
+
+Hiện mặc định dùng **API xác thực thật**, cần backend tại cổng `8000`.
+Android emulator dùng `http://10.0.2.2:8000/api/v1`. Với Android thật kết nối USB,
+chạy `adb reverse tcp:8000 tcp:8000`, sau đó:
+
+```powershell
+flutter run --device-user 0 --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+Backend cần migration, `AUTH_SECRET`, tài liệu pháp lý và webhook SMS để đăng ký/OTP.
+Xem [hướng dẫn backend](../backend/README.md).
+
+Để dùng **chế độ demo**, chạy `flutter run --dart-define=DEMO_MODE=true`.
+Đăng nhập `demo@trackchildren.vn` / `TreXanh123` để xem Bảo An và Gia Linh;
+hoặc `bo@trackchildren.vn` / `TreXanh123` để xem Minh Khang.
+Đăng ký mới lưu cục bộ, OTP mẫu là `123456`; tài khoản mới chưa có hồ sơ bé.
+Mỗi lần khởi động app cần đăng nhập lại. Các chỉnh sửa dữ liệu vẫn lưu trên thiết bị.
+Nếu đã sửa bộ mẫu, dùng **Cài đặt → Dữ liệu kiểm thử → Khôi phục bộ dữ liệu test**.
+
+Để bật lại xác thực API:
+```powershell
+flutter run --dart-define=DEMO_MODE=false --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+Sau khi đổi chế độ, dừng và chạy lại ứng dụng.
 
 - **Chạy trên thiết bị mặc định (hoặc máy ảo đang mở):**
   ```powershell
@@ -46,7 +111,7 @@ flutter devices
 - `R`: Hot Restart (khởi động lại app và nạp lại state)
 - `q`: Dừng ứng dụng
 
-## 3. Kiểm thử & Phân tích
+## 3. Khắc phục lỗi & Phân tích
 
 ### Android báo `Error type 3: Activity class ...MainActivity does not exist`
 
@@ -74,17 +139,6 @@ adb install --user 0 -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 Thay `0` bằng user đang dùng nếu cần; không cần gỡ ứng dụng hay xóa dữ liệu.
-
-- **Chạy toàn bộ unit & widget test:**
-  ```powershell
-  flutter test
-  ```
-
-- **Chạy riêng từng file test:**
-  ```powershell
-  flutter test test/home_layout_test.dart
-  flutter test test/child_profile_test.dart
-  ```
 
 - **Kiểm tra cú pháp & linter:**
   ```powershell
