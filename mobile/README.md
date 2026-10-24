@@ -2,7 +2,7 @@
 
 Ứng dụng Flutter cho phụ huynh và người chăm sóc trẻ.
 
-Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu, kịch bản kiểm tra và phạm vi mô phỏng](docs/demo-data.md). Trong app, mở **Cài đặt → Dữ liệu kiểm thử** để xem hoặc khôi phục bộ mẫu.
+Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu và phạm vi mô phỏng](docs/demo-data.md). Trong app, mở **Cài đặt → Dữ liệu kiểm thử** để xem hoặc khôi phục bộ mẫu.
 
 ## 1. Cài đặt
 
@@ -111,7 +111,7 @@ Sau khi đổi chế độ, dừng và chạy lại ứng dụng.
 - `R`: Hot Restart (khởi động lại app và nạp lại state)
 - `q`: Dừng ứng dụng
 
-## 3. Kiểm thử & Phân tích
+## 3. Khắc phục lỗi & Phân tích
 
 ### Android báo `Error type 3: Activity class ...MainActivity does not exist`
 
@@ -139,17 +139,6 @@ adb install --user 0 -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 Thay `0` bằng user đang dùng nếu cần; không cần gỡ ứng dụng hay xóa dữ liệu.
-
-- **Chạy toàn bộ unit & widget test:**
-  ```powershell
-  flutter test
-  ```
-
-- **Chạy riêng từng file test:**
-  ```powershell
-  flutter test test/home_layout_test.dart
-  flutter test test/child_profile_test.dart
-  ```
 
 - **Kiểm tra cú pháp & linter:**
   ```powershell

@@ -30,7 +30,7 @@ def database():
         try:
             target = make_conninfo(url, dbname=name)
             with psycopg.connect(target, autocommit=True) as db:
-                for file in sorted((Path(__file__).parents[1]/'migrations').glob('*.sql')):
+                for file in sorted((Path(__file__).parents[2]/'migrations').glob('*.sql')):
                     with db.transaction():
                         db.execute(file.read_text(encoding='utf-8'))
             yield target
@@ -82,7 +82,7 @@ def test_registration_and_session(env,channel):
     r=verify(client,ch,sent[-1][2]);assert r.status_code==200,r.text
     result=r.json();assert result['user']['relationship']=='grandfather'
     from jsonschema import Draft202012Validator
-    contract=json.loads((Path(__file__).parents[2]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
+    contract=json.loads((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
     Draft202012Validator({'$ref':'#/components/schemas/AuthResult',
         'components':contract['components']}).validate(result)
     headers={'Authorization':'Bearer '+result['accessToken']}

@@ -1,0 +1,746 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Track Children - Admin Authentication API",
+    "version": "1.1.0",
+    "description": "Password login and session lifecycle for web admins. Requires schema migrations through 011. Same-origin web proxy /api/backend forwards to backend root. AUTH_SECRET must contain at least 32 characters. Production requires HTTPS. No public admin registration. Password reset/invitation APIs are outside this contract."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    },
+    {
+      "url": "/api/backend"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Admin Auth"
+    }
+  ],
+  "paths": {
+    "/admin/auth/login": {
+      "post": {
+        "operationId": "admin_login",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "login",
+        "description": "Verify email/password. Same 401 for unknown email and wrong password. Disabled accounts return 403 only after valid password. Five attempts per normalized email per 15 minutes; 30 per IP per minute. Success resets the email counter. Session lifetime 8 hours; access JWT 15 minutes. Legacy bcrypt is upgraded to Argon2.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "tc_admin_refresh; HttpOnly; SameSite=Strict; Path=/; Secure except APP_ENV=local. Refresh value never appears in JSON."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Requested-With",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "TrackChildrenAdmin"
+            },
+            "description": "Required for every POST; rejects cross-origin simple form submissions."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLogin"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/auth/refresh": {
+      "post": {
+        "operationId": "admin_refresh",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "refresh",
+        "description": "Rotate refresh token atomically, retaining the original 8-hour absolute expiry. Old cookie cannot be reused. Invalid, disabled, revoked or expired session returns 401 and deletes cookie.",
+        "security": [
+          {
+            "AdminRefreshCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "tc_admin_refresh; HttpOnly; SameSite=Strict; Path=/; Secure except APP_ENV=local. Refresh value never appears in JSON."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Requested-With",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "TrackChildrenAdmin"
+            },
+            "description": "Required for every POST; rejects cross-origin simple form submissions."
+          }
+        ]
+      }
+    },
+    "/admin/auth/me": {
+      "get": {
+        "operationId": "admin_me",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "me",
+        "description": "Read current identity and live database roles/permissions. Check JWT issuer, audience, signature, expiry and persisted session.",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "admin_update_profile",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "Update own admin profile",
+        "description": "Update the authenticated admin fullName only; normalized to 2-150 Unicode characters. Identity is taken exclusively from the validated JWT/session. Writes and audit log commit atomically. Returns the complete current profile. Existing sessions remain valid; refresh and GET /me return the saved name. Repeating the same normalized name is a no-op. Requires migrations through 011; no additional migration.",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Requested-With",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "TrackChildrenAdmin"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved profile",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked access token/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account unavailable or CSRF_REJECTED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR: invalid or extra profile fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authentication not configured or database unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/auth/logout": {
+      "post": {
+        "operationId": "admin_logout",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "logout",
+        "description": "Idempotently revoke current cookie session and delete cookie. Missing or invalid cookie still returns 204. Revoked access JWT stops working immediately.",
+        "security": [
+          {
+            "AdminRefreshCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "tc_admin_refresh; HttpOnly; SameSite=Strict; Path=/; Secure except APP_ENV=local. Refresh value never appears in JSON."
+              }
+            }
+          },
+          "403": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Requested-With",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "TrackChildrenAdmin"
+            },
+            "description": "Required for every POST; rejects cross-origin simple form submissions."
+          }
+        ]
+      }
+    },
+    "/admin/auth/change-password": {
+      "post": {
+        "operationId": "admin_change_password",
+        "tags": [
+          "Admin Auth"
+        ],
+        "summary": "change-password",
+        "description": "Verify current password, require different new password with ASCII letter and digit and 10-128 characters. Revoke every session and delete cookie; sign in again. Five attempts per admin per 15 minutes. Wrong current password returns INVALID_CREDENTIALS without revoking sessions. Password hash update, session revocation and audit log commit atomically. Audit records contain no passwords, password hashes or tokens. No additional migration required.",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "tc_admin_refresh; HttpOnly; SameSite=Strict; Path=/; Secure except APP_ENV=local. Refresh value never appears in JSON."
+              }
+            }
+          },
+          "401": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth error; see error.code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Requested-With",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "TrackChildrenAdmin"
+            },
+            "description": "Required for every POST; rejects cross-origin simple form submissions."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPasswordChange"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AdminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "AdminRefreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "tc_admin_refresh"
+      }
+    },
+    "schemas": {
+      "AdminLogin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Trimmed, case-insensitive."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        }
+      },
+      "AdminPasswordChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128,
+            "pattern": "^(?=.*[A-Za-z])(?=.*[0-9]).+$"
+          }
+        }
+      },
+      "AdminProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "role",
+          "roles",
+          "permissions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Primary role; super_admin first, otherwise alphabetic; empty when no role."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AdminSession": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "admin"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "const": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 900
+          },
+          "admin": {
+            "$ref": "#/components/schemas/AdminProfile"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "fields",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_CREDENTIALS",
+                  "ACCOUNT_UNAVAILABLE",
+                  "RATE_LIMITED",
+                  "RATE_LIMIT_UNAVAILABLE",
+                  "AUTH_NOT_CONFIGURED",
+                  "DATABASE_UNAVAILABLE",
+                  "ACCESS_TOKEN_EXPIRED",
+                  "ACCESS_TOKEN_INVALID",
+                  "SESSION_EXPIRED",
+                  "SESSION_REVOKED",
+                  "VALIDATION_ERROR",
+                  "CSRF_REJECTED"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "object"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "AdminProfileUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Trim leading/trailing whitespace; collapse internal whitespace. Unicode names supported. Reject control characters. Only your own full name can be edited; email, roles and account status are read-only."
+          }
+        }
+      }
+    }
+  }
+}

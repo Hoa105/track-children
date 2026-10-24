@@ -49,14 +49,16 @@ export default function App() {
 
 function Router() {
   const { path, params } = useHashRoute();
-  const { admin } = useAuth();
+  const { admin, loading } = useAuth();
   const isPublic = publicPaths.includes(path);
 
   useEffect(() => {
+    if (loading) return;
     if (!admin && !isPublic) navigate("/login");
     if (admin && (path === "/login" || path === "/forgot-password")) navigate("/");
-  }, [admin, isPublic, path]);
+  }, [admin, loading, isPublic, path]);
 
+  if (loading) return <div className="auth-shell" role="status">Đang kiểm tra phiên đăng nhập…</div>;
   if (path === "/invite") return <SetPasswordPage key={params.get("token")} mode="invite" token={params.get("token") ?? ""} />;
   if (path === "/reset-password") return <SetPasswordPage key={params.get("token")} mode="reset" token={params.get("token") ?? ""} />;
   if (!admin) return path === "/forgot-password" ? <ForgotPasswordPage /> : <LoginPage />;

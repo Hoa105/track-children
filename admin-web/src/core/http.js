@@ -1,3 +1,4 @@
+import { authorizedFetch } from "./adminAuth.js";
 import { BACKEND } from "./api.js";
 
 export class ApiError extends Error {
@@ -7,14 +8,13 @@ export class ApiError extends Error {
   }
 }
 
-// Gọi API quản trị của backend. Chưa có đăng nhập thật nên backend (DEV_AUTH=true)
-// tạm nhận vai trò qua header X-Admin-Role; khi có JWT thay bằng Authorization: Bearer.
+// Protected admin APIs use the live JWT and refresh session.
 export async function adminRequest(admin, path, { method = "GET", body } = {}) {
   let response;
   try {
-    response = await fetch(`${BACKEND}${path}`, {
+    response = await authorizedFetch(`${BACKEND}${path}`, {
       method,
-      headers: { "X-Admin-Role": admin.role, ...(body !== undefined && { "Content-Type": "application/json" }) },
+      headers: { ...(body !== undefined && { "Content-Type": "application/json" }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

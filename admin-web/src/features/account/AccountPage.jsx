@@ -1,86 +1,93 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useAuth } from "../../core/auth.jsx";
 import * as authApi from "../../core/authApi.js";
 import { PERMISSIONS, roleLabel } from "../../core/session.js";
-import { Badge, DataTable, MockNotice, PageHeading, Panel } from "../../shared/ui.jsx";
-
-// admin.admin_sessions của admin đang đăng nhập (dữ liệu mẫu)
-const initialSessions = [
-  { id: "s1", device: "Chrome · Windows", ip: "113.161.x.x", lastUsed: "Đang dùng", current: true },
-  { id: "s2", device: "Safari · macOS", ip: "14.232.x.x", lastUsed: "Hôm qua 21:14", current: false },
-];
+import { Badge, PageHeading, Panel } from "../../shared/ui.jsx";
 
 export default function AccountPage({ onNotify }) {
   const { admin, updateProfile, logout } = useAuth();
   const [fullName, setFullName] = useState(admin.fullName);
+  const [profileError, setProfileError] = useState("");
+  const [profileBusy, setProfileBusy] = useState(false);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [sessions, setSessions] = useState(initialSessions);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const busy = profileBusy || passwordBusy || logoutBusy;
 
-  function saveProfile(event) {
+  async function saveProfile(event) {
     event.preventDefault();
-    if (fullName.trim().length < 2) return;
-    updateProfile({ fullName: fullName.trim() });
-    onNotify("Đã cập nhật thông tin");
+    const problem = authApi.profileProblem(fullName);
+    if (problem) return setProfileError(problem);
+    setProfileBusy(true);
+    setProfileError("");
+    try {
+      const saved = await updateProfile({ fullName });
+      setFullName(saved.fullName);
+      onNotify("Đã cập nhật thông tin");
+    } catch (error) {
+      setProfileError(error.message);
+    } finally {
+      setProfileBusy(false);
+    }
   }
 
   async function savePassword(event) {
     event.preventDefault();
     const problem = authApi.passwordProblem(next, confirm);
     if (problem) return setPasswordError(problem);
-    setBusy(true);
+    if (next === current) return setPasswordError("Mật khẩu mới phải khác mật khẩu hiện tại.");
+    setPasswordBusy(true);
     setPasswordError("");
     try {
       await authApi.changePassword(admin.id, current, next);
       setCurrent(""); setNext(""); setConfirm("");
-      setSessions((list) => list.filter((session) => session.current));
-      onNotify("Đã đổi mật khẩu, các thiết bị khác đã bị đăng xuất");
-    } catch (exception) {
-      setPasswordError(exception.message);
+    } catch (error) {
+      setPasswordError(error.message);
     } finally {
-      setBusy(false);
+      setPasswordBusy(false);
     }
   }
 
+  async function signOut() {
+    setLogoutBusy(true);
+    setProfileError("");
+    try { await logout(); }
+    catch (error) { setProfileError(error.message); }
+    finally { setLogoutBusy(false); }
+  }
+
   const permissionLabels = PERMISSIONS.filter((permission) => admin.permissions.includes(permission.code)).map((permission) => permission.label);
+  const roles = admin.roles?.length ? admin.roles.map(roleLabel).join(", ") : roleLabel(admin.role);
 
   return <div>
     <PageHeading eyebrow="TÀI KHOẢN" title="Tài khoản của tôi" subtitle={admin.email}>
-      <button className="button secondary" onClick={logout}>Đăng xuất</button>
+      <button className="button secondary" onClick={signOut} disabled={busy}>Đăng xuất</button>
     </PageHeading>
-    <MockNotice />
     <div className="content-grid">
       <Panel title="Thông tin">
-        <form className="form-stack" onSubmit={saveProfile}>
-          <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
+        <form className="form-stack" onSubmit={saveProfile} aria-busy={profileBusy}>
+          <label>HỌ VÀ TÊN<input autoComplete="name" required maxLength={150} disabled={busy} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
           <label>EMAIL<input value={admin.email} disabled /></label>
-          <label>VAI TRÒ<input value={roleLabel(admin.role)} disabled /></label>
-          <div><button className="button primary" disabled={fullName.trim() === admin.fullName}>Lưu</button></div>
+          <label>VAI TRÒ<input value={roles} disabled /></label>
+          {profileError && <p className="auth-error" role="alert">{profileError}</p>}
+          <div><button className="button primary" disabled={busy || fullName.trim() === admin.fullName}>{profileBusy ? "Đang lưu…" : "Lưu thông tin"}</button></div>
         </form>
         <p className="eyebrow perm-title">QUYỀN CỦA BẠN</p>
         <div className="chip-row">{permissionLabels.map((label) => <Badge key={label} tone="green">{label}</Badge>)}</div>
       </Panel>
-      <Panel title="Đổi mật khẩu" subtitle="Đổi mật khẩu sẽ đăng xuất các thiết bị khác">
-        <form className="form-stack" onSubmit={savePassword}>
-          <label>MẬT KHẨU HIỆN TẠI<input type="password" autoComplete="current-password" required value={current} onChange={(event) => setCurrent(event.target.value)} /></label>
-          <label>MẬT KHẨU MỚI<input type="password" autoComplete="new-password" required value={next} onChange={(event) => setNext(event.target.value)} /></label>
-          <label>XÁC NHẬN MẬT KHẨU MỚI<input type="password" autoComplete="new-password" required value={confirm} onChange={(event) => setConfirm(event.target.value)} /></label>
-          <p className="auth-hint">Tối thiểu 10 ký tự, gồm cả chữ và số.</p>
-          {passwordError && <p className="auth-error">{passwordError}</p>}
-          <div><button className="button primary" disabled={busy}>Đổi mật khẩu</button></div>
+      <Panel title="Đổi mật khẩu" subtitle="Đổi thành công sẽ đăng xuất mọi phiên, gồm phiên hiện tại.">
+        <form className="form-stack" onSubmit={savePassword} aria-busy={passwordBusy}>
+          <label>MẬT KHẨU HIỆN TẠI<input type="password" autoComplete="current-password" required maxLength={1024} disabled={busy} value={current} onChange={(event) => setCurrent(event.target.value)} /></label>
+          <label>MẬT KHẨU MỚI<input type="password" autoComplete="new-password" required minLength={10} maxLength={128} disabled={busy} value={next} onChange={(event) => setNext(event.target.value)} /></label>
+          <label>XÁC NHẬN MẬT KHẨU MỚI<input type="password" autoComplete="new-password" required maxLength={128} disabled={busy} value={confirm} onChange={(event) => setConfirm(event.target.value)} /></label>
+          <p className="auth-hint">10–128 ký tự, gồm chữ và số, khác mật khẩu hiện tại.</p>
+          {passwordError && <p className="auth-error" role="alert">{passwordError}</p>}
+          <div><button className="button primary" disabled={busy}>{passwordBusy ? "Đang đổi…" : "Đổi mật khẩu"}</button></div>
         </form>
       </Panel>
     </div>
-    <Panel title="Phiên đăng nhập" subtitle="admin.admin_sessions" action={sessions.length > 1 && <button className="link-button danger" onClick={() => { setSessions((list) => list.filter((session) => session.current)); onNotify("Đã đăng xuất các thiết bị khác"); }}>Đăng xuất thiết bị khác</button>}>
-      <DataTable rowKey="id" rows={sessions} columns={[
-        { key: "device", label: "THIẾT BỊ", render: (session) => <>{session.device} {session.current && <Badge tone="green">Phiên này</Badge>}</> },
-        { key: "ip", label: "IP" },
-        { key: "lastUsed", label: "HOẠT ĐỘNG GẦN NHẤT" },
-        { key: "actions", label: "", render: (session) => !session.current && <button className="link-button danger" onClick={() => { setSessions((list) => list.filter((item) => item.id !== session.id)); onNotify("Đã đăng xuất phiên"); }}>Đăng xuất</button> },
-      ]} />
-    </Panel>
   </div>;
 }

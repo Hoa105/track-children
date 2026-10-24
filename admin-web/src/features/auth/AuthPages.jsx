@@ -38,12 +38,13 @@ function useSubmit() {
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, sessionNotice } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { busy, error, run } = useSubmit();
 
   return <AuthLayout title="Đăng nhập quản trị" subtitle="Dành cho quản trị viên Track Children." footer="Tài khoản quản trị do Super Admin tạo.">
+    {sessionNotice && <p className="auth-success" role="status">{sessionNotice}</p>}
     <form onSubmit={(event) => { event.preventDefault(); run(async () => { await login(email, password); navigate("/"); }); }}>
       <Field label="EMAIL" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="ten@trackchildren.vn" />
       <Field label="MẬT KHẨU" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
@@ -51,7 +52,6 @@ export function LoginPage() {
       {error && <p className="auth-error" role="alert">{error}</p>}
       <button className="button primary auth-submit" disabled={busy}>{busy ? "Đang đăng nhập…" : "Đăng nhập"}</button>
     </form>
-    {import.meta.env.DEV && <p className="auth-demo">Bản mock: <code>lan@trackchildren.vn</code> / <code>MatKhau@2026</code> (Super Admin) · <code>tri@trackchildren.vn</code> (Kiểm duyệt viên) · <code>quang@trackchildren.vn</code> / <code>TamThoi@2026</code> (đăng nhập lần đầu)</p>}
   </AuthLayout>;
 }
 
@@ -69,7 +69,6 @@ export function ForgotPasswordPage() {
           <button className="button primary auth-submit" disabled={busy}>Gửi link đặt lại</button>
         </form>}
     <p className="auth-back"><a href="#/login">← Quay lại đăng nhập</a></p>
-    {import.meta.env.DEV && sent && <p className="auth-demo">Bản mock: mở <a href="#/reset-password?token=demo-reset">link đặt lại mẫu</a>.</p>}
   </AuthLayout>;
 }
 

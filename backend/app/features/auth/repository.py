@@ -1,6 +1,12 @@
 """SQL persistence for auth. Callers own transactions and lock ordering."""
 
 
+from app.features.auth.admin.repository import (
+    find_access_identity as find_admin_access_identity,
+    find_permission as find_admin_permission,
+)
+
+
 def find_access_identity(db, parameters):
     return db.execute(
         """SELECT u.*,s.expires_at AS session_expiry,s.revoked_at AS session_revoked

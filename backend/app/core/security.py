@@ -37,7 +37,7 @@ def verify_password(value: str, hashed: str) -> bool:
         return False
 
 
-def access_token(user_id, session_id, expires):
+def access_token(user_id, session_id, expires, *, audience=None):
     return jwt.encode(
         {
             "sub": str(user_id),
@@ -45,7 +45,7 @@ def access_token(user_id, session_id, expires):
             "iat": now(),
             "exp": expires,
             "iss": settings.auth_issuer,
-            "aud": settings.auth_audience,
+            "aud": audience or settings.auth_audience,
         },
         settings.auth_secret,
         algorithm="HS256",

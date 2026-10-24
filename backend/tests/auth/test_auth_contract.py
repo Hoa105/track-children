@@ -56,7 +56,7 @@ def test_auth_setup_preserves_other_features_validation():
 
 def test_openapi_document():
     from openapi_spec_validator import validate
-    doc=json.loads((Path(__file__).parents[2]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
+    doc=json.loads((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
     validate(doc)
     actual=app.openapi()['paths']
     for path,ops in doc['paths'].items():

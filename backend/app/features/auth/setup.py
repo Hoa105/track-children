@@ -11,7 +11,9 @@ from app.features.auth.router import router
 
 
 def install_auth(app):
+    from app.features.auth.admin.router import router as admin_router
     app.include_router(router)
+    app.include_router(admin_router)
 
     @app.exception_handler(AuthenticationRequired)
     async def authentication_error(request, exc):
@@ -20,7 +22,7 @@ def install_auth(app):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         path = request.url.path
-        if path == "/api/v1/legal-documents" or path.startswith("/api/v1/auth/"):
+        if path == "/api/v1/legal-documents" or path.startswith(("/api/v1/auth/", "/admin/auth/")):
             fields = {
                 ".".join(str(p) for p in e["loc"][1:]): e["msg"] for e in exc.errors()
             }

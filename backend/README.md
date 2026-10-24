@@ -50,12 +50,17 @@ Mobile gọi `http://10.0.2.2:8000` trên Android emulator, `http://localhost:80
 ở nơi khác; thiết bị thật: `flutter run --dart-define=API_BASE_URL=http://<IP LAN>:8000`
 (và chạy uvicorn với `--host 0.0.0.0`).
 
-## Tests
+## Kết quả kiểm thử
 
-`pytest` — `tests/test_vaccination.py` cần PostgreSQL local đã migrate (không có thì bỏ qua).
+[Báo cáo kết quả](../docs/test-results/README.md).
 
 Sau khi đổi seed lịch tiêm, xuất lại bản dự phòng offline cho mobile:
 `python -m app.seed.export_mobile_schedule`.
 
 `/dev/profiles` ch? b?t khi `APP_ENV=local` v? `DEV_AUTH=true`, y?u c?u JWT
 c?a ch?nh ph? huynh trong request; endpoint n?y kh?ng t?o t?i kho?n.
+
+## Admin authentication
+
+[Setup and API](../docs/api/admin-auth.md), [OpenAPI JSON](../docs/api/admin-auth.openapi.json).
+Implementation: `app/features/auth/admin/`. Requires migrations through 011.
