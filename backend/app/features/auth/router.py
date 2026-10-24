@@ -125,3 +125,27 @@ def logout(data: schemas.Refresh):
 @router.get("/auth/me")
 def me(user: dict = Depends(require_user)):
     return output(service.public_user(user))
+
+
+@router.patch("/auth/me")
+def update_profile(data: schemas.ProfileUpdate, request: Request):
+    if err := ready():
+        return output(err)
+    from app.features.auth import account_service
+
+    with transaction() as db:
+        result = account_service.update_profile(db, request, data)
+    return output(result)
+
+
+@router.post("/auth/change-password", status_code=204)
+def change_password(data: schemas.PasswordChange, request: Request):
+    if err := ready():
+        return output(err)
+    from app.features.auth import account_service
+
+    with transaction() as db:
+        result = account_service.change_password(db, request, data)
+    if isinstance(result, AuthFailure):
+        return output(result)
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})

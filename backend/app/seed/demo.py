@@ -20,6 +20,8 @@ PARENTS = [
     ("00000000-0000-4000-8000-000000000002", "bo@trackchildren.vn", "Trần Minh Đức", "duc_tran", "bố"),
 ]
 
+RELATIONSHIP_CODES = {"mẹ": "mother", "bố": "father"}
+
 # (id, chủ, tên, giới tính, số tháng tuổi) — DemoStore._fixture
 CHILDREN = [
     ("00000000-0000-4000-8000-000000000101", PARENTS[0][0], "Bảo An", "male", 8),
@@ -42,11 +44,12 @@ def seed(today: dt.date | None = None) -> None:
             cur.execute(
                 """
                 INSERT INTO account.users
-                  (id, email, password_hash, full_name, username, relationship, status, email_verified_at)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active', now())
+                  (id, email, password_hash, display_name, default_relationship,
+                   status, consented_at, email_verified_at)
+                VALUES (%s, %s, %s, %s, %s, 'active', now(), now())
                 ON CONFLICT (id) DO NOTHING
                 """,
-                (user_id, email, _PASSWORD_HASH, name, username, relationship),
+                (user_id, email, _PASSWORD_HASH, name, RELATIONSHIP_CODES[relationship]),
             )
         for child_id, owner, name, gender, months in CHILDREN:
             cur.execute(

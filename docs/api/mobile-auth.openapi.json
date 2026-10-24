@@ -3,7 +3,7 @@
   "info": {
     "title": "Track Children - Mobile Auth API",
     "version": "2.0.0",
-    "description": "# Đăng ký App với schema 009\n\nCập nhật 23/10/2026. Tài liệu này thay thế phần đăng ký/OTP/phiên trong hợp đồng auth cũ.\nLuồng đăng nhập bằng mật khẩu và web admin sẽ được đồng bộ trong hạng mục tiếp theo."
+    "description": "# Đăng ký App với schema 009\n\nCập nhật 23/10/2026. Tài liệu này thay thế phần đăng ký/OTP/phiên trong hợp đồng auth cũ.\nLuồng đăng nhập bằng mật khẩu và web admin sẽ được đồng bộ trong hạng mục tiếp theo.\n\nCập nhật 25/10/2026: bổ sung API cập nhật thông tin và đổi mật khẩu tài khoản app."
   },
   "servers": [
     {
@@ -37,8 +37,8 @@
               }
             }
           },
-          "503": {
-            "description": "DATABASE_UNAVAILABLE; LEGAL_DOCUMENTS_UNAVAILABLE",
+          "422": {
+            "description": "VALIDATION_ERROR",
             "content": {
               "application/json": {
                 "schema": {
@@ -47,8 +47,8 @@
               }
             }
           },
-          "422": {
-            "description": "VALIDATION_ERROR",
+          "503": {
+            "description": "DATABASE_UNAVAILABLE; LEGAL_DOCUMENTS_UNAVAILABLE",
             "content": {
               "application/json": {
                 "schema": {
@@ -113,6 +113,16 @@
               }
             }
           },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "RATE_LIMITED",
             "content": {
@@ -134,16 +144,6 @@
           },
           "503": {
             "description": "DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED; LEGAL_DOCUMENTS_UNAVAILABLE; OTP_DELIVERY_UNAVAILABLE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "VALIDATION_ERROR",
             "content": {
               "application/json": {
                 "schema": {
@@ -245,6 +245,16 @@
               }
             }
           },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "OTP_ATTEMPTS_EXCEEDED",
             "content": {
@@ -260,16 +270,6 @@
                 "schema": {
                   "type": "integer",
                   "minimum": 0
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "VALIDATION_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -347,6 +347,16 @@
               }
             }
           },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "RATE_LIMITED",
             "content": {
@@ -362,16 +372,6 @@
                 "schema": {
                   "type": "integer",
                   "minimum": 0
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "VALIDATION_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -459,6 +459,16 @@
               }
             }
           },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "LOGIN_TEMPORARILY_LOCKED; RATE_LIMITED",
             "content": {
@@ -474,16 +484,6 @@
                 "schema": {
                   "type": "integer",
                   "minimum": 0
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "VALIDATION_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -705,6 +705,43 @@
             }
           }
         }
+      },
+      "patch": {
+        "operationId": "patch_auth_me",
+        "summary": "Cập nhật thông tin tài khoản app",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
       }
     },
     "/auth/social": {
@@ -762,6 +799,45 @@
           },
           "503": {
             "description": "SOCIAL_AUTH_NOT_CONFIGURED"
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "post_auth_change_password",
+        "summary": "Đổi mật khẩu tài khoản app",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed; all sessions are revoked."
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -1406,6 +1482,73 @@
         ],
         "title": "SocialRegister",
         "type": "object"
+      },
+      "ProfileUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "defaultRelationship"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "defaultRelationship": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "grandfather",
+              "grandmother",
+              "other_guardian"
+            ]
+          }
+        }
+      },
+      "PasswordChangeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Invalid or expired bearer session",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       }
     }
   },

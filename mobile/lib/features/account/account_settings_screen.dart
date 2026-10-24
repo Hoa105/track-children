@@ -13,6 +13,7 @@ class AccountSettingsScreen extends StatefulWidget {
     this.email = 'quan@email.com',
     this.phone = '0912345678',
     this.role = ParentRole.mother,
+    this.onSessionExpired,
     super.key,
   });
 
@@ -21,6 +22,7 @@ class AccountSettingsScreen extends StatefulWidget {
   final String email;
   final String phone;
   final ParentRole role;
+  final VoidCallback? onSessionExpired;
 
   @override
   State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
@@ -32,10 +34,48 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   late final _usernameController = TextEditingController(text: widget.username);
   late final _emailController = TextEditingController(text: widget.email);
   late final _phoneController = TextEditingController(text: widget.phone);
-  late String _savedPhone = widget.phone;
   late ParentRole _role = widget.role;
   bool _isEditing = false;
-  final bool _isSaving = false;
+  bool _isSaving = false;
+  bool _hasStartedEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProfile();
+  }
+
+  Future<void> _refreshProfile() async {
+    final auth = AuthService.instance;
+    if (!auth.signedIn || auth.demoMode) return;
+    try {
+      final profile = await auth.currentUser();
+      if (!mounted || _hasStartedEditing) return;
+      setState(() {
+        _fullNameController.text =
+            profile['displayName'] as String? ??
+            profile['fullName'] as String? ??
+            '';
+        _emailController.text = profile['email'] as String? ?? '';
+        _phoneController.text = profile['phone'] as String? ?? '';
+        final role = profile['defaultRelationship'] ?? profile['relationship'];
+        _role = ParentRole.values.firstWhere(
+          (value) => value.registrationValue == role,
+          orElse: () => ParentRole.guardian,
+        );
+      });
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      if (!auth.signedIn) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+        widget.onSessionExpired?.call();
+      }
+      // Keep the cached profile available when the network is unavailable.
+    } catch (_) {
+      // A background refresh must not prevent reading or editing cached data.
+    }
+  }
 
   @override
   void dispose() {
@@ -49,82 +89,48 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   String? _validateRequired(String? value) =>
       (value?.trim().isNotEmpty ?? false) ? null : 'Thông tin này là bắt buộc.';
 
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) return 'Vui lòng nhập email.';
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-      return 'Email chưa đúng định dạng.';
-    }
-    return null;
-  }
-
-  String? _validatePhone(String? value) {
-    final phone = (value ?? '').replaceAll(RegExp(r'[\s()-]'), '');
-    if (!RegExp(r'^\+?\d{9,15}$').hasMatch(phone)) {
-      return 'Số điện thoại cần có ít nhất 9 chữ số.';
-    }
-    return null;
-  }
-
   Future<void> _save() async {
-    if (AuthService.instance.signedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Cập nhật tài khoản chưa được hỗ trợ trong phiên bản này.',
-          ),
-        ),
-      );
-      return;
-    }
+    if (_isSaving) return;
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
-
-    final newPhone = _phoneController.text.trim();
-    if (newPhone != _savedPhone) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đổi số điện thoại chưa được kết nối dịch vụ.'),
-        ),
-      );
-      return;
-    }
-
-    if (DemoStore.instance.signedIn) {
-      try {
+    setState(() => _isSaving = true);
+    try {
+      if (AuthService.instance.signedIn) {
+        await AuthService.instance.updateProfile(
+          displayName: _fullNameController.text,
+          defaultRelationship: _role.registrationValue,
+        );
+      } else if (DemoStore.instance.signedIn) {
         await DemoStore.instance.saveParent({
           'fullName': _fullNameController.text.trim(),
-          'username': _usernameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'phone': newPhone,
           'role': _role.name,
         });
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Chưa lưu được tài khoản test. Kiểm tra email trùng.',
-              ),
-            ),
-          );
-        }
-        return;
+      } else {
+        throw AuthException('SESSION_EXPIRED', {});
       }
       if (!mounted) return;
-    }
-    setState(() {
-      _savedPhone = newPhone;
-      _isEditing = false;
-    });
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Đã lưu thay đổi thông tin tài khoản.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      _fullNameController.text =
+          AuthService.instance.user?['displayName'] as String? ??
+          _fullNameController.text.trim();
+      setState(() => _isEditing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã lưu thay đổi thông tin tài khoản.')),
       );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is AuthException
+                  ? error.toString()
+                  : 'Chưa lưu được thông tin. Vui lòng thử lại.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   void _onEditSavePressed() {
@@ -132,6 +138,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     if (_isEditing) {
       _save();
     } else {
+      _hasStartedEditing = true;
       setState(() => _isEditing = true);
     }
   }
@@ -213,7 +220,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                               AppTextField(
                                 label: 'Họ và tên',
                                 controller: _fullNameController,
-                                readOnly: !_isEditing,
+                                readOnly: !_isEditing || _isSaving,
                                 validator: _validateRequired,
                                 icon: Icons.person_outline_rounded,
                                 textCapitalization: TextCapitalization.words,
@@ -223,16 +230,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                               AppTextField(
                                 label: 'Tên đăng nhập',
                                 controller: _usernameController,
-                                readOnly: !_isEditing,
-                                validator: _validateRequired,
+                                readOnly: true,
+                                validator: (_) => null,
                                 icon: Icons.alternate_email_rounded,
                               ),
                               const SizedBox(height: 18),
                               AppTextField(
                                 label: 'Email',
                                 controller: _emailController,
-                                readOnly: !_isEditing,
-                                validator: _validateEmail,
+                                readOnly: true,
+                                validator: (_) => null,
                                 keyboardType: TextInputType.emailAddress,
                                 icon: Icons.mail_outline_rounded,
                               ),
@@ -240,8 +247,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                               AppTextField(
                                 label: 'Số điện thoại',
                                 controller: _phoneController,
-                                readOnly: !_isEditing,
-                                validator: _validatePhone,
+                                readOnly: true,
+                                validator: (_) => null,
                                 keyboardType: TextInputType.phone,
                                 icon: Icons.phone_outlined,
                               ),
@@ -260,7 +267,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                                     _RoleChip(
                                       role: role,
                                       selected: _role == role,
-                                      enabled: _isEditing,
+                                      enabled: _isEditing && !_isSaving,
                                       onSelected: () =>
                                           setState(() => _role = role),
                                     ),

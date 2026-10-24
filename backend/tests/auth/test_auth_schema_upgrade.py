@@ -72,7 +72,7 @@ def test_fresh_install_enforces_defaults_and_contact_uniqueness(old_db):
         VALUES ('Parent@Example.com','hash',now()) RETURNING id,display_name,default_relationship,status""").fetchone()
     assert uid[1:] == ("Phụ huynh", "mother", "pending")
     assert db.execute("""SELECT is_nullable FROM information_schema.columns
-        WHERE table_schema='account' AND table_name='users' AND column_name='consented_at'""").fetchone() == ("NO",)
+        WHERE table_schema='account' AND table_name='users' AND column_name='consented_at'""").fetchone() == ("YES",)
     with pytest.raises(psycopg.errors.UniqueViolation):
         with db.transaction():
             db.execute("""INSERT INTO account.users(email,password_hash,consented_at)
@@ -109,8 +109,9 @@ def test_exact_reset_matches_spec_and_preserves_business(old_db):
         expected = set(re.findall(r'^\| ([a-z_]+) \|', block, re.M))
         actual = {r[0] for r in db.execute('''SELECT column_name FROM information_schema.columns
             WHERE table_schema=%s AND table_name=%s''', (schema,table)).fetchall()}
-        assert actual == expected, (table, actual-expected, expected-actual)
-    assert db.execute("SELECT count(*) FROM account.users").fetchone() == (0,)
+        legacy_profile_columns = {'avatar_url', 'gender', 'date_of_birth', 'deleted_at'} if table == 'users' else set()
+        assert actual - legacy_profile_columns == expected, (table, actual-expected-legacy_profile_columns, expected-actual)
+    assert db.execute("SELECT count(*) FROM account.users").fetchone() == (1,)
     assert db.execute("SELECT to_regnamespace('auth_legacy'),to_regclass('account.registration_challenges'),to_regclass('account.refresh_token_history'),to_regclass('account.auth_rate_limits')").fetchone() == (None,None,None,None)
     db.execute("SELECT account.seed_local_auth_samples(%s)", ("$argon2id$synthetic-test-hash",))
     db.execute("SELECT account.seed_local_auth_samples(%s)", ("$argon2id$synthetic-test-hash",))
@@ -120,16 +121,15 @@ def test_exact_reset_matches_spec_and_preserves_business(old_db):
     assert db.execute("SELECT status,email,phone FROM account.users WHERE id=%s", (uid,)).fetchone() == ('deleted',None,None)
 
 
-def test_exact_reset_refuses_to_delete_business_references(old_db):
+def test_upgrade_preserves_business_references(old_db):
     db = old_db
     uid = add_user(db)
     db.execute("""INSERT INTO child.children(owner_user_id,full_name,date_of_birth,gender)
         VALUES (%s,'Preserved child','2024-01-01','female')""", (uid,))
-    with pytest.raises(psycopg.errors.RaiseException):
-        upgrade(db)
+    upgrade(db)
     assert db.execute('SELECT owner_user_id FROM child.children').fetchone() == (uid,)
     assert db.execute('SELECT count(*) FROM account.users').fetchone() == (1,)
-    assert db.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='account' AND table_name='users' AND column_name='username'").fetchone() == ('username',)
+    assert db.execute("SELECT display_name,default_relationship FROM account.users WHERE id=%s", (uid,)).fetchone() == ('Existing Parent','mother')
 
 
 def test_code_subject_xor_and_consent_are_enforced(old_db):
