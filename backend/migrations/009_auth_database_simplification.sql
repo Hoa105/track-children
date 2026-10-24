@@ -1,69 +1,27 @@
--- Consolidated auth reset: replaces former 009 + 010 (development baseline).
--- Apply after 001-008 in one transaction. Deletes old AUTH data only.
--- Abort if any business row references an old identity. Back up before use.
--- Already-upgraded databases must reconcile the ledger, never replay this reset.
-DO $$
-DECLARE ref record; linked boolean;
-BEGIN
-    FOR ref IN
-        SELECT n.nspname, c.relname, a.attname
-        FROM pg_constraint k
-        JOIN pg_class c ON c.oid = k.conrelid
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = ANY(k.conkey)
-        WHERE k.contype = 'f'
-          AND k.confrelid IN ('account.users'::regclass, 'admin.admin_users'::regclass)
-          AND n.nspname <> 'auth_legacy'
-          AND NOT (n.nspname = 'account' AND c.relname IN
-              ('user_sessions','verification_codes','user_consents','registration_challenges'))
-          AND NOT (n.nspname = 'admin' AND c.relname IN ('admin_sessions','admin_password_resets','admin_invitations','admin_user_roles'))
-    LOOP
-        -- Block concurrent business inserts while resetting the referenced identities.
-        EXECUTE format('LOCK TABLE %I.%I IN SHARE ROW EXCLUSIVE MODE', ref.nspname, ref.relname);
-        EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I.%I WHERE %I IS NOT NULL)',
-            ref.nspname, ref.relname, ref.attname) INTO linked;
-        IF linked THEN
-            RAISE EXCEPTION 'Auth reset refused: %.%.% still references an account',
-                ref.nspname, ref.relname, ref.attname;
-        END IF;
-    END LOOP;
-END $$;
-
-
-LOCK TABLE account.users, admin.admin_users IN ACCESS EXCLUSIVE MODE;
+-- Auth schema alignment based on AUTH-DATABASE-CHANGE-SPEC.md.
+-- Preserve account identities and business references; migrate legacy auth data
+-- before removing tables outside the target model.
+LOCK TABLE account.users, admin.admin_users IN SHARE ROW EXCLUSIVE MODE;
 DROP TRIGGER trg_users_auth_challenges ON account.users;
 DROP FUNCTION account.revoke_registration_challenges();
 DROP TRIGGER trg_admin_users_keep_super_admin ON admin.admin_users;
 DROP TRIGGER trg_admin_user_roles_keep_super_admin ON admin.admin_user_roles;
 DROP FUNCTION admin.ensure_active_super_admin();
-DROP TABLE account.user_consents;
-DROP TABLE account.legal_documents;
-DROP TABLE account.verification_codes;
-DROP TABLE admin.admin_password_resets;
-DROP TABLE admin.admin_invitations;
-DROP TABLE admin.admin_user_roles;
-DROP TABLE admin.role_permissions;
-DROP TABLE admin.permissions;
-DROP TABLE admin.roles;
+-- Legacy tables are migrated below before being removed.
 DROP TABLE account.registration_challenges;
 DROP TABLE account.refresh_token_history;
 DROP TABLE account.auth_rate_limits;
-DELETE FROM account.user_sessions;
-DELETE FROM admin.admin_sessions;
-DELETE FROM account.users;
-DELETE FROM admin.admin_users;
-
 ALTER TABLE account.users RENAME COLUMN full_name TO display_name;
 ALTER TABLE account.users RENAME COLUMN relationship TO default_relationship;
+UPDATE account.users SET display_name = 'Phụ huynh'
+ WHERE display_name IS NULL OR btrim(display_name) = '';
+UPDATE account.users SET default_relationship = 'mother'
+ WHERE default_relationship IS NULL OR btrim(default_relationship) = '';
 ALTER TABLE account.users
     DROP CONSTRAINT users_deleted_at_check,
     DROP CONSTRAINT users_status_check,
     DROP COLUMN username,
-    DROP COLUMN avatar_url,
-    DROP COLUMN gender,
-    DROP COLUMN date_of_birth,
-    DROP COLUMN deleted_at,
-    ADD COLUMN consented_at timestamptz NOT NULL,
+    ADD COLUMN consented_at timestamptz,
     ALTER COLUMN display_name SET DEFAULT 'Phụ huynh',
     ALTER COLUMN default_relationship SET DEFAULT 'mother',
     ALTER COLUMN default_relationship SET NOT NULL,
@@ -72,7 +30,22 @@ ALTER TABLE account.users
     ADD CONSTRAINT users_failed_login_attempts_check CHECK (failed_login_attempts >= 0),
     ADD CONSTRAINT users_nonempty_contact_check CHECK
         ((email IS NULL OR btrim(email::text) <> '') AND (phone IS NULL OR btrim(phone) <> '')),
-    ADD CONSTRAINT users_status_check CHECK (status IN ('pending','active','locked','deleted'));
+    ADD CONSTRAINT users_status_check CHECK (status IN ('pending','active','locked','pending_deletion','deleted'));
+
+DO $$
+BEGIN
+    IF to_regclass('account.user_consents') IS NOT NULL THEN
+        UPDATE account.users u
+        SET consented_at = c.consented_at
+        FROM (
+            SELECT user_id, min(consented_at) AS consented_at
+            FROM account.user_consents
+            WHERE is_accepted = true
+            GROUP BY user_id
+        ) c
+        WHERE u.id = c.user_id AND u.consented_at IS NULL;
+    END IF;
+END $$;
 ALTER TABLE account.user_sessions
     ADD COLUMN remember_me boolean NOT NULL DEFAULT true,
     ALTER COLUMN platform SET NOT NULL,
@@ -81,7 +54,11 @@ ALTER TABLE account.user_sessions
     DROP COLUMN ip_address,
     DROP COLUMN last_used_at;
 ALTER TABLE admin.admin_users
-    ADD COLUMN is_active boolean NOT NULL DEFAULT true,
+    ADD COLUMN is_active boolean;
+UPDATE admin.admin_users SET is_active = (status = 'active') WHERE is_active IS NULL;
+ALTER TABLE admin.admin_users
+    ALTER COLUMN is_active SET DEFAULT true,
+    ALTER COLUMN is_active SET NOT NULL,
     DROP COLUMN status,
     DROP COLUMN failed_login_attempts,
     DROP COLUMN locked_until,
@@ -113,6 +90,41 @@ CREATE INDEX auth_codes_user_purpose_created_idx ON account.auth_codes (user_id,
     WHERE user_id IS NOT NULL;
 CREATE INDEX auth_codes_admin_purpose_created_idx ON account.auth_codes (admin_user_id, purpose, created_at)
     WHERE admin_user_id IS NOT NULL;
+
+DO $$
+BEGIN
+    IF to_regclass('account.verification_codes') IS NOT NULL THEN
+        INSERT INTO account.auth_codes
+            (id,user_id,purpose,channel,target,code_hash,attempt_count,expires_at,consumed_at,created_at)
+        SELECT id, user_id,
+               CASE WHEN purpose = 'reset_password' THEN 'reset_password' ELSE 'verify_contact' END,
+               CASE WHEN target LIKE '%@%' THEN 'email' ELSE 'sms' END,
+               target, code_hash, attempts, expires_at, used_at, created_at
+        FROM account.verification_codes
+        WHERE user_id IS NOT NULL
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+    IF to_regclass('admin.admin_password_resets') IS NOT NULL THEN
+        INSERT INTO account.auth_codes
+            (id,admin_user_id,purpose,channel,target,code_hash,expires_at,consumed_at,created_at)
+        SELECT r.id, r.admin_user_id, 'reset_password', 'email', a.email::text,
+               r.token_hash, r.expires_at, r.used_at, r.created_at
+        FROM admin.admin_password_resets r
+        JOIN admin.admin_users a ON a.id = r.admin_user_id
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+END $$;
+
+DROP TABLE IF EXISTS account.verification_codes;
+DROP TABLE IF EXISTS admin.admin_password_resets;
+DROP TABLE IF EXISTS account.user_consents;
+DROP TABLE IF EXISTS account.legal_documents;
+
+-- Admins share one authorization class; no role/permission tables remain.
+DROP TABLE IF EXISTS admin.admin_user_roles;
+DROP TABLE IF EXISTS admin.role_permissions;
+DROP TABLE IF EXISTS admin.permissions;
+DROP TABLE IF EXISTS admin.roles;
 
 -- Preserve business deletion cleanup without references to removed auth columns.
 -- Contact NULL remains permitted only for an anonymized (deleted) account.

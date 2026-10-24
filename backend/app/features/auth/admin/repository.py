@@ -65,15 +65,10 @@ def revoke_all(db, uid):
 
 
 def profile(db, user):
-    roles = [r['code'] for r in db.execute('''SELECT r.code FROM admin.roles r
-        JOIN admin.admin_user_roles ur ON ur.role_id=r.id WHERE ur.admin_user_id=%s
-        ORDER BY CASE WHEN r.code='super_admin' THEN 0 ELSE 1 END,r.code''', (user['id'],)).fetchall()]
-    permissions = [r['code'] for r in db.execute('''SELECT DISTINCT p.code FROM admin.permissions p
-        JOIN admin.role_permissions rp ON rp.permission_id=p.id
-        JOIN admin.admin_user_roles ur ON ur.role_id=rp.role_id
-        WHERE ur.admin_user_id=%s ORDER BY p.code''', (user['id'],)).fetchall()]
+    # All active admins have the same authorization class. Authorization is
+    # enforced by the backend and is not persisted as role/permission rows.
     return dict(id=str(user['id']), email=str(user['email']), fullName=user['full_name'],
-                role=roles[0] if roles else '', roles=roles, permissions=permissions)
+                role='admin', roles=['admin'], permissions=[])
 
 
 def find_access_identity(db, parameters):
@@ -84,8 +79,6 @@ def find_access_identity(db, parameters):
 
 
 def find_permission(db, parameters):
-    return db.execute('''SELECT r.code FROM admin.roles r
-        JOIN admin.admin_user_roles ur ON ur.role_id=r.id
-        JOIN admin.role_permissions rp ON rp.role_id=r.id
-        JOIN admin.permissions p ON p.id=rp.permission_id
-        WHERE ur.admin_user_id=%s AND p.code=%s ORDER BY r.code LIMIT 1''', parameters).fetchone()
+    return db.execute('''SELECT %s AS code
+        FROM admin.admin_users
+        WHERE id=%s AND is_active=true''', (parameters[1], parameters[0])).fetchone()

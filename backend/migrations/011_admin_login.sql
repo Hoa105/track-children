@@ -1,5 +1,10 @@
--- Restore admin role/permission enforcement after auth consolidation 009.
--- Additive only: existing accounts and sessions are preserved.
+/*
+This migration is intentionally a no-op.
+
+The target auth design gives every admin the same authorization class and
+does not include roles, permissions, invitations, or role assignments. The
+old contents are kept in this historical file only as migration provenance;
+existing databases are cleaned by 012_auth_schema_alignment.sql.
 CREATE TABLE admin.roles (
     id          serial PRIMARY KEY,
     code        varchar(50) NOT NULL UNIQUE,      -- super_admin, content_manager, moderator, support
@@ -63,3 +68,4 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO admin.permissions(code,description) VALUES ('user.recover','Account recovery') ON CONFLICT DO NOTHING;
 INSERT INTO admin.role_permissions(role_id,permission_id) SELECT r.id,p.id FROM admin.roles r CROSS JOIN admin.permissions p WHERE r.code IN ('super_admin','support') AND p.code='user.recover' ON CONFLICT DO NOTHING;
+*/
