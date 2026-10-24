@@ -143,12 +143,35 @@ class DemoStore extends ChangeNotifier {
     parents.add(<String, dynamic>{
       ...?existing,
       ...user,
-      'role': user['relationship'] ?? 'guardian',
+      'fullName': user['displayName'] ?? user['fullName'] ?? '',
+      'username': user['username'] ?? '',
+      'email': user['email'] ?? '',
+      'phone': user['phone'] ?? '',
+      'role':
+          (user['defaultRelationship'] ?? user['relationship']) ==
+              'other_guardian'
+          ? 'guardian'
+          : user['defaultRelationship'] ?? user['relationship'] ?? 'guardian',
       'notifications': existing?['notifications'] ?? true,
       'biometric': existing?['biometric'] ?? false,
     });
     d['parentId'] = user['id'];
     d['childId'] = null;
+  });
+
+  Future<void> updateAuthenticatedProfile(Map<String, dynamic> user) => _write((
+    d,
+  ) {
+    final parent = (d['parents'] as List)
+        .where((p) => p['id'] == user['id'])
+        .firstOrNull;
+    if (parent == null) return;
+    parent.addAll(user);
+    parent['email'] = user['email'] ?? '';
+    parent['phone'] = user['phone'] ?? '';
+    parent['fullName'] = user['displayName'] ?? user['fullName'] ?? '';
+    final role = user['defaultRelationship'] ?? user['relationship'];
+    parent['role'] = role == 'other_guardian' ? 'guardian' : role ?? 'guardian';
   });
 
   Future<void> clearAuthenticatedCache() => _write((d) {

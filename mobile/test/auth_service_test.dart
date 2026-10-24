@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -33,55 +34,172 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('Apple binds provider nonce to backend challenge and accepts session', () async {
-    final calls = <String>[];
+  test('late GET cannot replace a successful profile save', () async {
+    final response = Completer<http.Response>();
     final service = AuthService(
-      socialIdentityProvider: (provider, nonce) async {
-        expect(provider, 'apple');
-        expect(nonce, 'server-nonce');
-        return {'idToken': 'apple-id-token', 'authorizationCode': 'one-time-code'};
-      },
       client: MockClient((request) async {
-        calls.add(request.url.path);
-        if (request.url.path.endsWith('/challenge')) {
-          return jsonResponse({'nonce': 'server-nonce', 'challenge': 'signed-challenge'});
-        }
-        final body = jsonDecode(request.body) as Map;
-        expect(body['challenge'], 'signed-challenge');
-        expect(body['authorizationCode'], 'one-time-code');
-        expect(body['rememberMe'], false);
-        return jsonResponse({...tokens('apple'), 'isNewUser': true});
+        if (request.method == 'GET') return response.future;
+        return jsonResponse({
+          ...profile,
+          'displayName': 'Saved',
+          'defaultRelationship': 'father',
+        });
       }),
+    )..user = profile;
+    final pending = service.currentUser();
+    await service.updateProfile(
+      displayName: 'Saved',
+      defaultRelationship: 'father',
     );
-    expect(await service.socialRegister('apple', acceptedTerms: true, remember: false), true);
-    expect(service.signedIn, true);
-    expect(await const FlutterSecureStorage().read(key: 'auth.refresh'), isNull);
-    expect(calls, ['/api/v1/auth/social/apple/challenge', '/api/v1/auth/social']);
+    response.complete(jsonResponse({...profile, 'displayName': 'Old'}));
+    expect((await pending)['displayName'], 'Saved');
+    expect(service.user!['displayName'], 'Saved');
   });
 
   test(
-    'registration waits for OTP and never logs in implicitly',
+    'profile update sends editable fields and synchronizes the local profile',
+    () async {
+      DemoStore.resetInstanceForTesting();
+      await DemoStore.instance.bindAuthenticatedUser(profile);
+      final service = AuthService(
+        client: MockClient((request) async {
+          if (request.method != 'PATCH') return jsonResponse(tokens('old'));
+          expect(request.headers['Authorization'], 'Bearer access-old');
+          expect(jsonDecode(request.body), {
+            'displayName': 'Updated',
+            'defaultRelationship': 'other_guardian',
+          });
+          return jsonResponse({
+            ...profile,
+            'displayName': 'Updated',
+            'defaultRelationship': 'other_guardian',
+            'relationship': 'other_guardian',
+          });
+        }),
+      );
+      await service.login('parent@example.com', 'password');
+      await service.updateProfile(
+        displayName: ' Updated ',
+        defaultRelationship: 'other_guardian',
+      );
+      expect(service.user!['displayName'], 'Updated');
+      expect(DemoStore.instance.parent['fullName'], 'Updated');
+      expect(DemoStore.instance.parent['role'], 'guardian');
+    },
+  );
+
+  test('password change clears credentials only after success', () async {
+    var reject = true;
+    final service = AuthService(
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/login')) {
+          return jsonResponse(tokens('old'));
+        }
+        expect(request.url.path, '/api/v1/auth/change-password');
+        expect(jsonDecode(request.body), {
+          'currentPassword': 'old-password',
+          'newPassword': 'new-password',
+        });
+        if (reject) {
+          return jsonResponse({
+            'error': {'code': 'INVALID_CREDENTIALS'},
+          }, 401);
+        }
+        return http.Response('', 204);
+      }),
+    );
+    await service.login('parent@example.com', 'password');
+    await expectLater(
+      service.changePassword(
+        currentPassword: 'old-password',
+        newPassword: 'new-password',
+      ),
+      throwsA(isA<AuthException>()),
+    );
+    expect(service.signedIn, true);
+    reject = false;
+    await service.changePassword(
+      currentPassword: 'old-password',
+      newPassword: 'new-password',
+    );
+    expect(service.signedIn, false);
+    expect(
+      await const FlutterSecureStorage().read(key: 'auth.refresh'),
+      isNull,
+    );
+  });
+
+  test(
+    'Apple binds provider nonce to backend challenge and accepts session',
     () async {
       final calls = <String>[];
       final service = AuthService(
-        client: MockClient((r) async {
-          calls.add(r.url.path);
-          if (r.url.path.endsWith('/register')) {
-            return jsonResponse({'requiresOtp': true, 'verificationId': 'pending'}, 201);
+        socialIdentityProvider: (provider, nonce) async {
+          expect(provider, 'apple');
+          expect(nonce, 'server-nonce');
+          return {
+            'idToken': 'apple-id-token',
+            'authorizationCode': 'one-time-code',
+          };
+        },
+        client: MockClient((request) async {
+          calls.add(request.url.path);
+          if (request.url.path.endsWith('/challenge')) {
+            return jsonResponse({
+              'nonce': 'server-nonce',
+              'challenge': 'signed-challenge',
+            });
           }
-          return jsonResponse(tokens('local'));
+          final body = jsonDecode(request.body) as Map;
+          expect(body['challenge'], 'signed-challenge');
+          expect(body['authorizationCode'], 'one-time-code');
+          expect(body['rememberMe'], false);
+          return jsonResponse({...tokens('apple'), 'isNewUser': true});
         }),
       );
-      final result = await service.register({
-        'email': 'parent@example.com',
-        'password': 'a password 123',
-        'acceptedTerms': true,
-      });
-      expect(result['requiresOtp'], true);
-      expect(service.signedIn, false);
-      expect(calls, ['/api/v1/auth/register']);
+      expect(
+        await service.socialRegister(
+          'apple',
+          acceptedTerms: true,
+          remember: false,
+        ),
+        true,
+      );
+      expect(service.signedIn, true);
+      expect(
+        await const FlutterSecureStorage().read(key: 'auth.refresh'),
+        isNull,
+      );
+      expect(calls, [
+        '/api/v1/auth/social/apple/challenge',
+        '/api/v1/auth/social',
+      ]);
     },
   );
+
+  test('registration waits for OTP and never logs in implicitly', () async {
+    final calls = <String>[];
+    final service = AuthService(
+      client: MockClient((r) async {
+        calls.add(r.url.path);
+        if (r.url.path.endsWith('/register')) {
+          return jsonResponse({
+            'requiresOtp': true,
+            'verificationId': 'pending',
+          }, 201);
+        }
+        return jsonResponse(tokens('local'));
+      }),
+    );
+    final result = await service.register({
+      'email': 'parent@example.com',
+      'password': 'a password 123',
+      'acceptedTerms': true,
+    });
+    expect(result['requiresOtp'], true);
+    expect(service.signedIn, false);
+    expect(calls, ['/api/v1/auth/register']);
+  });
 
   test(
     'rememberMe saves only refresh secret and restore verifies server identity',

@@ -63,6 +63,34 @@ class Verify(Challenge):
     device: Device
 
 
+class ProfileUpdate(Input):
+    displayName: str = Field(min_length=1, max_length=150)
+    defaultRelationship: Literal[
+        'mother', 'father', 'grandfather', 'grandmother', 'other_guardian'
+    ]
+
+    @field_validator('displayName', mode='before')
+    @classmethod
+    def normalize_display_name(cls, value):
+        if not isinstance(value, str):
+            return value
+        value = ' '.join(value.split())
+        if not value:
+            raise ValueError('Display name must not be empty')
+        return value
+
+
+class PasswordChange(Input):
+    currentPassword: str = Field(min_length=1, max_length=128)
+    newPassword: str = Field(min_length=8, max_length=64)
+
+    @model_validator(mode='after')
+    def require_different_password(self):
+        if self.currentPassword == self.newPassword:
+            raise ValueError('New password must differ from current password')
+        return self
+
+
 class Login(Input):
     email: EmailStr | None = Field(default=None, max_length=254)
     phone: str | None = None

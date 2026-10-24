@@ -18,6 +18,9 @@ class AuthException implements Exception {
   String toString() => switch (code) {
     'VALIDATION_ERROR' =>
       'Thông tin chưa hợp lệ. Vui lòng kiểm tra: ${((details['fields'] as Map?)?.keys ?? ['thông tin đã nhập']).map((field) => switch (field.toString().split('.').first) {
+        'currentPassword' => 'mật khẩu hiện tại',
+        'newPassword' => 'mật khẩu mới (8–64 ký tự)',
+        'defaultRelationship' => 'vai trò với bé',
         'password' => 'mật khẩu (8–64 ký tự)',
         'email' => 'email',
         'phone' => 'số điện thoại',
@@ -28,6 +31,8 @@ class AuthException implements Exception {
         'code' => 'mã OTP',
         _ => field.toString(),
       }).join(', ')}.',
+    'SESSION_EXPIRED' ||
+    'SESSION_REVOKED' => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
     'INVALID_CREDENTIALS' => 'Email, số điện thoại hoặc mật khẩu chưa đúng.',
     'ACCOUNT_CONFLICT' => 'Email hoặc số điện thoại đã được dùng.',
     'OTP_DELIVERY_UNAVAILABLE' =>
@@ -46,8 +51,7 @@ class AuthException implements Exception {
     'SOCIAL_AUTH_NOT_CONFIGURED' => 'Đăng nhập Google/Apple chưa được cấu hình. Vui lòng liên hệ nhóm phát triển.',
     'GOOGLE_CLIENT_ID_MISSING' =>
       'App chưa có Google client ID. Vui lòng cấu hình và chạy lại app.',
-    'GOOGLE_OAUTH_CONFIGURATION_ERROR' =>
-      'Cấu hình Google OAuth chưa khớp. Cần kiểm tra Web client ID, package Android và SHA-1 của khóa ký app.',
+    'GOOGLE_OAUTH_CONFIGURATION_ERROR' => 'Cấu hình Google OAuth chưa khớp. Cần kiểm tra Web client ID, package Android và SHA-1 của khóa ký app.',
     'SOCIAL_PLATFORM_UNSUPPORTED' =>
       'Phương thức này chưa được hỗ trợ trên nền tảng đang dùng.',
     'SOCIAL_CANCELLED' => 'Chưa đăng nhập được. Kiểm tra mạng và thử lại.',
@@ -59,7 +63,8 @@ class AuthException implements Exception {
       'Nhà cung cấp chưa xác nhận email của tài khoản này.',
     'SOCIAL_ACCOUNT_CONFLICT' =>
       'Email đã có tài khoản. Vui lòng đăng nhập bằng phương thức đã đăng ký.',
-    'NETWORK_ERROR' => 'Không thể kết nối máy chủ ứng dụng. Vui lòng thử lại sau.',
+    'NETWORK_ERROR' =>
+      'Không thể kết nối máy chủ ứng dụng. Vui lòng thử lại sau.',
     'SERVER_RESPONSE_INVALID' => 'Máy chủ phản hồi lỗi. Vui lòng thử lại.',
     'RATE_LIMIT_UNAVAILABLE' ||
     'DATABASE_UNAVAILABLE' => 'Máy chủ tạm thời bận. Vui lòng thử lại.',
@@ -110,6 +115,7 @@ class AuthService {
   bool _remember = true;
   Future<void>? _refreshing;
   int _generation = 0;
+  int _profileRevision = 0;
   Map<String, dynamic>? user;
   bool get signedIn => user != null;
 
@@ -395,9 +401,24 @@ class AuthService {
       _setDemoUser();
       return user!;
     }
-    final result = await _request('/auth/me', authorized: true);
-    user = result;
-    return result;
+    final generation = _generation;
+    final revision = _profileRevision;
+    try {
+      final result = await _request('/auth/me', authorized: true);
+      if (generation != _generation) {
+        throw AuthException('SESSION_EXPIRED', {});
+      }
+      // A GET started before a save must not replace the newer saved profile.
+      if (revision != _profileRevision) return user ?? result;
+      user = result;
+      await DemoStore.instance.updateAuthenticatedProfile(result);
+      return result;
+    } on AuthException catch (error) {
+      if (generation == _generation && _invalidSession(error.code)) {
+        await clear();
+      }
+      rethrow;
+    }
   }
 
   Future<void> refresh() =>
@@ -444,6 +465,99 @@ class AuthService {
       if (_invalidSession(e.code)) await clear();
       return false;
     }
+  }
+
+  Future<Map<String, dynamic>> _patch(
+    String path,
+    Map<String, dynamic> body, {
+    bool retry = true,
+  }) async {
+    try {
+      final response = await _client
+          .patch(
+            Uri.parse('$baseUrl$path'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (_access != null) 'Authorization': 'Bearer $_access',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 204) return <String, dynamic>{};
+      final dynamic parsed = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body);
+      if (parsed is! Map<String, dynamic>) throw const FormatException();
+      final decoded = parsed;
+      if (response.statusCode >= 400) {
+        final error = decoded['error'] is Map
+            ? Map<String, dynamic>.from(decoded['error'] as Map)
+            : <String, dynamic>{};
+        if (retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
+          await refresh();
+          return await _patch(path, body, retry: false);
+        }
+        throw AuthException(
+          error['code'] is String
+              ? error['code'] as String
+              : 'HTTP_${response.statusCode}',
+          error['details'] is Map
+              ? Map<String, dynamic>.from(error['details'] as Map)
+              : <String, dynamic>{},
+        );
+      }
+      return decoded;
+    } on AuthException {
+      rethrow;
+    } on FormatException {
+      throw AuthException('SERVER_RESPONSE_INVALID', {});
+    } on TimeoutException {
+      throw AuthException('NETWORK_ERROR', {});
+    } on http.ClientException {
+      throw AuthException('NETWORK_ERROR', {});
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String displayName,
+    required String defaultRelationship,
+  }) async {
+    _profileRevision++;
+    if (demoMode) {
+      await DemoStore.instance.saveParent({
+        'fullName': displayName.trim(),
+        'role': defaultRelationship,
+      });
+      _setDemoUser();
+      return user!;
+    }
+    final result = await _patch('/auth/me', {
+      'displayName': displayName.trim(),
+      'defaultRelationship': defaultRelationship,
+    });
+    user = result;
+    await DemoStore.instance.updateAuthenticatedProfile(result);
+    return result;
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (demoMode) {
+      if (DemoStore.instance.parent['password'] != currentPassword) {
+        throw AuthException('INVALID_CREDENTIALS', {});
+      }
+      await DemoStore.instance.saveParent({'password': newPassword});
+      await clear();
+      return;
+    }
+    await _request(
+      '/auth/change-password',
+      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      authorized: true,
+    );
+    await clear();
   }
 
   Future<bool> logout() async {
