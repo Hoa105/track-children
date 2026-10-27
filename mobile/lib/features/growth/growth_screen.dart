@@ -1,3 +1,4 @@
+import 'growth_overview.dart';
 import '../../services/demo_store.dart';
 
 import 'dart:convert';
@@ -69,8 +70,8 @@ Future<void> openMeasurementFromHome(
   }
 }
 
-class GrowthScreen extends StatefulWidget {
-  const GrowthScreen({
+class LegacyGrowthScreen extends StatefulWidget {
+  const LegacyGrowthScreen({
     required this.childName,
     this.onLogout,
     this.initialMetric = 0,
@@ -82,10 +83,10 @@ class GrowthScreen extends StatefulWidget {
   final bool openMeasurement;
   final VoidCallback? onLogout;
   @override
-  State<GrowthScreen> createState() => _GrowthScreenState();
+  State<LegacyGrowthScreen> createState() => _GrowthScreenState();
 }
 
-class _GrowthScreenState extends State<GrowthScreen> {
+class _GrowthScreenState extends State<LegacyGrowthScreen> {
   static const labels = ['Cân nặng', 'Chiều cao', 'Vòng đầu', 'BMI'];
   static const units = ['kg', 'cm', 'cm', 'kg/m²'];
   List<Map<String, dynamic>> _records = [];
@@ -1305,4 +1306,49 @@ class _MeasurementSheetState extends State<_MeasurementSheet> {
       ),
     );
   }
+}
+
+/// Entry point for the first approved growth redesign screen.
+class GrowthScreen extends StatelessWidget {
+  const GrowthScreen({
+    required this.childName,
+    this.onLogout,
+    this.initialMetric = 0,
+    this.openMeasurement = false,
+    super.key,
+  });
+  final String childName;
+  final VoidCallback? onLogout;
+  final int initialMetric;
+  final bool openMeasurement;
+  @override
+  Widget build(BuildContext context) => openMeasurement
+      ? LegacyGrowthScreen(
+          childName: childName,
+          onLogout: onLogout,
+          initialMetric: initialMetric,
+          openMeasurement: true,
+        )
+      : GrowthOverview(
+          onNavigation: (destination) {
+            if (destination == 'Trang chủ') {
+              Navigator.of(context).popUntil(
+                (route) => route.settings.name == '/home' || route.isFirst,
+              );
+            } else if (destination == 'Cá nhân') {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      SettingsScreen(childName: childName, onLogout: onLogout),
+                ),
+              );
+            } else if (destination == 'Khám phá') {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ExploreScreen(onLogout: onLogout),
+                ),
+              );
+            }
+          },
+        );
 }

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 522 463">
+  <g stroke="#292929" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="white">
+    <path d="M414 175 Q442 159 454 127 Q463 98 443 81 Q422 88 421 117 Q422 142 437 157 Q472 139 502 157 L513 166 Q486 197 451 175 Q441 169 437 157"/>
+    <path d="M201 276 C175 220 196 164 240 126 C281 91 335 64 379 50 C392 78 397 106 399 119 C419 166 431 215 426 259 C423 304 388 340 340 342 L309 342 C326 367 356 375 382 379 C400 383 413 375 425 381 C437 391 413 416 394 418 Q365 425 333 390 Q345 418 349 442 M274 334 Q229 358 221 419 M205 298 Q227 326 274 334"/>
+    <path d="M289 100 Q374 138 413 263 M225 183 Q286 132 399 119" fill="none"/>
+    <path d="M273 334 Q244 314 216 340 Q225 366 254 349Z M308 342 Q349 337 371 368 Q334 392 308 342Z"/>
+    <ellipse cx="258" cy="244" rx="8" ry="14" transform="rotate(16 258 244)" fill="#292929" stroke="none"/>
+    <ellipse cx="338" cy="262" rx="8" ry="14" transform="rotate(16 338 262)" fill="#292929" stroke="none"/>
+    <path d="M277 264 L307 270 Q302 294 288 292 Q274 289 277 264Z"/>
+    <path d="M238 269 L233 277 M246 272 L241 280 M349 287 L344 295 M357 291 L352 299" fill="none" stroke-width="3.5"/>
+  </g>
+  <g stroke="#1677FF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="white">
+    <path d="M165 297 L180 292 L215 366 L197 371Z"/>
+    <circle cx="162" cy="235" r="68"/>
+    <circle cx="163" cy="236" r="53"/>
+    <path d="M153 206 Q136 213 132 234" fill="none"/>
+  </g>
+  <path d="M200 317 Q183 308 170 324 Q156 339 169 351 Q180 363 196 349 Q215 332 200 317Z" fill="white" stroke="#292929" stroke-width="4.5" stroke-linecap="round"/>
+  <g fill="none" stroke="#3283FF" stroke-width="9" stroke-linecap="round">
+    <path d="M106 114 L116 144 M53 146 L80 167 M38 207 L66 206"/>
+  </g>
+  <g fill="#FFF4CE" stroke="#E8A333" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <path transform="translate(438 37) scale(1.5) translate(-438 -37)" d="M438 17 L443 32 L457 37 L443 42 L438 57 L433 42 L419 37 L433 32Z"/>
+    <path transform="translate(484 65) scale(1.5) translate(-484 -65)" d="M484 51 L487 61 L497 65 L487 69 L484 79 L480 69 L470 65 L480 61Z"/>
+    <path transform="translate(321 26) scale(1.5) translate(-321 -26)" d="M321 15 L324 23 L332 26 L324 29 L321 37 L318 29 L310 26 L318 23Z"/>
+  </g>
+</svg>

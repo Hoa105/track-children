@@ -21,8 +21,30 @@ flutter devices
 
 ### Auth trên Chrome
 
-Auth trên web mặc định gọi `http://localhost:8000/api/v1`. Backend cần
-`APP_ENV=local` và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Auth trên web mặc định gọi `http://localhost:8000/api/v1`.
+Nếu chạy backend bằng Docker Compose, thêm vào `.env` ở **gốc repository**:
+
+```dotenv
+CORS_ORIGINS='["http://localhost:5174","http://127.0.0.1:5174"]'
+```
+
+Sau đó áp dụng lại cấu hình bằng `docker compose up -d --no-deps backend`.
+Compose mặc định chạy `APP_ENV=production`, nên cần khai báo origin cụ thể như trên.
+Nếu chạy backend trực tiếp ở môi trường local, có thể dùng `APP_ENV=local`
+và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Lỗi CORS có thể hiện thành “Không thể kết nối” trên app dù `/health` vẫn trả `200`.
+Nếu API auth trả `404` sau khi cập nhật mã nguồn, build lại image backend:
+`docker compose up -d --build --no-deps backend` (Compose không mount mã nguồn trực tiếp).
+
+Lưu ý: các biến `${...}` của Compose lấy từ `.env` ở gốc repository,
+không tự lấy từ `backend/.env`. Với kiểm thử local dùng API và OTP preview,
+cấu hình ở `.env` gốc: `APP_ENV=local`, `AUTH_SECRET` (ít nhất 32 ký tự),
+`AUTH_OTP_PREVIEW=true`, `AUTH_SKIP_OTP=false` và
+`LEGAL_DOCUMENTS_PATH=/app/local-config/legal-documents.local.json`.
+Compose mount file tài liệu local chỉ đọc; có thể đổi file nguồn bằng
+`LEGAL_DOCUMENTS_FILE`. Tài liệu `local-test-1` chỉ dành cho kiểm thử nội bộ.
+Ở chế độ local, backend cho phép cổng localhost ngẫu nhiên của `flutter run`.
+OTP preview hiện trong hộp thoại xác minh, chưa gửi email/SMS thật.
 Chọn **Mobile Chrome (API)** trong VS Code hoặc chạy trong thư mục `mobile`:
 
 ```bash
@@ -30,6 +52,22 @@ flutter run -d chrome --web-port 5174 --dart-define=DEMO_MODE=false
 ```
 
 Sau khi đổi cấu hình, dừng và chạy lại app.
+
+Nếu sau reload gặp `AppInspector ... Runtime.evaluate ... Cannot find context
+with specified id`, debugger có thể đang giữ JavaScript context cũ của Chrome.
+Dừng phiên chạy hiện tại hoàn toàn rồi chạy lại; tránh bấm refresh trình duyệt
+đồng thời với hot restart. Không cần xóa dữ liệu ứng dụng hay `flutter clean`
+chỉ vì log này.
+
+Để review giao diện mà không dùng Dart debugger, chọn **Mobile Chrome (UI Profile)**
+trong VS Code (có trong cấu hình gốc và thư mục `mobile`) hoặc chạy:
+
+```bash
+flutter run -d chrome --profile --web-port 5174 --dart-define=DEMO_MODE=false
+```
+
+Profile không hỗ trợ hot reload/breakpoint Dart; sau khi sửa mã cần dừng và chạy lại.
+Đây là cách tránh lỗi kết nối debugger khi kiểm thử UI, không phải bản vá DWDS.
 
 Hiện mặc định dùng **API xác thực thật**, cần backend tại cổng `8000`.
 Android emulator dùng `http://10.0.2.2:8000/api/v1`. Với Android thật kết nối USB,

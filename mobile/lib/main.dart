@@ -9,6 +9,12 @@ import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/growth/growth_overview.dart';
+import 'features/growth/growth_weight_detail.dart';
+import 'features/growth/growth_stature_detail.dart';
+import 'features/growth/growth_head_detail.dart';
+import 'features/growth/growth_bmi_detail.dart';
+import 'features/growth/growth_conclusion_explanation.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/splash/start_screen.dart';
 
@@ -37,6 +43,7 @@ class TrackChildrenApp extends StatefulWidget {
 
 class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  late final GrowthRepository _growthRepository = MockGrowthRepository();
 
   Future<void> _logout() async {
     final revocation = AuthService.instance.logout();
@@ -142,6 +149,45 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       navigatorKey: _navigatorKey,
       title: 'Bé Lớn Khôn',
       debugShowCheckedModeBanner: false,
+      routes: {
+        '/growth/bmi-detail': (_) =>
+            GrowthBmiDetailScreen(repository: _growthRepository),
+        '/growth/head-detail': (_) =>
+            GrowthHeadDetailScreen(repository: _growthRepository),
+        '/growth/length-detail': (_) =>
+            GrowthStatureDetailScreen(repository: _growthRepository),
+        '/growth/weight-velocity-explanation': (_) =>
+            const GrowthConclusionExplanationScreen(
+              introText:
+                  'Cùng tìm hiểu dữ liệu và cách tính tốc độ tăng cân của bé.',
+              sources: {
+                'WHO Weight velocity': 'https://www.who.int/tools/child-growth-standards/standards/weight-velocity',
+              },
+              sections: [
+                GrowthExplanationSection(
+                  '1. Dữ liệu được sử dụng',
+                  'Chưa có lần đo được chọn. Hãy mở phần giải thích từ tab Tốc độ.',
+                ),
+                GrowthExplanationSection(
+                  '2. Cách tính',
+                  'Cần hai số đo và khoảng thời gian hợp lệ.',
+                ),
+                GrowthExplanationSection(
+                  '3. Xu hướng qua các tháng',
+                  'Chưa đủ dữ liệu nhận xét xu hướng.',
+                ),
+                GrowthExplanationSection(
+                  '4. Căn cứ WHO',
+                  'Chưa có kết quả đối chiếu WHO hợp lệ cho lần đo đang đánh giá.',
+                ),
+              ],
+            ),
+        '/growth/weight-explanation': (_) =>
+            const GrowthConclusionExplanationScreen(),
+        '/growth': (_) => GrowthOverview(repository: _growthRepository),
+        '/growth/weight-detail': (_) =>
+            GrowthWeightDetailScreen(repository: _growthRepository),
+      },
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(

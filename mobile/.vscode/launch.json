@@ -36,6 +36,19 @@
         "5174",
         "--dart-define=DEMO_MODE=false"
       ]
+    },
+    {
+      "name": "Mobile Chrome (UI Profile)",
+      "type": "dart",
+      "request": "launch",
+      "deviceId": "chrome",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--web-port",
+        "5174",
+        "--dart-define=DEMO_MODE=false"
+      ],
+      "flutterMode": "profile"
     }
   ]
 }
