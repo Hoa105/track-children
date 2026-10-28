@@ -55,7 +55,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(home: GrowthScreen(childName: 'Test')),
+      const MaterialApp(home: LegacyGrowthScreen(childName: 'Test')),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Cập nhật số đo'));
@@ -102,7 +102,7 @@ void main() {
           ),
           child: child!,
         ),
-        home: const GrowthScreen(childName: 'Test'),
+        home: const LegacyGrowthScreen(childName: 'Test'),
       ),
     );
     await tester.pumpAndSettle();
