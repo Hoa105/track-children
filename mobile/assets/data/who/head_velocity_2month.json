@@ -1,0 +1,158 @@
+{
+  "interval_months": 2,
+  "unit": "cm",
+  "columns": [
+    "start_month",
+    "sd_neg2",
+    "median",
+    "sd_pos2"
+  ],
+  "tables": {
+    "boys": [
+      [
+        0,
+        3.2,
+        4.7,
+        6.2
+      ],
+      [
+        1,
+        2.4,
+        3.4,
+        4.5
+      ],
+      [
+        2,
+        1.8,
+        2.5,
+        3.4
+      ],
+      [
+        3,
+        1.4,
+        2.1,
+        2.9
+      ],
+      [
+        4,
+        1.1,
+        1.7,
+        2.5
+      ],
+      [
+        5,
+        0.8,
+        1.4,
+        2.2
+      ],
+      [
+        6,
+        0.6,
+        1.2,
+        1.9
+      ],
+      [
+        7,
+        0.4,
+        1.0,
+        1.7
+      ],
+      [
+        8,
+        0.3,
+        0.9,
+        1.5
+      ],
+      [
+        9,
+        0.2,
+        0.8,
+        1.4
+      ],
+      [
+        10,
+        0.1,
+        0.7,
+        1.3
+      ]
+    ],
+    "girls": [
+      [
+        0,
+        3.0,
+        4.4,
+        5.8
+      ],
+      [
+        1,
+        2.1,
+        3.1,
+        4.2
+      ],
+      [
+        2,
+        1.5,
+        2.3,
+        3.2
+      ],
+      [
+        3,
+        1.2,
+        2.0,
+        2.8
+      ],
+      [
+        4,
+        0.9,
+        1.7,
+        2.4
+      ],
+      [
+        5,
+        0.7,
+        1.4,
+        2.1
+      ],
+      [
+        6,
+        0.5,
+        1.2,
+        1.9
+      ],
+      [
+        7,
+        0.4,
+        1.0,
+        1.7
+      ],
+      [
+        8,
+        0.3,
+        0.8,
+        1.5
+      ],
+      [
+        9,
+        0.2,
+        0.7,
+        1.4
+      ],
+      [
+        10,
+        0.1,
+        0.7,
+        1.3
+      ]
+    ]
+  },
+  "sources": {
+    "boys": {
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-velocity/ttt_headc_boys_2mon_z.xlsx?sfvrsn=c84c1459_7",
+      "sha256": "bca7da6eb4e2cf124a0fbf5fbc1dfb8175519a8e9137a4947378ecc8b6f7c719"
+    },
+    "girls": {
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-velocity/ttt_headc_girls_2mon_z.xlsx?sfvrsn=5721a52d_7",
+      "sha256": "0a9127f305c5e33646c95c29ff78459dd72856e3f14c2162f7df9cd692ef1c02"
+    }
+  }
+}

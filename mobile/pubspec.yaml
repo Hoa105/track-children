@@ -65,6 +65,15 @@ flutter:
   uses-material-design: true
 
   fonts:
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/dancing_script/DancingScript-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/dancing_script/DancingScript-Variable.ttf
+          weight: 700
+    - family: PatrickHand
+      fonts:
+        - asset: assets/fonts/patrick_hand/PatrickHand-Regular.ttf
     - family: Nunito
       fonts:
         - asset: assets/fonts/nunito/Nunito-Variable.ttf
@@ -81,6 +90,14 @@ flutter:
           weight: 900
 
   assets:
+    - assets/data/who/weight_for_age_curves.json
+    - assets/data/who/weight_for_stature_curves.json
+    - assets/data/who/weight_velocity_1month.json
+    - assets/data/who/stature_velocity_2month.json
+    - assets/data/who/head_velocity_2month.json
+    - assets/data/who/stature_for_age_curves.json
+    - assets/data/who/head_for_age_curves.json
+    - assets/growth/
     - assets/data/who_bmi.json
     - assets/data/who_growth.json
     - assets/images/scenery/backgrounds/
