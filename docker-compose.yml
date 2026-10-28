@@ -39,6 +39,13 @@ services:
 
   backend:
     build: ./backend
+    volumes:
+      - type: bind
+        source: ${LEGAL_DOCUMENTS_FILE:-./backend/legal-documents.local.json}
+        target: /app/local-config/legal-documents.local.json
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - "8000:8000"
     env_file:

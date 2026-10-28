@@ -14,6 +14,7 @@ import 'delete_account_screen.dart';
 import '../growth/growth_screen.dart';
 import '../explore/explore_screen.dart';
 import 'demo_data_screen.dart';
+import 'live_change_password_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({this.onLogout, this.childName = 'Bé An', super.key});
@@ -39,7 +40,14 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
 
   Future<void> _changePassword() async {
     if (AuthService.instance.signedIn) {
-      _toast('Đổi mật khẩu chưa được hỗ trợ trong phiên bản này.');
+      final changed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const LiveChangePasswordDialog(),
+      );
+      if (!mounted || changed != true) return;
+      _toast('Đã đổi mật khẩu. Vui lòng đăng nhập lại.');
+      widget.onLogout?.call();
       return;
     }
     final changed = await showDialog<String>(
@@ -205,6 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                         onTap: () => Navigator.of(context).push<void>(
                           MaterialPageRoute(
                             builder: (_) => AccountSettingsScreen(
+                              onSessionExpired: widget.onLogout,
                               fullName:
                                   DemoStore.instance.parent['fullName']
                                       as String,

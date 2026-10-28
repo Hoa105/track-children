@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+<!-- Recognizable child side profile, with clear forehead, nose, chin, ear, hair and neck -->
+<path d="M34 77 Q35 71 32 68 C23 62 20 54 21 44 C21 25 34 15 51 15 C69 15 79 28 78 44 L78 50 Q83 54 85 58 Q86 61 81 62 L77 63 Q76 72 66 75 L65 83 L39 83 L39 77 Z" fill="#FFF1E6" stroke="#277B58" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- hair cap, distinct from face -->
+<path d="M22 43 Q19 21 40 16 Q64 9 76 29 Q66 29 60 24 Q51 35 37 32 Q34 40 22 43 Z" fill="#9A7457" stroke="#72543F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- ear -->
+<path d="M30 48 C22 43 19 53 25 58 Q29 62 33 57" fill="#FFF1E6" stroke="#277B58" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M27 52 Q31 50 30 55" fill="none" stroke="#DBA994" stroke-width="1.7" stroke-linecap="round"/>
+<!-- eye, cheek, smile -->
+<path d="M68 45 Q71 43 74 45" fill="none" stroke="#72543F" stroke-width="2.4" stroke-linecap="round"/>
+<circle cx="64" cy="57" r="3.8" fill="#F5C4B6"/>
+<path d="M72 65 Q75 67 78 64" fill="none" stroke="#C77D70" stroke-width="2" stroke-linecap="round"/>
+<!-- measurement tape is intentionally behind facial features, follows upper head circumference -->
+<path d="M18 39 Q45 28 79 38" fill="none" stroke="#4B92C6" stroke-width="3" stroke-dasharray="5 5" stroke-linecap="round"/>
+</svg>

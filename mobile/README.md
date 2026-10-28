@@ -21,8 +21,30 @@ flutter devices
 
 ### Auth trên Chrome
 
-Auth trên web mặc định gọi `http://localhost:8000/api/v1`. Backend cần
-`APP_ENV=local` và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Auth trên web mặc định gọi `http://localhost:8000/api/v1`.
+Nếu chạy backend bằng Docker Compose, thêm vào `.env` ở **gốc repository**:
+
+```dotenv
+CORS_ORIGINS='["http://localhost:5174","http://127.0.0.1:5174"]'
+```
+
+Sau đó áp dụng lại cấu hình bằng `docker compose up -d --no-deps backend`.
+Compose mặc định chạy `APP_ENV=production`, nên cần khai báo origin cụ thể như trên.
+Nếu chạy backend trực tiếp ở môi trường local, có thể dùng `APP_ENV=local`
+và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Lỗi CORS có thể hiện thành “Không thể kết nối” trên app dù `/health` vẫn trả `200`.
+Nếu API auth trả `404` sau khi cập nhật mã nguồn, build lại image backend:
+`docker compose up -d --build --no-deps backend` (Compose không mount mã nguồn trực tiếp).
+
+Lưu ý: các biến `${...}` của Compose lấy từ `.env` ở gốc repository,
+không tự lấy từ `backend/.env`. Với kiểm thử local dùng API và OTP preview,
+cấu hình ở `.env` gốc: `APP_ENV=local`, `AUTH_SECRET` (ít nhất 32 ký tự),
+`AUTH_OTP_PREVIEW=true`, `AUTH_SKIP_OTP=false` và
+`LEGAL_DOCUMENTS_PATH=/app/local-config/legal-documents.local.json`.
+Compose mount file tài liệu local chỉ đọc; có thể đổi file nguồn bằng
+`LEGAL_DOCUMENTS_FILE`. Tài liệu `local-test-1` chỉ dành cho kiểm thử nội bộ.
+Ở chế độ local, backend cho phép cổng localhost ngẫu nhiên của `flutter run`.
+OTP preview hiện trong hộp thoại xác minh, chưa gửi email/SMS thật.
 Chọn **Mobile Chrome (API)** trong VS Code hoặc chạy trong thư mục `mobile`:
 
 ```bash
