@@ -7,7 +7,7 @@ import pytest
 
 from app.core import security as sec
 from app.core.config import settings
-from .test_registration_v2 import database, env
+from .test_registration import database, env
 
 PASSWORD = ' Mật khẩu test 123 '
 DEVICE = {'platform': 'android', 'deviceId': 'login-test'}

@@ -11,7 +11,7 @@ from jsonschema import Draft202012Validator
 from app.core import security as sec
 from app.features.auth.admin import repository
 from app.main import app
-from .test_registration_v2 import database
+from .test_registration import database
 from .test_admin_auth import admin_env, hashed, login, bearer, error, PASSWORD, HEADERS
 
 

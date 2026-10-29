@@ -131,10 +131,8 @@ def me(user: dict = Depends(require_user)):
 def update_profile(data: schemas.ProfileUpdate, request: Request):
     if err := ready():
         return output(err)
-    from app.features.auth import account_service
-
     with transaction() as db:
-        result = account_service.update_profile(db, request, data)
+        result = service.update_profile(db, request, data)
     return output(result)
 
 
@@ -142,10 +140,8 @@ def update_profile(data: schemas.ProfileUpdate, request: Request):
 def change_password(data: schemas.PasswordChange, request: Request):
     if err := ready():
         return output(err)
-    from app.features.auth import account_service
-
     with transaction() as db:
-        result = account_service.change_password(db, request, data)
+        result = service.change_password(db, request, data)
     if isinstance(result, AuthFailure):
         return output(result)
     return Response(status_code=204, headers={"Cache-Control": "no-store"})
