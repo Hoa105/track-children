@@ -3,6 +3,13 @@
 Các lệnh dưới đây dùng PowerShell, bắt đầu tại thư mục gốc dự án. Cần Docker
 Desktop hoạt động; lệnh seed cần môi trường `.venv` đã cài dependencies backend.
 
+Schema `growth` hiện hành sau migration 015 chỉ có hai bảng:
+`growth.measurements` (số đo gốc), `growth.evaluations` (cache Z-score/phân loại).
+WHO reference dùng file tĩnh; velocity tính khi truy xuất. Xem
+[đặc tả schema](../core_growth/GROWTH-DATABASE-SPEC-v2.md) và
+[inventory WHO velocity](../core_growth/GROWTH-WHO-VELOCITY-INVENTORY.md).
+Các tên index/constraint lịch sử có thể vẫn giữ tiền tố cũ.
+
 ## 1. Tạo schema trên database mới
 
 Khởi động hai database và chạy toàn bộ migration:

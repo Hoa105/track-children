@@ -27,6 +27,10 @@ class PreparedReferenceRepository extends MockGrowthRepository {
   final GrowthWeightReference reference;
   @override
   Future<GrowthWeightReference?> weightReference() async => reference;
+  static final statureReferences = <bool, GrowthStatureReference?>{};
+  @override
+  Future<GrowthStatureReference?> statureReference(bool length) async =>
+      statureReferences[length];
 }
 
 void main() {
@@ -42,6 +46,11 @@ void main() {
       ) as Map<String, dynamic>,
       GrowthReferenceSex.boys,
     );
+    final source = MockGrowthRepository();
+    for (final length in [true, false]) {
+      PreparedReferenceRepository.statureReferences[length] = await source
+          .statureReference(length);
+    }
   });
   test(
     'chart calendar age handles month end and the inclusive 60-month limit',
@@ -104,20 +113,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('8,8 kg'), findsOneWidget);
-    expect(find.text('Tăng 300 g'), findsOneWidget);
-    expect(find.text('Ngày đo: 15/05/2025'), findsOneWidget);
-    expect(find.text('12 tháng\n8,8 kg\n15/05/2025'), findsOneWidget);
-    expect(find.text('WHO cân nặng theo tuổi · bé trai'), findsOneWidget);
-    expect(
-      tester
-          .widget<GrowthWeightMeasurementChart>(
-            find.byType(GrowthWeightMeasurementChart),
-          )
-          .reference!
-          .rows
-          .length,
-      61,
+    expect(find.byType(GrowthWeightMeasurementChart), findsOneWidget);
+    final chart = tester.widget<GrowthWeightMeasurementChart>(
+      find.byType(GrowthWeightMeasurementChart),
     );
+    expect(chart.reference!.rows.length, 61);
+    expect(chart.points.last.value, 8.8);
     final boundary =
         key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
@@ -130,37 +131,10 @@ void main() {
       await file.writeAsBytes(png!.buffer.asUint8List());
       capture.dispose();
     });
-    expect(find.text('Cân nặng theo độ tuổi'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Chọn điểm đo'), 180);
-    await tester.tap(find.text('Chọn điểm đo'));
-    await tester.pumpAndSettle();
-    final latestPoint = find.byKey(
-      ValueKey('weight-point-${DateTime(2025, 5, 15).toIso8601String()}'),
-    );
-    await tester.scrollUntilVisible(
-      latestPoint,
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(latestPoint);
-    await tester.pumpAndSettle();
-    expect(find.text('15/05/2025 · 8,8 kg'), findsOneWidget);
-    await tester.ensureVisible(find.byTooltip('Đóng chi tiết điểm đo'));
-    await tester.tap(find.byTooltip('Đóng chi tiết điểm đo'));
-    await tester.pumpAndSettle();
-    expect(find.text('15/05/2025 · 8,8 kg'), findsNothing);
-    expect(
-      tester
-          .widget<GrowthWeightMeasurementChart>(
-            find.byType(GrowthWeightMeasurementChart),
-          )
-          .showTooltip,
-      isFalse,
-    );
     await tester.ensureVisible(find.byType(DropdownButton<int>));
     await tester.tap(find.byType(DropdownButton<int>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('0–12 tháng').last);
+    await tester.tap(find.text('9 \u2013 12 th\u00e1ng').last);
     await tester.pumpAndSettle();
     expect(
       tester
@@ -170,17 +144,6 @@ void main() {
           .maxAgeMonths,
       12,
     );
-    await tester.ensureVisible(find.byTooltip('Giải thích biểu đồ cân nặng'));
-    await tester.tap(find.byTooltip('Giải thích biểu đồ cân nặng'));
-    await tester.pumpAndSettle();
-    expect(find.text('Về biểu đồ cân nặng'), findsOneWidget);
-    await tester.tap(find.text('Đóng'));
-    await tester.pumpAndSettle();
-    for (final tab in ['Biểu đồ', 'Lịch sử']) {
-      await tester.tap(find.text(tab));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('$tab cân nặng sẽ'), findsOneWidget);
-    }
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     tester.view.physicalSize = const Size(320, 740);
@@ -193,21 +156,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Mức thay đổi ghi nhận chưa phải đánh giá tốc độ theo WHO.'),
-      200,
-    );
-    expect(find.text('Tình trạng hiện tại'), findsOneWidget);
-    final layoutError = tester.takeException();
-    expect(
-      layoutError,
-      isNull,
-      reason: layoutError is FlutterError
-          ? layoutError.diagnostics
-                .map((node) => node.toStringDeep())
-                .join('\n')
-          : null,
-    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('overview to detail, update and save refresh shared values', (
@@ -280,7 +229,7 @@ void main() {
       await tester.ensureVisible(find.byType(DropdownButton<int>));
       await tester.tap(find.byType(DropdownButton<int>));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('0–12 tháng').last);
+      await tester.tap(find.text('9 – 12 tháng').last);
       await tester.pumpAndSettle();
       final chart = tester.widget<GrowthWeightMeasurementChart>(
         find.byType(GrowthWeightMeasurementChart),

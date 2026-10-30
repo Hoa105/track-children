@@ -73,7 +73,14 @@ void main() {
       for (final title in ['Chiều dài/chiều cao', 'Vòng đầu']) {
         await tester.tap(find.text(title));
         await tester.pumpAndSettle();
-        expect(find.text('Cập nhật ${title.toLowerCase()}'), findsOneWidget);
+        expect(
+          find.text(
+            title == 'Chiều dài/chiều cao'
+                ? 'Cập nhật chiều dài'
+                : 'Cập nhật ${title.toLowerCase()}',
+          ),
+          findsOneWidget,
+        );
         await tester.tap(find.byTooltip('Về chọn chỉ số'));
         await tester.pumpAndSettle();
       }

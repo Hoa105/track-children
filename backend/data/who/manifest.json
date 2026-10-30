@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1",
+  "files": [
+    {
+      "kind": "attained",
+      "path": "attained.json",
+      "sha256": "5bbccf3b992461fa759c980a7f106391ccebc19c473444621c6871928b3d11f0",
+      "status": "VERIFIED",
+      "sourceUrl": "https://cran.r-project.org/package=anthro",
+      "version": "anthro-1.1.0-WHO",
+      "retrievedOn": "2026-10-29",
+      "verificationMethod": "Export of installed official WHO anthro 1.1.0 tables; checksum and public-engine anchor checks"
+    },
+    {
+      "kind": "velocity",
+      "path": "velocity.json",
+      "sha256": "1fbf6c42c5cd177d0faea623e923d299b93820250915daa71522fa0decc755ae",
+      "status": "VERIFIED",
+      "sourceUrl": "https://www.who.int/tools/child-growth-standards/standards/growth-velocity-based-on-weight-length-and-head-circumference",
+      "version": "WHO-2009",
+      "retrievedOn": "2026-10-29",
+      "verificationMethod": "All 26 local tables matched official WHO linked XLSX interval labels and all numeric values; original/official download hashes retained per table"
+    }
+  ]
+}

@@ -19,6 +19,16 @@ flutter devices
 
 ## 2. Chạy ứng dụng
 
+### Android thật qua USB: thiết lập kết nối trước mỗi lần chạy
+
+Từ gốc repository, dùng lệnh sau để kiểm tra backend và thiết lập lại `adb reverse` trước khi chạy Flutter (không yêu cầu cấu hình Google để đăng nhập email/mật khẩu):
+
+```powershell
+.\scripts\run-mobile-local.ps1
+```
+
+Nếu terminal đang ở `mobile`, chạy `..\scripts\run-mobile-local.ps1`. Khi có nhiều thiết bị, thêm `-DeviceId <serial>`. Backend cần chạy ở cổng 8000. Script truyền `API_BASE_URL=http://127.0.0.1:8000/api/v1` vào lần build/run đó. `flutter run` trực tiếp không tự thiết lập cổng backend; ánh xạ có thể mất khi ngắt USB hoặc khởi động lại ADB. Chỉ chuẩn bị kết nối cho app đang mở: `..\scripts\run-mobile-local.ps1 -PrepareOnly`, rồi thử đăng nhập lại.
+
 ### Auth trên Chrome
 
 Auth trên web mặc định gọi `http://localhost:8000/api/v1`.

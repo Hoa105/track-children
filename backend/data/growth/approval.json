@@ -1,0 +1,13 @@
+{
+  "approvalType": "PROJECT_OWNER_CONTENT_ACCEPTANCE",
+  "approvedBy": "USER_IN_CONVERSATION",
+  "approvedOn": "2026-10-29",
+  "sourceStatement": "Project owner accepted content and mapping in this conversation before implementation.",
+  "clinicalReviewer": null,
+  "scope": "Application content and mapping accepted by project owner; no claim of clinical certification",
+  "files": {
+    "GROWTH-WHO-CLASSIFICATION-MAP.csv": "dbae5209cccf1a07adb862ceedf9ab877066e8b5e4834b0c3ba953b13e53a848",
+    "GROWTH-COMMENT-MAPPING.csv": "3e39a8247679ddd84021c95535179cc50b319d4c18c73b5a3e09917666909f8f",
+    "GROWTH-ADVICE-MAPPING.csv": "54f1006be0cec1de78184f3968f57617277470c6ed467fbd149da18f800928b4"
+  }
+}

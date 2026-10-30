@@ -4,10 +4,31 @@ API contracts and integration documentation.
 
 ## Mobile growth
 
-[OpenAPI 3.1 JSON](mobile-growth.openapi.json) — contract dự kiến cho màn Theo dõi:
-cân nặng, chiều cao, vòng đầu và BMI. Có API đọc lịch sử/tổng quan, lưu số đo
-theo ngày và xóa mềm từng chỉ số. Import vào Swagger Editor hoặc Postman.
-Trạng thái: **thiết kế, chưa triển khai backend**; phụ thuộc API hồ sơ trẻ.
+[OpenAPI 3.1 JSON](mobile-growth.openapi.json) — contract v1.0.0 ngày 29/10/2026
+cho giao diện growth mới, base `/api/v1`, Bearer phiên mobile hiện hành,
+JSON camelCase. Gồm 6 operations: overview, metric detail/chart/history,
+velocity, đọc ngày, upsert ngày và xóa mềm số đo. Import vào Swagger Editor/Postman.
+
+Trạng thái: **IMPLEMENTED — đã có backend và Flutter remote**;
+hướng dẫn môi trường, kiểm thử và giới hạn tại
+[Growth runtime](../core_growth/GROWTH-RUNTIME-README.md). Chưa deploy production.
+Status/mapping theo [contract 2.1](../core_growth/GROWTH-STATUS-CONTRACT.md);
+đối chiếu màn hình với operation tại `x-screen-operations` trong JSON.
+Ví dụ là dữ liệu tổng hợp kiểm tra contract, không phải dữ liệu trẻ thật hoặc
+tuyên bố bộ reference đã VERIFIED. Chưa có API hồ sơ trẻ thì tích hợp phải
+dùng child UUID được provision trong database test, không tự upload dữ liệu demo.
+
+Kiểm tra từ thư mục gốc (môi trường Python có jsonschema/openapi-spec-validator):
+
+```powershell
+.\.venv\Scripts\python.exe docs/api/tools/validate_growth_openapi.py
+```
+
+JSON là artifact import độc lập, không cần các file core để resolve `$ref`.
+Khi sửa status nguồn hoặc generator, dựng lại bằng
+`docs/api/tools/build_growth_openapi.py` rồi chạy validator. Validator kiểm tra
+OpenAPI, references, examples, enum/reason đồng bộ và các trường hợp dữ liệu sai;
+không phải test endpoint đã hoạt động.
 
 ## Mobile auth
 

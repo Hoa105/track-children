@@ -223,7 +223,21 @@ class DemoStore extends ChangeNotifier {
     d['parentId'] = null;
     d['childId'] = null;
   });
-  Future<void> selectChild(String id) {
+
+  Future<void> cacheAuthenticatedChildren(
+    String owner,
+    List<Map<String, dynamic>> profiles,
+  ) => _write((d) {
+    if (d['parentId'] != owner) return;
+    (d['children'] as List).removeWhere(
+      (c) => c['parentId'] == owner && c['server'] == true,
+    );
+    for (final profile in profiles) {
+      (d['children'] as List).removeWhere((c) => c['id'] == profile['id']);
+      (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
+    }
+  });
+  Future<void> selectChild(String id) async {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
     }

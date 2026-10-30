@@ -171,6 +171,21 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   // Explicit display fixtures only, kept separate from WHO chart references.
   double? _sampleZ(GrowthMeasurementDraft p) {
+    if (widget.repository is! MockGrowthRepository) {
+      return widget.repository.indicatorZScore(
+        _bmi
+            ? 'bmi'
+            : _head
+            ? 'head_circumference'
+            : 'height',
+        p.measuredAt,
+        _bmi
+            ? 'bmifa'
+            : _head
+            ? 'hcfa'
+            : 'lhfa',
+      );
+    }
     if (_bmi) {
       if (widget.repository is! MockGrowthRepository ||
           (widget.repository as MockGrowthRepository).referenceSex !=

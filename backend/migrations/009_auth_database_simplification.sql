@@ -121,6 +121,10 @@ DROP TABLE IF EXISTS account.user_consents;
 DROP TABLE IF EXISTS account.legal_documents;
 
 -- Admins share one authorization class; no role/permission tables remain.
+-- Keep legacy invitation records and their historical role identifiers, but
+-- detach the obsolete role FK before removing the authorization tables.
+ALTER TABLE IF EXISTS admin.admin_invitations
+    DROP CONSTRAINT IF EXISTS admin_invitations_role_id_fkey;
 DROP TABLE IF EXISTS admin.admin_user_roles;
 DROP TABLE IF EXISTS admin.role_permissions;
 DROP TABLE IF EXISTS admin.permissions;

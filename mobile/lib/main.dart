@@ -106,6 +106,29 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       await DemoStore.instance.bindAuthenticatedUser(
         AuthService.instance.user!,
       );
+      if (!AuthService.instance.demoMode) {
+        final owner = AuthService.instance.user!['id'] as String;
+        try {
+          final response = await AuthService.instance.authorizedRequest(
+            'GET',
+            '/children',
+          );
+          if (AuthService.instance.user?['id'] != owner) return;
+          await DemoStore.instance.cacheAuthenticatedChildren(
+            owner,
+            (response['children'] as List)
+                .map((c) => Map<String, dynamic>.from(c as Map))
+                .toList(),
+          );
+        } catch (error) {
+          if (mounted) {
+            ScaffoldMessenger.maybeOf(_navigatorKey.currentContext ?? context)
+                ?.showSnackBar(
+                  SnackBar(content: Text('Chưa tải được hồ sơ bé: $error')),
+                );
+          }
+        }
+      }
     }
     if (!mounted) return;
     _navigatorKey.currentState?.pushAndRemoveUntil(

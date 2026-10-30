@@ -1,4 +1,6 @@
 import 'growth_overview.dart';
+import 'api_growth_repository.dart';
+import '../../services/auth_service.dart';
 import '../../services/demo_store.dart';
 import '../../services/growth_api.dart';
 import '../../services/who_bmi_reference.dart';
@@ -38,6 +40,38 @@ Future<void> openMeasurementFromHome(
   BuildContext context, {
   required String childName,
 }) async {
+  if (!AuthService.instance.demoMode && AuthService.instance.signedIn) {
+    if (DemoStore.instance.child?['growthAccess'] != 'edit') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bạn chỉ có quyền xem số đo của bé.')),
+      );
+      return;
+    }
+    try {
+      final repository = ApiGrowthRepository();
+      final records = await repository.recordsForSheet();
+      if (!context.mounted) return;
+      final result = await showMeasurementSheet(
+        context,
+        records: records,
+        isPreview: false,
+        onSave: repository.saveRecord,
+      );
+      if (result != null && context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Đã lưu số đo của bé')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa tải được số đo. Vui lòng thử lại.'),
+          ),
+        );
+      }
+    }
+    return;
+  }
   final childId = DemoStore.instance.child?['id'] as String?;
   if (GrowthApi.instance.signedIn &&
       DemoStore.instance.child?['growthAccess'] != 'edit') {
@@ -121,9 +155,14 @@ class _GrowthScreenState extends State<LegacyGrowthScreen> {
   bool _isPreview = false;
   String? _loadError;
   String get _key => 'growth_v1_${widget.childName}';
-  bool get _canEdit =>
-      !GrowthApi.instance.signedIn ||
-      DemoStore.instance.childById(_childId ?? '')?['growthAccess'] == 'edit';
+  bool get _canEdit {
+    if (AuthService.instance.signedIn && !AuthService.instance.demoMode) {
+      return DemoStore.instance.childById(_childId ?? '')?['growthAccess'] ==
+          'edit';
+    }
+    return !GrowthApi.instance.signedIn ||
+        DemoStore.instance.childById(_childId ?? '')?['growthAccess'] == 'edit';
+  }
 
   bool _referenceAllowed(Map<String, dynamic> r) {
     if (!GrowthApi.instance.signedIn) return true;
@@ -180,6 +219,16 @@ class _GrowthScreenState extends State<LegacyGrowthScreen> {
   Future<void> _load() async {
     final childId = _childId;
     try {
+      if (AuthService.instance.signedIn && !AuthService.instance.demoMode) {
+        final records = await ApiGrowthRepository().recordsForSheet();
+        if (mounted && _childId == childId) {
+          setState(() {
+            _records = records;
+            _isPreview = false;
+          });
+        }
+        return;
+      }
       if (childId != null && GrowthApi.instance.signedIn) {
         await DemoStore.instance.refreshGrowth(childId);
         if (!mounted || _childId != childId) return;
@@ -252,6 +301,18 @@ class _GrowthScreenState extends State<LegacyGrowthScreen> {
 
   Future<void> _update() async {
     if (_loading || _loadError != null || !_canEdit) return;
+    if (AuthService.instance.signedIn && !AuthService.instance.demoMode) {
+      final record = await showMeasurementSheet(
+        context,
+        records: _records,
+        isPreview: false,
+        onSave: ApiGrowthRepository().saveRecord,
+      );
+      if (record != null && mounted) {
+        await _loadAfterSave();
+      }
+      return;
+    }
     final childId = _childId;
     final record = await showMeasurementSheet(
       context,
@@ -302,6 +363,16 @@ class _GrowthScreenState extends State<LegacyGrowthScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadAfterSave() async {
+    final records = await ApiGrowthRepository().recordsForSheet();
+    if (mounted) {
+      setState(() {
+        _records = records;
+        _selected = null;
+      });
     }
   }
 
@@ -1545,6 +1616,10 @@ class GrowthScreen extends StatelessWidget {
           openMeasurement: true,
         )
       : GrowthOverview(
+          repository:
+              AuthService.instance.demoMode || !AuthService.instance.signedIn
+              ? null
+              : ApiGrowthRepository(),
           onNavigation: (destination) {
             if (destination == 'Trang chủ') {
               Navigator.of(context).popUntil(

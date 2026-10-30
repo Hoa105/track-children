@@ -1,0 +1,111 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mobile child profile selection",
+    "version": "1.0.0",
+    "description": "Read-only profile selection used by authenticated growth screens."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/children": {
+      "get": {
+        "operationId": "listAccessibleChildren",
+        "summary": "List owned or explicitly shared child profiles",
+        "responses": {
+          "200": {
+            "description": "Owned profiles and profiles with active caregiver membership, matching migration 002. Growth data permissions are separate. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "children"
+                  ],
+                  "properties": {
+                    "children": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChildSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or revoked session"
+          },
+          "403": {
+            "description": "Account unavailable"
+          },
+          "503": {
+            "description": "Authentication or database unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ChildSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "fullName",
+          "dateOfBirth",
+          "gender",
+          "growthAccess"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "enum": [
+              "male",
+              "female"
+            ]
+          },
+          "growthAccess": {
+            "enum": [
+              "none",
+              "view",
+              "edit"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

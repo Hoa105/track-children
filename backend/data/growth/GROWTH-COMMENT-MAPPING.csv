@@ -1,0 +1,54 @@
+mapping_type,indicator,code,title,summary_template,review_status
+ATTAINED,WFA,SEVERE_UNDERWEIGHT,Cân nặng thấp nhiều so với tuổi,"Ở {{age_label}}, bé nặng {{current_value}} {{unit}} (Z={{z_score}}), thấp hơn ngưỡng −3 SD WHO theo tuổi và giới tính. Cần được nhân viên y tế đánh giá sớm.",APPROVED
+ATTAINED,WFA,UNDERWEIGHT,Cân nặng thấp so với tuổi,"Cân nặng {{current_value}} {{unit}} ở {{age_label}} tương ứng Z={{z_score}}, dưới −2 SD WHO. Nên kiểm tra nguyên nhân và diễn tiến các lần đo.",APPROVED
+ATTAINED,WFA,WITHIN_RANGE,Cân nặng theo tuổi trong khoảng tham chiếu,"Với {{current_value}} {{unit}} ở {{age_label}}, Z={{z_score}} nằm từ −2 đến +2 SD WHO. Kết quả này không thay thế đánh giá cân nặng theo chiều dài/chiều cao.",APPROVED
+ATTAINED,WFA,HIGH_WFA,Cân nặng theo tuổi cao,Cân nặng {{current_value}} {{unit}} ở {{age_label}} cho Z={{z_score}} trên +2 SD. Chỉ số này riêng lẻ không xác định thừa cân; cần xem WFL/WFH hoặc BMI theo tuổi.,APPROVED
+ATTAINED,LHFA,SEVERE_STUNTING,Chiều dài/chiều cao thấp nhiều so với tuổi,"Số đo {{current_value}} cm ở {{age_label}} có Z={{z_score}}, dưới −3 SD WHO. Cần đánh giá tăng trưởng và sức khỏe sớm.",APPROVED
+ATTAINED,LHFA,STUNTING,Chiều dài/chiều cao thấp so với tuổi,"Số đo {{current_value}} cm ở {{age_label}} có Z={{z_score}}, dưới −2 SD WHO. Nên xem lịch sử chiều cao và trao đổi với nhân viên y tế.",APPROVED
+ATTAINED,LHFA,WITHIN_RANGE,Chiều dài/chiều cao trong khoảng tham chiếu,Số đo {{current_value}} cm ở {{age_label}} có Z={{z_score}} trong khoảng tham chiếu WHO được chọn cho chỉ số này.,APPROVED
+ATTAINED,LHFA,VERY_TALL,Chiều dài/chiều cao cao nổi bật,Số đo {{current_value}} cm ở {{age_label}} có Z={{z_score}} trên +3 SD WHO. Cần đối chiếu tiền sử gia đình và đánh giá nếu có dấu hiệu bất thường.,APPROVED
+ATTAINED,WFL,SEVERE_WASTING,Cân nặng rất thấp so với chiều dài/chiều cao,"Với cân nặng {{current_value}} kg và chiều dài/chiều cao tương ứng, Z={{z_score}} dưới −3 SD WHO. Đây là dấu hiệu nhân trắc cần được đánh giá y tế khẩn trương.",APPROVED
+ATTAINED,WFH,SEVERE_WASTING,Cân nặng rất thấp so với chiều dài/chiều cao,"Với cân nặng {{current_value}} kg và chiều dài/chiều cao tương ứng, Z={{z_score}} dưới −3 SD WHO. Đây là dấu hiệu nhân trắc cần được đánh giá y tế khẩn trương.",APPROVED
+ATTAINED,WFL,WASTING,Cân nặng thấp so với chiều dài/chiều cao,Z={{z_score}} dưới −2 SD WHO cho thấy cân nặng thấp so với chiều dài/chiều cao hiện tại; nên được đánh giá sớm.,APPROVED
+ATTAINED,WFH,WASTING,Cân nặng thấp so với chiều dài/chiều cao,Z={{z_score}} dưới −2 SD WHO cho thấy cân nặng thấp so với chiều dài/chiều cao hiện tại; nên được đánh giá sớm.,APPROVED
+ATTAINED,WFL,WITHIN_RANGE,Cân nặng phù hợp theo chiều dài/chiều cao,Z={{z_score}} nằm trong khoảng −2 đến +1 SD WHO của chỉ số này.,APPROVED
+ATTAINED,WFH,WITHIN_RANGE,Cân nặng phù hợp theo chiều dài/chiều cao,Z={{z_score}} nằm trong khoảng −2 đến +1 SD WHO của chỉ số này.,APPROVED
+ATTAINED,WFL,RISK_OVERWEIGHT,Có nguy cơ thừa cân theo chỉ số WHO,"Z={{z_score}} nằm trên +1 đến +2 SD. Đây là tín hiệu để theo dõi và trao đổi cách chăm sóc phù hợp, không phải chẩn đoán béo phì.",APPROVED
+ATTAINED,WFH,RISK_OVERWEIGHT,Có nguy cơ thừa cân theo chỉ số WHO,"Z={{z_score}} nằm trên +1 đến +2 SD. Đây là tín hiệu để theo dõi và trao đổi cách chăm sóc phù hợp, không phải chẩn đoán béo phì.",APPROVED
+ATTAINED,WFL,OVERWEIGHT,Thừa cân theo chỉ số nhân trắc WHO,Z={{z_score}} trên +2 đến +3 SD. Nên trao đổi với nhân viên y tế để đánh giá toàn diện.,APPROVED
+ATTAINED,WFH,OVERWEIGHT,Thừa cân theo chỉ số nhân trắc WHO,Z={{z_score}} trên +2 đến +3 SD. Nên trao đổi với nhân viên y tế để đánh giá toàn diện.,APPROVED
+ATTAINED,WFL,OBESITY,Z-score vượt ngưỡng béo phì nhân trắc,"Z={{z_score}} trên +3 SD WHO. Cần được chuyên gia y tế đánh giá, không tự áp dụng chế độ giảm cân.",APPROVED
+ATTAINED,WFH,OBESITY,Z-score vượt ngưỡng béo phì nhân trắc,"Z={{z_score}} trên +3 SD WHO. Cần được chuyên gia y tế đánh giá, không tự áp dụng chế độ giảm cân.",APPROVED
+ATTAINED,BMIFA,SEVERE_THINNESS,BMI rất thấp theo tuổi,BMI {{current_value}} kg/m² ở {{age_label}} có Z={{z_score}} dưới −3 SD. Cần đánh giá thêm bằng các chỉ số khác và khám.,APPROVED
+ATTAINED,BMIFA,THINNESS,BMI thấp theo tuổi,BMI {{current_value}} kg/m² có Z={{z_score}} dưới −2 SD; nên đối chiếu WFL/WFH và các lần đo trước.,APPROVED
+ATTAINED,BMIFA,WITHIN_RANGE,BMI theo tuổi trong khoảng tham chiếu,BMI {{current_value}} kg/m² ở {{age_label}} có Z={{z_score}} trong khoảng −2 đến +1 SD WHO.,APPROVED
+ATTAINED,BMIFA,RISK_OVERWEIGHT,Nguy cơ thừa cân theo BMI,BMI {{current_value}} kg/m² có Z={{z_score}} trên +1 đến +2 SD WHO.,APPROVED
+ATTAINED,BMIFA,OVERWEIGHT,BMI cao hơn ngưỡng thừa cân,BMI {{current_value}} kg/m² có Z={{z_score}} trên +2 đến +3 SD WHO.,APPROVED
+ATTAINED,BMIFA,OBESITY,BMI vượt ngưỡng béo phì nhân trắc,BMI {{current_value}} kg/m² có Z={{z_score}} trên +3 SD WHO; cần tư vấn chuyên môn.,APPROVED
+ATTAINED,HCFA,VERY_LOW_HC,Vòng đầu rất nhỏ so với tuổi,Vòng đầu {{current_value}} cm ở {{age_label}} có Z={{z_score}} dưới −3 SD; nên được bác sĩ nhi đánh giá sớm.,APPROVED
+ATTAINED,HCFA,LOW_HC,Vòng đầu nhỏ so với tuổi,Vòng đầu {{current_value}} cm có Z={{z_score}} dưới −2 SD; nên kiểm tra lại phép đo và trao đổi bác sĩ.,APPROVED
+ATTAINED,HCFA,WITHIN_RANGE,Vòng đầu trong khoảng tham chiếu,Vòng đầu {{current_value}} cm ở {{age_label}} có Z={{z_score}} từ −2 đến +2 SD WHO.,APPROVED
+ATTAINED,HCFA,HIGH_HC,Vòng đầu lớn so với tuổi,"Vòng đầu {{current_value}} cm có Z={{z_score}} trên +2 SD; cần xem xu hướng, yếu tố gia đình và đánh giá khi cần.",APPROVED
+ATTAINED,HCFA,VERY_HIGH_HC,Vòng đầu rất lớn so với tuổi,Vòng đầu {{current_value}} cm có Z={{z_score}} trên +3 SD; nên được bác sĩ đánh giá sớm.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,PENDING_CALCULATION,Đang tính đánh giá,Số đo đang chờ tính đánh giá.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,NOT_ASSESSABLE,Chưa đủ điều kiện đánh giá,Chưa đủ dữ liệu hoặc chưa thuộc miền tham chiếu để đánh giá chỉ số này.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,RECHECK_DATA,Cần kiểm tra dữ liệu,Kết quả tính chưa đủ tin cậy để phân loại.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,CALCULATION_UNAVAILABLE,Chưa hoàn tất phép tính,Hệ thống chưa hoàn tất phép tính cho các số đo này.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,NOT_APPLICABLE,Ngoài phạm vi đánh giá,Chỉ số này không được đánh giá trong phạm vi hiện tại của ứng dụng.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INSUFFICIENT_MEASUREMENTS,Chưa đủ số đo,Cần ít nhất hai lần đo hợp lệ ở các ngày khác nhau để tính mức thay đổi.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INVALID_INTERVAL,Cần kiểm tra ngày đo,Khoảng đo chưa hợp lệ để tính tốc độ.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INCOMPARABLE_MEASUREMENTS,Chưa so sánh được cặp đo,Cặp số đo chưa cùng cơ sở đo để tính tốc độ.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,NOT_SUPPORTED,Chưa hỗ trợ tốc độ cho chỉ số này,Ứng dụng không hỗ trợ đánh giá tốc độ cho chỉ số này.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,CALCULATION_UNAVAILABLE,Chưa hoàn tất phép tính,Hệ thống chưa hoàn tất phép tính cho các số đo này.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,ACTUAL_ONLY,Tốc độ thực tế,"Từ {{start_date}} đến {{end_date}}, mức thay đổi là {{delta_value}} {{delta_unit}}, tương ứng {{rate_per_month}} {{rate_unit}}; chưa có khoảng tham chiếu WHO khớp.",APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_MATCHED,Có khoảng tham chiếu WHO phù hợp,Mức thay đổi {{delta_value}} {{delta_unit}} trong khoảng {{interval_label}} được đặt cạnh các mốc WHO tương ứng; đây chưa phải phân loại tốc độ.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_UNAVAILABLE,Thiếu dữ liệu tham chiếu,Đã tính được tốc độ thực tế; dữ liệu tham chiếu WHO cần thiết hiện chưa sẵn có.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_UNVERIFIED,Tham chiếu chưa được kiểm định,Đã tính được tốc độ thực tế; bộ tham chiếu WHO chưa đủ điều kiện để đối chiếu.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_NOT_APPLICABLE,Không áp dụng đối chiếu WHO,Đã tính được tốc độ thực tế; đối chiếu WHO không áp dụng cho khoảng đo này trong phạm vi ứng dụng.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_FASTER,Tốc độ kỳ gần đây cao hơn,Tốc độ thay đổi {{indicator_name}} cao hơn kỳ trước {{rate_difference}} {{rate_unit}}.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_SLOWER,Tốc độ kỳ gần đây thấp hơn,Tốc độ thay đổi {{indicator_name}} thấp hơn kỳ trước {{rate_difference}} {{rate_unit}}.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_UNCHANGED,Tốc độ hai kỳ bằng nhau,Tốc độ thay đổi {{indicator_name}} bằng kỳ trước theo giá trị tính đầy đủ.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,METHOD_NOT_VERIFIED,Chưa xác minh phương pháp Z-score tốc độ,Nhánh phương pháp tương ứng chưa được kiểm định để tính Z-score tốc độ.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,TRANSFORM_DOMAIN_ERROR,Ngoài miền phép biến đổi,Mức thay đổi không thuộc miền của nhánh tính Z-score tốc độ đang hỗ trợ.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,INVALID_REFERENCE_PARAMETERS,Hệ số tham chiếu chưa hợp lệ,Chưa đủ hệ số hợp lệ để tính Z-score tốc độ.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,CALCULATION_FAILED,Chưa tính được Z-score tốc độ,Phép tính Z-score tốc độ chưa hoàn tất.,APPROVED

@@ -73,3 +73,4 @@ node_modules/
 .test-deps/
 backend/.env
 backend/.runtime/
+backend/.r-library/

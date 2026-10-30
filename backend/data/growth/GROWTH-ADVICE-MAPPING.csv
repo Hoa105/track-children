@@ -1,0 +1,57 @@
+mapping_type,applies_to,condition_code,advice_code,advice_template,review_status
+ATTAINED,WFA,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,LHFA,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,HCFA,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,BMIFA,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,WFL,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,WFH,WITHIN_RANGE,CONTINUE_MONITORING,"Tiếp tục theo dõi {{indicator_name}} theo lịch phù hợp, lưu lại các lần đo và duy trì chăm sóc, ăn uống theo lứa tuổi. Một kết quả trong khoảng tham chiếu không thay thế kiểm tra sức khỏe định kỳ.",APPROVED
+ATTAINED,WFA,UNDERWEIGHT,REVIEW_FEEDING_AND_VISIT,"Kiểm tra lại cách cân và lịch sử số đo. Trao đổi với nhân viên y tế về chế độ ăn/bú, bệnh gần đây và các chỉ số chiều dài/chiều cao; không tự tăng lượng ăn bằng mọi giá.",APPROVED
+ATTAINED,WFA,SEVERE_UNDERWEIGHT,PROMPT_CLINICAL_REVIEW,"Nên đưa bé đến cơ sở y tế sớm để đánh giá nguyên nhân cân nặng thấp nhiều so với tuổi. Nếu bé bỏ bú/ăn, lừ đừ hoặc có dấu hiệu mất nước, cần đi khám khẩn cấp.",APPROVED
+ATTAINED,WFA,HIGH_WFA,CHECK_WEIGHT_FOR_LENGTH,Xem thêm cân nặng theo chiều dài/chiều cao hoặc BMI theo tuổi trước khi nhận định thừa cân. Không tự áp dụng chế độ ăn hạn chế cho trẻ.,APPROVED
+ATTAINED,LHFA,STUNTING,REVIEW_LINEAR_GROWTH,"Đo lại đúng tư thế, xem các mốc chiều dài/chiều cao trước đó và trao đổi với nhân viên y tế về tăng trưởng, dinh dưỡng và bệnh lý có thể ảnh hưởng.",APPROVED
+ATTAINED,LHFA,SEVERE_STUNTING,PROMPT_GROWTH_REVIEW,Nên được bác sĩ nhi đánh giá sớm để xem xét nguyên nhân chiều dài/chiều cao rất thấp theo tuổi; mang theo lịch sử đo.,APPROVED
+ATTAINED,LHFA,VERY_TALL,REVIEW_TALL_STATURE,"Kiểm tra lại số đo và xem chiều cao gia đình. Nếu tăng nhanh bất thường hoặc có dấu hiệu khác, trao đổi với bác sĩ nhi.",APPROVED
+ATTAINED,WFL,WASTING,EARLY_NUTRITION_ASSESSMENT,"Đưa bé đi đánh giá dinh dưỡng sớm; cần xem tình trạng ăn uống, bệnh gần đây, dấu hiệu phù và các chỉ số khác. Không tự điều trị tại nhà chỉ dựa trên biểu đồ.",APPROVED
+ATTAINED,WFH,WASTING,EARLY_NUTRITION_ASSESSMENT,"Đưa bé đi đánh giá dinh dưỡng sớm; cần xem tình trạng ăn uống, bệnh gần đây, dấu hiệu phù và các chỉ số khác. Không tự điều trị tại nhà chỉ dựa trên biểu đồ.",APPROVED
+ATTAINED,WFL,SEVERE_WASTING,URGENT_NUTRITION_ASSESSMENT,"Đưa bé đến cơ sở y tế **khẩn trương** để đánh giá suy dinh dưỡng cấp tính và biến chứng có thể có. Nếu bé lừ đừ, bỏ bú/ăn, khó thở hoặc mất nước, cần cấp cứu.",APPROVED
+ATTAINED,WFH,SEVERE_WASTING,URGENT_NUTRITION_ASSESSMENT,"Đưa bé đến cơ sở y tế **khẩn trương** để đánh giá suy dinh dưỡng cấp tính và biến chứng có thể có. Nếu bé lừ đừ, bỏ bú/ăn, khó thở hoặc mất nước, cần cấp cứu.",APPROVED
+ATTAINED,WFL,RISK_OVERWEIGHT,RESPONSIVE_FEEDING,"Tiếp tục theo dõi xu hướng; cho bé ăn phù hợp tuổi, đáp ứng tín hiệu đói/no và khuyến khích vận động, vui chơi phù hợp. Không ép ăn hoặc tự hạn chế dinh dưỡng.",APPROVED
+ATTAINED,WFH,RISK_OVERWEIGHT,RESPONSIVE_FEEDING,"Tiếp tục theo dõi xu hướng; cho bé ăn phù hợp tuổi, đáp ứng tín hiệu đói/no và khuyến khích vận động, vui chơi phù hợp. Không ép ăn hoặc tự hạn chế dinh dưỡng.",APPROVED
+ATTAINED,BMIFA,RISK_OVERWEIGHT,RESPONSIVE_FEEDING,"Tiếp tục theo dõi xu hướng; cho bé ăn phù hợp tuổi, đáp ứng tín hiệu đói/no và khuyến khích vận động, vui chơi phù hợp. Không ép ăn hoặc tự hạn chế dinh dưỡng.",APPROVED
+ATTAINED,WFL,OVERWEIGHT,OVERWEIGHT_REVIEW,"Trao đổi với bác sĩ nhi hoặc chuyên gia dinh dưỡng để đánh giá chế độ ăn, tăng trưởng và hoạt động phù hợp tuổi. Không tự cho trẻ ăn kiêng giảm cân.",APPROVED
+ATTAINED,WFH,OVERWEIGHT,OVERWEIGHT_REVIEW,"Trao đổi với bác sĩ nhi hoặc chuyên gia dinh dưỡng để đánh giá chế độ ăn, tăng trưởng và hoạt động phù hợp tuổi. Không tự cho trẻ ăn kiêng giảm cân.",APPROVED
+ATTAINED,BMIFA,OVERWEIGHT,OVERWEIGHT_REVIEW,"Trao đổi với bác sĩ nhi hoặc chuyên gia dinh dưỡng để đánh giá chế độ ăn, tăng trưởng và hoạt động phù hợp tuổi. Không tự cho trẻ ăn kiêng giảm cân.",APPROVED
+ATTAINED,WFL,OBESITY,SPECIALIST_WEIGHT_REVIEW,Nên được chuyên gia y tế đánh giá để có kế hoạch chăm sóc phù hợp tuổi; không tự áp dụng thực đơn giảm cân hoặc thuốc giảm cân.,APPROVED
+ATTAINED,WFH,OBESITY,SPECIALIST_WEIGHT_REVIEW,Nên được chuyên gia y tế đánh giá để có kế hoạch chăm sóc phù hợp tuổi; không tự áp dụng thực đơn giảm cân hoặc thuốc giảm cân.,APPROVED
+ATTAINED,BMIFA,OBESITY,SPECIALIST_WEIGHT_REVIEW,Nên được chuyên gia y tế đánh giá để có kế hoạch chăm sóc phù hợp tuổi; không tự áp dụng thực đơn giảm cân hoặc thuốc giảm cân.,APPROVED
+ATTAINED,BMIFA,THINNESS,REVIEW_LOW_BMI,Kiểm tra lại cân nặng và chiều cao dùng tính BMI; xem thêm WFL/WFH và trao đổi với nhân viên y tế nếu BMI tiếp tục thấp.,APPROVED
+ATTAINED,BMIFA,SEVERE_THINNESS,PROMPT_LOW_BMI_REVIEW,Nên được đánh giá y tế sớm; BMI rất thấp theo tuổi không đủ để tự xác định nguyên nhân hoặc phác đồ điều trị.,APPROVED
+ATTAINED,HCFA,LOW_HC,HC_MEASURE_AND_REVIEW,"Đo lại vòng đầu đúng kỹ thuật, xem các lần đo trước và trao đổi với bác sĩ nhi để đánh giá trong bối cảnh phát triển của bé.",APPROVED
+ATTAINED,HCFA,VERY_LOW_HC,PROMPT_HC_REVIEW,"Nên đưa bé đến bác sĩ nhi sớm, mang theo các số đo vòng đầu và thông tin phát triển; không suy ra chẩn đoán chỉ từ một giá trị Z-score.",APPROVED
+ATTAINED,HCFA,HIGH_HC,HC_TREND_REVIEW,"Kiểm tra lại phép đo, xem diễn tiến vòng đầu và yếu tố gia đình; tham khảo bác sĩ nhi nếu tăng nhanh hoặc có triệu chứng.",APPROVED
+ATTAINED,HCFA,VERY_HIGH_HC,PROMPT_HIGH_HC_REVIEW,"Nên được bác sĩ nhi đánh giá sớm. Nếu kèm nôn nhiều, co giật, li bì hoặc thay đổi ý thức, cần đi cấp cứu.",APPROVED
+AGE_CONTEXT,ALL,AGE_0_5_MONTHS,FEED_0_5M,"WHO khuyến nghị nuôi con hoàn toàn bằng sữa mẹ trong 6 tháng đầu khi có thể; nếu có khó khăn khi bú hoặc nuôi dưỡng, hãy tìm hỗ trợ từ nhân viên y tế.",APPROVED
+AGE_CONTEXT,ALL,AGE_6_23_MONTHS,FEED_6_23M,"Từ khoảng 6 tháng, cho bé ăn bổ sung đa dạng, an toàn và phù hợp lứa tuổi; tiếp tục bú mẹ đến 2 tuổi hoặc lâu hơn khi có thể.",APPROVED
+AGE_CONTEXT,ALL,AGE_24_59_MONTHS,FEED_24_59M,"Duy trì bữa ăn đa dạng, phù hợp tuổi, vận động/vui chơi và theo dõi tăng trưởng định kỳ; trao đổi với nhân viên y tế nếu có lo ngại.",APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,PENDING_CALCULATION,ASSESSMENT_STATUS_PENDING_CALCULATION,Tải lại kết quả sau khi quá trình tính hoàn tất.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,NOT_ASSESSABLE,ASSESSMENT_STATUS_NOT_ASSESSABLE,Kiểm tra thông tin hồ sơ và các số đo cần thiết.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,RECHECK_DATA,ASSESSMENT_STATUS_RECHECK_DATA,"Kiểm tra ngày sinh, ngày đo, đơn vị và tư thế; đối chiếu số đo đã nhập.",APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,CALCULATION_UNAVAILABLE,ASSESSMENT_STATUS_CALCULATION_UNAVAILABLE,Thử tải lại kết quả; không nhập lại số đo nếu đã lưu thành công.,APPROVED
+ASSESSMENT_STATUS,ALL_ATTAINED,NOT_APPLICABLE,ASSESSMENT_STATUS_NOT_APPLICABLE,Xem lịch sử số đo đã ghi nhận.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INSUFFICIENT_MEASUREMENTS,VELOCITY_INSUFFICIENT_MEASUREMENTS,Bổ sung số đo hợp lệ vào lịch sử.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INVALID_INTERVAL,VELOCITY_INVALID_INTERVAL,Kiểm tra ngày bắt đầu và ngày kết thúc khoảng đo.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,INCOMPARABLE_MEASUREMENTS,VELOCITY_INCOMPARABLE_MEASUREMENTS,Kiểm tra đơn vị và tư thế của hai lần đo.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,NOT_SUPPORTED,VELOCITY_NOT_SUPPORTED,Xem số đo và đánh giá tình trạng theo tuổi nếu có.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,CALCULATION_UNAVAILABLE,VELOCITY_CALCULATION_UNAVAILABLE,Thử tải lại kết quả; không nhập lại số đo nếu đã lưu thành công.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,ACTUAL_ONLY,VELOCITY_ACTUAL_ONLY,Xem mức thay đổi thực tế và khoảng ngày đo; kết quả này chưa có đối chiếu WHO.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_MATCHED,VELOCITY_REFERENCE_MATCHED,"Xem hai ngày đo, mức thay đổi và các mốc tham chiếu đi kèm.",APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_UNAVAILABLE,VELOCITY_REFERENCE_UNAVAILABLE,Có thể xem mức thay đổi thực tế trong khi chờ dữ liệu tham chiếu.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_UNVERIFIED,VELOCITY_REFERENCE_UNVERIFIED,Xem mức thay đổi thực tế; đối chiếu WHO sẽ hiển thị khi nguồn được kiểm định.,APPROVED
+VELOCITY,ALL_SUPPORTED_VELOCITY,REFERENCE_NOT_APPLICABLE,VELOCITY_REFERENCE_NOT_APPLICABLE,Xem tốc độ thực tế và lịch sử các lần đo.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_FASTER,VELOCITY_TREND_TREND_FASTER,Xem giá trị và độ dài của cả hai khoảng đo.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_SLOWER,VELOCITY_TREND_TREND_SLOWER,Xem giá trị và độ dài của cả hai khoảng đo.,APPROVED
+VELOCITY_TREND,ALL_SUPPORTED_VELOCITY,TREND_UNCHANGED,VELOCITY_TREND_TREND_UNCHANGED,Xem giá trị và độ dài của cả hai khoảng đo.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,METHOD_NOT_VERIFIED,VELOCITY_ZSCORE_METHOD_NOT_VERIFIED,Xem mức thay đổi thực tế; chỉ xem đối chiếu WHO khi tham chiếu đã được kiểm định.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,TRANSFORM_DOMAIN_ERROR,VELOCITY_ZSCORE_TRANSFORM_DOMAIN_ERROR,Xem mức thay đổi thực tế; chỉ xem đối chiếu WHO khi tham chiếu đã được kiểm định.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,INVALID_REFERENCE_PARAMETERS,VELOCITY_ZSCORE_INVALID_REFERENCE_PARAMETERS,Xem mức thay đổi thực tế; chỉ xem đối chiếu WHO khi tham chiếu đã được kiểm định.,APPROVED
+VELOCITY_ZSCORE,ALL_SUPPORTED_VELOCITY,CALCULATION_FAILED,VELOCITY_ZSCORE_CALCULATION_FAILED,Xem mức thay đổi thực tế; chỉ xem đối chiếu WHO khi tham chiếu đã được kiểm định.,APPROVED

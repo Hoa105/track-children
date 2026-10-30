@@ -9,6 +9,8 @@ import 'growth_weight_velocity_data.dart';
 export 'growth_models.dart';
 
 abstract class GrowthRepository {
+  double? indicatorZScore(String metric, DateTime date, String indicator) =>
+      null;
   Future<GrowthStatureVelocityReference?> headVelocityReference() async => null;
   Future<GrowthStatureVelocityReference?> statureVelocityReference() async =>
       null;

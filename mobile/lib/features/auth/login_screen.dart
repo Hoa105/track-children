@@ -80,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.login(
         _accountController.text,
         _passwordController.text,
-        remember: _rememberMe,
       );
       valid = true;
     } on AuthException catch (e) {
@@ -92,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
               challenge: Map<String, dynamic>.from(
                 e.details['registration'] as Map,
               ),
-              remember: _rememberMe,
             ) ==
             true;
       } else {
@@ -129,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.socialRegister(
         provider.name,
         acceptedTerms: true,
-        remember: _rememberMe,
       );
       if (mounted) widget.onLoginSuccess?.call();
     } on AuthException catch (e) {

@@ -1,72 +1,109 @@
 {
   "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "Track Children - Mobile Growth API",
-    "version": "0.1.0",
-    "description": "Implemented growth contract; updated 2026-10-18. See mobile-growth.md for setup and mobile-growth-test-results.md for verification and limitations. Requires mobile authentication and child-profile APIs. JSON uses camelCase, UUID identifiers, YYYY-MM-DD measurement dates and UTC ISO 8601 timestamps. Fixed units: kg, cm and kg/m2. Resolve children by childId, never by name. Never upload demo data automatically. Owners have edit access; active members require growth view/edit permission. Validate both JWT and current session/account state using existing auth. Z-scores, percentiles, nutritional classification, offline sync and WHO-reference management are outside this version. BMI rounds to two decimals using ROUND_HALF_UP. Active measurement ages are recalculated when the owner updates birth date; a birth date after an active measurement is rejected."
+    "version": "1.0.0",
+    "description": "API growth triển khai ngày 29/10/2026 theo docs/core_growth; backend và repository Flutter remote đã có mã và kiểm thử tích hợp HTTP. Sáu operations cho giao diện growth mới. JSON camelCase, base /api/v1, current mobile Bearer session. PostgreSQL chỉ growth.measurements/evaluations; WHO static, velocity on read. Input kg/cm; BMI và Z từ backend normalization/anthro. Synthetic examples illustrate contract, not verified WHO reference datasets. No automatic demo-data upload. Runtime data still respects mapping review gates. Deployment/device QA and existing auth migration issues are tracked in GROWTH-RUNTIME-README.md."
   },
   "servers": [
     {
       "url": "http://localhost:8000/api/v1",
-      "description": "Local backend; growth routes are a design only"
+      "description": "Local growth backend"
     }
   ],
   "tags": [
     {
-      "name": "Growth",
-      "description": "Weight, height/length, head circumference and derived BMI"
+      "name": "Mobile Growth",
+      "description": "Growth overview, metric detail/chart/history, velocity and daily measurements."
     }
   ],
   "security": [
     {
-      "bearerAuth": []
+      "MobileBearer": []
     }
   ],
+  "x-implementation-status": "IMPLEMENTED",
+  "x-status-contract-version": "2.1",
+  "x-screen-operations": {
+    "overview": [
+      "getGrowthOverview"
+    ],
+    "weightDetail": [
+      "getGrowthMetricDetail",
+      "getGrowthVelocity"
+    ],
+    "statureDetail": [
+      "getGrowthMetricDetail",
+      "getGrowthVelocity"
+    ],
+    "headDetail": [
+      "getGrowthMetricDetail",
+      "getGrowthVelocity"
+    ],
+    "bmiDetail": [
+      "getGrowthMetricDetail"
+    ],
+    "measurementForm": [
+      "getGrowthDay",
+      "upsertGrowthDay"
+    ],
+    "history": [
+      "getGrowthMetricDetail",
+      "deleteGrowthMeasurement"
+    ],
+    "homeMeasurement": [
+      "getGrowthDay",
+      "upsertGrowthDay"
+    ]
+  },
   "paths": {
     "/children/{childId}/growth": {
       "get": {
+        "operationId": "getGrowthOverview",
         "tags": [
-          "Growth"
+          "Mobile Growth"
         ],
-        "operationId": "getChildGrowth",
-        "summary": "Read growth history and latest measurements",
-        "description": "Requires growth view/edit access or ownership. days is ordered by date ascending, with at least one active measurement per day. Deleted measurements are excluded. from/to are inclusive; an omitted bound is unbounded. Returns all records in range for charting without pagination in this version. summary is the latest active value per metric across ALL history, independent of the date filter; latest BMI is the latest same-day pair. Empty data returns days=[] and null summary entries. WHO reference curves are supplied by existing mobile assets, not this endpoint. Measurement unit must match metric: weight=kg, height/head_circumference=cm.",
+        "summary": "Tổng quan bốn nhóm tăng trưởng",
+        "description": "Authorized snapshot of child context and exactly four cards. latest is independent of date filters; sparkline uses the effective range. Authentication uses the current mobile session, no growth-specific login. Read computation has a cumulative 15-second R execution budget plus a bounded 2-second queue wait. Process at most 128 days per R batch, prioritize selected/latest days, and mark remaining misses PENDING_CALCULATION. Release DB locks during R; bound total HTTP work to 20 seconds, with explicit client timeout at least 30 seconds. No unlimited 5-year synchronous recomputation. Repeated GETs may warm reproducible cache, never mutate raw measurements.",
         "parameters": [
           {
-            "name": "childId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
+            "$ref": "#/components/parameters/ChildId"
           },
           {
-            "name": "from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
+            "$ref": "#/components/parameters/StartOn"
           },
           {
-            "name": "to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
+            "$ref": "#/components/parameters/EndBefore"
           }
         ],
         "responses": {
           "200": {
-            "description": "Growth history, child metadata and latest summary",
+            "description": "Success; inspect per-block computation/reference/content statuses.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GrowthResult"
+                  "$ref": "#/components/schemas/OverviewResponse"
+                },
+                "examples": {
+                  "OverviewEmpty": {
+                    "$ref": "#/components/examples/OverviewEmpty"
+                  },
+                  "OverviewEngineUnavailable": {
+                    "$ref": "#/components/examples/OverviewEngineUnavailable"
+                  },
+                  "OverviewViewOnly": {
+                    "$ref": "#/components/examples/OverviewViewOnly"
+                  }
                 }
               }
             }
@@ -81,121 +118,336 @@
             "$ref": "#/components/responses/NotFound"
           },
           "422": {
-            "$ref": "#/components/responses/Validation"
+            "$ref": "#/components/responses/ValidationError"
           },
           "503": {
-            "$ref": "#/components/responses/Unavailable"
+            "$ref": "#/components/responses/DatabaseUnavailable"
           }
         }
       }
     },
-    "/children/{childId}/growth/days/{date}": {
-      "put": {
+    "/children/{childId}/growth/metrics/{metric}": {
+      "get": {
+        "operationId": "getGrowthMetricDetail",
         "tags": [
-          "Growth"
+          "Mobile Growth"
         ],
-        "operationId": "saveChildGrowthDay",
-        "summary": "Create or update measurements for one day",
-        "description": "Requires growth edit access or ownership. Atomically upsert supplied metrics by (childId, metric, date). This PUT explicitly updates only supplied metrics rather than replacing the entire day; omitted metrics remain unchanged. Repeating the same payload never creates duplicates. If a previous measurement was soft-deleted, create a new active record. Compute ageInDays from birth date and measurement date; never accept client age. BMI = weightKg / (heightCm / 100)^2 using active measurements from the SAME day only; round returned BMI to 2 decimals. Never combine different days. No manual BMI, automatic position conversion or nutritional classification. Return all active measurements for the day after saving; bmi=null if the pair is incomplete. Serialize concurrent writes; the last write in database serialization order wins for the same metric. HTTP response arrival order is not the database write order. Client reloads history/summary after writes. An optional note affects supplied metrics only; omit to preserve existing notes, null to clear. Missing permission is 404 for no view access and 403 for view-only access.",
+        "summary": "Chi tiết, lịch sử, biểu đồ và đánh giá",
+        "description": "All active readings/samples in range, no pagination that silently truncates chart history. Same-day pairs only. For weight, primary WFA plus a WFL/WFH scatter; other metrics return one age chart. Filters never change Z/classification. Seven SD curves only from verified data, segmented at day 731 where applicable. Exact evidence may be empty even if R assessment is valid. selected point assessment/content matches its IDs and snapshot. Missing paired data keeps raw history, bmi samples absent, and an explicit NOT_ASSESSABLE/MISSING_PAIRED_MEASUREMENT for affected eligible primary IDs. Read computation has a cumulative 15-second R execution budget plus a bounded 2-second queue wait. Process at most 128 days per R batch, prioritize selected/latest days, and mark remaining misses PENDING_CALCULATION. Release DB locks during R; bound total HTTP work to 20 seconds, with explicit client timeout at least 30 seconds. No unlimited 5-year synchronous recomputation. Repeated GETs may warm reproducible cache, never mutate raw measurements.",
         "parameters": [
           {
-            "name": "childId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
+            "$ref": "#/components/parameters/ChildId"
           },
           {
-            "name": "date",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
+            "$ref": "#/components/parameters/Metric"
+          },
+          {
+            "$ref": "#/components/parameters/StartOn"
+          },
+          {
+            "$ref": "#/components/parameters/EndBefore"
+          },
+          {
+            "$ref": "#/components/parameters/SelectedMeasurementId"
+          },
+          {
+            "$ref": "#/components/parameters/WeightForSizeIndicator"
+          },
+          {
+            "$ref": "#/components/parameters/StatureView"
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Success; inspect per-block computation/reference/content statuses.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricDetailResponse"
+                },
+                "examples": {
+                  "DetailReferenceUnavailable": {
+                    "$ref": "#/components/examples/DetailReferenceUnavailable"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DatabaseUnavailable"
+          }
+        }
+      }
+    },
+    "/children/{childId}/growth/metrics/{metric}/velocity": {
+      "get": {
+        "operationId": "getGrowthVelocity",
+        "tags": [
+          "Mobile Growth"
+        ],
+        "summary": "Tốc độ thực tế và đối chiếu WHO theo kỳ",
+        "description": "Actual intervals use consecutive readings from full active history before filtering end dates; keep predecessor outside viewport. Actual unit g/month or cm/month uses 30.4375 days. Each actual pair may be annotated against the unique exact source row for its own dates, without changing the pair or drawing a WHO overlay in actual mode. WHO intervals have separate IDs, full-interval units g/cm, exact DOB calendar-month or 28-day anchors, correct sex/age/period. No rate overlay with interval gains. who mode requires intervalMonths; actual mode forbids it and returns whoIntervals=[]. With fewer than two valid readings return INSUFFICIENT_MEASUREMENTS/NOT_REQUESTED and no bars. With valid actual rate but no exact pair, return READY/NO_EXACT_REFERENCE. Missing/unverified sources and >=24-month end ages use their distinct statuses. Never issue REFERENCE_LOW/HIGH/MIDDLE/EXTREME or a velocity diagnosis. Read computation has a cumulative 15-second R execution budget plus a bounded 2-second queue wait. Process at most 128 days per R batch, prioritize selected/latest days, and mark remaining misses PENDING_CALCULATION. Release DB locks during R; bound total HTTP work to 20 seconds, with explicit client timeout at least 30 seconds. No unlimited 5-year synchronous recomputation. Repeated GETs may warm reproducible cache, never mutate raw measurements.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChildId"
+          },
+          {
+            "$ref": "#/components/parameters/VelocityMetric"
+          },
+          {
+            "$ref": "#/components/parameters/StartOn"
+          },
+          {
+            "$ref": "#/components/parameters/EndBefore"
+          },
+          {
+            "$ref": "#/components/parameters/VelocityMode"
+          },
+          {
+            "$ref": "#/components/parameters/IntervalMonths"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; inspect per-block computation/reference/content statuses.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VelocityResponse"
+                },
+                "examples": {
+                  "VelocityInsufficient": {
+                    "$ref": "#/components/examples/VelocityInsufficient"
+                  },
+                  "VelocityActualOnly": {
+                    "$ref": "#/components/examples/VelocityActualOnly"
+                  },
+                  "VelocityReferenceUnverified": {
+                    "$ref": "#/components/examples/VelocityReferenceUnverified"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DatabaseUnavailable"
+          }
+        }
+      }
+    },
+    "/children/{childId}/growth/days/{measuredOn}": {
+      "get": {
+        "operationId": "getGrowthDay",
+        "tags": [
+          "Mobile Growth"
+        ],
+        "summary": "Đọc các số đo và cặp BMI theo ngày",
+        "description": "Authorized daily form snapshot. No measurements is 200, not 404. Reconstruct derived BMI from active same-day pair using engine normalization; no manual BMI. Read computation has a cumulative 15-second R execution budget plus a bounded 2-second queue wait. Process at most 128 days per R batch, prioritize selected/latest days, and mark remaining misses PENDING_CALCULATION. Release DB locks during R; bound total HTTP work to 20 seconds, with explicit client timeout at least 30 seconds. No unlimited 5-year synchronous recomputation. Repeated GETs may warm reproducible cache, never mutate raw measurements.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChildId"
+          },
+          {
+            "$ref": "#/components/parameters/MeasuredOn"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; inspect per-block computation/reference/content statuses.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayResponse"
+                },
+                "examples": {
+                  "DayEmpty": {
+                    "$ref": "#/components/examples/DayEmpty"
+                  },
+                  "DayEngineUnavailable": {
+                    "$ref": "#/components/examples/DayEngineUnavailable"
+                  },
+                  "DayMissingPair": {
+                    "$ref": "#/components/examples/DayMissingPair"
+                  },
+                  "DayWhoFlagged": {
+                    "$ref": "#/components/examples/DayWhoFlagged"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DatabaseUnavailable"
+          }
+        }
+      },
+      "put": {
+        "operationId": "upsertGrowthDay",
+        "tags": [
+          "Mobile Growth"
+        ],
+        "summary": "Lưu hoặc cập nhật một phần số đo trong ngày",
+        "description": "Requires edit. Atomically upsert only supplied metrics, partial unique active(child,metric,measured_on). Repeating payload preserves active IDs; omitted fields stay unchanged. Null metrics rejected; use DELETE for removal. Validate before commit. Parent child row lock serializes writers; invalidate dependent evaluations in same transaction. Run R outside transaction, check input fingerprint under lock before publishing. Once saved, return 200 measurementSaved=true even if R times out; never resurrect stale cache or ask client to submit again. Date changes are not supported by this PUT: it writes the path day, does not move an existing ID. Existing date correction requires a separately designed move operation, not automatic delete/reinsert. Read computation has a cumulative 15-second R execution budget plus a bounded 2-second queue wait. Process at most 128 days per R batch, prioritize selected/latest days, and mark remaining misses PENDING_CALCULATION. Release DB locks during R; bound total HTTP work to 20 seconds, with explicit client timeout at least 30 seconds. No unlimited 5-year synchronous recomputation. Repeated GETs may warm reproducible cache, never mutate raw measurements.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChildId"
+          },
+          {
+            "$ref": "#/components/parameters/MeasuredOn"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; inspect per-block computation/reference/content statuses.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveDayResponse"
+                },
+                "examples": {
+                  "SaveAssessmentUnavailable": {
+                    "$ref": "#/components/examples/SaveAssessmentUnavailable"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DatabaseUnavailable"
+          }
+        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SaveGrowthDay"
+                "$ref": "#/components/schemas/SaveDayRequest"
               },
-              "example": {
-                "weightKg": 8.4,
-                "height": {
-                  "value": 69.5,
-                  "measurePosition": "lying"
+              "examples": {
+                "weightOnly": {
+                  "$ref": "#/components/examples/RequestWeight"
                 },
-                "headCircumferenceCm": 43.7,
-                "note": "Measured at home"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Saved; both creation and update return 200",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GrowthDay"
+                "sameDayPair": {
+                  "$ref": "#/components/examples/RequestPair"
                 }
               }
             }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "422": {
-            "$ref": "#/components/responses/Validation"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
           }
         }
       }
     },
     "/children/{childId}/growth/measurements/{measurementId}": {
       "delete": {
+        "operationId": "deleteGrowthMeasurement",
         "tags": [
-          "Growth"
+          "Mobile Growth"
         ],
-        "operationId": "deleteChildGrowthMeasurement",
-        "summary": "Soft-delete one measurement",
-        "description": "Requires growth edit access or ownership. Verify measurement belongs to childId. Set deleted_at/deleted_by in storage. Removing weight or height removes the derived BMI for that day when the pair becomes incomplete. Repeating deletion of an already deleted measurement belonging to this child returns 204; nonexistent or other-child IDs return 404. Client reloads history and summary. No view permission returns 404; view-only permission returns 403.",
+        "summary": "Xóa mềm một số đo",
+        "description": "Requires edit. Verify child ownership and access before looking up record. In one child-locked transaction soft-delete and invalidate all evaluations depending on primary or paired FK; no R execution needed. Same authorized already-deleted ID returns 204. Nonexistent/other-child/no-view is 404, view-only is 403. Re-adding same metric/day creates a new active ID. Reload overview/detail/velocity after success; absence of response body is expected.",
         "parameters": [
           {
-            "name": "childId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
+            "$ref": "#/components/parameters/ChildId"
           },
           {
-            "name": "measurementId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
+            "$ref": "#/components/parameters/MeasurementId"
           }
         ],
         "responses": {
           "204": {
-            "description": "Deleted; no response body"
+            "description": "Deletion committed or already deleted; no body.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All child-specific responses are private and not stored by shared caches.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -207,10 +459,10 @@
             "$ref": "#/components/responses/NotFound"
           },
           "422": {
-            "$ref": "#/components/responses/Validation"
+            "$ref": "#/components/responses/ValidationError"
           },
           "503": {
-            "$ref": "#/components/responses/Unavailable"
+            "$ref": "#/components/responses/DatabaseUnavailable"
           }
         }
       }
@@ -218,125 +470,1074 @@
   },
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
+      "MobileBearer": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
-    "responses": {
-      "Unauthorized": {
-        "description": "ACCESS_TOKEN_INVALID, ACCESS_TOKEN_EXPIRED, SESSION_EXPIRED or SESSION_REVOKED; includes WWW-Authenticate: Bearer.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        },
-        "headers": {
-          "WWW-Authenticate": {
-            "schema": {
-              "type": "string",
-              "const": "Bearer"
-            }
-          }
-        }
-      },
-      "Forbidden": {
-        "description": "ACCOUNT_UNAVAILABLE, or GROWTH_WRITE_FORBIDDEN for a member with view-only access.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
-      },
-      "NotFound": {
-        "description": "CHILD_NOT_FOUND or MEASUREMENT_NOT_FOUND. Deleted children and children without view access return 404 to avoid disclosing profiles.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
-      },
-      "Validation": {
-        "description": "VALIDATION_ERROR: invalid UUID/date, measurement before birth or after today in Asia/Ho_Chi_Minh, from > to, out-of-range value or missing height measurement position.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
-      },
-      "Unavailable": {
-        "description": "DATABASE_UNAVAILABLE or AUTH_NOT_CONFIGURED (AUTH_SECRET must have at least 32 characters).",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
+        "bearerFormat": "JWT",
+        "description": "Existing parent mobile auth session; server checks token and current account/session plus child scope growth."
       }
     },
     "schemas": {
-      "Error": {
+      "AssessmentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_CALCULATION",
+          "READY",
+          "NOT_ASSESSABLE",
+          "RECHECK_DATA",
+          "CALCULATION_UNAVAILABLE",
+          "NOT_APPLICABLE"
+        ]
+      },
+      "AssessmentReason": {
+        "type": "string",
+        "enum": [
+          "MISSING_SEX",
+          "MISSING_MEASUREMENTS",
+          "MISSING_PAIRED_MEASUREMENT",
+          "INCONSISTENT_PAIR",
+          "WHO_OUT_OF_RANGE",
+          "WHO_FLAGGED",
+          "NON_FINITE_RESULT",
+          "INVALID_MEASURE_POSITION",
+          "R_TIMEOUT",
+          "R_BUSY",
+          "R_EXECUTION_FAILED",
+          "INVALID_R_RESPONSE",
+          "OUT_OF_SCOPE_AGE"
+        ]
+      },
+      "VelocityCalculationStatus": {
+        "type": "string",
+        "enum": [
+          "READY",
+          "INSUFFICIENT_MEASUREMENTS",
+          "INVALID_INTERVAL",
+          "INCOMPARABLE_MEASUREMENTS",
+          "NOT_SUPPORTED",
+          "CALCULATION_UNAVAILABLE"
+        ]
+      },
+      "ReferenceStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "REFERENCE_MATCHED",
+          "NO_EXACT_REFERENCE",
+          "REFERENCE_UNAVAILABLE",
+          "REFERENCE_UNVERIFIED",
+          "REFERENCE_NOT_APPLICABLE"
+        ]
+      },
+      "ReferenceReason": {
+        "type": "string",
+        "enum": [
+          "NO_MATCHING_INTERVAL",
+          "NO_MATCHING_AGE",
+          "MISSING_REFERENCE_FILE",
+          "REFERENCE_NOT_VERIFIED",
+          "CHECKSUM_MISMATCH",
+          "REFERENCE_SCHEMA_INVALID",
+          "OUT_OF_SCOPE_AGE",
+          "UNSUPPORTED_INDICATOR"
+        ]
+      },
+      "VelocityZScoreStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "READY",
+          "UNAVAILABLE"
+        ]
+      },
+      "VelocityZScoreReason": {
+        "type": "string",
+        "enum": [
+          "METHOD_NOT_VERIFIED",
+          "TRANSFORM_DOMAIN_ERROR",
+          "INVALID_REFERENCE_PARAMETERS",
+          "CALCULATION_FAILED"
+        ]
+      },
+      "ContentStatus": {
+        "type": "string",
+        "enum": [
+          "READY",
+          "MAPPING_NOT_FOUND",
+          "MAPPING_NOT_APPROVED",
+          "TEMPLATE_DATA_MISSING"
+        ]
+      },
+      "ReferenceImportStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_VERIFICATION",
+          "LOCAL_STRUCTURE_CHECKED",
+          "VERIFIED"
+        ]
+      },
+      "Metric": {
+        "type": "string",
+        "enum": [
+          "weight",
+          "height",
+          "head_circumference",
+          "bmi"
+        ]
+      },
+      "Indicator": {
+        "type": "string",
+        "enum": [
+          "wfa",
+          "lhfa",
+          "hcfa",
+          "bmifa",
+          "wfl",
+          "wfh"
+        ]
+      },
+      "ClassificationCode": {
+        "type": "string",
+        "enum": [
+          "HIGH_HC",
+          "HIGH_WFA",
+          "LOW_HC",
+          "OBESITY",
+          "OVERWEIGHT",
+          "RISK_OVERWEIGHT",
+          "SEVERE_STUNTING",
+          "SEVERE_THINNESS",
+          "SEVERE_UNDERWEIGHT",
+          "SEVERE_WASTING",
+          "STUNTING",
+          "THINNESS",
+          "UNDERWEIGHT",
+          "VERY_HIGH_HC",
+          "VERY_LOW_HC",
+          "VERY_TALL",
+          "WASTING",
+          "WITHIN_RANGE"
+        ]
+      },
+      "PointKey": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "error"
-        ],
         "properties": {
-          "error": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "code",
-              "message",
-              "fields",
-              "details"
-            ],
-            "properties": {
-              "code": {
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "indicator": {
+            "$ref": "#/components/schemas/Indicator"
+          }
+        },
+        "required": [
+          "measurementId",
+          "pairedMeasurementId",
+          "indicator"
+        ]
+      },
+      "Scope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "startOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endBefore": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "startOn",
+          "endBefore"
+        ],
+        "description": "Effective business-day range [startOn,endBefore), clipped to birth, today and the exclusive 60-calendar-month birthday. endBefore may equal startOn for an empty effective range."
+      },
+      "ResponseMeta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "const": "1"
+          },
+          "snapshotToken": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "engineBundleId": {
+            "anyOf": [
+              {
                 "type": "string"
               },
-              "message": {
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "calculationPending": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "snapshotToken",
+          "generatedAt",
+          "engineBundleId",
+          "contentVersion",
+          "calculationPending"
+        ],
+        "description": "A single consistent snapshot. snapshotToken is opaque, not sortable. engineBundleId=null when the R runtime is unavailable. calculationPending reports unfinished cache misses, not a failed measurement save."
+      },
+      "ChildContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "sex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "male",
+                  "female"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "growthAccess": {
+            "type": "string",
+            "enum": [
+              "view",
+              "edit"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "dateOfBirth",
+          "sex",
+          "growthAccess"
+        ]
+      },
+      "ContentBlock": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ContentStatus"
+          },
+          "mappingType": {
+            "type": "string",
+            "enum": [
+              "ATTAINED",
+              "ASSESSMENT_STATUS",
+              "VELOCITY",
+              "VELOCITY_TREND",
+              "VELOCITY_ZSCORE",
+              "AGE_CONTEXT"
+            ]
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ACTUAL_ONLY",
+                  "AGE_0_5_MONTHS",
+                  "AGE_24_59_MONTHS",
+                  "AGE_6_23_MONTHS",
+                  "CALCULATION_FAILED",
+                  "CALCULATION_UNAVAILABLE",
+                  "HIGH_HC",
+                  "HIGH_WFA",
+                  "INCOMPARABLE_MEASUREMENTS",
+                  "INSUFFICIENT_MEASUREMENTS",
+                  "INVALID_INTERVAL",
+                  "INVALID_REFERENCE_PARAMETERS",
+                  "LOW_HC",
+                  "METHOD_NOT_VERIFIED",
+                  "NOT_APPLICABLE",
+                  "NOT_ASSESSABLE",
+                  "NOT_SUPPORTED",
+                  "OBESITY",
+                  "OVERWEIGHT",
+                  "PENDING_CALCULATION",
+                  "RECHECK_DATA",
+                  "REFERENCE_MATCHED",
+                  "REFERENCE_NOT_APPLICABLE",
+                  "REFERENCE_UNAVAILABLE",
+                  "REFERENCE_UNVERIFIED",
+                  "RISK_OVERWEIGHT",
+                  "SEVERE_STUNTING",
+                  "SEVERE_THINNESS",
+                  "SEVERE_UNDERWEIGHT",
+                  "SEVERE_WASTING",
+                  "STUNTING",
+                  "THINNESS",
+                  "TRANSFORM_DOMAIN_ERROR",
+                  "TREND_FASTER",
+                  "TREND_SLOWER",
+                  "TREND_UNCHANGED",
+                  "UNDERWEIGHT",
+                  "VERY_HIGH_HC",
+                  "VERY_LOW_HC",
+                  "VERY_TALL",
+                  "WASTING",
+                  "WITHIN_RANGE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adviceCode": {
+            "anyOf": [
+              {
                 "type": "string"
               },
-              "fields": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "status",
+          "mappingType",
+          "code",
+          "adviceCode",
+          "text"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "not": {
+                    "const": "READY"
+                  }
                 }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": true
+              }
+            },
+            "then": {
+              "properties": {
+                "text": {
+                  "const": "Nội dung giải thích hiện chưa sẵn có."
+                }
               }
             }
           }
-        }
+        ],
+        "description": "Only APPROVED templates may produce READY. Failed lookup/review/missing data uses the fixed fallback; never substitute another classification. adviceCode is for advice deduplication, null for comments."
+      },
+      "Content": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "$ref": "#/components/schemas/ContentBlock"
+          },
+          "advice": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            }
+          },
+          "ageContext": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            }
+          }
+        },
+        "required": [
+          "comment",
+          "advice",
+          "ageContext"
+        ]
+      },
+      "IndicatorAssessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "indicator": {
+            "$ref": "#/components/schemas/Indicator"
+          },
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentStatus"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classificationCode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScorePrecision": {
+            "const": 2
+          },
+          "precisionSource": {
+            "const": "anthro_public_output"
+          },
+          "sourceStandard": {
+            "const": "WHO-2006"
+          },
+          "cacheTag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^W06-[a-f0-9]{24}$",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "$ref": "#/components/schemas/Content"
+          }
+        },
+        "required": [
+          "indicator",
+          "measurementId",
+          "pairedMeasurementId",
+          "status",
+          "reason",
+          "zScore",
+          "classificationCode",
+          "zScorePrecision",
+          "precisionSource",
+          "sourceStandard",
+          "cacheTag",
+          "content"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "PENDING_CALCULATION"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "null"
+                },
+                "zScore": {
+                  "type": "null"
+                },
+                "classificationCode": {
+                  "type": "null"
+                },
+                "cacheTag": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "null"
+                },
+                "zScore": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "NOT_ASSESSABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "MISSING_SEX",
+                    "MISSING_MEASUREMENTS",
+                    "MISSING_PAIRED_MEASUREMENT",
+                    "INCONSISTENT_PAIR",
+                    "WHO_OUT_OF_RANGE"
+                  ]
+                },
+                "zScore": {
+                  "type": "null"
+                },
+                "classificationCode": {
+                  "type": "null"
+                },
+                "cacheTag": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "RECHECK_DATA"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "WHO_FLAGGED",
+                    "NON_FINITE_RESULT",
+                    "INVALID_MEASURE_POSITION"
+                  ]
+                },
+                "zScore": {
+                  "type": "null"
+                },
+                "classificationCode": {
+                  "type": "null"
+                },
+                "cacheTag": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "CALCULATION_UNAVAILABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "R_TIMEOUT",
+                    "R_BUSY",
+                    "R_EXECUTION_FAILED",
+                    "INVALID_R_RESPONSE"
+                  ]
+                },
+                "zScore": {
+                  "type": "null"
+                },
+                "classificationCode": {
+                  "type": "null"
+                },
+                "cacheTag": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "NOT_APPLICABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "OUT_OF_SCOPE_AGE"
+                  ]
+                },
+                "zScore": {
+                  "type": "null"
+                },
+                "classificationCode": {
+                  "type": "null"
+                },
+                "cacheTag": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "wfa"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE_UNDERWEIGHT",
+                        "UNDERWEIGHT",
+                        "WITHIN_RANGE",
+                        "HIGH_WFA"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "lhfa"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE_STUNTING",
+                        "STUNTING",
+                        "WITHIN_RANGE",
+                        "VERY_TALL"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "hcfa"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "VERY_LOW_HC",
+                        "LOW_HC",
+                        "WITHIN_RANGE",
+                        "HIGH_HC",
+                        "VERY_HIGH_HC"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "bmifa"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE_THINNESS",
+                        "THINNESS",
+                        "WITHIN_RANGE",
+                        "RISK_OVERWEIGHT",
+                        "OVERWEIGHT",
+                        "OBESITY"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "wfl"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE_WASTING",
+                        "WASTING",
+                        "WITHIN_RANGE",
+                        "RISK_OVERWEIGHT",
+                        "OVERWEIGHT",
+                        "OBESITY"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "const": "wfh"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "classificationCode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE_WASTING",
+                        "WASTING",
+                        "WITHIN_RANGE",
+                        "RISK_OVERWEIGHT",
+                        "OVERWEIGHT",
+                        "OBESITY"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pairedMeasurementId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "indicator": {
+                  "type": "string",
+                  "enum": [
+                    "bmifa",
+                    "wfl",
+                    "wfh"
+                  ]
+                },
+                "status": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "pairedMeasurementId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "cacheTag": {
+                  "type": "string"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "const": "READY"
+                },
+                "classificationCode": {
+                  "$ref": "#/components/schemas/ClassificationCode"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Z is the unchanged public anthro 1.1.0 output (already rounded to 2 decimals). READY may have null classification when its mapping is not approved; then cacheTag=null. A flag/policy failure only removes the affected indicators, not other valid indicators on the day."
+      },
+      "Normalization": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "READY",
+              "NOT_ASSESSABLE",
+              "RECHECK_DATA",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "recumbent_length",
+                  "standing_height"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "normalizedLenheiCm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adjustmentCm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "enum": [
+                  -0.7,
+                  0,
+                  0.7
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "basis",
+          "normalizedLenheiCm",
+          "adjustmentCm"
+        ],
+        "description": "Normalized by the 731-day anthro boundary, not calendar-month display labels or raw cmeasure. c9mo_flag=1 disallows height-based assessment even if R returns finite numbers.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "null"
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "recumbent_length",
+                    "standing_height"
+                  ]
+                },
+                "normalizedLenheiCm": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "adjustmentCm": {
+                  "type": "number",
+                  "enum": [
+                    -0.7,
+                    0,
+                    0.7
+                  ]
+                }
+              }
+            }
+          }
+        ]
       },
       "Measurement": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "metric",
-          "value",
-          "unit",
-          "measurePosition",
-          "measuredAt",
-          "ageInDays",
-          "note",
-          "createdAt",
-          "updatedAt"
-        ],
         "properties": {
           "id": {
             "type": "string",
@@ -352,7 +1553,9 @@
           },
           "value": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 99999.99,
+            "multipleOf": 0.01
           },
           "unit": {
             "type": "string",
@@ -361,29 +1564,41 @@
               "cm"
             ]
           },
-          "measurePosition": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "lying",
-              "standing",
-              null
-            ]
-          },
-          "measuredAt": {
+          "measuredOn": {
             "type": "string",
             "format": "date"
           },
-          "ageInDays": {
+          "measuredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ageDays": {
             "type": "integer",
             "minimum": 0
           },
+          "measurePosition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "lying",
+                  "standing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "note": {
-            "type": [
-              "string",
-              "null"
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "createdAt": {
@@ -394,50 +1609,1147 @@
             "type": "string",
             "format": "date-time"
           }
-        }
-      },
-      "BmiPoint": {
-        "type": "object",
-        "additionalProperties": false,
+        },
         "required": [
-          "measuredAt",
+          "id",
+          "metric",
           "value",
           "unit",
-          "weightMeasurementId",
-          "heightMeasurementId"
+          "measuredOn",
+          "measuredAt",
+          "ageDays",
+          "measurePosition",
+          "note",
+          "createdAt",
+          "updatedAt"
         ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "metric": {
+                  "const": "weight"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "unit": {
+                  "const": "kg"
+                },
+                "measurePosition": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "metric": {
+                  "const": "height"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "unit": {
+                  "const": "cm"
+                },
+                "measurePosition": {
+                  "type": "string",
+                  "enum": [
+                    "lying",
+                    "standing"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "metric": {
+                  "const": "head_circumference"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "unit": {
+                  "const": "cm"
+                },
+                "measurePosition": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Raw active measurement only. measuredOn is Asia/Ho_Chi_Minh business date. Deleted rows are excluded. IDs, not names/indexes, identify points."
+      },
+      "RawValues": {
+        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "measuredAt": {
+          "weightKg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "heightCm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headCircumferenceCm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measurePosition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "lying",
+                  "standing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "weightKg",
+          "heightCm",
+          "headCircumferenceCm",
+          "measurePosition"
+        ]
+      },
+      "MetricSample": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measuredOn": {
             "type": "string",
             "format": "date"
+          },
+          "ageDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ageLabel": {
+            "type": "string"
           },
           "value": {
             "type": "number",
             "exclusiveMinimum": 0
           },
           "unit": {
-            "const": "kg/m2"
-          },
-          "weightMeasurementId": {
             "type": "string",
-            "format": "uuid"
+            "enum": [
+              "kg",
+              "cm",
+              "kg/m2"
+            ]
           },
-          "heightMeasurementId": {
-            "type": "string",
-            "format": "uuid"
+          "raw": {
+            "$ref": "#/components/schemas/RawValues"
+          },
+          "normalization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Normalization"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assessments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndicatorAssessment"
+            },
+            "maxItems": 6
           }
-        }
+        },
+        "required": [
+          "measurementId",
+          "pairedMeasurementId",
+          "measuredOn",
+          "ageDays",
+          "ageLabel",
+          "value",
+          "unit",
+          "raw",
+          "normalization",
+          "assessments"
+        ],
+        "description": "Value/normalization calculated by backend. BMI and weight-for-size use the same active-day weight/height pair. No client-side re-pairing or raw-height BMI. A sample may have unavailable assessments."
       },
-      "GrowthDay": {
+      "ChartPoint": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "measuredAt",
-          "measurements",
-          "bmi"
-        ],
         "properties": {
-          "measuredAt": {
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measuredOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "ageDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ageLabel": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "kg",
+              "cm",
+              "kg/m2"
+            ]
+          },
+          "raw": {
+            "$ref": "#/components/schemas/RawValues"
+          },
+          "normalization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Normalization"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assessments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndicatorAssessment"
+            },
+            "maxItems": 6
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "segmentId": {
+            "type": "string"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/IndicatorAssessment"
+          }
+        },
+        "required": [
+          "measurementId",
+          "pairedMeasurementId",
+          "measuredOn",
+          "ageDays",
+          "ageLabel",
+          "value",
+          "unit",
+          "raw",
+          "normalization",
+          "assessments",
+          "x",
+          "y",
+          "segmentId",
+          "assessment"
+        ],
+        "description": "x/y must equal the selected chart units and normalization. measurementId+pairedMeasurementId+indicator is the stable selection key; duplicate x at different dates must remain distinct. assessment is the entry for this chart in assessments."
+      },
+      "OmittedPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measuredOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "raw": {
+            "$ref": "#/components/schemas/RawValues"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/AssessmentReason"
+          }
+        },
+        "required": [
+          "measurementId",
+          "pairedMeasurementId",
+          "measuredOn",
+          "raw",
+          "reason"
+        ]
+      },
+      "Axis": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "age_days",
+              "length_cm",
+              "height_cm",
+              "weight",
+              "length",
+              "head_circumference",
+              "bmi",
+              "interval_end_date"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "days",
+              "date",
+              "cm",
+              "kg",
+              "kg/m2",
+              "g",
+              "g/month",
+              "cm/month"
+            ]
+          },
+          "displayUnit": {
+            "type": "string"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "unit",
+          "displayUnit",
+          "min",
+          "max"
+        ]
+      },
+      "ReferenceSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasetId": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "version": {
+            "type": "string"
+          },
+          "retrievedOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female"
+            ]
+          },
+          "standard": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "kg",
+              "cm",
+              "kg/m2",
+              "g"
+            ]
+          },
+          "xType": {
+            "type": "string",
+            "enum": [
+              "age_days",
+              "length_cm",
+              "height_cm",
+              "interval"
+            ]
+          },
+          "xMin": {
+            "type": "number"
+          },
+          "xMax": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "datasetId",
+          "sha256",
+          "sourceUrl",
+          "version",
+          "retrievedOn",
+          "sex",
+          "standard",
+          "unit",
+          "xType",
+          "xMin",
+          "xMax"
+        ]
+      },
+      "Curve": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sd": {
+            "type": "integer",
+            "enum": [
+              -3,
+              -2,
+              -1,
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sd",
+          "points"
+        ]
+      },
+      "ReferenceSegment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string"
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "recumbent_length",
+                  "standing_height"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "xMin": {
+            "type": "number"
+          },
+          "xMax": {
+            "type": "number"
+          },
+          "curves": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Curve"
+            },
+            "maxItems": 7
+          }
+        },
+        "required": [
+          "id",
+          "datasetId",
+          "basis",
+          "xMin",
+          "xMax",
+          "curves"
+        ],
+        "description": "LHFA/BMIFA split at 731 days. Never join curves/child series across the normalization boundary. Draw-only interpolation within a curve/segment is not an assessment or exact SD evidence."
+      },
+      "ChartReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "importStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceImportStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "standard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenceSource"
+            }
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenceSegment"
+            }
+          }
+        },
+        "required": [
+          "importStatus",
+          "reason",
+          "standard",
+          "sources",
+          "segments"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "importStatus": {
+                  "not": {
+                    "const": "VERIFIED"
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "segments": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ],
+        "description": "Missing file: importStatus=null/reason=MISSING_REFERENCE_FILE, no curves. Non-VERIFIED imports never supply overlays. Numeric R assessments can remain READY independently."
+      },
+      "Warning": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "assessment",
+              "reference",
+              "content",
+              "engine"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "scope",
+          "status",
+          "reason"
+        ],
+        "description": "status/reason must belong to the named namespace in the status contract; no undocumented widget-only codes."
+      },
+      "Evidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "indicator": {
+            "$ref": "#/components/schemas/Indicator"
+          },
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pairedMeasurementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "datasetId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "referenceVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "x": {
+            "type": "number"
+          },
+          "sdValues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "sd": {
+                  "type": "integer",
+                  "enum": [
+                    -3,
+                    -2,
+                    -1,
+                    0,
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "sd",
+                "value"
+              ]
+            }
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "MISSING_REFERENCE_FILE",
+                  "REFERENCE_NOT_VERIFIED",
+                  "NO_MATCHING_AGE",
+                  "NO_MATCHING_INTERVAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "indicator",
+          "measurementId",
+          "pairedMeasurementId",
+          "datasetId",
+          "referenceVersion",
+          "x",
+          "sdValues",
+          "available",
+          "reason"
+        ],
+        "description": "Exact official SD values at this x/basis/version only. Do not present interpolated display curves as exact reference evidence. Empty evidence does not invalidate a public R Z-score."
+      },
+      "Chart": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chartId": {
+            "type": "string",
+            "enum": [
+              "WFA_AGE",
+              "LHFA_AGE",
+              "HCFA_AGE",
+              "BMIFA_AGE",
+              "WFL_LENGTH",
+              "WFH_HEIGHT"
+            ]
+          },
+          "indicator": {
+            "$ref": "#/components/schemas/Indicator"
+          },
+          "xAxis": {
+            "$ref": "#/components/schemas/Axis"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/Axis"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/ChartReference"
+          },
+          "childPoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            }
+          },
+          "omittedPoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OmittedPoint"
+            }
+          },
+          "selectedPointKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PointKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            }
+          }
+        },
+        "required": [
+          "chartId",
+          "indicator",
+          "xAxis",
+          "yAxis",
+          "reference",
+          "childPoints",
+          "omittedPoints",
+          "selectedPointKey",
+          "evidence",
+          "warnings"
+        ],
+        "description": "Six attained-growth charts; WFL/WFH are scatter (x=cm,y=kg), not age plots. No synthetic y=0 WHO coordinates. Filter changes viewport, not classifications."
+      },
+      "VelocityCapability": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "type": "string",
+            "enum": [
+              "weight",
+              "height",
+              "head_circumference"
+            ]
+          },
+          "actualSupported": {
+            "const": true
+          },
+          "whoIntervalMonths": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                6
+              ]
+            },
+            "uniqueItems": true
+          },
+          "referenceImportStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceImportStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "metric",
+          "actualSupported",
+          "whoIntervalMonths",
+          "referenceImportStatus"
+        ],
+        "description": "Supported periods, not a promise of a match for every age. Weight 1-month and head 2/3-month tables end at 12 months. Length/head do not support period 1. Product WHO comparison requires end age below 24 calendar months."
+      },
+      "Capabilities": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Metric"
+            },
+            "uniqueItems": true
+          },
+          "velocity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VelocityCapability"
+            },
+            "maxItems": 3
+          },
+          "bmiVelocitySupported": {
+            "const": false
+          },
+          "whoVelocityEndAgeMonthsExclusive": {
+            "const": 24
+          },
+          "maxAgeMonthsExclusive": {
+            "const": 60
+          }
+        },
+        "required": [
+          "metrics",
+          "velocity",
+          "bmiVelocitySupported",
+          "whoVelocityEndAgeMonthsExclusive",
+          "maxAgeMonthsExclusive"
+        ]
+      },
+      "OverviewCard": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "$ref": "#/components/schemas/Metric"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricSample"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sparkline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricSample"
+            }
+          }
+        },
+        "required": [
+          "metric",
+          "latest",
+          "sparkline"
+        ],
+        "description": "latest uses all active history independent of the sparkline date filter. No average Z-score."
+      },
+      "OverviewResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          },
+          "child": {
+            "$ref": "#/components/schemas/ChildContext"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverviewCard"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "metric": {
+                      "const": "weight"
+                    }
+                  },
+                  "required": [
+                    "metric"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "metric": {
+                      "const": "height"
+                    }
+                  },
+                  "required": [
+                    "metric"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "metric": {
+                      "const": "head_circumference"
+                    }
+                  },
+                  "required": [
+                    "metric"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "metric": {
+                      "const": "bmi"
+                    }
+                  },
+                  "required": [
+                    "metric"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          }
+        },
+        "required": [
+          "meta",
+          "child",
+          "scope",
+          "cards",
+          "capabilities"
+        ],
+        "description": "Exactly one card for each metric; absent values are latest=null and sparkline=[]."
+      },
+      "MetricDetailResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          },
+          "child": {
+            "$ref": "#/components/schemas/ChildContext"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/Metric"
+          },
+          "measurements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Measurement"
+            }
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricSample"
+            }
+          },
+          "charts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Chart"
+            },
+            "minItems": 1,
+            "maxItems": 2
+          },
+          "selectedPointKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PointKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          }
+        },
+        "required": [
+          "meta",
+          "child",
+          "scope",
+          "metric",
+          "measurements",
+          "samples",
+          "charts",
+          "selectedPointKey",
+          "capabilities"
+        ],
+        "description": "Full data in the effective date range (no hidden pagination). BMI includes its source raw measurements. Weight returns WFA plus the requested/default WFL or WFH chart, even empty. Other metrics return one age chart. Per-chart datasets and source metadata must share this snapshot."
+      },
+      "DayResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          },
+          "child": {
+            "$ref": "#/components/schemas/ChildContext"
+          },
+          "measuredOn": {
             "type": "string",
             "format": "date"
           },
@@ -451,204 +2763,87 @@
           "bmi": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BmiPoint"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        }
-      },
-      "ChildContext": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "fullName",
-          "dateOfBirth",
-          "gender",
-          "growthAccess"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "dateOfBirth": {
-            "type": "string",
-            "format": "date"
-          },
-          "gender": {
-            "type": "string",
-            "enum": [
-              "male",
-              "female"
-            ]
-          },
-          "growthAccess": {
-            "type": "string",
-            "enum": [
-              "view",
-              "edit"
-            ]
-          }
-        }
-      },
-      "LatestSummary": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "weight",
-          "height",
-          "headCircumference",
-          "bmi"
-        ],
-        "properties": {
-          "weight": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Measurement"
+                "$ref": "#/components/schemas/MetricSample"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "height": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Measurement"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "headCircumference": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Measurement"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "bmi": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/BmiPoint"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        }
-      },
-      "GrowthResult": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "child",
-          "range",
-          "days",
-          "summary"
-        ],
-        "properties": {
-          "child": {
-            "$ref": "#/components/schemas/ChildContext"
-          },
-          "range": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "from",
-              "to"
-            ],
-            "properties": {
-              "from": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date"
-              },
-              "to": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date"
-              }
-            }
-          },
-          "days": {
+          "assessments": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GrowthDay"
-            }
-          },
-          "summary": {
-            "$ref": "#/components/schemas/LatestSummary"
+              "$ref": "#/components/schemas/IndicatorAssessment"
+            },
+            "maxItems": 5
           }
-        }
-      },
-      "HeightInput": {
-        "type": "object",
-        "additionalProperties": false,
+        },
         "required": [
-          "value",
-          "measurePosition"
+          "meta",
+          "child",
+          "measuredOn",
+          "measurements",
+          "bmi",
+          "assessments"
         ],
-        "properties": {
-          "value": {
-            "type": "number",
-            "exclusiveMinimum": 0,
-            "maximum": 250,
-            "multipleOf": 0.01
-          },
-          "measurePosition": {
-            "type": "string",
-            "enum": [
-              "lying",
-              "standing"
-            ]
-          }
-        }
+        "description": "An empty day is 200 with measurements=[], bmi=null, assessments=[]. No fake pending evaluation without a primary measurement. At most WFA/LHFA/HCFA/BMIFA plus one WFL/H."
       },
-      "SaveGrowthDay": {
+      "SaveDayRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": [],
         "properties": {
           "weightKg": {
             "type": "number",
             "exclusiveMinimum": 0,
-            "maximum": 200,
+            "maximum": 99999.99,
             "multipleOf": 0.01
           },
           "height": {
-            "$ref": "#/components/schemas/HeightInput"
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 99999.99,
+                "multipleOf": 0.01
+              },
+              "measurePosition": {
+                "type": "string",
+                "enum": [
+                  "lying",
+                  "standing"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "measurePosition"
+            ]
           },
           "headCircumferenceCm": {
             "type": "number",
             "exclusiveMinimum": 0,
-            "maximum": 100,
+            "maximum": 99999.99,
             "multipleOf": 0.01
           },
+          "measuredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "note": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 2000
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
+        "required": [],
         "anyOf": [
           {
             "required": [
@@ -666,7 +2861,2634 @@
             ]
           }
         ],
-        "description": "At least one measurement is required. Omitted measurements remain unchanged; measurement fields cannot be null. note applies only to supplied measurements: omit to preserve, null to clear. Maximum values mirror current UI input limits and are technical validation limits, not clinical thresholds."
+        "description": "Partial-day upsert. At least one non-null metric. kg/cm only; no manual age/BMI/Z/unit/IDs. note absent preserves notes, null clears; applies only to supplied metrics. measuredAt if supplied must have a timezone, match path business day and not be in the future. If omitted preserve existing row timestamp, or use local midnight for a new row as a date-only convention, not recovered actual time."
+      },
+      "SaveDayResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "measurementSaved": {
+            "const": true
+          },
+          "changedMetrics": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "weight",
+                "height",
+                "head_circumference"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "day": {
+            "$ref": "#/components/schemas/DayResponse"
+          }
+        },
+        "required": [
+          "measurementSaved",
+          "changedMetrics",
+          "day"
+        ],
+        "description": "200 even when R is unavailable after commit. Repeat same values keeps active IDs and may yield changedMetrics=[]. Never report a committed measurement as an unsuccessful save because assessment failed."
+      },
+      "VelocityEndpoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "measurementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "measuredOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "ageDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rawValue": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "comparisonValue": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "normalization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Normalization"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "measurementId",
+          "measuredOn",
+          "ageDays",
+          "rawValue",
+          "comparisonValue",
+          "normalization"
+        ]
+      },
+      "MatchedVelocityReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/ReferenceSource"
+          },
+          "intervalLabel": {
+            "type": "string"
+          },
+          "tableIntervalMonths": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              6
+            ]
+          },
+          "intervalMonths": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startAgeValue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "startAgeUnit": {
+            "type": "string",
+            "enum": [
+              "weeks",
+              "months"
+            ]
+          },
+          "endAgeValue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endAgeUnit": {
+            "type": "string",
+            "enum": [
+              "weeks",
+              "months"
+            ]
+          },
+          "sdValues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "sd": {
+                  "type": "integer",
+                  "enum": [
+                    -3,
+                    -2,
+                    -1,
+                    0,
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "sd",
+                "value"
+              ]
+            },
+            "minItems": 7,
+            "maxItems": 7
+          }
+        },
+        "required": [
+          "source",
+          "intervalLabel",
+          "tableIntervalMonths",
+          "intervalMonths",
+          "startAgeValue",
+          "startAgeUnit",
+          "endAgeValue",
+          "endAgeUnit",
+          "sdValues"
+        ],
+        "description": "Full-interval increments in g or cm, including negative/zero published values and ties. intervalMonths=null for mixed week/month rows. Only verified source and exact calendar/week anchors; no interpolation or division into monthly rates."
+      },
+      "VelocityInterval": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "intervalId": {
+            "type": "string"
+          },
+          "from": {
+            "$ref": "#/components/schemas/VelocityEndpoint"
+          },
+          "to": {
+            "$ref": "#/components/schemas/VelocityEndpoint"
+          },
+          "elapsedDays": {
+            "type": "integer"
+          },
+          "calculationStatus": {
+            "$ref": "#/components/schemas/VelocityCalculationStatus"
+          },
+          "deltaValue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deltaUnit": {
+            "type": "string",
+            "enum": [
+              "g",
+              "cm"
+            ]
+          },
+          "ratePerMonth": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rateUnit": {
+            "type": "string",
+            "enum": [
+              "g/month",
+              "cm/month"
+            ]
+          },
+          "referenceStatus": {
+            "$ref": "#/components/schemas/ReferenceStatus"
+          },
+          "referenceReason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "matchedReference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchedVelocityReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScoreStatus": {
+            "$ref": "#/components/schemas/VelocityZScoreStatus"
+          },
+          "zScoreReason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VelocityZScoreReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "$ref": "#/components/schemas/Content"
+          },
+          "zScoreContent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Content"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "intervalId",
+          "from",
+          "to",
+          "elapsedDays",
+          "calculationStatus",
+          "deltaValue",
+          "deltaUnit",
+          "ratePerMonth",
+          "rateUnit",
+          "referenceStatus",
+          "referenceReason",
+          "matchedReference",
+          "zScoreStatus",
+          "zScoreReason",
+          "zScore",
+          "content",
+          "zScoreContent"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "calculationStatus": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "elapsedDays": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "deltaValue": {
+                  "type": "number"
+                },
+                "ratePerMonth": {
+                  "type": "number"
+                },
+                "referenceStatus": {
+                  "not": {
+                    "const": "NOT_REQUESTED"
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "deltaValue": {
+                  "type": "null"
+                },
+                "ratePerMonth": {
+                  "type": "null"
+                },
+                "referenceStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "NOT_REQUESTED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "null"
+                },
+                "matchedReference": {
+                  "type": "null"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "REFERENCE_MATCHED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "null"
+                },
+                "matchedReference": {
+                  "$ref": "#/components/schemas/MatchedVelocityReference"
+                },
+                "zScoreStatus": {
+                  "type": "string",
+                  "enum": [
+                    "READY",
+                    "UNAVAILABLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "NO_EXACT_REFERENCE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "string",
+                  "enum": [
+                    "NO_MATCHING_INTERVAL",
+                    "NO_MATCHING_AGE"
+                  ]
+                },
+                "matchedReference": {
+                  "type": "null"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "REFERENCE_UNAVAILABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "string",
+                  "enum": [
+                    "MISSING_REFERENCE_FILE"
+                  ]
+                },
+                "matchedReference": {
+                  "type": "null"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "REFERENCE_UNVERIFIED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "string",
+                  "enum": [
+                    "REFERENCE_NOT_VERIFIED",
+                    "CHECKSUM_MISMATCH",
+                    "REFERENCE_SCHEMA_INVALID"
+                  ]
+                },
+                "matchedReference": {
+                  "type": "null"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "REFERENCE_NOT_APPLICABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceReason": {
+                  "type": "string",
+                  "enum": [
+                    "OUT_OF_SCOPE_AGE",
+                    "UNSUPPORTED_INDICATOR"
+                  ]
+                },
+                "matchedReference": {
+                  "type": "null"
+                },
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "zScoreStatus": {
+                  "const": "NOT_REQUESTED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "zScore": {
+                  "type": "null"
+                },
+                "zScoreReason": {
+                  "type": "null"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "zScoreStatus": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "zScore": {
+                  "type": "number"
+                },
+                "zScoreReason": {
+                  "type": "null"
+                },
+                "zScoreContent": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "zScoreStatus": {
+                  "const": "UNAVAILABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "zScore": {
+                  "type": "null"
+                },
+                "zScoreReason": {
+                  "$ref": "#/components/schemas/VelocityZScoreReason"
+                },
+                "zScoreContent": {
+                  "$ref": "#/components/schemas/Content"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Actual rate = full-interval delta / elapsedDays * 30.4375. Do not round before calculation. Negative and zero increments remain valid numeric observations. REFERENCE_MATCHED is not a healthy/unhealthy classification; Z may still be unavailable."
+      },
+      "VelocityTrend": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "TREND_FASTER",
+              "TREND_SLOWER",
+              "TREND_UNCHANGED"
+            ]
+          },
+          "previousIntervalId": {
+            "type": "string"
+          },
+          "currentIntervalId": {
+            "type": "string"
+          },
+          "previousRatePerMonth": {
+            "type": "number"
+          },
+          "currentRatePerMonth": {
+            "type": "number"
+          },
+          "rateDifference": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rateUnit": {
+            "type": "string",
+            "enum": [
+              "g/month",
+              "cm/month"
+            ]
+          },
+          "content": {
+            "$ref": "#/components/schemas/Content"
+          }
+        },
+        "required": [
+          "code",
+          "previousIntervalId",
+          "currentIntervalId",
+          "previousRatePerMonth",
+          "currentRatePerMonth",
+          "rateDifference",
+          "rateUnit",
+          "content"
+        ],
+        "description": "Only two consecutive non-overlapping actual intervals with same basis/units. Compare unrounded actual rates; UNCHANGED means exact equality, no implicit epsilon. rateDifference is magnitude, not signed change."
+      },
+      "VelocityResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          },
+          "child": {
+            "$ref": "#/components/schemas/ChildContext"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "weight",
+              "height",
+              "head_circumference"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "actual",
+              "who"
+            ]
+          },
+          "intervalMonths": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "calculationStatus": {
+            "$ref": "#/components/schemas/VelocityCalculationStatus"
+          },
+          "referenceStatus": {
+            "$ref": "#/components/schemas/ReferenceStatus"
+          },
+          "referenceReason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actualIntervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VelocityInterval"
+            }
+          },
+          "whoIntervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VelocityInterval"
+            }
+          },
+          "selectedActualIntervalId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selectedWhoIntervalId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VelocityTrend"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "$ref": "#/components/schemas/Content"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          }
+        },
+        "required": [
+          "meta",
+          "child",
+          "scope",
+          "metric",
+          "mode",
+          "intervalMonths",
+          "calculationStatus",
+          "referenceStatus",
+          "referenceReason",
+          "actualIntervals",
+          "whoIntervals",
+          "selectedActualIntervalId",
+          "selectedWhoIntervalId",
+          "trend",
+          "content",
+          "capabilities"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "mode": {
+                  "const": "actual"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "intervalMonths": {
+                  "type": "null"
+                },
+                "whoIntervals": {
+                  "maxItems": 0
+                },
+                "selectedWhoIntervalId": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "intervalMonths": {
+                  "type": "integer",
+                  "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    6
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "calculationStatus": {
+                  "not": {
+                    "const": "READY"
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "referenceStatus": {
+                  "const": "NOT_REQUESTED"
+                },
+                "referenceReason": {
+                  "type": "null"
+                },
+                "trend": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Actual list is built from consecutive active readings before filtering by interval end date. WHO list is separate and may use different pairs or overlap. Selecting a WHO pair never changes actual latest rate. No exact match is 200 with reason, not a fabricated WHO Z-score."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "ACCESS_TOKEN_EXPIRED",
+                  "ACCESS_TOKEN_INVALID",
+                  "ACCESS_TOKEN_REQUIRED",
+                  "ACCOUNT_UNAVAILABLE",
+                  "AUTH_NOT_CONFIGURED",
+                  "DATABASE_UNAVAILABLE",
+                  "DUPLICATE_MEASUREMENT",
+                  "INVALID_DATE",
+                  "INVALID_MEASURE_POSITION",
+                  "INVALID_METRIC",
+                  "INVALID_VALUE",
+                  "OUT_OF_SCOPE_AGE",
+                  "RESOURCE_NOT_FOUND",
+                  "SESSION_EXPIRED",
+                  "SESSION_REVOKED",
+                  "UNAUTHORIZED_CAREGIVER",
+                  "VALIDATION_ERROR"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "fields",
+              "details"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "description": "Transport/request failures only; follows auth error envelope. Engine/reference/content failures normally stay in successful data responses."
+      }
+    },
+    "parameters": {
+      "ChildId": {
+        "name": "childId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Real authorized child UUID, never a display name or local demo ID."
+      },
+      "Metric": {
+        "name": "metric",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Metric"
+        }
+      },
+      "VelocityMetric": {
+        "name": "metric",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "weight",
+            "height",
+            "head_circumference"
+          ]
+        },
+        "description": "BMI velocity is not a supported operation; bmi is a 422 INVALID_METRIC request."
+      },
+      "MeasuredOn": {
+        "name": "measuredOn",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Asia/Ho_Chi_Minh business date. Cannot precede birth, be future, or be on/after the 60-month birthday."
+      },
+      "MeasurementId": {
+        "name": "measurementId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "StartOn": {
+        "name": "startOn",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Inclusive date. Default birth date; effective range clipped to product scope. A supplied startOn must be before a supplied endBefore."
+      },
+      "EndBefore": {
+        "name": "endBefore",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Exclusive date. Default min(tomorrow business date,60-month birthday). Clipping can produce an empty effective range."
+      },
+      "SelectedMeasurementId": {
+        "name": "selectedMeasurementId",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Optional primary ID within the effective range. Belongs to this child and requested metric (weight for BMI). Missing/deleted/other-child ID is 404; an authorized ID outside this metric/range is 422. Default newest visible point."
+      },
+      "WeightForSizeIndicator": {
+        "name": "weightForSizeIndicator",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "wfl",
+            "wfh"
+          ]
+        },
+        "description": "Only for metric=weight. Default branch of newest visible same-day pair by age_days; if none, branch by child current age. Explicit branch returns only eligible pairs for that branch, never converts WFL into WFH to force a match."
+      },
+      "StatureView": {
+        "name": "statureView",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "radius5",
+            "radius10",
+            "all"
+          ],
+          "default": "radius5"
+        },
+        "description": "Only weight detail secondary scatter. Anchor is newest eligible pair in branch; clip reference viewport to the official cm domain. Does not change assessment or discard primary WFA history."
+      },
+      "VelocityMode": {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "actual",
+            "who"
+          ],
+          "default": "actual"
+        }
+      },
+      "IntervalMonths": {
+        "name": "intervalMonths",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            6
+          ]
+        },
+        "description": "Required in who mode, forbidden in actual mode. Unsupported metric/period combination is 422 INVALID_VALUE; a supported period with no matching pair is 200 NO_EXACT_REFERENCE. Head/length period 1 unsupported; weight period 1 preserves its first mixed week/month rows."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing/invalid/expired/revoked mobile access. Refresh through existing auth; no growth token store.",
+        "headers": {
+          "Cache-Control": {
+            "description": "All child-specific responses are private and not stored by shared caches.",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          },
+          "WWW-Authenticate": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bearer challenge for 401."
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "ACCESS_TOKEN_EXPIRED",
+                "message": "ACCESS_TOKEN_EXPIRED",
+                "fields": {},
+                "details": {}
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated but view-only for this edit, or account unavailable.",
+        "headers": {
+          "Cache-Control": {
+            "description": "All child-specific responses are private and not stored by shared caches.",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "UNAUTHORIZED_CAREGIVER",
+                "message": "UNAUTHORIZED_CAREGIVER",
+                "fields": {},
+                "details": {}
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Child/measurement missing or no view permission. Do not reveal another child exists.",
+        "headers": {
+          "Cache-Control": {
+            "description": "All child-specific responses are private and not stored by shared caches.",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "RESOURCE_NOT_FOUND",
+                "fields": {},
+                "details": {}
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Malformed fields/query or semantic date/metric/position error. error.fields identifies fields; specific request codes may be used.",
+        "headers": {
+          "Cache-Control": {
+            "description": "All child-specific responses are private and not stored by shared caches.",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "VALIDATION_ERROR",
+                "fields": {},
+                "details": {}
+              }
+            }
+          }
+        }
+      },
+      "DatabaseUnavailable": {
+        "description": "Database unavailable before confirmed completion, or AUTH_NOT_CONFIGURED from the existing auth readiness dependency. A transport timeout does not prove a mutation rolled back; reconcile using GET day before resubmission.",
+        "headers": {
+          "Cache-Control": {
+            "description": "All child-specific responses are private and not stored by shared caches.",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "DATABASE_UNAVAILABLE",
+                "fields": {},
+                "details": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "OverviewEmpty": {
+        "summary": "OverviewEmpty",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "cards": [
+            {
+              "metric": "weight",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "height",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "head_circumference",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "bmi",
+              "latest": null,
+              "sparkline": []
+            }
+          ],
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "OverviewEngineUnavailable": {
+        "summary": "OverviewEngineUnavailable",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "cards": [
+            {
+              "metric": "weight",
+              "latest": {
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "pairedMeasurementId": null,
+                "measuredOn": "2026-01-01",
+                "ageDays": 365,
+                "ageLabel": "12 tháng",
+                "value": 9.5,
+                "unit": "kg",
+                "raw": {
+                  "weightKg": 9.5,
+                  "heightCm": null,
+                  "headCircumferenceCm": null,
+                  "measurePosition": null
+                },
+                "normalization": null,
+                "assessments": [
+                  {
+                    "indicator": "wfa",
+                    "measurementId": "00000000-0000-4000-8000-000000000201",
+                    "pairedMeasurementId": null,
+                    "status": "CALCULATION_UNAVAILABLE",
+                    "reason": "R_EXECUTION_FAILED",
+                    "zScore": null,
+                    "classificationCode": null,
+                    "zScorePrecision": 2,
+                    "precisionSource": "anthro_public_output",
+                    "sourceStandard": "WHO-2006",
+                    "cacheTag": null,
+                    "content": {
+                      "comment": {
+                        "status": "MAPPING_NOT_APPROVED",
+                        "mappingType": "ASSESSMENT_STATUS",
+                        "code": "CALCULATION_UNAVAILABLE",
+                        "adviceCode": null,
+                        "text": "Nội dung giải thích hiện chưa sẵn có."
+                      },
+                      "advice": [],
+                      "ageContext": []
+                    }
+                  }
+                ]
+              },
+              "sparkline": [
+                {
+                  "measurementId": "00000000-0000-4000-8000-000000000201",
+                  "pairedMeasurementId": null,
+                  "measuredOn": "2026-01-01",
+                  "ageDays": 365,
+                  "ageLabel": "12 tháng",
+                  "value": 9.5,
+                  "unit": "kg",
+                  "raw": {
+                    "weightKg": 9.5,
+                    "heightCm": null,
+                    "headCircumferenceCm": null,
+                    "measurePosition": null
+                  },
+                  "normalization": null,
+                  "assessments": [
+                    {
+                      "indicator": "wfa",
+                      "measurementId": "00000000-0000-4000-8000-000000000201",
+                      "pairedMeasurementId": null,
+                      "status": "CALCULATION_UNAVAILABLE",
+                      "reason": "R_EXECUTION_FAILED",
+                      "zScore": null,
+                      "classificationCode": null,
+                      "zScorePrecision": 2,
+                      "precisionSource": "anthro_public_output",
+                      "sourceStandard": "WHO-2006",
+                      "cacheTag": null,
+                      "content": {
+                        "comment": {
+                          "status": "MAPPING_NOT_APPROVED",
+                          "mappingType": "ASSESSMENT_STATUS",
+                          "code": "CALCULATION_UNAVAILABLE",
+                          "adviceCode": null,
+                          "text": "Nội dung giải thích hiện chưa sẵn có."
+                        },
+                        "advice": [],
+                        "ageContext": []
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "metric": "height",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "head_circumference",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "bmi",
+              "latest": null,
+              "sparkline": []
+            }
+          ],
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "DayEmpty": {
+        "summary": "DayEmpty",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "measuredOn": "2026-01-01",
+          "measurements": [],
+          "bmi": null,
+          "assessments": []
+        }
+      },
+      "DayEngineUnavailable": {
+        "summary": "DayEngineUnavailable",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "measuredOn": "2026-01-01",
+          "measurements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000201",
+              "metric": "weight",
+              "value": 9.5,
+              "unit": "kg",
+              "measuredOn": "2026-01-01",
+              "measuredAt": "2026-01-01T03:00:00Z",
+              "ageDays": 365,
+              "measurePosition": null,
+              "note": null,
+              "createdAt": "2026-01-01T03:00:00Z",
+              "updatedAt": "2026-01-01T03:00:00Z"
+            }
+          ],
+          "bmi": null,
+          "assessments": [
+            {
+              "indicator": "wfa",
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "status": "CALCULATION_UNAVAILABLE",
+              "reason": "R_EXECUTION_FAILED",
+              "zScore": null,
+              "classificationCode": null,
+              "zScorePrecision": 2,
+              "precisionSource": "anthro_public_output",
+              "sourceStandard": "WHO-2006",
+              "cacheTag": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "ASSESSMENT_STATUS",
+                  "code": "CALCULATION_UNAVAILABLE",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              }
+            }
+          ]
+        }
+      },
+      "DetailReferenceUnavailable": {
+        "summary": "DetailReferenceUnavailable",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "metric": "weight",
+          "measurements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000201",
+              "metric": "weight",
+              "value": 9.5,
+              "unit": "kg",
+              "measuredOn": "2026-01-01",
+              "measuredAt": "2026-01-01T03:00:00Z",
+              "ageDays": 365,
+              "measurePosition": null,
+              "note": null,
+              "createdAt": "2026-01-01T03:00:00Z",
+              "updatedAt": "2026-01-01T03:00:00Z"
+            }
+          ],
+          "samples": [
+            {
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "measuredOn": "2026-01-01",
+              "ageDays": 365,
+              "ageLabel": "12 tháng",
+              "value": 9.5,
+              "unit": "kg",
+              "raw": {
+                "weightKg": 9.5,
+                "heightCm": null,
+                "headCircumferenceCm": null,
+                "measurePosition": null
+              },
+              "normalization": null,
+              "assessments": [
+                {
+                  "indicator": "wfa",
+                  "measurementId": "00000000-0000-4000-8000-000000000201",
+                  "pairedMeasurementId": null,
+                  "status": "CALCULATION_UNAVAILABLE",
+                  "reason": "R_EXECUTION_FAILED",
+                  "zScore": null,
+                  "classificationCode": null,
+                  "zScorePrecision": 2,
+                  "precisionSource": "anthro_public_output",
+                  "sourceStandard": "WHO-2006",
+                  "cacheTag": null,
+                  "content": {
+                    "comment": {
+                      "status": "MAPPING_NOT_APPROVED",
+                      "mappingType": "ASSESSMENT_STATUS",
+                      "code": "CALCULATION_UNAVAILABLE",
+                      "adviceCode": null,
+                      "text": "Nội dung giải thích hiện chưa sẵn có."
+                    },
+                    "advice": [],
+                    "ageContext": []
+                  }
+                }
+              ]
+            }
+          ],
+          "charts": [
+            {
+              "chartId": "WFA_AGE",
+              "indicator": "wfa",
+              "xAxis": {
+                "type": "age_days",
+                "unit": "days",
+                "displayUnit": "calendar_months",
+                "min": 0,
+                "max": 1826
+              },
+              "yAxis": {
+                "type": "weight",
+                "unit": "kg",
+                "displayUnit": "kg",
+                "min": null,
+                "max": null
+              },
+              "reference": {
+                "importStatus": null,
+                "reason": "MISSING_REFERENCE_FILE",
+                "standard": "WHO-2006",
+                "sources": [],
+                "segments": []
+              },
+              "childPoints": [
+                {
+                  "measurementId": "00000000-0000-4000-8000-000000000201",
+                  "pairedMeasurementId": null,
+                  "measuredOn": "2026-01-01",
+                  "ageDays": 365,
+                  "ageLabel": "12 tháng",
+                  "value": 9.5,
+                  "unit": "kg",
+                  "raw": {
+                    "weightKg": 9.5,
+                    "heightCm": null,
+                    "headCircumferenceCm": null,
+                    "measurePosition": null
+                  },
+                  "normalization": null,
+                  "assessments": [
+                    {
+                      "indicator": "wfa",
+                      "measurementId": "00000000-0000-4000-8000-000000000201",
+                      "pairedMeasurementId": null,
+                      "status": "CALCULATION_UNAVAILABLE",
+                      "reason": "R_EXECUTION_FAILED",
+                      "zScore": null,
+                      "classificationCode": null,
+                      "zScorePrecision": 2,
+                      "precisionSource": "anthro_public_output",
+                      "sourceStandard": "WHO-2006",
+                      "cacheTag": null,
+                      "content": {
+                        "comment": {
+                          "status": "MAPPING_NOT_APPROVED",
+                          "mappingType": "ASSESSMENT_STATUS",
+                          "code": "CALCULATION_UNAVAILABLE",
+                          "adviceCode": null,
+                          "text": "Nội dung giải thích hiện chưa sẵn có."
+                        },
+                        "advice": [],
+                        "ageContext": []
+                      }
+                    }
+                  ],
+                  "x": 365,
+                  "y": 9.5,
+                  "segmentId": "wfa",
+                  "assessment": {
+                    "indicator": "wfa",
+                    "measurementId": "00000000-0000-4000-8000-000000000201",
+                    "pairedMeasurementId": null,
+                    "status": "CALCULATION_UNAVAILABLE",
+                    "reason": "R_EXECUTION_FAILED",
+                    "zScore": null,
+                    "classificationCode": null,
+                    "zScorePrecision": 2,
+                    "precisionSource": "anthro_public_output",
+                    "sourceStandard": "WHO-2006",
+                    "cacheTag": null,
+                    "content": {
+                      "comment": {
+                        "status": "MAPPING_NOT_APPROVED",
+                        "mappingType": "ASSESSMENT_STATUS",
+                        "code": "CALCULATION_UNAVAILABLE",
+                        "adviceCode": null,
+                        "text": "Nội dung giải thích hiện chưa sẵn có."
+                      },
+                      "advice": [],
+                      "ageContext": []
+                    }
+                  }
+                }
+              ],
+              "omittedPoints": [],
+              "selectedPointKey": {
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "pairedMeasurementId": null,
+                "indicator": "wfa"
+              },
+              "evidence": [],
+              "warnings": [
+                {
+                  "scope": "reference",
+                  "status": "REFERENCE_UNAVAILABLE",
+                  "reason": "MISSING_REFERENCE_FILE"
+                }
+              ]
+            },
+            {
+              "chartId": "WFL_LENGTH",
+              "indicator": "wfl",
+              "xAxis": {
+                "type": "length_cm",
+                "unit": "cm",
+                "displayUnit": "cm",
+                "min": 45,
+                "max": 110
+              },
+              "yAxis": {
+                "type": "weight",
+                "unit": "kg",
+                "displayUnit": "kg",
+                "min": null,
+                "max": null
+              },
+              "reference": {
+                "importStatus": null,
+                "reason": "MISSING_REFERENCE_FILE",
+                "standard": "WHO-2006",
+                "sources": [],
+                "segments": []
+              },
+              "childPoints": [],
+              "omittedPoints": [],
+              "selectedPointKey": null,
+              "evidence": [],
+              "warnings": [
+                {
+                  "scope": "reference",
+                  "status": "REFERENCE_UNAVAILABLE",
+                  "reason": "MISSING_REFERENCE_FILE"
+                }
+              ]
+            }
+          ],
+          "selectedPointKey": {
+            "measurementId": "00000000-0000-4000-8000-000000000201",
+            "pairedMeasurementId": null,
+            "indicator": "wfa"
+          },
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "VelocityInsufficient": {
+        "summary": "VelocityInsufficient",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "metric": "weight",
+          "mode": "actual",
+          "intervalMonths": null,
+          "calculationStatus": "INSUFFICIENT_MEASUREMENTS",
+          "referenceStatus": "NOT_REQUESTED",
+          "referenceReason": null,
+          "actualIntervals": [],
+          "whoIntervals": [],
+          "selectedActualIntervalId": null,
+          "selectedWhoIntervalId": null,
+          "trend": null,
+          "content": {
+            "comment": {
+              "status": "MAPPING_NOT_APPROVED",
+              "mappingType": "VELOCITY",
+              "code": "INSUFFICIENT_MEASUREMENTS",
+              "adviceCode": null,
+              "text": "Nội dung giải thích hiện chưa sẵn có."
+            },
+            "advice": [],
+            "ageContext": []
+          },
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "SaveAssessmentUnavailable": {
+        "summary": "SaveAssessmentUnavailable",
+        "value": {
+          "measurementSaved": true,
+          "changedMetrics": [
+            "weight"
+          ],
+          "day": {
+            "meta": {
+              "schemaVersion": "1",
+              "snapshotToken": "synthetic-example-snapshot",
+              "generatedAt": "2026-10-29T03:00:00Z",
+              "engineBundleId": null,
+              "contentVersion": "mapping-v2.1-example",
+              "calculationPending": false
+            },
+            "child": {
+              "id": "00000000-0000-4000-8000-000000000101",
+              "fullName": "Bé minh họa",
+              "dateOfBirth": "2025-01-01",
+              "sex": "female",
+              "growthAccess": "edit"
+            },
+            "measuredOn": "2026-01-01",
+            "measurements": [
+              {
+                "id": "00000000-0000-4000-8000-000000000201",
+                "metric": "weight",
+                "value": 9.5,
+                "unit": "kg",
+                "measuredOn": "2026-01-01",
+                "measuredAt": "2026-01-01T03:00:00Z",
+                "ageDays": 365,
+                "measurePosition": null,
+                "note": null,
+                "createdAt": "2026-01-01T03:00:00Z",
+                "updatedAt": "2026-01-01T03:00:00Z"
+              }
+            ],
+            "bmi": null,
+            "assessments": [
+              {
+                "indicator": "wfa",
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "pairedMeasurementId": null,
+                "status": "CALCULATION_UNAVAILABLE",
+                "reason": "R_EXECUTION_FAILED",
+                "zScore": null,
+                "classificationCode": null,
+                "zScorePrecision": 2,
+                "precisionSource": "anthro_public_output",
+                "sourceStandard": "WHO-2006",
+                "cacheTag": null,
+                "content": {
+                  "comment": {
+                    "status": "MAPPING_NOT_APPROVED",
+                    "mappingType": "ASSESSMENT_STATUS",
+                    "code": "CALCULATION_UNAVAILABLE",
+                    "adviceCode": null,
+                    "text": "Nội dung giải thích hiện chưa sẵn có."
+                  },
+                  "advice": [],
+                  "ageContext": []
+                }
+              }
+            ]
+          }
+        }
+      },
+      "RequestWeight": {
+        "summary": "RequestWeight",
+        "value": {
+          "weightKg": 9.5
+        }
+      },
+      "RequestPair": {
+        "summary": "RequestPair",
+        "value": {
+          "weightKg": 9.5,
+          "height": {
+            "value": 75,
+            "measurePosition": "lying"
+          },
+          "note": null
+        }
+      },
+      "ValidationError": {
+        "summary": "ValidationError",
+        "value": {
+          "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "VALIDATION_ERROR",
+            "fields": {
+              "height.measurePosition": "Required for height"
+            },
+            "details": {}
+          }
+        }
+      },
+      "OverviewViewOnly": {
+        "summary": "OverviewViewOnly",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "view"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "cards": [
+            {
+              "metric": "weight",
+              "latest": {
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "pairedMeasurementId": null,
+                "measuredOn": "2026-01-01",
+                "ageDays": 365,
+                "ageLabel": "12 tháng",
+                "value": 9.5,
+                "unit": "kg",
+                "raw": {
+                  "weightKg": 9.5,
+                  "heightCm": null,
+                  "headCircumferenceCm": null,
+                  "measurePosition": null
+                },
+                "normalization": null,
+                "assessments": [
+                  {
+                    "indicator": "wfa",
+                    "measurementId": "00000000-0000-4000-8000-000000000201",
+                    "pairedMeasurementId": null,
+                    "status": "CALCULATION_UNAVAILABLE",
+                    "reason": "R_EXECUTION_FAILED",
+                    "zScore": null,
+                    "classificationCode": null,
+                    "zScorePrecision": 2,
+                    "precisionSource": "anthro_public_output",
+                    "sourceStandard": "WHO-2006",
+                    "cacheTag": null,
+                    "content": {
+                      "comment": {
+                        "status": "MAPPING_NOT_APPROVED",
+                        "mappingType": "ASSESSMENT_STATUS",
+                        "code": "CALCULATION_UNAVAILABLE",
+                        "adviceCode": null,
+                        "text": "Nội dung giải thích hiện chưa sẵn có."
+                      },
+                      "advice": [],
+                      "ageContext": []
+                    }
+                  }
+                ]
+              },
+              "sparkline": [
+                {
+                  "measurementId": "00000000-0000-4000-8000-000000000201",
+                  "pairedMeasurementId": null,
+                  "measuredOn": "2026-01-01",
+                  "ageDays": 365,
+                  "ageLabel": "12 tháng",
+                  "value": 9.5,
+                  "unit": "kg",
+                  "raw": {
+                    "weightKg": 9.5,
+                    "heightCm": null,
+                    "headCircumferenceCm": null,
+                    "measurePosition": null
+                  },
+                  "normalization": null,
+                  "assessments": [
+                    {
+                      "indicator": "wfa",
+                      "measurementId": "00000000-0000-4000-8000-000000000201",
+                      "pairedMeasurementId": null,
+                      "status": "CALCULATION_UNAVAILABLE",
+                      "reason": "R_EXECUTION_FAILED",
+                      "zScore": null,
+                      "classificationCode": null,
+                      "zScorePrecision": 2,
+                      "precisionSource": "anthro_public_output",
+                      "sourceStandard": "WHO-2006",
+                      "cacheTag": null,
+                      "content": {
+                        "comment": {
+                          "status": "MAPPING_NOT_APPROVED",
+                          "mappingType": "ASSESSMENT_STATUS",
+                          "code": "CALCULATION_UNAVAILABLE",
+                          "adviceCode": null,
+                          "text": "Nội dung giải thích hiện chưa sẵn có."
+                        },
+                        "advice": [],
+                        "ageContext": []
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "metric": "height",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "head_circumference",
+              "latest": null,
+              "sparkline": []
+            },
+            {
+              "metric": "bmi",
+              "latest": null,
+              "sparkline": []
+            }
+          ],
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "DayMissingPair": {
+        "summary": "DayMissingPair",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": "synthetic-local-anthro-1.1.0",
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "measuredOn": "2026-01-01",
+          "measurements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000201",
+              "metric": "weight",
+              "value": 9.5,
+              "unit": "kg",
+              "measuredOn": "2026-01-01",
+              "measuredAt": "2026-01-01T03:00:00Z",
+              "ageDays": 365,
+              "measurePosition": null,
+              "note": null,
+              "createdAt": "2026-01-01T03:00:00Z",
+              "updatedAt": "2026-01-01T03:00:00Z"
+            }
+          ],
+          "bmi": null,
+          "assessments": [
+            {
+              "indicator": "wfa",
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "status": "READY",
+              "reason": null,
+              "zScore": 0.49,
+              "classificationCode": null,
+              "zScorePrecision": 2,
+              "precisionSource": "anthro_public_output",
+              "sourceStandard": "WHO-2006",
+              "cacheTag": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "ATTAINED",
+                  "code": "WITHIN_RANGE",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              }
+            },
+            {
+              "indicator": "bmifa",
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "status": "NOT_ASSESSABLE",
+              "reason": "MISSING_PAIRED_MEASUREMENT",
+              "zScore": null,
+              "classificationCode": null,
+              "zScorePrecision": 2,
+              "precisionSource": "anthro_public_output",
+              "sourceStandard": "WHO-2006",
+              "cacheTag": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "ASSESSMENT_STATUS",
+                  "code": "NOT_ASSESSABLE",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              }
+            },
+            {
+              "indicator": "wfl",
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "status": "NOT_ASSESSABLE",
+              "reason": "MISSING_PAIRED_MEASUREMENT",
+              "zScore": null,
+              "classificationCode": null,
+              "zScorePrecision": 2,
+              "precisionSource": "anthro_public_output",
+              "sourceStandard": "WHO-2006",
+              "cacheTag": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "ASSESSMENT_STATUS",
+                  "code": "NOT_ASSESSABLE",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              }
+            }
+          ]
+        }
+      },
+      "DayWhoFlagged": {
+        "summary": "DayWhoFlagged",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": "synthetic-local-anthro-1.1.0",
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "measuredOn": "2026-01-01",
+          "measurements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000201",
+              "metric": "weight",
+              "value": 40,
+              "unit": "kg",
+              "measuredOn": "2026-01-01",
+              "measuredAt": "2026-01-01T03:00:00Z",
+              "ageDays": 365,
+              "measurePosition": null,
+              "note": null,
+              "createdAt": "2026-01-01T03:00:00Z",
+              "updatedAt": "2026-01-01T03:00:00Z"
+            }
+          ],
+          "bmi": null,
+          "assessments": [
+            {
+              "indicator": "wfa",
+              "measurementId": "00000000-0000-4000-8000-000000000201",
+              "pairedMeasurementId": null,
+              "status": "RECHECK_DATA",
+              "reason": "WHO_FLAGGED",
+              "zScore": null,
+              "classificationCode": null,
+              "zScorePrecision": 2,
+              "precisionSource": "anthro_public_output",
+              "sourceStandard": "WHO-2006",
+              "cacheTag": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "ASSESSMENT_STATUS",
+                  "code": "RECHECK_DATA",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              }
+            }
+          ]
+        }
+      },
+      "VelocityActualOnly": {
+        "summary": "VelocityActualOnly",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "metric": "weight",
+          "mode": "actual",
+          "intervalMonths": null,
+          "calculationStatus": "READY",
+          "referenceStatus": "NO_EXACT_REFERENCE",
+          "referenceReason": "NO_MATCHING_INTERVAL",
+          "actualIntervals": [
+            {
+              "intervalId": "synthetic-actual-interval",
+              "from": {
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "measuredOn": "2026-08-01",
+                "ageDays": 577,
+                "rawValue": 9.0,
+                "comparisonValue": 9.0,
+                "normalization": null
+              },
+              "to": {
+                "measurementId": "00000000-0000-4000-8000-000000000202",
+                "measuredOn": "2026-08-31",
+                "ageDays": 607,
+                "rawValue": 9.3,
+                "comparisonValue": 9.3,
+                "normalization": null
+              },
+              "elapsedDays": 30,
+              "calculationStatus": "READY",
+              "deltaValue": 300,
+              "deltaUnit": "g",
+              "ratePerMonth": 304.375,
+              "rateUnit": "g/month",
+              "referenceStatus": "NO_EXACT_REFERENCE",
+              "referenceReason": "NO_MATCHING_INTERVAL",
+              "matchedReference": null,
+              "zScoreStatus": "NOT_REQUESTED",
+              "zScoreReason": null,
+              "zScore": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "VELOCITY",
+                  "code": "ACTUAL_ONLY",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              },
+              "zScoreContent": null
+            }
+          ],
+          "whoIntervals": [],
+          "selectedActualIntervalId": "synthetic-actual-interval",
+          "selectedWhoIntervalId": null,
+          "trend": null,
+          "content": {
+            "comment": {
+              "status": "MAPPING_NOT_APPROVED",
+              "mappingType": "VELOCITY",
+              "code": "ACTUAL_ONLY",
+              "adviceCode": null,
+              "text": "Nội dung giải thích hiện chưa sẵn có."
+            },
+            "advice": [],
+            "ageContext": []
+          },
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
+      },
+      "VelocityReferenceUnverified": {
+        "summary": "VelocityReferenceUnverified",
+        "value": {
+          "meta": {
+            "schemaVersion": "1",
+            "snapshotToken": "synthetic-example-snapshot",
+            "generatedAt": "2026-10-29T03:00:00Z",
+            "engineBundleId": null,
+            "contentVersion": "mapping-v2.1-example",
+            "calculationPending": false
+          },
+          "child": {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "fullName": "Bé minh họa",
+            "dateOfBirth": "2025-01-01",
+            "sex": "female",
+            "growthAccess": "edit"
+          },
+          "scope": {
+            "startOn": "2025-01-01",
+            "endBefore": "2026-10-30"
+          },
+          "metric": "weight",
+          "mode": "who",
+          "intervalMonths": 2,
+          "calculationStatus": "READY",
+          "referenceStatus": "REFERENCE_UNVERIFIED",
+          "referenceReason": "REFERENCE_NOT_VERIFIED",
+          "actualIntervals": [
+            {
+              "intervalId": "synthetic-actual-interval",
+              "from": {
+                "measurementId": "00000000-0000-4000-8000-000000000201",
+                "measuredOn": "2026-08-01",
+                "ageDays": 577,
+                "rawValue": 9.0,
+                "comparisonValue": 9.0,
+                "normalization": null
+              },
+              "to": {
+                "measurementId": "00000000-0000-4000-8000-000000000202",
+                "measuredOn": "2026-08-31",
+                "ageDays": 607,
+                "rawValue": 9.3,
+                "comparisonValue": 9.3,
+                "normalization": null
+              },
+              "elapsedDays": 30,
+              "calculationStatus": "READY",
+              "deltaValue": 300,
+              "deltaUnit": "g",
+              "ratePerMonth": 304.375,
+              "rateUnit": "g/month",
+              "referenceStatus": "REFERENCE_UNVERIFIED",
+              "referenceReason": "REFERENCE_NOT_VERIFIED",
+              "matchedReference": null,
+              "zScoreStatus": "NOT_REQUESTED",
+              "zScoreReason": null,
+              "zScore": null,
+              "content": {
+                "comment": {
+                  "status": "MAPPING_NOT_APPROVED",
+                  "mappingType": "VELOCITY",
+                  "code": "REFERENCE_UNVERIFIED",
+                  "adviceCode": null,
+                  "text": "Nội dung giải thích hiện chưa sẵn có."
+                },
+                "advice": [],
+                "ageContext": []
+              },
+              "zScoreContent": null
+            }
+          ],
+          "whoIntervals": [],
+          "selectedActualIntervalId": "synthetic-actual-interval",
+          "selectedWhoIntervalId": null,
+          "trend": null,
+          "content": {
+            "comment": {
+              "status": "MAPPING_NOT_APPROVED",
+              "mappingType": "VELOCITY",
+              "code": "REFERENCE_UNVERIFIED",
+              "adviceCode": null,
+              "text": "Nội dung giải thích hiện chưa sẵn có."
+            },
+            "advice": [],
+            "ageContext": []
+          },
+          "capabilities": {
+            "metrics": [
+              "weight",
+              "height",
+              "head_circumference",
+              "bmi"
+            ],
+            "velocity": [
+              {
+                "metric": "weight",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "height",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              },
+              {
+                "metric": "head_circumference",
+                "actualSupported": true,
+                "whoIntervalMonths": [
+                  2,
+                  3,
+                  4,
+                  6
+                ],
+                "referenceImportStatus": "LOCAL_STRUCTURE_CHECKED"
+              }
+            ],
+            "bmiVelocitySupported": false,
+            "whoVelocityEndAgeMonthsExclusive": 24,
+            "maxAgeMonthsExclusive": 60
+          }
+        }
       }
     }
   }
