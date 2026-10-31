@@ -1,3 +1,7 @@
+import 'growth_weight_velocity_header.dart';
+import 'weight_chart_view.dart';
+import '../../app_colors.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,14 +9,12 @@ import 'package:flutter/material.dart';
 import 'growth_repository.dart';
 import 'growth_visuals.dart';
 import 'growth_stature_age_axis.dart';
-import 'growth_status_badge.dart';
 import 'growth_chart_explanation_dialog.dart';
 import 'growth_weight_assessment.dart';
 import 'growth_weight_velocity.dart';
 import 'growth_weight_history.dart';
 import 'growth_weight_input.dart';
 import 'growth_weight_stature_chart.dart';
-import 'growth_weight_chart_legend.dart';
 
 int growthWeightAgeStart(int end) =>
     const {0: 0, 3: 0, 6: 3, 9: 6, 12: 9, 36: 12, 60: 36}[end]!;
@@ -85,7 +87,9 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
     try {
       _statureReference = age == null
           ? null
-          : await widget.repository.statureReference(age < 24);
+          : await widget.repository.statureReference(
+              sorted.last.measuredAt.difference(birth!).inDays < 731,
+            );
     } catch (_) {
       _statureReference = null;
     }
@@ -179,7 +183,7 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                             border: Border(
                               bottom: BorderSide(
                                 color: label == _tab
-                                    ? growthWeightOrange
+                                    ? WeightChartColors.positive
                                     : const Color(0xFFEEF0EC),
                                 width: label == _tab ? 2 : 1,
                               ),
@@ -197,8 +201,8 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: label == _tab
-                                      ? growthWeightOrange
-                                      : growthMuted,
+                                      ? WeightChartColors.positive
+                                      : WeightChartColors.axis,
                                 ),
                               ),
                             ),
@@ -285,52 +289,30 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                           : ageMonths < 24
                           ? 'chiều dài'
                           : 'chiều cao';
-                      final visiblePoints = birth == null
-                          ? <GrowthMeasurementDraft>[]
-                          : points.where((point) {
-                              final age = growthChartAgeMonths(
-                                birth,
-                                point.measuredAt,
-                              );
-                              return age != null &&
-                                  growthWeightAgeInRange(age, _ageRange);
-                            }).toList();
                       return SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _WeightCurrentHeader(
                               latest: latest,
+                              grams: grams,
                               easyRead: easy,
                               onUpdate: _update,
                             ),
-                            const SizedBox(height: 20),
-                            _WeightSummaryNotes(
-                              statureLabel: statureLabel,
-                              measuredAt: latest.measuredAt,
-                              previous: previous,
-                              grams: grams,
-                              easyRead: easy,
-                            ),
-                            const SizedBox(height: 24),
-                            GrowthAgeChartHeading(
-                              months: _ageRange,
-                              easyRead: easy,
-                              onChanged: (value) => setState(() {
-                                _selectedAgeEnd = value;
-                                _selected = null;
-                                _showTooltip = true;
-                              }),
-                            ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             GrowthWeightMeasurementChart(
                               seriesColor: growthWeightOrange,
                               zScoreForPoint: (point) => widget.repository
                                   .weightAssessmentFor(point, null)
                                   ?.wfa
                                   ?.zScore,
-                              points: visiblePoints,
+                              classificationForPoint: (point) => widget
+                                  .repository
+                                  .weightAssessmentFor(point, null)
+                                  ?.wfa
+                                  ?.classification,
+                              points: points,
                               reference: _referenceData,
                               dateOfBirth: birth,
                               minAgeMonths: _ageStart,
@@ -350,15 +332,6 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                                 _showTooltip = true;
                               }),
                             ),
-                            const SizedBox(height: 8),
-                            if (_referenceData == null)
-                              const GrowthWeightChartLegend(
-                                seriesColor: growthWeightOrange,
-                              ),
-                            if (_referenceData != null)
-                              const GrowthWeightReferenceLegend(
-                                seriesColor: growthWeightOrange,
-                              ),
                             const SizedBox(height: 18),
                             Transform.rotate(
                               angle: easy ? 0 : -.035,
@@ -370,7 +343,7 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                                     vertical: 18,
                                   ),
                                   child: Text(
-                                    'Vùng màu thể hiện cân nặng của bé so với chuẩn WHO theo tuổi và giới tính. Xem thêm Cân nặng theo $statureLabel để đánh giá mức độ cân đối',
+                                    'Xem thêm Cân nặng theo chiều dài để đánh giá mức độ cân đối',
                                     style: TextStyle(
                                       fontFamily: easy
                                           ? 'Nunito'
@@ -397,6 +370,30 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                             else
                               const SizedBox(height: 16),
                             GrowthWeightStatureChart(
+                              classificationForDate: (date) {
+                                final weight = points
+                                    .where(
+                                      (p) => DateUtils.isSameDay(
+                                        p.measuredAt,
+                                        date,
+                                      ),
+                                    )
+                                    .lastOrNull;
+                                final stature = _statureMeasurements
+                                    .where(
+                                      (p) => DateUtils.isSameDay(
+                                        p.measuredAt,
+                                        date,
+                                      ),
+                                    )
+                                    .lastOrNull;
+                                return weight == null
+                                    ? null
+                                    : widget.repository
+                                          .weightAssessmentFor(weight, stature)
+                                          ?.wflh
+                                          ?.classification;
+                              },
                               zScoreForDate: (date) {
                                 final weight = points
                                     .where(
@@ -428,7 +425,10 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                               dateOfBirth: birth,
                               useLength: ageMonths == null
                                   ? null
-                                  : ageMonths < 24,
+                                  : latest.measuredAt
+                                            .difference(birth!)
+                                            .inDays <
+                                        731,
                               statureLabel: statureLabel,
                             ),
                             if (_referenceFailed)
@@ -441,48 +441,9 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                                 ),
                               ),
                             const SizedBox(height: 8),
-                            if (_selected != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: Semantics(
-                                  liveRegion: true,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: const Color(0xFFE9EDE8),
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '${_formatDate(_selected!.measuredAt)} · ${formatGrowthValue(_selected!.value)} kg',
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Đóng chi tiết điểm đo',
-                                          onPressed: () => setState(() {
-                                            _selected = null;
-                                            _showTooltip = false;
-                                          }),
-                                          icon: const Icon(
-                                            Icons.close,
-                                            size: 20,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
                             const SizedBox(height: 24),
                             GrowthWeightAssessment(
+                              overviewOnly: true,
                               measuredAt: latest.measuredAt,
                               statureMeasurement: _statureMeasurements
                                   .where(
@@ -516,15 +477,6 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
                               weight: latest.value,
                               statureLabel: statureLabel,
                             ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'Mức thay đổi ghi nhận chưa phải đánh giá tốc độ theo WHO.',
-                              style: TextStyle(
-                                fontSize: easy ? 18 : 14,
-                                height: 1.4,
-                                color: growthMuted,
-                              ),
-                            ),
                           ],
                         ),
                       );
@@ -541,106 +493,54 @@ class _GrowthWeightDetailScreenState extends State<GrowthWeightDetailScreen> {
 }
 
 class _WeightCurrentHeader extends StatelessWidget {
-  const _WeightCurrentHeader({
-    required this.latest,
-    required this.easyRead,
-    required this.onUpdate,
-  });
+  const _WeightCurrentHeader({required this.latest, required this.grams, required this.easyRead, required this.onUpdate});
   final GrowthMeasurementDraft latest;
+  final int? grams;
   final bool easyRead;
   final VoidCallback onUpdate;
-
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final measurement = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Cân nặng hiện tại',
-            style: TextStyle(
-              fontSize: easyRead ? 20 : 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 4,
-            children: [
-              Text(
-                '${formatGrowthValue(latest.value)} kg',
-                style: TextStyle(
-                  fontSize: easyRead ? 36 : 32,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF172A4B),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Cập nhật cân nặng',
-                onPressed: onUpdate,
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  size: 20,
-                  color: Color(0xFF62738D),
-                ),
-              ),
-            ],
-          ),
-          Text(
-            'Ngày đo: ${_formatDate(latest.measuredAt)}',
-            style: TextStyle(
-              fontSize: easyRead ? 18 : 13,
-              color: const Color(0xFF62738D),
-            ),
-          ),
+  Widget build(BuildContext context) => LayoutBuilder(builder:(context,c) {
+    final large = easyRead || MediaQuery.textScalerOf(context).scale(14)>20;
+    final update = IconButton(
+      tooltip:'Cập nhật cân nặng',
+      onPressed:onUpdate,
+      style:ButtonStyle(
+        minimumSize:const WidgetStatePropertyAll(Size(48,48)),
+        foregroundColor:WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.pressed) ? growthGreen : WeightChartColors.heroInk),
+        overlayColor:WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.pressed) ? growthGreen.withValues(alpha:.18) :
+          states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)
+            ? growthGreen.withValues(alpha:.10) : Colors.transparent),
+      ),
+      icon:const Icon(Icons.edit_outlined,size:20),
+    );
+    final value = Text.rich(TextSpan(children:[
+      TextSpan(text:formatGrowthValue(latest.value),style:TextStyle(fontSize:large?48:c.maxWidth<330?38:44,
+        fontWeight:FontWeight.w900,letterSpacing:-1.5,color:WeightChartColors.data)),
+      TextSpan(text:' kg',style:TextStyle(fontSize:large?24:20,fontWeight:FontWeight.w700,color:WeightChartColors.data)),
+    ]),style:const TextStyle(fontFamily:'Nunito',height:1.12));
+    final change = _WeightSummaryNotes(measuredAt:latest.measuredAt,previous:null,grams:grams,easyRead:large);
+    return CustomPaint(painter:large?null:const GrowthWeightHeaderDoodle(),child:
+      Padding(padding:const EdgeInsets.fromLTRB(4,0,4,10),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        if(!large) Row(children:[
+          const Expanded(child:Text('Bé hiện nặng',style:TextStyle(fontFamily:'DancingScript',fontSize:21,
+            fontWeight:FontWeight.w700,color:WeightChartColors.heroInk))),
+        ]) else ...[
+          const Text('Bé hiện nặng',style:TextStyle(fontFamily:'Nunito',fontSize:20,fontWeight:FontWeight.w700,color:WeightChartColors.heroInk)),
+          const SizedBox(height:6),
         ],
-      );
-      final reference = Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          GrowthStatusBadge(
-            label: 'Ph\u00f9 h\u1ee3p',
-            icon: Icons.check_rounded,
-            foreground: const Color(0xFF9A4D1D),
-            background: const Color(0xFFFFEDD9),
-            angle: easyRead ? 0 : -.045,
-            easyRead: easyRead,
-          ),
-          const SizedBox(height: 12),
-          GrowthStatusBadge(
-            label: 'C\u00e2n \u0111\u1ed1i',
-            icon: Icons.drag_handle_rounded,
-            foreground: const Color(0xFFAE652B),
-            background: const Color(0xFFFFF3E5),
-            angle: easyRead ? 0 : .045,
-            easyRead: easyRead,
-          ),
+        const SizedBox(height:4),
+        if(!large) Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+          Expanded(child:Row(children:[Flexible(child:value),update])),
+          const SizedBox(width:12),
+          Flexible(child:Align(alignment:Alignment.centerRight,child:change)),
+        ]) else ...[
+          Row(children:[Flexible(child:value),update]),const SizedBox(height:6),
+          Align(alignment:Alignment.centerRight,child:change),
         ],
-      );
-      final stacked =
-          easyRead ||
-          constraints.maxWidth < 300 ||
-          MediaQuery.textScalerOf(context).scale(15) > 21;
-      return stacked
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                measurement,
-                const SizedBox(height: 16),
-                SizedBox(width: 172, child: reference),
-              ],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(child: measurement),
-                const SizedBox(width: 12),
-                SizedBox(width: 132, child: reference),
-              ],
-            );
-    },
-  );
+      ])));
+  });
 }
 
 String growthRelativeMeasurementInterval(DateTime previous, DateTime current) {
@@ -654,122 +554,20 @@ String growthRelativeMeasurementInterval(DateTime previous, DateTime current) {
   return days > 0 ? 'so với $days ngày trước' : 'so với lần đo cùng ngày';
 }
 
-class _WeightNotePaper extends StatelessWidget {
-  const _WeightNotePaper({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: const GrowthNotePaperPainter(),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: child,
-    ),
-  );
-}
-
 class _WeightSummaryNotes extends StatelessWidget {
-  const _WeightSummaryNotes({
-    required this.statureLabel,
-    required this.measuredAt,
-    required this.previous,
-    required this.grams,
-    required this.easyRead,
-  });
-  final GrowthMeasurementDraft? previous;
+  const _WeightSummaryNotes({required this.measuredAt,required this.previous,required this.grams,required this.easyRead});
   final DateTime measuredAt;
-  final String statureLabel;
+  final GrowthMeasurementDraft? previous;
   final int? grams;
   final bool easyRead;
-
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(width: 8),
-          Flexible(
-            child: Transform.rotate(
-              angle: easyRead ? 0 : -.12,
-              child: _WeightNotePaper(
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: grams == null
-                            ? 'Chưa đủ số đo để so sánh'
-                            : grams == 0
-                            ? 'Cân nặng không đổi'
-                            : '${grams! > 0 ? 'Tăng' : 'Giảm'} ${grams!.abs()}g',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: growthWeightOrange,
-                        ),
-                      ),
-                      if (previous != null)
-                        TextSpan(
-                          text:
-                              '\n${growthRelativeMeasurementInterval(previous!.measuredAt, measuredAt)}',
-                          style: TextStyle(fontSize: easyRead ? 16 : 17),
-                        ),
-                    ],
-                  ),
-                  style: TextStyle(
-                    fontFamily: easyRead ? 'Nunito' : 'DancingScript',
-                    fontSize: easyRead ? 20 : 21,
-                    height: 1.2,
-                    color: const Color(0xFF20365D),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (!easyRead)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: GrowthAsset('weight-note-arrow', size: 64),
-            ),
-        ],
-      ),
-      SizedBox(height: easyRead ? 8 : 0),
-      Transform.translate(
-        offset: easyRead ? const Offset(0, -30) : const Offset(-8, -26),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8, right: 8),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Transform.rotate(
-              angle: easyRead ? 0 : -.12,
-              alignment: Alignment.centerRight,
-              child: _WeightNotePaper(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const GrowthAsset('overview-chart', size: 28),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'Cân nặng của bé hiện phù hợp với tuổi\nvà cân đối với $statureLabel',
-                        style: TextStyle(
-                          fontFamily: easyRead ? 'Nunito' : 'DancingScript',
-                          fontSize: easyRead ? 18 : 18,
-                          height: 1.25,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) => Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.end,children:[
+    Text(grams==null?'Chưa có lần đo trước':grams==0?'Cân nặng không đổi':'${grams!>0?'Tăng':'Giảm'} ${grams!.abs()} g',
+      style:TextStyle(fontFamily:easyRead?'Nunito':'DancingScript',fontSize:easyRead?20:21,
+        fontWeight:FontWeight.w900,color:WeightChartColors.data)),
+    if(grams!=null) Text('so với lần trước',style:TextStyle(fontFamily:easyRead?'Nunito':'DancingScript',
+      fontSize:easyRead?17:15,color:WeightChartColors.heroInk)),
+  ]);
 }
 
 class GrowthAgeChartHeading extends StatelessWidget {
@@ -896,6 +694,7 @@ class GrowthWeightMeasurementChart extends StatelessWidget {
     this.showTooltip = true,
     this.reference,
     this.zScoreForPoint,
+    this.classificationForPoint,
     this.onHover,
     this.unit = 'kg',
     this.axisTitle = 'Cân nặng (kg)',
@@ -908,6 +707,7 @@ class GrowthWeightMeasurementChart extends StatelessWidget {
   final List<GrowthMeasurementDraft> points;
   final ValueChanged<GrowthMeasurementDraft> onSelect;
   final double? Function(GrowthMeasurementDraft)? zScoreForPoint;
+  final String? Function(GrowthMeasurementDraft)? classificationForPoint;
   final ValueChanged<GrowthMeasurementDraft?>? onHover;
   final bool easyReadMode;
   final DateTime? dateOfBirth;
@@ -931,6 +731,42 @@ class GrowthWeightMeasurementChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (unit == 'kg' && dateOfBirth != null) {
+      final birth = dateOfBirth!;
+      return WeightChartView(
+        title: 'Cân nặng theo tuổi',
+        start: minAgeMonths.toDouble(),
+        end: maxAgeMonths.toDouble(),
+        birth: birth,
+        classificationForDate: (date) => classificationForPoint?.call(
+          points.firstWhere((p) => p.measuredAt == date),
+        ),
+        points: [
+          for (final p in points)
+            (
+              x:
+                  DateTime.utc(
+                        p.measuredAt.year,
+                        p.measuredAt.month,
+                        p.measuredAt.day,
+                      )
+                      .difference(
+                        DateTime.utc(birth.year, birth.month, birth.day),
+                      )
+                      .inDays
+                      .toDouble(),
+              kg: p.value,
+              date: p.measuredAt,
+              z: zScoreForPoint?.call(p),
+            ),
+        ],
+        curves: [
+          for (final r in reference?.rows ?? <GrowthWeightReferenceRow>[])
+            (x: r.ageDays ?? weightAgeTick(r.month), kg: r.weights),
+        ],
+      );
+    }
+
     if (dateOfBirth == null) {
       return Padding(
         padding: const EdgeInsets.all(20),

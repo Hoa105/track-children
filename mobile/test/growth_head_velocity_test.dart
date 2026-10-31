@@ -7,6 +7,7 @@ import 'package:track_children/features/growth/growth_head_detail.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_stature_velocity.dart';
 import 'package:track_children/features/growth/growth_stature_velocity_reference.dart';
+import 'package:track_children/features/growth/head_velocity_data.dart';
 
 final readings = [
   for (var i = 0; i < 4; i++)
@@ -17,6 +18,16 @@ final readings = [
 ];
 
 class HeadVelocityRepo extends GrowthRepository {
+  @override
+  Future<HeadVelocityReference?> headVelocityPeriodReference(
+    int period,
+  ) async => HeadVelocityReference.fromJson(
+    jsonDecode(
+      File('assets/data/who/head_velocity_periods.json').readAsStringSync(),
+    ),
+    'boys',
+    period,
+  );
   @override
   DateTime get dateOfBirth => DateTime(2024, 5, 15);
   @override
@@ -99,17 +110,19 @@ void main() {
       find.byType(GrowthStatureVelocityTab),
     );
     expect(tab.headCircumference, isTrue);
-    expect(find.text('+1 cm/2 tháng'), findsOneWidget);
+    expect(find.text('+1\u00A0cm'), findsOneWidget);
+    for (final period in [2, 3, 4, 6]) {
+      expect(find.byKey(ValueKey('head-period-$period')), findsOneWidget);
+    }
+    expect(find.text('1 tháng'), findsNothing);
+    await tester.ensureVisible(find.text('Vì sao có nhận xét này?'));
+    await tester.tap(find.text('Vì sao có nhận xét này?'));
+    await tester.pumpAndSettle();
+    expect(find.text('Căn cứ đánh giá theo WHO'), findsOneWidget);
     expect(
-      find.textContaining('vòng đầu trong khoảng 0–12 tháng'),
+      find.textContaining('kỳ 2/3 tháng đến 12 tháng tuổi'),
       findsOneWidget,
     );
-    expect(find.text('WHO · −2 SD đến +2 SD · kỳ 2 tháng'), findsOneWidget);
-    await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-    await tester.tap(find.text('Vì sao có kết luận này?'));
-    await tester.pumpAndSettle();
-    expect(find.text('Căn cứ đánh giá'), findsOneWidget);
-    expect(find.textContaining('Kỳ 9–11 tháng · Bé trai'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('Head velocity handles narrow large text', (tester) async {

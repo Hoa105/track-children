@@ -1,0 +1,17 @@
+indicator,classification_code,ui_label,overview_template,review_status
+WFA,SEVERE_UNDERWEIGHT,Rất nhẹ cân,"Ở lần đo này, cân nặng của bé còn thấp nhiều so với khoảng phù hợp dành cho các bé cùng tuổi và giới tính.",APPROVED
+WFA,UNDERWEIGHT,Nhẹ cân,"Ở lần đo này, cân nặng của bé còn thấp hơn khoảng phù hợp dành cho các bé cùng tuổi và giới tính.",APPROVED
+WFA,WITHIN_RANGE,Phù hợp,"Ở lần đo này, cân nặng của bé đang nằm trong khoảng phù hợp với tuổi và giới tính của con.",APPROVED
+WFA,HIGH_WFA,Nặng cân,"Cân nặng của bé ở lần đo này đang cao so với tuổi, còn mức độ cân đối của con cần được xem thêm cùng với chiều dài hoặc chiều cao hiện tại.",APPROVED
+WFL,SEVERE_WASTING,Rất gầy,"Khi xem cân nặng cùng với chiều dài ở lần đo này, bé có cân nặng còn thấp nhiều so với khoảng cân đối dành cho các bé cùng giới tính.",APPROVED
+WFL,WASTING,Gầy,"Khi xem cân nặng cùng với chiều dài ở lần đo này, bé có cân nặng còn thấp hơn khoảng cân đối dành cho các bé cùng giới tính.",APPROVED
+WFL,WITHIN_RANGE,Cân đối,"Khi xem cân nặng cùng với chiều dài ở lần đo này, hai số đo của bé đang ở mức cân đối với nhau.",APPROVED
+WFL,RISK_OVERWEIGHT,Nguy cơ thừa cân,"Khi xem cân nặng cùng với chiều dài ở lần đo này, cân nặng của bé đang cao hơn khoảng cân đối và thuộc mức có nguy cơ thừa cân.",APPROVED
+WFL,OVERWEIGHT,Thừa cân,"Khi xem cân nặng cùng với chiều dài ở lần đo này, cân nặng của bé đang cao hơn khoảng cân đối và thuộc mức thừa cân.",APPROVED
+WFL,OBESITY,Béo phì,"Khi xem cân nặng cùng với chiều dài ở lần đo này, cân nặng của bé đang cao nhiều so với khoảng cân đối và thuộc mức béo phì theo phân loại WHO.",APPROVED
+WFH,SEVERE_WASTING,Rất gầy,"Khi xem cân nặng cùng với chiều cao ở lần đo này, bé có cân nặng còn thấp nhiều so với khoảng cân đối dành cho các bé cùng giới tính.",APPROVED
+WFH,WASTING,Gầy,"Khi xem cân nặng cùng với chiều cao ở lần đo này, bé có cân nặng còn thấp hơn khoảng cân đối dành cho các bé cùng giới tính.",APPROVED
+WFH,WITHIN_RANGE,Cân đối,"Khi xem cân nặng cùng với chiều cao ở lần đo này, hai số đo của bé đang ở mức cân đối với nhau.",APPROVED
+WFH,RISK_OVERWEIGHT,Nguy cơ thừa cân,"Khi xem cân nặng cùng với chiều cao ở lần đo này, cân nặng của bé đang cao hơn khoảng cân đối và thuộc mức có nguy cơ thừa cân.",APPROVED
+WFH,OVERWEIGHT,Thừa cân,"Khi xem cân nặng cùng với chiều cao ở lần đo này, cân nặng của bé đang cao hơn khoảng cân đối và thuộc mức thừa cân.",APPROVED
+WFH,OBESITY,Béo phì,"Khi xem cân nặng cùng với chiều cao ở lần đo này, cân nặng của bé đang cao nhiều so với khoảng cân đối và thuộc mức béo phì theo phân loại WHO.",APPROVED

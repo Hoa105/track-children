@@ -95,9 +95,15 @@ void main() {
     'missing reference keeps measurements and retry restores five curves',
     (tester) async {
       final repo = RetryReferenceRepository(preparedReference);
+      await tester.runAsync(() async {
+        await repo.statureReference(true);
+        await repo.statureReference(false);
+        await repo.weightVelocityReference();
+      });
       await tester.pumpWidget(
         MaterialApp(home: GrowthWeightDetailScreen(repository: repo)),
       );
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pumpAndSettle();
       expect(find.text('8,5 kg'), findsOneWidget);
       expect(
@@ -113,6 +119,7 @@ void main() {
         200,
       );
       await tester.tap(find.text('Chưa tải được đường WHO. Thử lại'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -124,9 +131,11 @@ void main() {
             .length,
         61,
       );
-      expect(find.text('WHO cân nặng theo tuổi · bé trai'), findsOneWidget);
-      expect(find.text('Phù hợp'), findsOneWidget);
-      expect(find.text('Cân đối'), findsOneWidget);
+      expect(find.byTooltip('Phóng to biểu đồ'), findsNWidgets(2));
+      expect(find.text('Phù hợp'), findsNothing);
+      expect(find.text('Cân đối'), findsNothing);
+      expect(find.text('Nhận xét tổng quan'), findsOneWidget);
+      expect(find.text('Gợi ý cho ba mẹ'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

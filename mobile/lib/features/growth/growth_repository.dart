@@ -4,11 +4,51 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 
 import 'growth_models.dart';
+import 'growth_overview_templates.dart';
 import 'growth_stature_velocity_reference.dart';
+import 'stature_velocity_data.dart';
+import 'head_velocity_data.dart';
 import 'growth_weight_velocity_data.dart';
 export 'growth_models.dart';
 
 abstract class GrowthRepository {
+  Future<HeadVelocityReference?> headVelocityPeriodReference(int period) async {
+    final base = await headVelocityReference();
+    if (base == null) return null;
+    final sex = base.sexLabel.toLowerCase().contains('trai') ? 'boys'
+        : base.sexLabel.toLowerCase().contains('gái') ? 'girls' : null;
+    if (sex == null) return null;
+    final data = jsonDecode(await rootBundle.loadString(
+      'assets/data/who/head_velocity_periods.json')) as Map<String, dynamic>;
+    return HeadVelocityReference.fromJson(data, sex, period);
+  }
+
+  Future<StatureVelocityReference?> statureVelocityPeriodReference(
+    int period,
+  ) async {
+    final base = await statureVelocityReference();
+    if (base == null) return null;
+    final sex = base.sexLabel.toLowerCase().contains('trai')
+        ? 'boys'
+        : base.sexLabel.toLowerCase().contains('gái')
+        ? 'girls'
+        : null;
+    if (sex == null) return null;
+    final json = jsonDecode(
+      await rootBundle.loadString(
+        'assets/data/who/stature_velocity_periods.json',
+      ),
+    ) as Map<String, dynamic>;
+    return StatureVelocityReference.fromJson(json, sex, period);
+  }
+
+  /// Null is reserved for local preview repositories. API failures must throw.
+  Future<List<GrowthWeightVelocityPoint>?> weightVelocityIntervals({
+    int period = 1,
+  }) async => null;
+  Future<GrowthWeightVelocityReference?> weightVelocityPeriodReference(
+    int period,
+  ) => period == 1 ? weightVelocityReference() : Future.value(null);
   double? indicatorZScore(String metric, DateTime date, String indicator) =>
       null;
   Future<GrowthStatureVelocityReference?> headVelocityReference() async => null;
@@ -32,13 +72,24 @@ abstract class GrowthRepository {
           stature.value <= 0) {
         continue;
       }
-      final meters = stature.value / 100;
+      // Local fallback only: API repositories provide authoritative normalized
+      // BMI. WHO 2006 chapters 6–7 normalize stature before computing BMI.
+      final birth = dateOfBirth;
+      if (birth == null || stature.method == null) continue;
+      final ageDays = DateTime.utc(date.year, date.month, date.day)
+          .difference(DateTime.utc(birth.year, birth.month, birth.day)).inDays;
+      if (ageDays < 0 || (stature.method == GrowthMeasurementMethod.standing && ageDays / 30.4375 < 9)) continue;
+      final length = ageDays < 731;
+      final adjustment = length && stature.method == GrowthMeasurementMethod.standing
+          ? .7 : !length && stature.method == GrowthMeasurementMethod.recumbent ? -.7 : 0;
+      final meters = (stature.value + adjustment) / 100;
+      if (meters <= 0) continue;
       final value = weight.value / (meters * meters);
       if (value.isFinite) {
         bmi[date] = GrowthMeasurementDraft(
           value: value,
           measuredAt: date,
-          method: stature.method,
+          method: length ? GrowthMeasurementMethod.recumbent : GrowthMeasurementMethod.standing,
         );
       }
     }
@@ -90,6 +141,32 @@ abstract class GrowthRepository {
 
 /// Per-flow in-memory fixtures. No backend, persistence or WHO assessment.
 class MockGrowthRepository extends GrowthRepository {
+  final _periodReferences = <int, Future<GrowthWeightVelocityReference?>>{};
+  late final Future<List<dynamic>> _periodTables = _loadPeriodTables();
+  Future<List<dynamic>> _loadPeriodTables() async => jsonDecode(
+    await rootBundle.loadString('assets/data/who/weight_velocity_periods.json'),
+  ) as List;
+  @override
+  Future<GrowthWeightVelocityReference?> weightVelocityPeriodReference(
+    int period,
+  ) =>
+      _periodReferences.putIfAbsent(period, () => _loadPeriodReference(period));
+  Future<GrowthWeightVelocityReference?> _loadPeriodReference(
+    int period,
+  ) async {
+    final tables = await _periodTables;
+    final table = tables.singleWhere(
+      (t) =>
+          t['period'] == period &&
+          t['sex'] ==
+              (referenceSex == GrowthReferenceSex.boys ? 'male' : 'female'),
+    ) as Map;
+    return GrowthWeightVelocityReference.fromIntervals([
+      for (final row in table['rows'] as List)
+        Map<String, dynamic>.from(row as Map),
+    ], dateOfBirth);
+  }
+
   @override
   Future<GrowthStatureVelocityReference?> headVelocityReference() async =>
       GrowthStatureVelocityReference.fromJson(
@@ -233,21 +310,43 @@ class MockGrowthRepository extends GrowthRepository {
         stature.method == GrowthMeasurementMethod.recumbent &&
         stature.value == (april ? 75 : 76.5);
     return GrowthWeightAssessmentData(
-      wfa: const GrowthIndexAssessment(
-        classification: 'Phù hợp với tuổi',
+      wfa: GrowthIndexAssessment(
+        overview: growthOverviewTemplates['WFA:WITHIN_RANGE'],
+        advice: growthOverviewAdvice['WFA:WITHIN_RANGE']!,
+        classification: 'Không nhẹ cân',
         zScore: -0.40,
-        explanation: 'Cân nặng của bé nằm trong khoảng phù hợp với trẻ cùng tuổi và giới tính.',
+        explanation: _weightExplanation('WFA:WITHIN_RANGE', weight, -0.40),
       ),
       wflh: paired
-          ? const GrowthIndexAssessment(
-              classification: 'Cân đối với chiều dài',
+          ? GrowthIndexAssessment(
+              overview: growthOverviewTemplates['WFL:WITHIN_RANGE'],
+              advice: growthOverviewAdvice['WFL:WITHIN_RANGE']!,
+              classification: 'Cân đối theo chiều dài',
               zScore: 0.60,
-              explanation: 'Cân nặng của bé cân đối với chiều dài hiện tại.',
+              explanation: _weightExplanation('WFL:WITHIN_RANGE', weight, 0.60),
             )
           : null,
-      combinedSummary: paired
-          ? 'Cân nặng của bé hiện phù hợp với tuổi và cân đối với chiều dài. Ba mẹ hãy tiếp tục theo dõi các lần đo tiếp theo nhé!'
-          : null,
+    );
+  }
+
+  String _weightExplanation(
+    String key,
+    GrowthMeasurementDraft weight,
+    double z,
+  ) {
+    final template = growthExplanationTemplates[key];
+    if (template == null) return 'Nội dung giải thích hiện chưa sẵn có.';
+    final values = <String, String>{
+      'age_label':
+          '${DateUtils.dateOnly(weight.measuredAt).difference(dateOfBirth).inDays} ngày',
+      'current_value': formatGrowthValue(weight.value),
+      'z_score': formatGrowthValue(z),
+      'unit': 'kg',
+      'indicator_name': key.split(':').first,
+    };
+    return template.replaceAllMapped(
+      RegExp(r'\{\{([a-z_]+)\}\}'),
+      (match) => values[match[1]] ?? match[0]!,
     );
   }
 

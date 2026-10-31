@@ -93,8 +93,11 @@ flutter:
     - assets/data/who/weight_for_age_curves.json
     - assets/data/who/weight_for_stature_curves.json
     - assets/data/who/weight_velocity_1month.json
+    - assets/data/who/weight_velocity_periods.json
     - assets/data/who/stature_velocity_2month.json
+    - assets/data/who/stature_velocity_periods.json
     - assets/data/who/head_velocity_2month.json
+    - assets/data/who/head_velocity_periods.json
     - assets/data/who/stature_for_age_curves.json
     - assets/data/who/head_for_age_curves.json
     - assets/growth/

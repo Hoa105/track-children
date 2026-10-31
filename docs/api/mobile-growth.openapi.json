@@ -873,6 +873,16 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "overview": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": {"type": "string", "enum": ["READY", "NOT_AVAILABLE"]},
+              "text": {"type": "string"}
+            },
+            "required": ["status", "text"],
+            "description": "Weight overview sentence selected by indicator and classification; display with approved advice."
+          },
           "comment": {
             "$ref": "#/components/schemas/ContentBlock"
           },
@@ -957,7 +967,12 @@
             "const": "anthro_public_output"
           },
           "sourceStandard": {
-            "const": "WHO-2006"
+            "type": "string",
+            "enum": [
+              "WHO-2006",
+              "WHO-2007"
+            ],
+            "description": "WHO-2007 for HCFA; WHO-2006 for the other attained indicators."
           },
           "cacheTag": {
             "anyOf": [
@@ -3141,7 +3156,15 @@
             ]
           },
           "content": {
-            "$ref": "#/components/schemas/Content"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Content"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null after the 24-month calendar birthday: record actual changes only, with no velocity interpretation or advice."
           },
           "zScoreContent": {
             "anyOf": [
@@ -3578,6 +3601,20 @@
               "$ref": "#/components/schemas/VelocityInterval"
             }
           },
+          "referenceIntervals": {
+            "type": "array",
+            "description": "All verified WHO rows for the requested sex and period, independent of available measurements; values are full-interval g/cm, not monthly rates.",
+            "items": {"type": "object", "required": ["start", "end", "startUnit", "endUnit", "sdValues", "unit", "intervalMonths"]}
+          },
+          "incrementComparison": {
+            "description": "Signed difference of full-interval increments in adjacent non-overlapping WHO periods; independent of normalized monthly-rate trend.",
+            "type": ["object", "null"],
+            "properties": {
+              "previousIntervalId": {"type":"string"}, "currentIntervalId": {"type":"string"},
+              "intervalMonths": {"type":"integer"}, "previousIncrement": {"type":"number"},
+              "currentIncrement": {"type":"number"}, "incrementDifference": {"type":"number"}, "unit": {"type":"string"}
+            }
+          },
           "selectedActualIntervalId": {
             "anyOf": [
               {
@@ -3609,7 +3646,15 @@
             ]
           },
           "content": {
-            "$ref": "#/components/schemas/Content"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Content"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null after the 24-month calendar birthday: record actual changes only, with no velocity interpretation or advice."
           },
           "capabilities": {
             "$ref": "#/components/schemas/Capabilities"

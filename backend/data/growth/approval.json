@@ -1,13 +1,41 @@
 {
   "approvalType": "PROJECT_OWNER_CONTENT_ACCEPTANCE",
   "approvedBy": "USER_IN_CONVERSATION",
-  "approvedOn": "2026-10-29",
-  "sourceStatement": "Project owner accepted content and mapping in this conversation before implementation.",
+  "approvedOn": "2026-10-30",
+  "sourceStatement": "User explicitly requested review and revision of mapping, observation and contract data against WHO sources; this records authorization for the revision, not post-edit clinical sign-off.",
   "clinicalReviewer": null,
   "scope": "Application content and mapping accepted by project owner; no claim of clinical certification",
   "files": {
-    "GROWTH-WHO-CLASSIFICATION-MAP.csv": "dbae5209cccf1a07adb862ceedf9ab877066e8b5e4834b0c3ba953b13e53a848",
-    "GROWTH-COMMENT-MAPPING.csv": "3e39a8247679ddd84021c95535179cc50b319d4c18c73b5a3e09917666909f8f",
-    "GROWTH-ADVICE-MAPPING.csv": "54f1006be0cec1de78184f3968f57617277470c6ed467fbd149da18f800928b4"
-  }
+    "GROWTH-WHO-CLASSIFICATION-MAP.csv": "8ef9168260eced4547f53041eb6ce37123f4ef2f8c93a6de6983a3c2ba2468e8",
+    "GROWTH-COMMENT-MAPPING.csv": "fa6b75121305280a5a6ad1f03e57e33d3a54473f860eee12247dab323925f73a",
+    "GROWTH-ADVICE-MAPPING.csv": "985f72090f81fd286fdf0b346e5cade0829ef5305f68ace1db5e4dfa5479a95e",
+    "GROWTH-OVERVIEW-TEMPLATES.csv": "cbe4898393c6bdb0c7e555fcc98fe7d27207c743819bd76eb96c8f3a22a98654"
+  },
+  "previous_approval": {
+    "approvedOn": "2026-10-29",
+    "sourceStatement": "Project owner accepted content and mapping in this conversation before implementation.",
+    "files": {
+      "GROWTH-WHO-CLASSIFICATION-MAP.csv": "dbae5209cccf1a07adb862ceedf9ab877066e8b5e4834b0c3ba953b13e53a848",
+      "GROWTH-COMMENT-MAPPING.csv": "3e39a8247679ddd84021c95535179cc50b319d4c18c73b5a3e09917666909f8f",
+      "GROWTH-ADVICE-MAPPING.csv": "54f1006be0cec1de78184f3968f57617277470c6ed467fbd149da18f800928b4"
+    }
+  },
+  "revisionVerification": "Automated structural, boundary and observation checks; sources and limitations in GROWTH-STANDARDIZATION-AUDIT.md",
+  "labelRevision": {
+    "requestedBy": "USER_IN_CONVERSATION",
+    "date": "2026-10-30",
+    "scope": "Owner-requested plain Vietnamese labels; codes, thresholds, explanation prose and review status unchanged.",
+    "previousFiles": {
+      "GROWTH-WHO-CLASSIFICATION-MAP.csv": "b086d65f256c6ae51268eb3cdad96a71a077831fe8aea903791970921be08cb9",
+      "GROWTH-COMMENT-MAPPING.csv": "33a07cc3badde0cac7048cc86c93d63cc325ae40b9aea2ec5d8f0f94030e9712",
+      "GROWTH-ADVICE-MAPPING.csv": "b39c5583534da8274df52618819434e2ce04dd44d1fb715c56a4288daa950d6d"
+    },
+    "draftCommentPolicy": "Only titles updated; existing clinical-review status/prose preserved; doc comment fingerprint is not reapproved."
+  },
+  "overviewAdviceRevision": {
+    "requestedBy": "USER_IN_CONVERSATION",
+    "scope": "Removed duplicate assessment introductions for WFA/WFL/WFH only; existing care actions, urgency, caveats and review statuses preserved. No new clinical sign-off."
+  },
+  "overviewTemplateAcceptance": "User requested dynamic overview + existing advice implementation; project-owner content acceptance, not clinical certification.",
+  "commentStatusAcceptance": "User explicitly requested all comment review_status values APPROVED; project-owner acceptance, not independent clinical certification."
 }

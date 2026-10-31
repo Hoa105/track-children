@@ -15,11 +15,13 @@ for filename, expected_hash in APPROVAL["files"].items():
 
 
 def load(name):
-    with (DATA / name).open(encoding="utf-8", newline="") as stream:
+    with (DATA / name).open(encoding="utf-8-sig", newline="") as stream:
         return list(csv.DictReader(stream))
 
 
 RULES = load("GROWTH-WHO-CLASSIFICATION-MAP.csv")
+OVERVIEWS = {(r['indicator'], r['classification_code']): r
+             for r in load('GROWTH-OVERVIEW-TEMPLATES.csv')}
 COMMENTS = {
     (r["mapping_type"], r["indicator"], r["code"]): r
     for r in load("GROWTH-COMMENT-MAPPING.csv")
@@ -94,6 +96,11 @@ def render(kind, scope, code, values=None):
     values = values or {}
     return {
         "comment": block(kind, scope, code, values),
+        "overview": {
+            "status": "READY" if kind == "ATTAINED" and (scope, code) in OVERVIEWS
+                and OVERVIEWS[scope, code]['review_status'] == 'APPROVED' else "NOT_AVAILABLE",
+            "text": OVERVIEWS.get((scope, code), {}).get('overview_template', '') if kind == "ATTAINED" else '',
+        },
         "advice": [block(kind, scope, code, values, True)],
         "ageContext": [],
     }

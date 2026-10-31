@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_bmi_detail.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
-import 'package:track_children/features/growth/growth_weight_detail.dart';
+import 'package:track_children/features/growth/weight_chart_view.dart';
 
 class BmiRepo extends GrowthRepository {
   BmiRepo({this.empty = false});
@@ -93,18 +93,17 @@ void main() {
       MaterialApp(home: GrowthBmiDetailScreen(repository: BmiRepo())),
     );
     await tester.pumpAndSettle();
-    final chart = tester.widget<GrowthWeightMeasurementChart>(
-      find.byType(GrowthWeightMeasurementChart),
-    );
+    final chart = tester.widget<WeightChartView>(find.byType(WeightChartView));
     expect(chart.points.length, 2);
     expect(chart.unit, 'kg/m²');
-    expect(chart.axisTitle, 'BMI (kg/m²)');
-    expect(chart.fitValueAxis, isTrue);
-    expect(chart.maxAgeMonths, 24);
-    await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-    await tester.tap(find.text('Vì sao có kết luận này?'));
+    expect(chart.metricName, 'BMI');
+    expect(chart.end, 60);
+    expect(chart.curves.length, 62);
+    expect(chart.breakAt, weightAgeTick(24));
+    await tester.ensureVisible(find.text('Vì sao có nhận xét này?'));
+    await tester.tap(find.text('Vì sao có nhận xét này?'));
     await tester.pumpAndSettle();
-    expect(find.text('Căn cứ đánh giá'), findsOneWidget);
+    expect(find.text('Căn cứ đánh giá theo WHO'), findsOneWidget);
     expect(find.text('Cách xác định BMI'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -137,7 +136,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Chưa đủ số đo cùng ngày để tính BMI'), findsOneWidget);
-    expect(find.byType(GrowthWeightMeasurementChart), findsNothing);
+    expect(find.byType(WeightChartView), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

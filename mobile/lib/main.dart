@@ -21,8 +21,10 @@ import 'features/splash/start_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DemoStore.instance.initialize();
-  await DemoStore.instance.logout();
   await AuthService.instance.restore();
+  if (!AuthService.instance.signedIn) {
+    await DemoStore.instance.logout();
+  }
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
   // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.

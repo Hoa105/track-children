@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_weight_velocity_data.dart';
 import 'package:track_children/features/growth/growth_weight_velocity_summary.dart';
-import 'package:track_children/features/growth/growth_conclusion_explanation.dart';
+import 'package:track_children/features/growth/growth_velocity_insight_sheet.dart';
 
 List<GrowthWeightVelocityPoint> samples(List<double> grams) => [
   for (var i = 0; i < grams.length; i++)
@@ -31,7 +31,7 @@ void main() {
       );
       expect(
         GrowthVelocitySummary(samples([300, 500, 400])).direction,
-        'Dao động qua các tháng',
+        'Dao động qua các kỳ',
       );
       expect(GrowthVelocitySummary(samples([400])).delta, isNull);
       expect(GrowthVelocitySummary(const []).latest, isNull);
@@ -55,6 +55,7 @@ void main() {
       addTearDown(tester.view.reset);
       final points = samples([500, 400]);
       final result = GrowthVelocityWhoResult(
+        zScore: .4,
         from: points.last.from,
         to: points.last.to,
         classification: 'Phân loại từ kết quả mẫu',
@@ -88,20 +89,24 @@ void main() {
         ),
       );
       await show(null);
-      expect(find.text('+400 g/tháng'), findsOneWidget);
-      expect(find.text('−100 g/tháng'), findsOneWidget);
-      expect(find.text('Chưa đủ căn cứ phân loại theo WHO'), findsOneWidget);
-      await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-      await tester.tap(find.text('Vì sao có kết luận này?'));
+      expect(find.text('+400\u00A0g', findRichText: true), findsOneWidget);
+      expect(find.text('Ít hơn 100\u00A0g'), findsOneWidget);
+      expect(find.text(summary.comment), findsOneWidget);
+      await tester.ensureVisible(find.text('Vì sao có nhận xét này'));
+      await tester.tap(find.text('Vì sao có nhận xét này'));
       await tester.pumpAndSettle();
-      expect(find.text('1. Dữ liệu được sử dụng'), findsOneWidget);
-      expect(find.byType(GrowthConclusionExplanationScreen), findsOneWidget);
-      expect(find.textContaining('(9 − 8,6) × 1.000 = 400 g'), findsOneWidget);
-      expect(find.text('4. Căn cứ WHO'), findsOneWidget);
+      expect(find.text('Kết quả của bé'), findsOneWidget);
+      expect(find.byType(GrowthVelocityInsightSheet), findsOneWidget);
+      expect(find.textContaining('(9 - 8,6) × 1.000 = 400 g'), findsOneWidget);
+      expect(
+        find.text('−100 g so với kỳ liền trước cùng độ dài.'),
+        findsOneWidget,
+      );
+      expect(find.text('Căn cứ đánh giá theo WHO'), findsOneWidget);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       await show(result);
-      expect(find.text('Phân loại từ kết quả mẫu'), findsOneWidget);
+      expect(find.text('Mức tăng cân trong kỳ của bé'), findsNothing);
       expect(result.matches(points.first), isFalse);
       expect(tester.takeException(), isNull);
     },

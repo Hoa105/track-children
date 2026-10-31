@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_stature_detail.dart';
-import 'package:track_children/features/growth/growth_weight_detail.dart';
 import 'package:track_children/features/growth/growth_stature_age_axis.dart';
+import 'package:track_children/features/growth/weight_chart_view.dart';
+import 'package:track_children/app_colors.dart';
+import 'package:track_children/features/growth/growth_visuals.dart'
+    show growthGreen;
 
 class StatureRepo extends GrowthRepository {
   StatureRepo(this.reference, {this.height = false, this.fail = false});
@@ -100,18 +103,22 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text(height ? 'Chiều cao' : 'Chiều dài'), findsOneWidget);
-        expect(find.byType(GrowthWeightMeasurementChart), findsOneWidget);
-        final chart = tester.widget<GrowthWeightMeasurementChart>(
-          find.byType(GrowthWeightMeasurementChart),
+        expect(find.byType(WeightChartView), findsOneWidget);
+        final chart = tester.widget<WeightChartView>(
+          find.byType(WeightChartView),
         );
         expect(chart.unit, 'cm');
-        expect(chart.seriesColor, const Color(0xFF4B92C6));
-        expect(chart.points.length, height ? 1 : 2);
-        await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-        await tester.tap(find.text('Vì sao có kết luận này?'));
+        expect(chart.dataColor, StatureChartColors.data);
+        expect(
+          tester.widget<Text>(find.text('Tổng quan')).style!.color,
+          growthGreen,
+        );
+        expect(chart.points.length, 2);
+        await tester.ensureVisible(find.text('Vì sao có nhận xét này?'));
+        await tester.tap(find.text('Vì sao có nhận xét này?'));
         await tester.pumpAndSettle();
-        expect(find.text('Căn cứ đánh giá'), findsOneWidget);
-        await tester.tap(find.byTooltip('Quay lại'));
+        expect(find.text('Chuẩn đối chiếu'), findsOneWidget);
+        await tester.tap(find.byTooltip('Đóng'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }

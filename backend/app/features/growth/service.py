@@ -312,6 +312,9 @@ def chart(state, indicator, samples, selected=None, view="radius5"):
         state["scope"]["endBefore"] - profile["date_of_birth"],
     )
     xmin, xmax = xmin.days, max(xmin.days, xmax.days - 1)
+    if indicator == "wfa":
+        # Reference domain is independent of the child's current age/read scope.
+        xmin, xmax = 0, 1826
     if indicator in ("wfl", "wfh"):
         xmin, xmax = (45, 110) if indicator == "wfl" else (65, 120)
         if points and view != "all":
@@ -319,7 +322,8 @@ def chart(state, indicator, samples, selected=None, view="radius5"):
             center = points[-1]["x"]
             xmin, xmax = max(xmin, center - radius), min(xmax, center + radius)
         points = [p for p in points if xmin <= p["x"] <= xmax]
-    ref = reference.curves(indicator, profile["gender"], xmin, xmax)
+    ref = reference.curves(indicator, profile["gender"], 0 if indicator == "wfa" else xmin,
+                           1826 if indicator == "wfa" else xmax)
     chosen = next(
         (p for p in points if p["measurementId"] == str(selected)),
         points[-1] if points else None,

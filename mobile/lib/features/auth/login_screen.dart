@@ -4,6 +4,7 @@ import 'otp_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
+import '../../services/demo_store.dart';
 import 'auth_entrance_animation.dart';
 import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
@@ -115,6 +116,13 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
       _previewError ??= 'Chưa hoàn tất đăng nhập.';
     });
+  }
+
+  Future<void> _quickLogin() async {
+    if (_isLoading) return;
+    _accountController.text = DemoStore.demoEmail;
+    _passwordController.text = DemoStore.password;
+    await _submit();
   }
 
   Future<void> _socialLogin(SocialProvider provider) async {
@@ -350,6 +358,29 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('Đăng nhập'),
                                 ),
                               ),
+                              if (AuthService.instance.demoMode) ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _quickLogin,
+                                    icon: const Icon(Icons.flash_on_rounded),
+                                    label: const Text(
+                                      'Đăng nhập nhanh tài khoản test',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(52),
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(
+                                        color: AppColors.primary,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

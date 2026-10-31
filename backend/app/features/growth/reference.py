@@ -32,10 +32,11 @@ def quantile(row, k):
 
 
 def curves(indicator, sex, x_min=None, x_max=None):
+    standard = "WHO-2007" if indicator == "hcfa" else "WHO-2006"
     missing = {
         "importStatus": None,
         "reason": "MISSING_REFERENCE_FILE",
-        "standard": "WHO-2006",
+        "standard": standard,
         "sources": [],
         "segments": [],
     }
@@ -86,7 +87,7 @@ def curves(indicator, sex, x_min=None, x_max=None):
             "version": entry["version"],
             "retrievedOn": entry["retrievedOn"],
             "sex": sex,
-            "standard": "WHO-2006",
+            "standard": standard,
             "unit": (
                 "kg"
                 if indicator in ("wfa", "wfl", "wfh")
@@ -124,7 +125,7 @@ def curves(indicator, sex, x_min=None, x_max=None):
     return {
         "importStatus": "VERIFIED",
         "reason": None,
-        "standard": "WHO-2006",
+        "standard": standard,
         "sources": sources,
         "segments": segments,
     }

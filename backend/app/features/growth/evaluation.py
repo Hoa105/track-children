@@ -307,6 +307,12 @@ def make(profile, day, values, indicator, status, reason, z, cache_tag):
     rendered = content.render(
         kind, indicator.upper() if kind == "ATTAINED" else "ALL_ATTAINED", code, params
     )
+    if status != "READY" and reason:
+        detail = content.render("ASSESSMENT_REASON", "ALL_ATTAINED", reason, params)
+        if rendered["comment"]["status"] == detail["comment"]["status"] == "READY":
+            rendered["comment"]["text"] += " " + detail["comment"]["text"]
+        if rendered["advice"][0]["status"] == detail["advice"][0]["status"] == "READY":
+            rendered["advice"][0]["text"] += " " + detail["advice"][0]["text"]
     if status == "READY" and classification:
         age_code = (
             "AGE_0_5_MONTHS"
@@ -321,6 +327,7 @@ def make(profile, day, values, indicator, status, reason, z, cache_tag):
             content.block("AGE_CONTEXT", "ALL", age_code, params, True)
         ]
     if status == "READY" and classification is None:
+        rendered['overview'] = {'status': 'NOT_AVAILABLE', 'text': ''}
         for block in [rendered["comment"], *rendered["advice"]]:
             block.update(status="MAPPING_NOT_APPROVED", text=content.FALLBACK)
     return {
@@ -333,7 +340,7 @@ def make(profile, day, values, indicator, status, reason, z, cache_tag):
         "classificationCode": classification,
         "zScorePrecision": 2,
         "precisionSource": "anthro_public_output",
-        "sourceStandard": "WHO-2006",
+        "sourceStandard": "WHO-2007" if indicator == "hcfa" else "WHO-2006",
         "cacheTag": cache_tag if classification else None,
         "content": rendered,
     }

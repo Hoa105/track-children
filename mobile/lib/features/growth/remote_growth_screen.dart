@@ -1,3 +1,4 @@
+import 'growth_classification_labels.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -29,26 +30,7 @@ const _chartTitles = {
   'WFL_LENGTH': 'Cân nặng theo chiều dài nằm',
   'WFH_HEIGHT': 'Cân nặng theo chiều cao đứng',
 };
-const _classificationLabels = {
-  'WITHIN_RANGE': 'Trong khoảng tham chiếu',
-  'SEVERE_UNDERWEIGHT': 'Nhẹ cân mức độ nặng',
-  'UNDERWEIGHT': 'Nhẹ cân',
-  'HIGH_WFA': 'Cân nặng theo tuổi cao',
-  'SEVERE_STUNTING': 'Thấp còi nặng',
-  'STUNTING': 'Thấp còi',
-  'VERY_TALL': 'Cao nổi bật so với tuổi',
-  'SEVERE_WASTING': 'Gầy còm nặng',
-  'WASTING': 'Gầy còm',
-  'RISK_OVERWEIGHT': 'Nguy cơ thừa cân',
-  'OVERWEIGHT': 'Thừa cân',
-  'OBESITY': 'Béo phì theo chỉ số nhân trắc',
-  'SEVERE_THINNESS': 'BMI rất thấp theo tuổi',
-  'THINNESS': 'BMI thấp theo tuổi',
-  'VERY_LOW_HC': 'Vòng đầu rất nhỏ so với tuổi',
-  'LOW_HC': 'Vòng đầu nhỏ so với tuổi',
-  'HIGH_HC': 'Vòng đầu lớn so với tuổi',
-  'VERY_HIGH_HC': 'Vòng đầu rất lớn so với tuổi',
-};
+
 String _date(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 String _number(dynamic n) =>
@@ -860,7 +842,7 @@ String _reason(dynamic code) => switch (code) {
   _ => 'Chưa đủ điều kiện đánh giá cho số đo này.',
 };
 String _assessmentLabel(Map a) => a['status'] == 'READY'
-    ? 'Z = ${_number(a['zScore'])}${a['classificationCode'] == null ? '' : ' · ${_classificationLabels[a['classificationCode']] ?? 'Có kết quả đánh giá'}'}'
+    ? 'Z = ${_number(a['zScore'])}${a['classificationCode'] == null ? '' : ' · ${growthClassificationLabel(a['indicator']?.toString(), a['classificationCode']?.toString()) ?? 'Có kết quả đánh giá'}'}'
     : _reason(a['reason'] ?? a['status']);
 
 class _PointExplanation extends StatelessWidget {

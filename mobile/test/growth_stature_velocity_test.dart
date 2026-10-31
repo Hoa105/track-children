@@ -8,8 +8,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_stature_detail.dart';
 import 'package:track_children/features/growth/growth_stature_velocity.dart';
+import 'package:track_children/features/growth/stature_velocity_data.dart';
 
 class StatureVelocityRepo extends GrowthRepository {
+  @override
+  Future<StatureVelocityReference?> statureVelocityPeriodReference(
+    int period,
+  ) async => StatureVelocityReference.fromJson(
+    jsonDecode(
+      File('assets/data/who/stature_velocity_periods.json').readAsStringSync(),
+    ),
+    'boys',
+    period,
+  );
   @override
   Future<GrowthStatureVelocityReference?> statureVelocityReference() async =>
       GrowthStatureVelocityReference.fromJson(
@@ -125,14 +136,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('WHO · −2 SD đến +2 SD · kỳ 2 tháng'), findsOneWidget);
-    await tester.tap(find.text('Từng tháng'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Kỳ 2 tháng · WHO'));
-    await tester.pumpAndSettle();
-    expect(find.text('+3 cm/2 tháng'), findsOneWidget);
-    expect(find.text('WHO · −2 SD đến +2 SD · kỳ 2 tháng'), findsOneWidget);
-    expect(find.textContaining('Kỳ 9–11 tháng · Bé trai:'), findsOneWidget);
+    expect(find.text('+3\u00A0cm'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stature-period-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stature-period-6')), findsOneWidget);
     expect(find.text('+1,5 cm/tháng'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -173,16 +179,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Tốc độ'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Từng tháng'));
-      await tester.pumpAndSettle();
       expect(find.byType(GrowthStatureVelocityTab), findsOneWidget);
-      expect(find.text('+1,5 cm/tháng'), findsOneWidget);
-      expect(find.text('0 cm/tháng'), findsOneWidget);
-      await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-      await tester.tap(find.text('Vì sao có kết luận này?'));
+      expect(find.text('+3\u00A0cm'), findsOneWidget);
+      expect(find.text('Chưa có dữ liệu so sánh'), findsOneWidget);
+      await tester.ensureVisible(find.text('Vì sao có nhận xét này?'));
+      await tester.tap(find.text('Vì sao có nhận xét này?'));
       await tester.pumpAndSettle();
-      expect(find.text('Căn cứ đánh giá'), findsOneWidget);
-      expect(find.textContaining('(75 − 73,5)'), findsOneWidget);
+      expect(find.text('Chu kỳ 2 tháng'), findsOneWidget);
+      expect(find.textContaining('(75 − 72)'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

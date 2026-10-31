@@ -9,6 +9,8 @@ import 'growth_visuals.dart';
 import 'growth_weight_velocity_axes.dart';
 import 'growth_chart_explanation_dialog.dart';
 import 'growth_conclusion_explanation.dart';
+import 'stature_velocity_view.dart';
+import 'head_velocity_view.dart';
 
 const growthStatureBlue = Color(0xFF4B92C6);
 
@@ -169,11 +171,19 @@ class _GrowthStatureVelocityTabState extends State<GrowthStatureVelocityTab> {
 
   @override
   Widget build(BuildContext context) =>
-      FutureBuilder<GrowthStatureVelocityReference?>(
-        future: _reference,
-        builder: (context, snapshot) =>
-            _content(context, snapshot.data, snapshot.hasError),
-      );
+      widget.headCircumference
+      ? HeadVelocityView(repository: widget.repository, readings: widget.readings, easyRead: widget.easyRead)
+      : !widget.bmiMode
+      ? StatureVelocityView(
+          repository: widget.repository,
+          readings: widget.readings,
+          easyRead: widget.easyRead,
+        )
+      : FutureBuilder<GrowthStatureVelocityReference?>(
+          future: _reference,
+          builder: (context, snapshot) =>
+              _content(context, snapshot.data, snapshot.hasError),
+        );
 
   Widget _content(
     BuildContext context,
@@ -205,6 +215,12 @@ class _GrowthStatureVelocityTabState extends State<GrowthStatureVelocityTab> {
             )
             .toList();
     final latest = points.lastOrNull;
+    final birth = widget.repository.dateOfBirth;
+    final recordingOnly =
+        birth != null &&
+        widget.readings.any(
+          (p) => (growthChartAgeMonths(birth, p.measuredAt) ?? 0) > 24,
+        );
     final activeReference = _months == 2 && range.$1 < _whoMax
         ? reference
         : null;
@@ -493,151 +509,152 @@ class _GrowthStatureVelocityTabState extends State<GrowthStatureVelocityTab> {
               ),
             ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: (widget.bmiMode
-                  ? const Color(0xFFEAF5E9)
-                  : widget.headCircumference
-                  ? const Color(0xFFF2ECF8)
-                  : const Color(0xFFEAF3FA)),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    GrowthAsset(
-                      widget.bmiMode
-                          ? 'result-smile'
-                          : widget.headCircumference
-                          ? 'result-smile-head'
-                          : 'result-smile-stature',
-                      size: 48,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Tốc độ ${widget.name.toLowerCase()} của bé thế nào?',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: _accent,
+          if (!recordingOnly)
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: (widget.bmiMode
+                    ? const Color(0xFFEAF5E9)
+                    : widget.headCircumference
+                    ? const Color(0xFFF2ECF8)
+                    : const Color(0xFFEAF3FA)),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      GrowthAsset(
+                        widget.bmiMode
+                            ? 'result-smile'
+                            : widget.headCircumference
+                            ? 'result-smile-head'
+                            : 'result-smile-stature',
+                        size: 48,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Tốc độ ${widget.name.toLowerCase()} của bé thế nào?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: _accent,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  widget.bmiMode
-                      ? 'Thay đổi BMI được ghi nhận'
-                      : bounds == null
-                      ? 'Chưa đủ căn cứ phân loại theo WHO'
-                      : 'Đối chiếu khoảng tham chiếu WHO',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.bmiMode
-                      ? 'BMI thay đổi khi cân nặng và chiều dài/chiều cao cùng thay đổi. Mức tăng hoặc giảm giữa các kỳ không tự xác định tình trạng dinh dưỡng.'
-                      : comparison ?? 'Chưa có kết quả đối chiếu tốc độ phù hợp với giới tính, tuổi và kỳ đo này.',
-                  style: const TextStyle(fontSize: 14, height: 1.5),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Đánh giá tốc độ hiện tại',
-                  style: TextStyle(fontSize: 13, color: growthMuted),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  direction,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Xu hướng qua các tháng',
-                  style: TextStyle(fontSize: 13, color: growthMuted),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Nhận xét',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  comment,
-                  style: const TextStyle(fontSize: 14, height: 1.5),
-                ),
-                const SizedBox(height: 20),
-                Material(
-                  color: const Color(0xFFFFFEFA),
-                  borderRadius: BorderRadius.circular(18),
-                  child: ListTile(
-                    leading: const GrowthAsset('lightbulb', size: 26),
-                    title: const Text(
-                      'Vì sao có kết luận này?',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                  const SizedBox(height: 18),
+                  Text(
+                    widget.bmiMode
+                        ? 'Thay đổi BMI được ghi nhận'
+                        : bounds == null
+                        ? 'Chưa đủ căn cứ phân loại theo WHO'
+                        : 'Đối chiếu khoảng tham chiếu WHO',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => GrowthConclusionExplanationScreen(
-                          easyRead: widget.easyRead,
-                          introText:
-                              'Cùng tìm hiểu mức tăng ${widget.name.toLowerCase()} của con qua các kỳ đo nhé!',
-                          sources: activeReference == null
-                              ? const {}
-                              : {
-                                  'WHO · tốc độ ${widget.name.toLowerCase()} · kỳ 2 tháng':
-                                      activeReference.sourceUrl,
-                                },
-                          sections: [
-                            if (widget.bmiMode)
-                              const GrowthExplanationSection(
-                                'BMI được xác định thế nào?',
-                                'BMI = cân nặng (kg) / chiều dài hoặc chiều cao (m)². Mỗi giá trị sử dụng hai số đo cùng ngày. Chỉ so sánh các giá trị cách nhau đúng một tháng, cùng cách đo chiều dài/chiều cao.',
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.bmiMode
+                        ? 'BMI thay đổi khi cân nặng và chiều dài/chiều cao cùng thay đổi. Mức tăng hoặc giảm giữa các kỳ không tự xác định tình trạng dinh dưỡng.'
+                        : comparison ?? 'Chưa có kết quả đối chiếu tốc độ phù hợp với giới tính, tuổi và kỳ đo này.',
+                    style: const TextStyle(fontSize: 14, height: 1.5),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Đánh giá tốc độ hiện tại',
+                    style: TextStyle(fontSize: 13, color: growthMuted),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    direction,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Xu hướng qua các tháng',
+                    style: TextStyle(fontSize: 13, color: growthMuted),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Nhận xét',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    comment,
+                    style: const TextStyle(fontSize: 14, height: 1.5),
+                  ),
+                  const SizedBox(height: 20),
+                  Material(
+                    color: const Color(0xFFFFFEFA),
+                    borderRadius: BorderRadius.circular(18),
+                    child: ListTile(
+                      leading: const GrowthAsset('lightbulb', size: 26),
+                      title: const Text(
+                        'Vì sao có kết luận này?',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => GrowthConclusionExplanationScreen(
+                            easyRead: widget.easyRead,
+                            introText:
+                                'Cùng tìm hiểu mức tăng ${widget.name.toLowerCase()} của con qua các kỳ đo nhé!',
+                            sources: activeReference == null
+                                ? const {}
+                                : {
+                                    'WHO · tốc độ ${widget.name.toLowerCase()} · kỳ 2 tháng':
+                                        activeReference.sourceUrl,
+                                  },
+                            sections: [
+                              if (widget.bmiMode)
+                                const GrowthExplanationSection(
+                                  'BMI được xác định thế nào?',
+                                  'BMI = cân nặng (kg) / chiều dài hoặc chiều cao (m)². Mỗi giá trị sử dụng hai số đo cùng ngày. Chỉ so sánh các giá trị cách nhau đúng một tháng, cùng cách đo chiều dài/chiều cao.',
+                                ),
+                              GrowthExplanationSection(
+                                '1. Dữ liệu được sử dụng',
+                                latest == null
+                                    ? 'Chưa đủ hai số đo cùng cách đo trong kỳ.'
+                                    : '${date(latest.from.measuredAt)}: ${value(latest.from.value)} $measurementUnit; ${date(latest.to.measuredAt)}: ${value(latest.to.value)} $measurementUnit. Hai số đo cùng cách đo và cách nhau đúng $period.',
                               ),
-                            GrowthExplanationSection(
-                              '1. Dữ liệu được sử dụng',
-                              latest == null
-                                  ? 'Chưa đủ hai số đo cùng cách đo trong kỳ.'
-                                  : '${date(latest.from.measuredAt)}: ${value(latest.from.value)} $measurementUnit; ${date(latest.to.measuredAt)}: ${value(latest.to.value)} $measurementUnit. Hai số đo cùng cách đo và cách nhau đúng $period.',
-                            ),
-                            GrowthExplanationSection(
-                              '2. Cách tính',
-                              latest == null
-                                  ? 'Tốc độ = mức thay đổi ${widget.name.toLowerCase()} / số tháng giữa hai lần đo.'
-                                  : '(${value(latest.to.value)} − ${value(latest.from.value)}) = ${signed(latest.change)} $measurementUnit trong $_months tháng (${value(latest.change / _months)} $measurementUnit/tháng trung bình).',
-                            ),
-                            GrowthExplanationSection(
-                              '3. Xu hướng qua các tháng',
-                              '$direction. $comment Tốc độ giảm so với kỳ trước không tự đồng nghĩa với bất thường.',
-                            ),
-                            GrowthExplanationSection(
-                              '4. Căn cứ WHO',
-                              widget.bmiMode
-                                  ? 'Bộ chuẩn WHO không có dải tốc độ BMI riêng. Biểu đồ chỉ mô tả mức thay đổi BMI; không suy ra Z-score vận tốc hoặc tình trạng dinh dưỡng từ chiều hướng tăng/giảm. Xem BMI theo tuổi trong tab Tổng quan để đối chiếu theo tuổi và giới tính.'
-                                  : comparison == null
-                                  ? 'WHO không có chuẩn ${widget.name.toLowerCase()} kỳ một tháng. Tham chiếu kỳ hai tháng chỉ dùng cho ${widget.headCircumference ? 'vòng đầu' : 'chiều dài nằm'} từ 0 đến $_whoMax tháng, theo đúng giới tính; cần đủ hai số đo đúng kỳ. Không tự suy ra Z-score từ dải màu.'
-                                  : '$comparison Dải màu biểu thị các giá trị −2 SD và +2 SD trong bảng WHO, không phải kết quả tính Z-score riêng của trẻ. Các kỳ hai tháng liền nhau có thể chồng lấn; nhận xét chỉ mô tả xu hướng.',
-                            ),
-                          ],
+                              GrowthExplanationSection(
+                                '2. Cách tính',
+                                latest == null
+                                    ? 'Tốc độ = mức thay đổi ${widget.name.toLowerCase()} / số tháng giữa hai lần đo.'
+                                    : '(${value(latest.to.value)} − ${value(latest.from.value)}) = ${signed(latest.change)} $measurementUnit trong $_months tháng (${value(latest.change / _months)} $measurementUnit/tháng trung bình).',
+                              ),
+                              GrowthExplanationSection(
+                                '3. Xu hướng qua các tháng',
+                                '$direction. $comment Tốc độ giảm so với kỳ trước không tự đồng nghĩa với bất thường.',
+                              ),
+                              GrowthExplanationSection(
+                                '4. Căn cứ WHO',
+                                widget.bmiMode
+                                    ? 'Bộ chuẩn WHO không có dải tốc độ BMI riêng. Biểu đồ chỉ mô tả mức thay đổi BMI; không suy ra Z-score vận tốc hoặc tình trạng dinh dưỡng từ chiều hướng tăng/giảm. Xem BMI theo tuổi trong tab Tổng quan để đối chiếu theo tuổi và giới tính.'
+                                    : comparison == null
+                                    ? 'WHO không có chuẩn ${widget.name.toLowerCase()} kỳ một tháng. Tham chiếu kỳ hai tháng chỉ dùng cho ${widget.headCircumference ? 'vòng đầu' : 'chiều dài nằm'} từ 0 đến $_whoMax tháng, theo đúng giới tính; cần đủ hai số đo đúng kỳ. Không tự suy ra Z-score từ dải màu.'
+                                    : '$comparison Dải màu biểu thị các giá trị −2 SD và +2 SD trong bảng WHO, không phải kết quả tính Z-score riêng của trẻ. Các kỳ hai tháng liền nhau có thể chồng lấn; nhận xét chỉ mô tả xu hướng.',
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -5,6 +5,25 @@ import 'package:track_children/features/growth/growth_overview.dart';
 import 'package:track_children/features/growth/remote_growth_repository.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  for (final sex in ['male', 'female']) {
+    test('truncated WFA snapshot uses full official display table for $sex', () async {
+      final repo = ApiGrowthRepository(remote: RemoteGrowthRepository('child', transport: (_, _, {body}) async => {
+        'meta': {'schemaVersion':'1'},
+        'child': {'id':'child','dateOfBirth':'2025-01-01','sex':sex},
+        'charts': [{'indicator':'wfa','reference':{
+          'importStatus':'VERIFIED', 'sources':[{'sourceUrl':'official','sha256':'fixture'}],
+          'segments':[{'curves':[for(final sd in [-3,-2,0,2,3]) {'sd':sd,'points':[
+            {'x':0,'y':3.5+sd*.3},{'x':365,'y':9.5+sd*.5}]}]}],
+        }}],
+      }));
+      final reference=await repo.weightReference();
+      expect(reference!.rows.first.month,0);
+      expect(reference.rows.last.month,60);
+      expect(reference.rows.length,61);
+      expect(reference.sex.name,sex=='male'?'boys':'girls');
+    });
+  }
   test(
     'original repository saves through API and propagates network errors',
     () async {

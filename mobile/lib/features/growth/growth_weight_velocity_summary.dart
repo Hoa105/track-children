@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'growth_repository.dart';
+import 'growth_weight_velocity_header.dart';
 import 'growth_visuals.dart';
-import 'growth_conclusion_explanation.dart';
+import 'growth_velocity_insight_sheet.dart';
 import 'growth_weight_velocity_data.dart';
 
 /// Supplied by a validated assessment, never generated from the shaded band.
@@ -61,27 +62,44 @@ GrowthVelocityWhoResult? growthVelocityReviewFixture(
 }
 
 class GrowthVelocitySummary {
-  GrowthVelocitySummary(this.points);
+  GrowthVelocitySummary(List<GrowthWeightVelocityPoint> points)
+    : points = [...points]
+        ..sort((a, b) {
+          final end = a.to.compareTo(b.to);
+          return end == 0 ? a.from.compareTo(b.from) : end;
+        });
   final List<GrowthWeightVelocityPoint> points;
   GrowthWeightVelocityPoint? get latest => points.lastOrNull;
-  GrowthWeightVelocityPoint? get previous =>
-      points.length > 1 &&
-          points[points.length - 2].startMonth + 1 == latest!.startMonth
-      ? points[points.length - 2]
-      : null;
+  GrowthWeightVelocityPoint? get previous => _previousFor(latest);
+  GrowthWeightVelocityPoint? _previousFor(GrowthWeightVelocityPoint? current) {
+    if (current == null ||
+        !current.hasWhoReference ||
+        current.intervalMonths <= 0)
+      return null;
+    // The two neonatal rows have distinct durations, so do not compare them.
+    if (current.intervalMonths == 1 && current.startMonth < 2) return null;
+    for (final point in points.reversed) {
+      if (point.hasWhoReference &&
+          point.intervalMonths == current.intervalMonths &&
+          !(point.intervalMonths == 1 && point.startMonth < 2) &&
+          DateUtils.isSameDay(point.to, current.from))
+        return point;
+    }
+    return null;
+  }
+
   int? get delta =>
-      previous == null ? null : latest!.grams.round() - previous!.grams.round();
+      previous == null ? null : (latest!.grams - previous!.grams).round();
   bool get oscillates {
-    int? lastSign;
-    for (var i = 1; i < points.length; i++) {
-      if (points[i].startMonth != points[i - 1].startMonth + 1) {
-        lastSign = null;
-        continue;
-      }
-      final sign = (points[i].grams.round() - points[i - 1].grams.round()).sign;
-      if (sign == 0) continue;
-      if (lastSign != null && lastSign != sign) return true;
-      lastSign = sign;
+    final signs = <GrowthWeightVelocityPoint, int>{};
+    for (final point in points) {
+      final previous = _previousFor(point);
+      if (previous == null) continue;
+      final sign = (point.grams - previous.grams).sign.toInt();
+      final lastSign = signs[previous];
+      if (sign != 0 && lastSign != null && lastSign != sign) return true;
+      if (sign != 0 || lastSign != null)
+        signs[point] = sign == 0 ? lastSign! : sign;
     }
     return false;
   }
@@ -91,7 +109,7 @@ class GrowthVelocitySummary {
       : previous == null
       ? 'Chưa đủ dữ liệu nhận xét xu hướng'
       : oscillates
-      ? 'Dao động qua các tháng'
+      ? 'Dao động qua các kỳ'
       : delta == 0
       ? 'Ít thay đổi'
       : delta! > 0
@@ -108,11 +126,11 @@ class GrowthVelocitySummary {
         ? 'Cân nặng của bé không đổi'
         : 'Bé tăng $grams g';
     final comparison = delta == null
-        ? '. Chưa có tháng liền trước để so sánh tốc độ.'
+        ? '. Chưa có kỳ liền trước cùng độ dài để so sánh.'
         : delta == 0
-        ? ', bằng mức tăng của tháng trước.'
-        : ', ${delta! > 0 ? 'nhiều' : 'ít'} hơn ${delta!.abs()} g so với tháng trước.';
-    return '$recorded trong tháng gần nhất đang xem$comparison ${oscillates ? 'Mức tăng có dao động giữa các tháng. ' : ''}Ba mẹ hãy tiếp tục theo dõi các lần đo tiếp theo nhé!';
+        ? ', bằng mức tăng của kỳ trước.'
+        : ', ${delta! > 0 ? 'nhiều' : 'ít'} hơn ${delta!.abs()} g so với kỳ trước.';
+    return '$recorded trong kỳ gần nhất đang xem$comparison ${oscillates ? 'Mức tăng có dao động giữa các kỳ. ' : ''}Ba mẹ hãy tiếp tục theo dõi các lần đo tiếp theo nhé!';
   }
 
   String get history => [
@@ -140,108 +158,14 @@ class GrowthVelocityHighlights extends StatelessWidget {
   final GrowthVelocitySummary summary;
   final bool easyRead;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: .9,
-            child: _note(
-              title: 'T\u1ed1c \u0111\u1ed9 t\u0103ng c\u00e2n th\u00e1ng g\u1ea7n nh\u1ea5t \u0111ang xem',
-              value: summary.latest == null
-                  ? 'Ch\u01b0a \u0111\u1ee7 d\u1eef li\u1ec7u'
-                  : '${growthVelocitySigned(summary.latest!.grams.round())} g/th\u00e1ng',
-              detail: summary.latest == null
-                  ? null
-                  : '${summary.latest!.startMonth}\u2013${summary.latest!.startMonth + 1} th\u00e1ng tu\u1ed5i \u00b7 ${_date(summary.latest!.from)} \u2013 ${_date(summary.latest!.to)}',
-              color: growthWeightOrange,
-              angle: -.045,
-            ),
-          ),
-        ),
-        if (!easyRead)
-          const Align(
-            alignment: Alignment.center,
-            child: GrowthAsset('weight-note-arrow', size: 52),
-          )
-        else
-          const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FractionallySizedBox(
-            widthFactor: .9,
-            child: _note(
-              title: 'Thay \u0111\u1ed5i t\u1ed1c \u0111\u1ed9 so v\u1edbi th\u00e1ng li\u1ec1n tr\u01b0\u1edbc',
-              value: summary.delta == null
-                  ? 'Ch\u01b0a \u0111\u1ee7 d\u1eef li\u1ec7u so s\u00e1nh'
-                  : '${growthVelocitySigned(summary.delta!)} g/th\u00e1ng',
-              color: const Color(0xFFAE652B),
-              angle: .035,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _note({
-    required String title,
-    required String value,
-    required Color color,
-    required double angle,
-    String? detail,
-  }) => Transform.rotate(
-    angle: easyRead ? 0 : angle,
-    child: CustomPaint(
-      painter: const GrowthNotePaperPainter(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: easyRead ? 'Nunito' : 'DancingScript',
-                fontSize: 18,
-                height: 1.3,
-                color: const Color(0xFF20365D),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: easyRead ? 'Nunito' : 'DancingScript',
-                fontSize: easyRead ? 24 : 21,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-            if (detail != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                detail,
-                style: TextStyle(
-                  fontFamily: easyRead ? 'Nunito' : 'DancingScript',
-                  fontSize: easyRead ? 18 : 13,
-                  height: 1.4,
-                  color: growthMuted,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => GrowthWeightVelocityHeader(
+    grams: summary.latest?.grams.round(),
+    delta: summary.delta,
+    easyRead: easyRead,
+    recordingOnly: summary.latest != null && !summary.latest!.hasWhoReference,
+    period: summary.latest?.intervalMonths ?? 1,
   );
 }
-
-String _date(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
 
 class GrowthVelocityAssessment extends StatelessWidget {
   const GrowthVelocityAssessment({
@@ -261,7 +185,7 @@ class GrowthVelocityAssessment extends StatelessWidget {
     color: const Color(0xFF4C6585),
   );
   TextStyle get _title => TextStyle(
-    fontSize: easyRead ? 20 : 17,
+    fontSize: easyRead ? 20 : 16,
     fontWeight: FontWeight.w800,
     color: const Color(0xFF20365D),
   );
@@ -275,12 +199,29 @@ class GrowthVelocityAssessment extends StatelessWidget {
               .where((r) => DateUtils.isSameDay(r.measuredAt, date))
               .lastOrNull;
     final from = readingAt(latest?.from), to = readingAt(latest?.to);
+    void openInsight(bool adviceMode) => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => GrowthVelocityInsightSheet(
+        adviceMode: adviceMode,
+        point: latest,
+        fromKg: from?.value,
+        toKg: to?.value,
+        previewExplanation: who?.explanation,
+        previewZ: who?.zScore,
+        comparison: summary.delta == null
+            ? null
+            : '${growthVelocitySigned(summary.delta!)} g so với kỳ liền trước cùng độ dài.',
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 24),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF1E4),
+          color: const Color(0xFFEAF5E9),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
@@ -288,7 +229,7 @@ class GrowthVelocityAssessment extends StatelessWidget {
           children: [
             Row(
               children: [
-                const GrowthAsset('result-smile-weight', size: 48),
+                const GrowthAsset('result-smile', size: 48),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -298,109 +239,59 @@ class GrowthVelocityAssessment extends StatelessWidget {
                       fontSize: easyRead ? 20 : 18,
                       height: 1.25,
                       fontWeight: FontWeight.w800,
-                      color: growthWeightOrange,
+                      color: growthGreen,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            _section(
-              _assessmentContent(
-                icon: const GrowthAsset('who', size: 26),
-                title: who?.classification ?? 'Ch\u01b0a \u0111\u1ee7 c\u0103n c\u1ee9 ph\u00e2n lo\u1ea1i theo WHO',
-                explanation: who?.explanation,
-                caption:
-                    '\u0110\u00e1nh gi\u00e1 t\u1ed1c \u0111\u1ed9 hi\u1ec7n t\u1ea1i${who?.zScore?.isFinite == true ? ' \u00b7 ${who!.zScore! > 0 ? '+' : ''}${who.zScore!.toStringAsFixed(2).replaceAll('.', ',')} SD' : ''}',
-              ),
-              const Color(0xFFFFE8D3),
-            ),
-            const SizedBox(height: 12),
-            _section(
-              _assessmentContent(
-                icon: const GrowthAsset('overview-trend', size: 26),
-                title: summary.direction,
-                explanation: summary.previous == null
-                    ? null
-                    : summary.oscillates
-                    ? 'M\u1ee9c t\u0103ng c\u00e2n c\u00f3 l\u00fac t\u0103ng, c\u00f3 l\u00fac gi\u1ea3m gi\u1eefa c\u00e1c th\u00e1ng li\u1ec1n nhau.'
-                    : summary.delta == 0
-                    ? 'M\u1ee9c t\u0103ng c\u00e2n g\u1ea7n nh\u1ea5t b\u1eb1ng th\u00e1ng li\u1ec1n tr\u01b0\u1edbc.'
-                    : 'M\u1ee9c t\u0103ng c\u00e2n g\u1ea7n nh\u1ea5t ${summary.delta! > 0 ? 'cao h\u01a1n' : 'th\u1ea5p h\u01a1n'} th\u00e1ng li\u1ec1n tr\u01b0\u1edbc ${summary.delta!.abs()} g.',
-                caption: 'Xu h\u01b0\u1edbng qua c\u00e1c th\u00e1ng',
-              ),
-              const Color(0xFFFFF1E4),
-            ),
-            const SizedBox(height: 24),
-            Text('Nhận xét', style: _title),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Text(summary.comment, style: _body),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Material(
               color: const Color(0xFFFFFEFA),
               borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    settings: const RouteSettings(
-                      name: '/growth/weight-velocity-explanation',
-                    ),
-                    builder: (_) => GrowthConclusionExplanationScreen(
-                      easyRead: easyRead,
-                      introText: 'M\u1ed7i l\u1ea7n \u0111o gi\u00fap ba m\u1eb9 hi\u1ec3u nh\u1ecbp t\u0103ng c\u00e2n c\u1ee7a con. C\u00f9ng xem d\u1eef li\u1ec7u, c\u00e1ch t\u00ednh v\u00e0 c\u0103n c\u1ee9 cho nh\u1eadn x\u00e9t n\u00e0y nh\u00e9!',
-                      sources: {
-                        'WHO Weight velocity': who?.sourceUrl ?? 'https://www.who.int/tools/child-growth-standards/standards/weight-velocity',
-                      },
-                      sections: [
-                        GrowthExplanationSection(
-                          '1. Dữ liệu được sử dụng',
-                          latest == null || from == null || to == null
-                              ? 'Chưa đủ hai số đo để giải thích cách tính.'
-                              : '${_date(latest.from)}: ${formatGrowthValue(from.value)} kg → ${_date(latest.to)}: ${formatGrowthValue(to.value)} kg. Khoảng đo: đúng 1 tháng, từ ${latest.startMonth} đến ${latest.startMonth + 1} tháng tuổi.',
-                        ),
-                        GrowthExplanationSection(
-                          '2. Cách tính',
-                          latest == null || from == null || to == null
-                              ? 'Cần hai số đo và khoảng thời gian hợp lệ.'
-                              : 'Mức thay đổi: (${formatGrowthValue(to.value)} − ${formatGrowthValue(from.value)}) × 1.000 = ${latest.grams.round()} g.\nTốc độ trung bình: ${latest.grams.round()} g ÷ 1 tháng = ${latest.grams.round()} g/tháng.${summary.delta == null ? '' : '\nThay đổi tốc độ: ${latest.grams.round()} − ${summary.previous!.grams.round()} = ${growthVelocitySigned(summary.delta!)} g/tháng. Đây là chênh lệch tốc độ giữa hai tháng.'}',
-                        ),
-                        GrowthExplanationSection(
-                          '3. Xu hướng qua các tháng',
-                          summary.points.isEmpty
-                              ? 'Chưa đủ dữ liệu nhận xét xu hướng.'
-                              : '${summary.history}\n${summary.direction}. So sánh tốc độ chỉ thực hiện giữa các tháng liền nhau; chiều hướng này không phải phân loại bất thường về y khoa.',
-                        ),
-                        GrowthExplanationSection(
-                          '4. Căn cứ WHO',
-                          who == null
-                              ? 'Chưa có kết quả đối chiếu WHO hợp lệ cho tháng đang đánh giá. Dải tham chiếu trên biểu đồ không đủ để tự phân loại tốc độ tăng cân chậm, nhanh hay bất thường.'
-                              : 'Chỉ số: tốc độ tăng cân, chu kỳ 1 tháng.\n${who.comparison}\nPhân loại: ${who.classification}. ${who.explanation}\nBộ chuẩn: ${who.version}\nNguồn: ${who.sourceUrl}',
-                        ),
-                      ],
-                    ),
-                  ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const GrowthAsset('lightbulb', size: 26),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'V\u00ec sao c\u00f3 k\u1ebft lu\u1eadn n\u00e0y?',
-                          style: _title,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF20365D),
-                      ),
-                    ],
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
+                leading: const GrowthAsset('lightbulb', size: 36),
+                title: Text('Vì sao có nhận xét này', style: _title),
+                subtitle: Text(
+                  'Kết quả của bé và căn cứ đánh giá WHO',
+                  style: _body,
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF315B87),
+                ),
+                onTap: () => openInsight(false),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Material(
+              color: const Color(0xFFFFFEFA),
+              borderRadius: BorderRadius.circular(18),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                leading: const GrowthAsset('heart', size: 36),
+                title: Text('Gợi ý cho ba mẹ', style: _title),
+                subtitle: Text('Theo dõi các kỳ đo của bé', style: _body),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF315B87),
+                ),
+                onTap: () => openInsight(true),
               ),
             ),
           ],
@@ -408,59 +299,4 @@ class GrowthVelocityAssessment extends StatelessWidget {
       ),
     );
   }
-
-  Widget _assessmentContent({
-    required Widget icon,
-    required String title,
-    required String caption,
-    String? explanation,
-  }) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          icon,
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: easyRead ? 19 : 16,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF20365D),
-              ),
-            ),
-          ),
-        ],
-      ),
-      if (explanation != null) ...[
-        const SizedBox(height: 6),
-        Text(explanation, style: _body),
-      ],
-      const SizedBox(height: 8),
-      Text(
-        caption,
-        style: TextStyle(
-          fontSize: easyRead ? 16 : 13,
-          height: 1.4,
-          color: const Color(0xFF74817A),
-        ),
-      ),
-    ],
-  );
-
-  Widget _section(Widget child, Color color) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(6),
-        topRight: Radius.circular(22),
-        bottomLeft: Radius.circular(22),
-        bottomRight: Radius.circular(6),
-      ),
-    ),
-    child: child,
-  );
 }

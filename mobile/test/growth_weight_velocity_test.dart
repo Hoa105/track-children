@@ -112,8 +112,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Tốc độ'));
       await tester.pumpAndSettle();
-      expect(find.text('Tốc độ tăng cân theo tháng'), findsOneWidget);
-      expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsOneWidget);
+      expect(find.text('Theo\ntháng'), findsOneWidget);
+      expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsNothing);
       final chart = find
           .descendant(
             of: find.byType(GrowthWeightVelocityTab),
@@ -135,25 +135,15 @@ void main() {
       await mouse.moveTo(
         origin +
             Offset(
-              62 + 10.5 / 12 * 274,
-              12 + (high - 300) / (high - low) * 224,
+              48 + 10.5 / 12 * (tester.getSize(chart).width - 62),
+              20 + (high - 300) / (high - low) * (tester.getSize(chart).height - 64),
             ),
       );
       await tester.pump();
-      expect(
-        find.text(
-          '300 g/tháng\nZ-score v\u1eadn t\u1ed1c: Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u\n10–11 tháng\n15/04/2025',
-        ),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Tăng 300 g', findRichText: true), findsOneWidget);
       await mouse.moveTo(Offset.zero);
       await tester.pump();
-      expect(
-        find.text(
-          '300 g/tháng\nZ-score v\u1eadn t\u1ed1c: Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u\n10–11 tháng\n15/04/2025',
-        ),
-        findsNothing,
-      );
+      expect(find.textContaining('Tăng 300 g', findRichText: true), findsNothing);
       await mouse.removePointer();
       await tester.ensureVisible(find.byTooltip('Giải thích tốc độ tăng cân'));
       await tester.tap(find.byTooltip('Giải thích tốc độ tăng cân'));
@@ -165,20 +155,20 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('velocity-age-filter')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('3–5 tuổi').last);
+      await tester.tap(find.text('4–5 tuổi').last);
       await tester.pumpAndSettle();
       expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsNothing);
       expect(
-        find.text('Chưa có tham chiếu WHO chu kỳ 1 tháng cho khoảng tuổi này.'),
+        find.text('Chưa đủ dữ liệu trong khoảng đang xem.'),
         findsOneWidget,
       );
       await tester.ensureVisible(find.byKey(const ValueKey('velocity-age-filter')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('velocity-age-filter')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('10–12 tháng').last);
+      await tester.tap(find.text('10–12').last);
       await tester.pumpAndSettle();
-      expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsOneWidget);
+      expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsNothing);
       await tester.tap(find.text('Tổng quan'));
       await tester.pumpAndSettle();
       expect(find.byType(GrowthWeightVelocityTab), findsNothing);
@@ -206,7 +196,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Chưa đủ hai số đo đúng mốc tháng để hiển thị mức tăng trong 2–12 tháng tuổi.'), findsOneWidget);
+    expect(find.text('Chưa đủ dữ liệu trong khoảng đang xem.'), findsOneWidget);
     expect(find.text('WHO: \u22122 \u0111\u1ebfn +2 SD'), findsNothing);
     expect(tester.takeException(), isNull);
   });

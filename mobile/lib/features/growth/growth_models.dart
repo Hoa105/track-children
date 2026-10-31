@@ -11,8 +11,12 @@ class GrowthIndexAssessment {
     required this.classification,
     required this.zScore,
     required this.explanation,
+    this.advice = const [],
+    this.overview,
   });
   final String classification, explanation;
+  final String? overview;
+  final List<String> advice;
   final double zScore;
   bool get isValid =>
       zScore.isFinite && classification.isNotEmpty && explanation.isNotEmpty;
@@ -146,8 +150,9 @@ double? growthChartAgeMonths(DateTime birth, DateTime measuredAt) {
 }
 
 class GrowthWeightReferenceRow {
-  const GrowthWeightReferenceRow(this.month, this.weights);
+  const GrowthWeightReferenceRow(this.month, this.weights, {this.ageDays});
   final int month;
+  final double? ageDays;
 
   /// WHO thresholds: -3 SD, -2 SD, median, +2 SD, +3 SD, kg.
   final List<double> weights;

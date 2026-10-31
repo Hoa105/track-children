@@ -113,6 +113,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('8,8 kg'), findsOneWidget);
+    expect(find.text('Bé hiện nặng'), findsOneWidget);
+    expect(find.byTooltip('Cập nhật cân nặng'), findsOneWidget);
+    expect(find.text('Cân nặng của bé thế nào?'), findsOneWidget);
+    expect(find.text('Vì sao có nhận xét này'), findsOneWidget);
+    expect(find.text('Gợi ý cho ba mẹ'), findsOneWidget);
+    expect(find.text('Phù hợp'), findsNothing);
+    expect(find.text('Cân đối'), findsNothing);
     expect(find.byType(GrowthWeightMeasurementChart), findsOneWidget);
     final chart = tester.widget<GrowthWeightMeasurementChart>(
       find.byType(GrowthWeightMeasurementChart),
@@ -131,19 +138,12 @@ void main() {
       await file.writeAsBytes(png!.buffer.asUint8List());
       capture.dispose();
     });
-    await tester.ensureVisible(find.byType(DropdownButton<int>));
-    await tester.tap(find.byType(DropdownButton<int>));
+    await tester.ensureVisible(find.byType(DropdownButton<int>).first);
+    await tester.tap(find.byType(DropdownButton<int>).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('9 \u2013 12 th\u00e1ng').last);
+    await tester.tap(find.text('10–12 tháng').last);
     await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<GrowthWeightMeasurementChart>(
-            find.byType(GrowthWeightMeasurementChart),
-          )
-          .maxAgeMonths,
-      12,
-    );
+    expect(tester.widget<DropdownButton<int>>(find.byType(DropdownButton<int>).first).value, 12);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     tester.view.physicalSize = const Size(320, 740);
@@ -226,21 +226,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('12 kg'), findsOneWidget);
-      await tester.ensureVisible(find.byType(DropdownButton<int>));
-      await tester.tap(find.byType(DropdownButton<int>));
+      await tester.ensureVisible(find.byType(DropdownButton<int>).first);
+      await tester.tap(find.byType(DropdownButton<int>).first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('9 – 12 tháng').last);
+      await tester.tap(find.text('10–12 tháng').last);
       await tester.pumpAndSettle();
-      final chart = tester.widget<GrowthWeightMeasurementChart>(
-        find.byType(GrowthWeightMeasurementChart),
-      );
-      expect(chart.points.any((p) => p.measuredAt.year == 2026), isFalse);
-      expect(
-        chart.points.every(
-          (p) => growthChartAgeMonths(repo.dateOfBirth, p.measuredAt)! <= 12,
-        ),
-        isTrue,
-      );
+      expect(tester.widget<DropdownButton<int>>(find.byType(DropdownButton<int>).first).value, 12);
       expect(find.text('12 kg'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

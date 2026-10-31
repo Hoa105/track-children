@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_head_detail.dart';
-import 'package:track_children/features/growth/growth_weight_detail.dart';
+import 'package:track_children/features/growth/weight_chart_view.dart';
 
 class HeadRepo extends GrowthRepository {
   HeadRepo(this.reference, {this.empty = false});
@@ -77,22 +77,23 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Vòng đầu'), findsOneWidget);
-      expect(find.text('45 cm'), findsOneWidget);
-      expect(find.text('Tăng 0,8 cm'), findsOneWidget);
-      final chart = tester.widget<GrowthWeightMeasurementChart>(
-        find.byType(GrowthWeightMeasurementChart),
+      expect(find.text('45\u00A0cm'), findsOneWidget);
+      expect(find.textContaining('Tăng 0,8\u00A0cm'), findsOneWidget);
+      final chart = tester.widget<WeightChartView>(
+        find.byType(WeightChartView),
       );
       expect(chart.points.length, 2);
-      expect(chart.maxAgeMonths, 60);
+      expect(chart.end, 60);
       expect(chart.unit, 'cm');
-      expect(chart.axisTitle, 'Vòng đầu (cm)');
-      expect(chart.seriesColor, const Color(0xFF9468B5));
-      await tester.ensureVisible(find.text('Vì sao có kết luận này?'));
-      await tester.tap(find.text('Vì sao có kết luận này?'));
+      expect(chart.metricName, 'Vòng đầu');
+      expect(chart.breakAt, isNull);
+      expect(chart.dataColor, const Color(0xFF9468B5));
+      await tester.ensureVisible(find.text('Vì sao có nhận xét này?'));
+      await tester.tap(find.text('Vì sao có nhận xét này?'));
       await tester.pumpAndSettle();
-      expect(find.text('Căn cứ đánh giá'), findsOneWidget);
+      expect(find.text('Căn cứ đánh giá theo WHO'), findsOneWidget);
       expect(
-        find.textContaining('WHO Child Growth Standards, vòng đầu'),
+        find.textContaining('WHO 2007: vòng đầu theo tuổi'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

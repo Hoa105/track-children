@@ -1,4 +1,9 @@
+import 'growth_classification_labels.dart';
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/demo_store.dart';
 import 'growth_repository.dart';
@@ -24,6 +29,18 @@ class ApiGrowthRepository extends GrowthRepository {
   final _details = <String, Future<GrowthDocument>>{};
   final _snapshots = <String, GrowthDocument>{};
   final _velocity = <Map<String, dynamic>>[];
+  final _velocityDocuments = <int, Future<GrowthDocument>>{};
+  Future<GrowthDocument> _velocityDocument(int period) => _velocityDocuments
+      .putIfAbsent(period, () => _loadVelocityDocument(period));
+  Future<GrowthDocument> _loadVelocityDocument(int period) async {
+    try {
+      return await remote.velocity('weight', mode: 'who', period: period);
+    } catch (_) {
+      _velocityDocuments.remove(period);
+      rethrow;
+    }
+  }
+
   @override
   DateTime? get dateOfBirth => _birth;
   void _profile(GrowthDocument doc) {
@@ -83,6 +100,7 @@ class ApiGrowthRepository extends GrowthRepository {
     _details.clear();
     _snapshots.clear();
     _velocity.clear();
+    _velocityDocuments.clear();
   }
 
   String _day(DateTime d) =>
@@ -93,6 +111,7 @@ class ApiGrowthRepository extends GrowthRepository {
     _details.clear();
     _snapshots.clear();
     _velocity.clear();
+    _velocityDocuments.clear();
     final doc = await remote.overview();
     _profile(doc);
     const titles = ['Cân nặng', 'Chiều dài', 'Vòng đầu', 'BMI'];
@@ -206,6 +225,7 @@ class ApiGrowthRepository extends GrowthRepository {
     _details.clear();
     _snapshots.clear();
     _velocity.clear();
+    _velocityDocuments.clear();
   }
 
   Map<String, dynamic>? assessment(
@@ -231,37 +251,34 @@ class ApiGrowthRepository extends GrowthRepository {
   double? indicatorZScore(String metric, DateTime date, String indicator) =>
       (assessment(metric, date, indicator)?['zScore'] as num?)?.toDouble();
 
-  static const _classificationLabels = {
-    'WITHIN_RANGE': 'Trong khoảng tham chiếu',
-    'SEVERE_UNDERWEIGHT': 'Nhẹ cân mức độ nặng',
-    'UNDERWEIGHT': 'Nhẹ cân',
-    'HIGH_WFA': 'Cân nặng theo tuổi cao',
-    'SEVERE_STUNTING': 'Thấp còi nặng',
-    'STUNTING': 'Thấp còi',
-    'VERY_TALL': 'Cao nổi bật so với tuổi',
-    'SEVERE_WASTING': 'Gầy còm nặng',
-    'WASTING': 'Gầy còm',
-    'RISK_OVERWEIGHT': 'Nguy cơ thừa cân',
-    'OVERWEIGHT': 'Thừa cân',
-    'OBESITY': 'Béo phì theo chỉ số nhân trắc',
-    'SEVERE_THINNESS': 'BMI rất thấp theo tuổi',
-    'THINNESS': 'BMI thấp theo tuổi',
-    'VERY_LOW_HC': 'Vòng đầu rất nhỏ so với tuổi',
-    'LOW_HC': 'Vòng đầu nhỏ so với tuổi',
-    'HIGH_HC': 'Vòng đầu lớn so với tuổi',
-    'VERY_HIGH_HC': 'Vòng đầu rất lớn so với tuổi',
-  };
-
   GrowthIndexAssessment? _index(Map<String, dynamic>? a) {
     if (a == null) return null;
     final content = a['content'] as Map?;
     final comment = content?['comment'] as Map?;
+    final overview = content?['overview'] as Map?;
+    final explanationText = comment != null && comment['status'] == 'READY'
+        ? (comment['text']?.toString() ?? '')
+        : 'Nội dung giải thích hiện chưa sẵn có.';
+    final overviewText = overview != null && overview['status'] == 'READY'
+        ? overview['text']?.toString()
+        : null;
     return GrowthIndexAssessment(
       classification:
-          _classificationLabels[a['classificationCode']] ??
+          growthClassificationLabel(
+            a['indicator']?.toString(),
+            a['classificationCode']?.toString(),
+          ) ??
           'C\u00f3 k\u1ebft qu\u1ea3 \u0111\u00e1nh gi\u00e1',
       zScore: (a['zScore'] as num).toDouble(),
-      explanation: comment?['text']?.toString() ?? '',
+      explanation: explanationText,
+      overview: overviewText,
+      advice: [
+        for (final item in (content?['advice'] as List? ?? []))
+          if (item is Map &&
+              item['status'] == 'READY' &&
+              item['text'] is String)
+            item['text'] as String,
+      ],
     );
   }
 
@@ -314,6 +331,25 @@ class ApiGrowthRepository extends GrowthRepository {
               (p['x'] as num).toInt(): (p['y'] as num).toDouble(),
           },
       };
+      if (indicator == 'wfa' || indicator == 'lhfa') {
+        final days = points[0]!.keys.toList()..sort();
+        for (final day in days) {
+          if ([
+            -3,
+            -2,
+            0,
+            2,
+            3,
+          ].every((sd) => points[sd]?.containsKey(day) == true)) {
+            rows.add(
+              GrowthWeightReferenceRow((day / 30.4375).floor(), [
+                for (final sd in [-3, -2, 0, 2, 3]) points[sd]![day]!,
+              ], ageDays: day.toDouble()),
+            );
+          }
+        }
+        continue;
+      }
       for (var month = 0; month <= 60; month++) {
         final first = DateTime(_birth!.year, _birth!.month + month);
         final day = DateTime(
@@ -353,8 +389,27 @@ class ApiGrowthRepository extends GrowthRepository {
   }
 
   @override
-  Future<GrowthWeightReference?> weightReference() =>
-      _ageReference('weight', 'wfa');
+  Future<GrowthWeightReference?> weightReference() async {
+    final reference = await _ageReference('weight', 'wfa');
+    if (reference == null)
+      return null; // Keep missing/unverified references explicit.
+    final days = reference.rows.map((r) => r.ageDays).toSet();
+    if (days.length == 1827 &&
+        List.generate(1827, (i) => i.toDouble()).every(days.contains)) {
+      return reference;
+    }
+    // Older/cached API snapshots may contain only the child's elapsed ages.
+    // Use the complete official bundled display table, never extrapolate a curve.
+    return GrowthWeightReference.fromJson(
+      jsonDecode(
+        await rootBundle.loadString(
+          'assets/data/who/weight_for_age_curves.json',
+        ),
+      ) as Map<String, dynamic>,
+      _sex,
+    );
+  }
+
   @override
   Future<GrowthWeightReference?> statureAgeReference(bool length) =>
       _ageReference('height', 'lhfa', length);
@@ -420,8 +475,109 @@ class ApiGrowthRepository extends GrowthRepository {
   }
 
   @override
+  Future<List<GrowthWeightVelocityPoint>?> weightVelocityIntervals({
+    int period = 1,
+  }) async {
+    final doc = await _velocityDocument(period);
+    _velocity
+      ..clear()
+      ..addAll(doc.list('whoIntervals'));
+    final intervals = <String, Map<String, dynamic>>{};
+    for (final item in doc.list('actualIntervals')) {
+      intervals[item['intervalId'].toString()] = {
+        ...item,
+        if (item['referenceStatus'] == 'REFERENCE_MATCHED')
+          'referenceStatus': 'NO_EXACT_REFERENCE',
+      };
+    }
+    for (final item in doc.list('whoIntervals')) {
+      intervals[item['intervalId'].toString()] = item;
+    }
+    final result = <GrowthWeightVelocityPoint>[];
+    for (final item in intervals.values) {
+      if (item['calculationStatus'] != 'READY' ||
+          item['deltaUnit'] != 'g' ||
+          item['deltaValue'] is! num)
+        continue;
+      final from = item['from'] as Map, to = item['to'] as Map;
+      final a = DateTime.parse(from['measuredOn'].toString());
+      final b = DateTime.parse(to['measuredOn'].toString());
+      final start = (from['ageDays'] as num).toDouble() / 30.4375;
+      final end = (to['ageDays'] as num).toDouble() / 30.4375;
+      final matched = item['matchedReference'] as Map?;
+      final content = item['content'] as Map?;
+      final comment = content?['comment'] as Map?;
+      result.add(
+        GrowthWeightVelocityPoint(
+          matched != null && item['referenceStatus'] == 'REFERENCE_MATCHED'
+              ? matched['startAgeUnit'] == 'weeks'
+                    ? 1
+                    : (matched['startAgeValue'] as num?)?.toInt() ??
+                          start.floor()
+              : start.floor(),
+          (item['deltaValue'] as num).toDouble(),
+          a,
+          b,
+          id: item['intervalId'].toString(),
+          startAgeMonths: start,
+          endAgeMonths: end,
+          serverLabel: item['referenceStatus'] == 'REFERENCE_MATCHED'
+              ? (matched == null ? null : matched['intervalLabel']?.toString())
+              : '${a.day}/${a.month}/${a.year}–${b.day}/${b.month}/${b.year} · Chỉ ghi nhận',
+          fromKg: (from['rawValue'] as num?)?.toDouble(),
+          toKg: (to['rawValue'] as num?)?.toDouble(),
+          elapsedDays: (item['elapsedDays'] as num?)?.toInt(),
+          referenceValues: {
+            for (final value in matched?['sdValues'] as List? ?? const [])
+              (value['sd'] as num).toInt(): (value['value'] as num).toDouble(),
+          },
+          explanation: comment != null && comment['status'] == 'READY'
+              ? comment['text']?.toString()
+              : null,
+          advice: [
+            for (final advice in content?['advice'] as List? ?? const [])
+              if (advice is Map &&
+                  advice['status'] == 'READY' &&
+                  advice['text'] is String)
+                advice['text'] as String,
+          ],
+          intervalMonths: item['referenceStatus'] == 'REFERENCE_MATCHED'
+              ? (matched?['tableIntervalMonths'] as num?)?.toInt() ?? 1
+              : 0,
+          referenceStatus:
+              item['referenceStatus']?.toString() ?? 'NOT_REQUESTED',
+          referenceReason: item['referenceReason']?.toString(),
+          zScore:
+              item['referenceStatus'] == 'REFERENCE_MATCHED' &&
+                  item['zScoreStatus'] == 'READY'
+              ? (item['zScore'] as num?)?.toDouble()
+              : null,
+        ),
+      );
+    }
+    result.sort((a, b) {
+      final order = a.to.compareTo(b.to);
+      return order == 0 ? a.from.compareTo(b.from) : order;
+    });
+    return result;
+  }
+
+  @override
+  Future<GrowthWeightVelocityReference?> weightVelocityPeriodReference(
+    int period,
+  ) async {
+    final doc = await _velocityDocument(period);
+    final rows = doc.list('referenceIntervals');
+    if (rows.isEmpty) return null;
+    return GrowthWeightVelocityReference.fromIntervals(
+      rows,
+      DateTime.tryParse(doc.child['dateOfBirth']?.toString() ?? ''),
+    );
+  }
+
+  @override
   Future<GrowthWeightVelocityReference?> weightVelocityReference() async {
-    final doc = await remote.velocity('weight', mode: 'who', period: 1);
+    final doc = await _velocityDocument(1);
     _velocity
       ..clear()
       ..addAll(doc.list('whoIntervals'));

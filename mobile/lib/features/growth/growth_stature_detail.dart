@@ -18,6 +18,9 @@ import 'growth_weight_detail.dart'
 import 'growth_weight_input.dart';
 import 'growth_chart_explanation_dialog.dart';
 import 'growth_conclusion_explanation.dart';
+import 'stature_overview.dart';
+import 'head_overview.dart';
+import 'bmi_overview.dart';
 
 String growthStatureName(double? age) => age == null
     ? 'Chiều dài/chiều cao'
@@ -45,6 +48,7 @@ class GrowthStatureDetailScreen extends StatefulWidget {
 class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
   bool get _head => widget.metric == GrowthMetric.headCircumference;
   bool get _bmi => widget.bmiMode;
+  Color get _tabColor => growthGreen;
   String get _unit => _bmi ? 'kg/m²' : 'cm';
   Color get _series => _bmi
       ? growthGreen
@@ -83,6 +87,7 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
   int? _range;
   String _tab = 'Tổng quan';
   bool get _velocity => _tab == 'Tốc độ';
+  GrowthWeightReference? _lengthReference, _heightReference;
   Future<
     ({
       List<GrowthMeasurementDraft> points,
@@ -103,6 +108,22 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
             points.last.measuredAt,
           );
     try {
+      if (_bmi) {
+        _lengthReference = await widget.repository.bmiAgeReference(true);
+        _heightReference = await widget.repository.bmiAgeReference(false);
+        return (points: points, reference: age == null || age < 24 ? _lengthReference : _heightReference, failed: false);
+      }
+      if (!_head && !_bmi) {
+        _lengthReference = await widget.repository.statureAgeReference(true);
+        _heightReference = await widget.repository.statureAgeReference(false);
+        return (
+          points: points,
+          reference: age == null || age < 24
+              ? _lengthReference
+              : _heightReference,
+          failed: false,
+        );
+      }
       final reference = age == null
           ? null
           : _bmi
@@ -335,7 +356,7 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
                               border: Border(
                                 bottom: BorderSide(
                                   color: tab == _tab
-                                      ? _series
+                                      ? _tabColor
                                       : const Color(0xFFEEF0EC),
                                   width: tab == _tab ? 2 : 1,
                                 ),
@@ -347,7 +368,7 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
                                 tab,
                                 style: TextStyle(
                                   fontSize: 15,
-                                  color: tab == _tab ? _series : growthMuted,
+                                  color: tab == _tab ? _tabColor : growthMuted,
                                 ),
                               ),
                             ),
@@ -444,6 +465,37 @@ class _GrowthStatureDetailScreenState extends State<GrowthStatureDetailScreen> {
     DateTime? birth,
     bool easy,
   ) {
+    if (_bmi) {
+      return BmiOverview(points: points, repository: widget.repository,
+        lengthReference: _lengthReference, heightReference: _heightReference,
+        scoreFor: _sampleZ, onUpdate: _update,
+        onRetry: () => setState(() => _data = _load()), failed: failed, easyRead: easy);
+    }
+    if (_head) {
+      return HeadOverview(
+        points: points,
+        repository: widget.repository,
+        reference: reference,
+        scoreFor: _sampleZ,
+        onUpdate: _update,
+        onRetry: () => setState(() => _data = _load()),
+        failed: failed,
+        easyRead: easy,
+      );
+    }
+    if (!_head && !_bmi) {
+      return StatureOverview(
+        points: points,
+        repository: widget.repository,
+        lengthReference: _lengthReference,
+        heightReference: _heightReference,
+        scoreFor: _sampleZ,
+        onUpdate: _update,
+        easyRead: easy,
+        failed: failed,
+        onRetry: () => setState(() => _data = _load()),
+      );
+    }
     final latest = points.last;
     final previous = points.length < 2 ? null : points[points.length - 2];
     final comparable =

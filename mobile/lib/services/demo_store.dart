@@ -29,6 +29,7 @@ class DemoStore extends ChangeNotifier {
   static VaccinationRemote? vaccinationRemote;
 
   static const storageKey = 'synchronized_demo_v1';
+  static const demoEmail = 'demo@trackchildren.vn';
   static const password = 'TreXanh123';
   Map<String, dynamic> _data;
   bool _loaded = false;
@@ -181,6 +182,8 @@ class DemoStore extends ChangeNotifier {
   /// Local feature cache for a server-authenticated user, without credentials.
   Future<void> bindAuthenticatedUser(Map<String, dynamic> user) => _write((d) {
     final parents = d['parents'] as List;
+    final sameOwner = d['parentId'] == user['id'];
+    final selectedChildId = sameOwner ? d['childId'] : null;
     final existing = parents.where((p) => p['id'] == user['id']).firstOrNull;
     parents.removeWhere((p) => p['id'] == user['id']);
     parents.add(<String, dynamic>{
@@ -199,7 +202,7 @@ class DemoStore extends ChangeNotifier {
       'biometric': existing?['biometric'] ?? false,
     });
     d['parentId'] = user['id'];
-    d['childId'] = null;
+    d['childId'] = selectedChildId;
   });
 
   Future<void> updateAuthenticatedProfile(Map<String, dynamic> user) => _write((

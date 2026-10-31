@@ -89,7 +89,7 @@ def make_interval(profile, a, b, metric, tables, entry, period=None):
     }
     code = status
     if status == "READY":
-        if b["measured_on"] >= ev.add_months(profile["date_of_birth"], 24):
+        if b["measured_on"] > ev.add_months(profile["date_of_birth"], 24):
             result.update(
                 referenceStatus="REFERENCE_NOT_APPLICABLE",
                 referenceReason="OUT_OF_SCOPE_AGE",
@@ -247,7 +247,37 @@ def make_interval(profile, a, b, metric, tables, entry, period=None):
     result["content"] = content.render(
         "VELOCITY", "ALL_SUPPORTED_VELOCITY", code, values
     )
+    if b["measured_on"] > ev.add_months(profile["date_of_birth"], 24):
+        result["content"] = None
     return result
+
+
+def compare_who_increments(intervals, period):
+    """Compare full-interval gains across adjacent, equal WHO periods."""
+    eligible = sorted((i for i in intervals
+        if i['calculationStatus'] == 'READY'
+        and i['referenceStatus'] == 'REFERENCE_MATCHED'
+        and (i.get('matchedReference') or {}).get('intervalMonths') == period
+        and i.get('deltaValue') is not None),
+        key=lambda i: (i['to']['measuredOn'], i['from']['measuredOn']))
+    if not eligible:
+        return None
+    current = eligible[-1]
+    previous = next((i for i in reversed(eligible[:-1])
+        if i['to']['measuredOn'] == current['from']['measuredOn']
+        and i['to']['measurementId'] == current['from']['measurementId']
+        and i['deltaUnit'] == current['deltaUnit']), None)
+    if previous is None:
+        return None
+    return {
+        'previousIntervalId': previous['intervalId'],
+        'currentIntervalId': current['intervalId'],
+        'intervalMonths': period,
+        'previousIncrement': previous['deltaValue'],
+        'currentIncrement': current['deltaValue'],
+        'incrementDifference': round(current['deltaValue'] - previous['deltaValue'], 6),
+        'unit': current['deltaUnit'],
+    }
 
 
 def build(state, metric, mode="actual", period=None):
@@ -318,7 +348,7 @@ def build(state, metric, mode="actual", period=None):
             else (
                 "REFERENCE_NOT_APPLICABLE"
                 if rows[-1]["measured_on"]
-                >= ev.add_months(state["profile"]["date_of_birth"], 24)
+                > ev.add_months(state["profile"]["date_of_birth"], 24)
                 else (
                     "REFERENCE_UNAVAILABLE"
                     if not entry
@@ -341,7 +371,14 @@ def build(state, metric, mode="actual", period=None):
             }[ref_status]
         )
     trend = None
-    if len(actual) >= 2:
+    recording_only = bool(rows) and rows[-1]["measured_on"] > ev.add_months(
+        state["profile"]["date_of_birth"], 24
+    )
+    if recording_only:
+        selected = None
+        ref_status = "REFERENCE_NOT_APPLICABLE"
+        reason = "OUT_OF_SCOPE_AGE"
+    if mode == "actual" and len(actual) >= 2 and not recording_only:
         a, b = actual[-2:]
         if (
             a["calculationStatus"] == b["calculationStatus"] == "READY"
@@ -389,11 +426,26 @@ def build(state, metric, mode="actual", period=None):
         "referenceReason": reason,
         "actualIntervals": actual,
         "whoIntervals": who,
+        "referenceIntervals": [
+            {
+                "start": row["start"], "end": row["end"],
+                "startUnit": row["start_unit"], "endUnit": row["end_unit"],
+                "sdValues": row["sdValues"], "unit": table["unit"],
+                "intervalMonths": table["table_interval_months"],
+            }
+            for table in tables
+            if mode == "who" and entry and entry["status"] == "VERIFIED"
+            and table["indicator"] == ("length" if metric == "height" else metric)
+            and table["sex"] == state["profile"]["gender"]
+            and table["table_interval_months"] == period
+            for row in table["rows"]
+        ],
         "selectedActualIntervalId": latest["intervalId"] if latest else None,
         "selectedWhoIntervalId": selected["intervalId"] if selected else None,
         "trend": trend,
+        "incrementComparison": compare_who_increments(who, period) if mode == 'who' and not recording_only else None,
         "content": (
-            selected["content"]
+            None if recording_only else selected["content"]
             if selected
             else (
                 latest["content"]

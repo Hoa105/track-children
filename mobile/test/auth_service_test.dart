@@ -383,6 +383,10 @@ void main() {
         'gender': 'female',
       });
       expect(store.children, isNotEmpty);
+      final selectedChildId = store.children.single['id'] as String;
+      await store.selectChild(selectedChildId);
+      await store.bindAuthenticatedUser(profile);
+      expect(store.child?['id'], selectedChildId);
       await store.clearAuthenticatedCache();
       await store.bindAuthenticatedUser({...profile, 'id': 'different-user'});
       expect(store.children, isEmpty);
