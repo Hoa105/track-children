@@ -129,3 +129,34 @@ blockquote { margin: 14px 0 0; padding: 10px 13px; background: #f6f9f7; border-l
 .form-stack .auth-hint { margin-top: 8px; }.form-stack > div:last-child { margin-top: 14px; }.password-go { margin-top: 14px; }
 @media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } }
 .edit-mode-bar { margin: 0 0 16px; }
+/* Hoạt động & nhóm (#/activities) */
+.search-box { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #e3ebe5; border-radius: 8px; padding: 0 10px; color: #8d9b93; }
+.search-box input { border: 0; outline: 0; padding: 7px 0; font-size: 11px; color: #41594b; width: 200px; background: none; }
+.activity-cell { display: flex; align-items: center; gap: 11px; }
+.activity-cell img, .thumb-empty, .group-swatch { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; flex: 0 0 auto; }
+.thumb-empty, .group-swatch { display: grid; place-items: center; background: #f0f5f2; color: #9fb2a6; font-size: 20px; }
+.detail-thumb { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0 12px; }
+.edit-form label { display: block; color: #8d9d93; font-size: 9px; font-weight: 700; letter-spacing: .7px; margin: 14px 0 0; }
+.edit-form input:not([type="checkbox"]), .edit-form select, .edit-form textarea, .step-editor textarea, .step-editor select, .media-grid input { display: block; width: 100%; margin-top: 7px; border: 1px solid #dfe9e2; border-radius: 7px; padding: 9px 10px; color: #41594b; outline: none; font: inherit; font-size: 11px; background: #fff; line-height: 1.5; }
+.edit-form textarea, .step-editor textarea { resize: vertical; }
+.edit-form .mono { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; }
+.edit-form input:focus, .edit-form select:focus, .edit-form textarea:focus, .step-editor textarea:focus, .media-grid input:focus { border-color: #75c99a; box-shadow: 0 0 0 3px #75c99a22; }
+.edit-form .verify-list label { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 11px; font-weight: 500; letter-spacing: 0; color: #4f6459; }
+.modal textarea { display: block; width: 100%; margin-top: 7px; border: 1px solid #dfe9e2; border-radius: 7px; padding: 10px 11px; font: inherit; font-size: 11px; }
+.step-editor { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 12px; }
+.step-editor li { display: flex; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #eef3ef; }
+.step-number { width: 24px; height: 24px; border-radius: 50%; background: #e3f5e9; color: #3f8a5c; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; margin-top: 7px; }
+.step-body { flex: 1; min-width: 0; }
+.step-tools { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.step-tools select { margin-top: 0; flex: 1; min-width: 0; }
+.step-tools img { width: 40px; height: 30px; object-fit: cover; border-radius: 5px; }
+.step-tools .icon-action:disabled { opacity: .35; cursor: not-allowed; }
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+.media-grid figure { margin: 0; border: 1px solid #e6eee8; border-radius: 10px; overflow: hidden; background: #fff; }
+.media-grid figure.is-thumb { border-color: #8fd0aa; box-shadow: 0 0 0 2px #8fd0aa44; }
+.media-grid img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #f0f5f2; }
+.media-grid figcaption { padding: 9px 10px 10px; font-size: 10px; }
+.media-grid figcaption b { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: #42594c; }
+.media-grid figcaption input { margin: 7px 0 8px; padding: 6px 8px; font-size: 10px; }
+@media (max-width: 760px) { .search-box input { width: 140px; } }

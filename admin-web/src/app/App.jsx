@@ -18,6 +18,8 @@ import AdminsPage from "../features/admins/AdminsPage.jsx";
 import AdminDetailPage from "../features/admins/AdminDetailPage.jsx";
 import AccountPage from "../features/account/AccountPage.jsx";
 import VaccinationPage from "../features/health/VaccinationPage.jsx";
+import ActivitiesPage from "../features/activities/ActivitiesPage.jsx";
+import ActivityDetailPage from "../features/activities/ActivityDetailPage.jsx";
 import ModulePage from "../features/modules/ModulePage.jsx";
 
 const pages = {
@@ -28,6 +30,7 @@ const pages = {
   "/ai/candidates": CandidateCriteriaPage,
   "/ai/chatbot": ChatbotMonitorPage,
   "/community/reports": ReportsPage,
+  "/activities": ActivitiesPage,
   "/health": VaccinationPage,
   "/admins": AdminsPage,
   "/account": AccountPage,
@@ -37,6 +40,7 @@ const pages = {
 const detailPages = {
   "/users": { Page: UserDetailPage },
   "/admins": { Page: AdminDetailPage },
+  "/activities": { Page: ActivityDetailPage },
   "/children": { Page: ChildDetailPage, permission: "child.support_view" },
 };
 

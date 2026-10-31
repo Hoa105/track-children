@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'api_config.dart';
 import 'demo_store.dart';
 
 class AuthException implements Exception {
@@ -55,10 +56,7 @@ class AuthService {
   static AuthService instance = AuthService(demoMode: demoEnabled);
   final bool demoMode;
   Map<String, dynamic>? _pendingRegistration;
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
-  );
+  static String get baseUrl => '$apiBaseUrl/api/v1';
   final http.Client _client;
   final FlutterSecureStorage _storage;
   String? _access;

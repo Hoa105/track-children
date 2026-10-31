@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../app_colors.dart';
 import '../../app_layout.dart';
+import '../../models/video_insight.dart';
 import '../../services/demo_store.dart';
+import '../../services/journal_media.dart';
+import 'journal_media_view.dart';
+import 'video_insight_view.dart';
 
 const _heading = TextStyle(
   fontSize: 20,
@@ -47,6 +51,22 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   DateTimeRange? _range;
+
+  @override
+  void initState() {
+    super.initState();
+    // Gửi nhật ký còn chờ + lấy bản mới nhất (vd bố ghi trên máy khác).
+    DemoStore.instance.syncJournal(widget.childId);
+  }
+
+  @override
+  void didUpdateWidget(JournalScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.childId != widget.childId) {
+      DemoStore.instance.syncJournal(widget.childId);
+    }
+  }
+
   Future<void> _filter() async {
     final picked = await showDateRangePicker(
       context: context,
@@ -192,11 +212,19 @@ class _JournalScreenState extends State<JournalScreen> {
                                 ),
                               ],
                             ),
-                            if (entry['photo'] != null) ...[
+                            if ((entry['media'] as List?)?.isNotEmpty ??
+                                false) ...[
                               const SizedBox(height: 12),
-                              _Photo(
-                                bytes: base64Decode(entry['photo'] as String),
+                              JournalMediaTile(
+                                childId: widget.childId,
+                                entryId: entry['id'] as String,
+                                media: Map<String, dynamic>.from(
+                                  (entry['media'] as List).first as Map,
+                                ),
                               ),
+                            ] else if (entry['photo'] != null) ...[
+                              const SizedBox(height: 12),
+                              _Photo(photo: entry['photo'] as String),
                             ],
                             const SizedBox(height: 12),
                             Text(entry['note'] as String? ?? '', style: _body),
@@ -208,6 +236,10 @@ class _JournalScreenState extends State<JournalScreen> {
                                 _Tag(
                                   label: entry['mood'] as String? ?? 'Vui vẻ',
                                 ),
+                                if (entry['activityName'] != null)
+                                  _Tag(label: entry['activityName'] as String),
+                                if (entry['insight'] != null)
+                                  const _Tag(label: 'Có nhận xét AI'),
                                 for (final domain
                                     in entry['domains'] as List? ?? [])
                                   _Tag(label: domain.toString()),
@@ -238,12 +270,63 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   late DateTime _date;
   late String _mood;
   late Set<String> _selected;
-  Uint8List? _photo;
+
+  /// Ảnh / video của nhật ký (xem [JournalMediaFiles]).
+  List<Map<String, dynamic>> _media = [];
+
+  /// Ảnh base64 của nhật ký cũ (chưa chuyển thành file khi đồng bộ).
+  String? _legacyPhoto;
+
+  /// File chọn trong lần sửa này; không lưu thì xóa khỏi máy.
+  final _newFiles = <String>{};
   bool _editing = false, _busy = false;
+  VideoInsight? _insight;
+  Timer? _poll;
+
+  /// Bản mới nhất trong store (nhận xét AI có thể đã cập nhật sau khi mở màn).
+  Map<String, dynamic>? _latestEntry() {
+    final id = widget.entry?['id'];
+    if (id == null) return null;
+    return DemoStore.instance
+            .journalEntries(widget.childId)
+            .where((e) => e['id'] == id)
+            .firstOrNull ??
+        widget.entry;
+  }
+
+  void _pollInsight() {
+    var attempts = 0;
+    _poll = Timer.periodic(const Duration(seconds: 4), (timer) async {
+      if (++attempts > 75) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final insight = await DemoStore.instance.refreshJournalInsight(
+          widget.childId,
+          widget.entry!['id'] as String,
+        );
+        if (insight == null) {
+          timer.cancel();
+          return;
+        }
+        if (mounted) setState(() => _insight = insight);
+        if (insight.finished) timer.cancel();
+      } catch (_) {
+        // Mạng chập chờn: thử lại ở lần sau
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     final entry = widget.entry;
+    final saved = entry?['insight'] as Map<String, dynamic>?;
+    if (saved != null) {
+      _insight = VideoInsight.fromJson(saved);
+      if (!_insight!.finished) _pollInsight();
+    }
     _editing = entry == null;
     _note = TextEditingController(text: entry?['note'] as String? ?? '');
     _date = entry == null
@@ -251,13 +334,19 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         : DateTime.parse(entry['date'] as String);
     _mood = entry?['mood'] as String? ?? _moods.first;
     _selected = Set<String>.from(entry?['domains'] as List? ?? []);
-    if (entry?['photo'] != null) {
-      _photo = base64Decode(entry!['photo'] as String);
-    }
+    _media = [
+      for (final m in entry?['media'] as List? ?? const [])
+        Map<String, dynamic>.from(m as Map),
+    ];
+    _legacyPhoto = entry?['photo'] as String?;
   }
 
   @override
   void dispose() {
+    for (final path in _newFiles) {
+      JournalMediaFiles.instance.remove(path);
+    }
+    _poll?.cancel();
     _note.dispose();
     super.dispose();
   }
@@ -278,8 +367,18 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         imageQuality: 75,
       );
       if (file == null) return;
-      final bytes = await file.readAsBytes();
-      if (mounted) setState(() => _photo = bytes);
+      final id = DemoStore.newMediaId();
+      final path = await JournalMediaFiles.instance.keep(file, id);
+      _newFiles.add(path);
+      if (!mounted) return;
+      // Mỗi nhật ký 1 ảnh: ảnh mới thay ảnh cũ, giữ video
+      setState(() {
+        _legacyPhoto = null;
+        _media = [
+          {'id': id, 'type': 'image', 'path': path, 'uploaded': false},
+          ..._media.where((m) => m['type'] != 'image'),
+        ];
+      });
     } catch (_) {
       _error('Không mở được ảnh. Vui lòng kiểm tra quyền truy cập và thử lại.');
     }
@@ -289,7 +388,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     if (!_form.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
-      await DemoStore.instance.saveJournalEntry(widget.childId, {
+      final entry = {
+        // Giữ hoạt động + nhận xét AI của nhật ký tạo từ chi tiết hoạt động
+        ...?_latestEntry(),
         'id':
             widget.entry?['id'] ??
             'journal_${DateTime.now().microsecondsSinceEpoch}',
@@ -297,8 +398,16 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         'note': _note.text.trim(),
         'mood': _mood,
         'domains': _selected.toList(),
-        'photo': _photo == null ? null : base64Encode(_photo!),
-      });
+        'media': _media,
+        'photo': _legacyPhoto,
+      }..removeWhere((key, value) => key == 'photo' && value == null);
+      await DemoStore.instance.saveJournalEntry(widget.childId, entry);
+      final saved = {for (final m in _media) m['path']};
+      // Ảnh chọn rồi đổi trong lúc sửa: không còn dùng
+      for (final path in _newFiles.where((p) => !saved.contains(p))) {
+        JournalMediaFiles.instance.remove(path);
+      }
+      _newFiles.clear();
       if (mounted) Navigator.pop(context);
     } catch (_) {
       _error('Chưa lưu được nhật ký. Vui lòng thử lại.');
@@ -417,7 +526,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 ],
                 const Text('Khoảnh khắc của bé', style: _title),
                 const SizedBox(height: 12),
-                if (_photo == null && _editing)
+                if (_media.isEmpty && _legacyPhoto == null && _editing)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -449,19 +558,42 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                       ],
                     ),
                   ),
-                if (_photo != null) ...[
-                  _Photo(bytes: _photo!),
+                if (_legacyPhoto != null) ...[
+                  _Photo(photo: _legacyPhoto!),
                   if (_editing)
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
                         onPressed: _busy
                             ? null
-                            : () => setState(() => _photo = null),
+                            : () => setState(() => _legacyPhoto = null),
                         icon: const Icon(Icons.close_rounded),
                         label: const Text('Bỏ ảnh'),
                       ),
                     ),
+                ],
+                for (final media in _media) ...[
+                  JournalMediaTile(
+                    key: ValueKey(media['id']),
+                    childId: widget.childId,
+                    entryId: widget.entry?['id'] as String? ?? '',
+                    media: media,
+                  ),
+                  if (_editing)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() => _media.remove(media)),
+                        icon: const Icon(Icons.close_rounded),
+                        label: Text(
+                          media['type'] == 'video' ? 'Bỏ video' : 'Bỏ ảnh',
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 12),
                 ],
                 if (_editing) ...[
                   const SizedBox(height: 12),
@@ -518,6 +650,24 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ],
             ),
           ),
+          if (!_editing && _insight != null) ...[
+            const SizedBox(height: 16),
+            _Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Nhận xét của AI', style: _title),
+                  if (widget.entry?['activityName'] != null)
+                    Text(
+                      'Hoạt động: ${widget.entry!['activityName']}',
+                      style: _caption,
+                    ),
+                  const SizedBox(height: 12),
+                  VideoInsightView(insight: _insight!),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _Panel(
             child: Column(
@@ -704,14 +854,15 @@ class _Tag extends StatelessWidget {
   );
 }
 
+/// Ảnh base64 của nhật ký cũ.
 class _Photo extends StatelessWidget {
-  const _Photo({required this.bytes});
-  final Uint8List bytes;
+  const _Photo({required this.photo});
+  final String photo;
   @override
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(12),
     child: Image.memory(
-      bytes,
+      base64Decode(photo),
       height: 180,
       width: double.infinity,
       fit: BoxFit.cover,
