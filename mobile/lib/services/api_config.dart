@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../config/local_backend_config.dart';
 
 /// Backend base URL. Override with `--dart-define=API_BASE_URL=http://<ip>:8000`
@@ -6,10 +5,7 @@ import '../config/local_backend_config.dart';
 String get apiBaseUrl {
   const configured = String.fromEnvironment('API_BASE_URL');
   if (configured.isNotEmpty) return configured;
-  // Match the auth endpoint prepared for the selected physical device/emulator.
-  return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-      ? Uri.parse(localMobileApiBaseUrl).origin
-      : 'http://localhost:8000';
+  return localMobileApiBaseUrl;
 }
 
 /// Local DemoStore ids → uuid seeded by `python -m app.seed.demo` (backend/app/seed/demo.py).

@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 import 'demo_store.dart';
 import 'social_identity.dart';
-import '../config/local_backend_config.dart';
+import 'api_config.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -100,12 +100,7 @@ class AuthService {
   static AuthService instance = AuthService(demoMode: demoEnabled);
   final bool demoMode;
   Map<String, dynamic>? _pendingRegistration;
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: kIsWeb
-        ? 'http://localhost:8000/api/v1'
-        : localMobileApiBaseUrl,
-  );
+  static final baseUrl = apiBaseUrl;
   final http.Client _client;
   final FlutterSecureStorage _storage;
   final Future<Map<String, dynamic>> Function(String, String?)

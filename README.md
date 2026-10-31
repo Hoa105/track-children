@@ -100,6 +100,18 @@ flutter pub get
 flutter run
 ```
 
+Build APK nhanh trên Windows:
+
+```powershell
+.\scripts\build-mobile.ps1
+```
+
+Build release hoặc đổi địa chỉ backend:
+
+```powershell
+.\scripts\build-mobile.ps1 -Release -ApiBaseUrl http://192.168.1.10:8000/api/v1
+```
+
 ### Backend
 
 ```powershell

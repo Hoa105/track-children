@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'api_config.dart';
+
 class GrowthApiException implements Exception {
   GrowthApiException(this.code);
   final String code;
@@ -15,10 +17,7 @@ class GrowthApiException implements Exception {
 class GrowthApi {
   GrowthApi({http.Client? client}) : _client = client ?? http.Client();
   static GrowthApi instance = GrowthApi();
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
-  );
+  static final baseUrl = apiBaseUrl;
   final http.Client _client;
   String? _access, _refresh;
   int _generation = 0;
