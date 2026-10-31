@@ -73,3 +73,9 @@ node_modules/
 .test-deps/
 backend/.env
 backend/.runtime/
+
+# Biến môi trường cục bộ (mẫu nằm ở .env.example)
+.env
+
+# Ảnh admin tải lên cho hoạt động (dữ liệu, không phải mã nguồn)
+backend/static/activities/uploads/

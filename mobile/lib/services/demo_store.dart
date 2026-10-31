@@ -1,20 +1,27 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'activity_api.dart';
 import 'api_config.dart';
+import 'journal_api.dart';
+import 'journal_media.dart';
 import 'vaccination_remote.dart';
+import 'video_insight_api.dart';
 import 'who_bmi_reference.dart';
 import '../models/tooth.dart';
 import '../models/activity.dart';
+import '../models/video_insight.dart';
 
 export 'vaccination_remote.dart';
 
 /// Local, fictional test database. Never authenticates against a real service.
 /// Vaccination records are the exception: with [vaccinationRemote] set they are
-/// saved to the backend first and cached here.
+/// saved to the backend first and cached here. Diary entries are saved here
+/// first and copied to the backend ([journalRemote]).
 class DemoStore extends ChangeNotifier {
   DemoStore({DateTime? today}) : _data = _fixture(today ?? DateTime.now());
   static DemoStore _instance = DemoStore();
@@ -26,6 +33,15 @@ class DemoStore extends ChangeNotifier {
 
   /// Set in main(); null (as in tests) keeps vaccination records local only.
   static VaccinationRemote? vaccinationRemote;
+
+  /// Set in main(); null disables AI comments on diary videos.
+  static VideoInsightRemote? videoInsightRemote;
+
+  /// Set in main(); null (as in tests) keeps "Đã làm" / "Yêu thích" local only.
+  static ActivityRemote? activityRemote;
+
+  /// Set in main(); null (as in tests) keeps the diary on this device only.
+  static JournalRemote? journalRemote;
 
   static const storageKey = 'synchronized_demo_v1';
   static const password = 'TreXanh123';
@@ -290,49 +306,368 @@ class DemoStore extends ChangeNotifier {
     return entries;
   }
 
-  Future<void> saveJournalEntry(String childId, Map<String, dynamic> entry) {
-    if (childById(childId) == null) {
-      throw StateError('Không có quyền sửa nhật ký');
+  static List<Map<String, dynamic>> _mediaOf(Map? entry) => [
+    for (final m in (entry?['media'] as List? ?? const []))
+      Map<String, dynamic>.from(m as Map),
+  ];
+
+  /// Photo / video still to be uploaded from this device.
+  static bool _mediaPending(Map m) =>
+      m['uploaded'] != true && m['rejected'] == null && m['path'] != null;
+
+  /// Id for a new journal photo / video (diary_media.id on the backend).
+  static String newMediaId() => _uuidV4();
+
+  Future<void> _removeFiles(Iterable<Map> media) async {
+    for (final m in media) {
+      if (m['path'] != null) {
+        await JournalMediaFiles.instance.remove(m['path'] as String);
+      }
     }
-    final entries = journalEntries(childId);
-    final value = {...entry, 'childId': childId};
-    final index = entries.indexWhere((e) => e['id'] == entry['id']);
-    if (index < 0) {
-      entries.add(value);
-    } else {
-      entries[index] = value;
-    }
-    return _saveJournalEntries(childId, entries);
   }
 
-  Future<void> deleteJournalEntry(String childId, String entryId) {
-    if (childById(childId) == null) {
-      throw StateError('Không có quyền sửa nhật ký');
-    }
-    return _saveJournalEntries(
-      childId,
-      journalEntries(childId)..removeWhere((e) => e['id'] == entryId),
-    );
-  }
-
-  Future<void> _saveJournalEntries(
+  /// Saved on this device first (works offline), then sent to the backend in
+  /// the background: the entry, then its photos / videos (`media` items with a
+  /// local `path`). Until the backend confirms them the entry keeps
+  /// `pendingSync` / the items `uploaded: false`, and [syncJournal] sends them again.
+  Future<void> saveJournalEntry(
     String childId,
-    List<Map<String, dynamic>> entries,
+    Map<String, dynamic> entry,
+  ) async {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    final before = journalEntries(childId)
+        .where((e) => e['id'] == entry['id'])
+        .firstOrNull;
+    final value = {
+      ...entry,
+      'childId': childId,
+      'pendingSync': '${DateTime.now().microsecondsSinceEpoch}',
+    };
+    await _writeJournal(childId, (entries, _) {
+      final index = entries.indexWhere((e) => e['id'] == entry['id']);
+      index < 0 ? entries.add(value) : entries[index] = value;
+    });
+    final kept = {for (final m in _mediaOf(value)) m['id']};
+    await _removeFiles(_mediaOf(before).where((m) => !kept.contains(m['id'])));
+    unawaited(_pushJournal(childId));
+  }
+
+  Future<void> deleteJournalEntry(String childId, String entryId) async {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    final before = journalEntries(childId)
+        .where((e) => e['id'] == entryId)
+        .firstOrNull;
+    await _writeJournal(childId, (entries, deleted) {
+      entries.removeWhere((e) => e['id'] == entryId);
+      deleted.add(entryId);
+    });
+    await _removeFiles(_mediaOf(before));
+    unawaited(_pushJournal(childId));
+  }
+
+  /// Edits the journal of [childId] in one write: entries plus ids deleted on
+  /// this device that the backend has not confirmed yet (`journalDeleted`).
+  Future<void> _writeJournal(
+    String childId,
+    void Function(List<Map<String, dynamic>> entries, Set<String> deleted)
+    change,
   ) {
-    entries.sort(
-      (a, b) => b['date'].toString().compareTo(a['date'].toString()),
-    );
-    return saveChild(childId, {
-      'journalEntries': entries,
-      'journal': entries.isEmpty
+    final entries = journalEntries(childId);
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == childId);
+      final saved = c['journalEntries'] as List?;
+      // Đọc lại trong lượt ghi để không đè thay đổi vừa xếp hàng trước
+      final current = saved == null
+          ? entries
+          : [for (final e in saved) _copy(e as Map)];
+      final deleted = Set<String>.from(c['journalDeleted'] as List? ?? []);
+      change(current, deleted);
+      current.sort(
+        (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+      );
+      c['journalEntries'] = current;
+      c['journalDeleted'] = deleted.toList();
+      c['journal'] = current.isEmpty
           ? null
           : {
-              ...entries.first,
-              'title': entries.first['note'],
+              ...current.first,
+              'title': current.first['note'],
               'category':
-                  (entries.first['domains'] as List?)?.join(' · ') ?? 'Nhật ký',
+                  (current.first['domains'] as List?)?.join(' · ') ?? 'Nhật ký',
+            };
+    });
+  }
+
+  final _journalPushes = <String, Future<bool>>{};
+
+  /// Sends pending saves / deletes / files of [childId]; one run per child at
+  /// a time. False when offline or not linked (pending items are kept).
+  Future<bool> _pushJournal(String childId) =>
+      _journalPushes[childId] ??= _pushJournalNow(childId).whenComplete(() {
+        // Không trả về Future đã xóa: whenComplete sẽ chờ chính nó
+        _journalPushes.remove(childId);
+      });
+
+  Future<bool> _pushJournalNow(String childId) async {
+    final remote = journalRemote;
+    if (remote == null) return false;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      // Mỗi bản (id + token) / mỗi file gửi 1 lần / lượt; bản sửa trong lúc
+      // gửi được gửi tiếp
+      final triedSaves = <String>{}, triedUploads = <String>{};
+      String saveKey(Map e) => '${e['id']}@${e['pendingSync']}';
+      while (true) {
+        final child = childById(childId);
+        if (child == null) return false;
+        final deletes = [
+          for (final id in (child['journalDeleted'] as List? ?? []))
+            if (triedSaves.add('delete:$id')) id as String,
+        ];
+        final work = journalEntries(childId).where((e) {
+          final save =
+              e['pendingSync'] != null && !triedSaves.contains(saveKey(e));
+          return save ||
+              _mediaOf(
+                e,
+              ).any((m) => _mediaPending(m) && !triedUploads.contains(m['id']));
+        }).toList();
+        if (deletes.isEmpty && work.isEmpty) return true;
+        for (final id in deletes) {
+          await remote.remove(account, id);
+          await _writeJournal(childId, (_, deleted) => deleted.remove(id));
+        }
+        for (final entry in work) {
+          final token = entry['pendingSync'];
+          if (token != null && triedSaves.add(saveKey(entry))) {
+            bool sameVersion(Map<String, dynamic> e) =>
+                e['id'] == entry['id'] && e['pendingSync'] == token;
+            try {
+              await remote.save(account, entry);
+            } on ApiException catch (e) {
+              // 410: đã xóa ở máy khác → bỏ trên máy này
+              if (e.statusCode == 410) {
+                await _writeJournal(
+                  childId,
+                  (entries, _) => entries.removeWhere(sameVersion),
+                );
+                await _removeFiles(_mediaOf(entry));
+              }
+              // Dữ liệu bị từ chối: giữ trên máy, lần đồng bộ sau gửi lại
+              if (!e.rejected) rethrow;
+              continue;
+            }
+            await _writeJournal(childId, (entries, _) {
+              for (final e in entries.where(sameVersion)) {
+                e.remove('pendingSync');
+              }
+            });
+          }
+          for (final media in _mediaOf(entry).where(_mediaPending)) {
+            if (triedUploads.add(media['id'] as String)) {
+              await _uploadJournalMedia(
+                remote,
+                account,
+                childId,
+                entry['id'] as String,
+                media,
+              );
+            }
+          }
+        }
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _uploadJournalMedia(
+    JournalRemote remote,
+    VaccinationAccount account,
+    String childId,
+    String entryId,
+    Map<String, dynamic> media,
+  ) async {
+    String? rejected;
+    if (!await JournalMediaFiles.instance.exists(media['path'] as String)) {
+      rejected = 'Không còn file trên máy';
+    } else {
+      try {
+        await remote.uploadMedia(account, entryId, media);
+      } on ApiException catch (e) {
+        if (!e.rejected) rethrow;
+        // Quá lớn / sai loại file: gửi lại cũng vậy. Lỗi 4xx khác thử lại sau.
+        if (e.statusCode != 413 && e.statusCode != 415) return;
+        rejected = e.message;
+      }
+    }
+    await _writeJournal(childId, (entries, _) {
+      for (final e in entries.where((e) => e['id'] == entryId)) {
+        // Gửi lại nhật ký để backend bỏ file bị từ chối khỏi danh sách
+        if (rejected != null) e['pendingSync'] = 'rejected-${media['id']}';
+        e['media'] = [
+          for (final m in _mediaOf(e))
+            m['id'] == media['id']
+                ? {
+                    ...m,
+                    if (rejected == null)
+                      'uploaded': true
+                    else
+                      'rejected': rejected,
+                  }
+                : m,
+        ];
+      }
+    });
+  }
+
+  /// Ảnh lưu base64 trong nhật ký (trước khi có MinIO) → file + media item.
+  Future<void> _convertLegacyPhotos(String childId) async {
+    for (final e in journalEntries(childId).where((e) => e['photo'] != null)) {
+      final id = newMediaId();
+      final String path;
+      try {
+        path = await JournalMediaFiles.instance.keepBytes(
+          base64Decode(e['photo'] as String),
+          id,
+          '.jpg',
+        );
+      } catch (_) {
+        continue;
+      }
+      await _writeJournal(childId, (entries, _) {
+        for (final x in entries.where(
+          (x) => x['id'] == e['id'] && x['photo'] == e['photo'],
+        )) {
+          x
+            ..remove('photo')
+            ..['media'] = [
+              ..._mediaOf(x),
+              {'id': id, 'type': 'image', 'path': path, 'uploaded': false},
+            ]
+            ..['pendingSync'] = 'photo-$id';
+        }
+      });
+    }
+  }
+
+  /// Sends what is saved only on this device, then replaces the cached diary
+  /// with the backend copy (entries still pending stay as on this device;
+  /// local copies of uploaded files are kept for offline viewing).
+  ///
+  /// The first sync of a child on this device uploads every local entry
+  /// (written before the diary was stored on the backend). Returns false when
+  /// offline (the cache is kept).
+  Future<bool> syncJournal(String childId) async {
+    final remote = journalRemote;
+    if (remote == null || childById(childId) == null) return false;
+    final parentId = _data['parentId'];
+    if (!((_data['journalSynced'] as List?) ?? const []).contains(childId)) {
+      await _writeJournal(childId, (entries, _) {
+        for (final e in entries) {
+          e['pendingSync'] ??= 'first-sync';
+        }
+      });
+    }
+    await _convertLegacyPhotos(childId);
+    final List<Map<String, dynamic>> server;
+    try {
+      if (!await _pushJournal(childId)) return false;
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      server = await remote.fetch(account);
+    } catch (_) {
+      return false;
+    }
+    if (_data['parentId'] != parentId || childById(childId) == null) {
+      return false;
+    }
+    final dropped = <Map>[];
+    await _writeJournal(childId, (entries, deleted) {
+      final local = {for (final e in entries) e['id']: e};
+      final pending = entries.where((e) => e['pendingSync'] != null).toList();
+      final pendingIds = {for (final e in pending) e['id']};
+      final merged = [
+        for (final e in server)
+          if (!pendingIds.contains(e['id']) && !deleted.contains(e['id']))
+            {
+              ...e,
+              'childId': childId,
+              'media': _mergeMedia(_mediaOf(local[e['id']]), _mediaOf(e)),
             },
-    }).then((_) {});
+        ...pending,
+      ];
+      final keptIds = {
+        for (final e in merged)
+          for (final m in _mediaOf(e)) m['id'],
+      };
+      for (final e in entries) {
+        dropped.addAll(_mediaOf(e).where((m) => !keptIds.contains(m['id'])));
+      }
+      entries
+        ..clear()
+        ..addAll(merged);
+    });
+    await _removeFiles(dropped);
+    await _write((d) {
+      final synced = Set<String>.from(d['journalSynced'] as List? ?? []);
+      d['journalSynced'] = (synced..add(childId)).toList();
+    });
+    return true;
+  }
+
+  /// Backend files (with local `path` when this device has a copy) plus
+  /// local files not uploaded yet.
+  static List<Map<String, dynamic>> _mergeMedia(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final paths = {for (final m in local) m['id']: m['path']};
+    final serverIds = {for (final m in server) m['id']};
+    return [
+      for (final m in server) {...m, 'path': ?paths[m['id']]},
+      ...local.where(
+        (m) =>
+            !serverIds.contains(m['id']) &&
+            (_mediaPending(m) || m['rejected'] != null),
+      ),
+    ];
+  }
+
+  final _mediaUrls = <String, (String, DateTime)>{};
+
+  /// Download link for a photo / video not on this device (renewed before it
+  /// expires). Null when offline.
+  Future<String?> journalMediaUrl(
+    String childId,
+    String entryId,
+    Map media,
+  ) async {
+    bool fresh(DateTime? t) =>
+        t != null && t.isAfter(DateTime.now().add(const Duration(minutes: 1)));
+    final id = media['id'] as String;
+    final cached = _mediaUrls[id];
+    if (cached != null && fresh(cached.$2)) return cached.$1;
+    if (media['url'] != null &&
+        fresh(DateTime.tryParse(media['expiresAt'] as String? ?? ''))) {
+      return media['url'] as String;
+    }
+    final remote = journalRemote;
+    if (remote == null) return null;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return null;
+      final link = await remote.mediaUrl(account, entryId, id);
+      _mediaUrls[id] = link;
+      return link.$1;
+    } catch (_) {
+      return null;
+    }
   }
 
   Set<String> completedActivities(String childId) => Set<String>.from(
@@ -342,12 +677,23 @@ class DemoStore extends ChangeNotifier {
   Set<String> get favoriteActivities =>
       Set<String>.from(parent['favoriteActivities'] as List? ?? []);
 
-  Future<void> setActivityDone(String childId, String activityId, bool done) {
+  /// Library activities (uuid ids) are saved to the backend first, so a failed
+  /// request leaves the local state unchanged. Bundled ideas stay local.
+  Future<void> setActivityDone(
+    String childId,
+    String activityId,
+    bool done,
+  ) async {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
     }
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
+    }
+    final remote = activityRemote;
+    if (remote != null && _uuid.hasMatch(activityId)) {
+      final account = await linkedAccount(childId);
+      if (account != null) await remote.setDone(account, activityId, done);
     }
     return _write((d) {
       final child = (d['children'] as List).firstWhere(
@@ -359,12 +705,21 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
-  Future<void> setActivityFavorite(String activityId, bool favorite) {
+  Future<void> setActivityFavorite(String activityId, bool favorite) async {
     if (!signedIn) throw StateError('Vui lòng đăng nhập');
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
     }
     final parentId = parent['id'];
+    final remote = activityRemote;
+    final anyChild = child;
+    // Yêu thích theo phụ huynh; cần 1 bé để đăng ký tài khoản (PUT /dev/profiles).
+    if (remote != null && anyChild != null && _uuid.hasMatch(activityId)) {
+      final account = await linkedAccount(anyChild['id'] as String);
+      if (account != null) {
+        await remote.setFavorite(account, activityId, favorite);
+      }
+    }
     return _write((d) {
       final account = (d['parents'] as List).firstWhere(
         (p) => p['id'] == parentId,
@@ -375,6 +730,73 @@ class DemoStore extends ChangeNotifier {
       favorite ? ids.add(activityId) : ids.remove(activityId);
       account['favoriteActivities'] = ids.toList();
     });
+  }
+
+  /// Replaces the library part of [childId]'s "Đã làm" and the parent's
+  /// favorites with the backend copy; bundled ideas (non-uuid ids) are kept.
+  ///
+  /// The first sync on this device uploads what was marked only locally.
+  /// Returns false when offline (the cache is kept).
+  Future<bool> syncActivities(String childId) async {
+    final remote = activityRemote;
+    if (remote == null) return false;
+    final parentId = _data['parentId'];
+    final Set<String> done, favorites;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      Future<Set<String>> fetch() => remote.fetchDone(account);
+      final synced = Set<String>.from(_data['activitySynced'] as List? ?? []);
+      final keys = (child: 'child:$childId', parent: 'parent:$parentId');
+      var serverDone = await fetch();
+      var serverFavorites = await remote.fetchFavorites(account);
+      if (!synced.contains(keys.child)) {
+        final localOnly = completedActivities(childId)
+            .where((id) => _uuid.hasMatch(id) && !serverDone.contains(id));
+        for (final id in localOnly) {
+          await remote.setDone(account, id, true);
+        }
+        if (localOnly.isNotEmpty) serverDone = await fetch();
+      }
+      if (!synced.contains(keys.parent)) {
+        final localOnly = favoriteActivities.where(
+          (id) => _uuid.hasMatch(id) && !serverFavorites.contains(id),
+        );
+        for (final id in localOnly) {
+          await remote.setFavorite(account, id, true);
+        }
+        if (localOnly.isNotEmpty) {
+          serverFavorites = await remote.fetchFavorites(account);
+        }
+      }
+      (done, favorites) = (serverDone, serverFavorites);
+    } catch (_) {
+      return false;
+    }
+    if (_data['parentId'] != parentId || childById(childId) == null) {
+      return false;
+    }
+    List<String> merge(List? local, Set<String> server) => [
+      ...?local?.cast<String>().where((id) => !_uuid.hasMatch(id)),
+      ...server,
+    ];
+    await _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == childId);
+      c['completedActivities'] = merge(c['completedActivities'] as List?, done);
+      final account = (d['parents'] as List).firstWhere(
+        (p) => p['id'] == parentId,
+      );
+      account['favoriteActivities'] = merge(
+        account['favoriteActivities'] as List?,
+        favorites,
+      );
+      d['activitySynced'] = {
+        ...?(d['activitySynced'] as List?)?.cast<String>(),
+        'child:$childId',
+        'parent:$parentId',
+      }.toList();
+    });
+    return true;
   }
 
   Map<String, DateTime> teeth(String id) => {
@@ -461,22 +883,29 @@ class DemoStore extends ChangeNotifier {
     );
   }
 
-  /// Backend uuids for local parent / child ids: the seeded demo ids, else a
-  /// uuid generated once on this device (registered via VaccinationRemote.link).
+  /// Backend uuids for local parent / child ids: ids that already are backend
+  /// uuids (server-authenticated user), the seeded demo ids, else a uuid
+  /// generated once on this device (registered via VaccinationRemote.link).
   Future<Map<String, String>> _serverIds(List<String> localIds) async {
-    String? known(String id) =>
-        demoServerIds[id] ?? (_data['serverIds'] as Map?)?[id] as String?;
+    String? known(String id) => _uuid.hasMatch(id)
+        ? id
+        : demoServerIds[id] ?? (_data['serverIds'] as Map?)?[id] as String?;
     if (localIds.any((id) => known(id) == null)) {
       await _write((d) {
         final saved = Map<String, dynamic>.from(d['serverIds'] as Map? ?? {});
         for (final id in localIds) {
-          if (demoServerIds[id] == null) saved[id] ??= _uuidV4();
+          if (known(id) == null) saved[id] ??= _uuidV4();
         }
         d['serverIds'] = saved;
       });
     }
     return {for (final id in localIds) id: known(id)!};
   }
+
+  static final _uuid = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
 
   static String _uuidV4() {
     final random = Random.secure();
@@ -499,6 +928,40 @@ class DemoStore extends ChangeNotifier {
       parent: parent,
       child: child,
     );
+  }
+
+  /// Backend identity of the signed-in parent + [childId], registered on the
+  /// backend first (dev: PUT /dev/profiles). Null when offline-only (tests) or
+  /// the child is not this parent's.
+  Future<VaccinationAccount?> linkedAccount(String childId) async {
+    final remote = vaccinationRemote;
+    if (remote == null) return null;
+    final account = await _account(childId);
+    if (account == null) return null;
+    await remote.link(account);
+    return account;
+  }
+
+  /// Fetches the latest AI comment for a journal entry and caches it in the
+  /// entry (`insight`). Null when the entry has no AI request or offline-only.
+  Future<VideoInsight?> refreshJournalInsight(
+    String childId,
+    String entryId,
+  ) async {
+    final remote = videoInsightRemote;
+    final entry = journalEntries(childId)
+        .where((e) => e['id'] == entryId)
+        .firstOrNull;
+    final saved = entry?['insight'] as Map?;
+    if (remote == null || entry == null || saved == null) return null;
+    final account = await linkedAccount(childId);
+    if (account == null) return null;
+    final insight = await remote.fetch(account, saved['id'] as String);
+    // Polling: chỉ lưu (và gửi lên backend) khi nhận xét thay đổi
+    if (jsonEncode(saved) != jsonEncode(insight.toJson())) {
+      await saveJournalEntry(childId, {...entry, 'insight': insight.toJson()});
+    }
+    return insight;
   }
 
   /// Saves to the backend first, so a failed request leaves the local book unchanged.

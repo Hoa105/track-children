@@ -9,7 +9,9 @@
       <array><string>$(GOOGLE_REVERSED_CLIENT_ID)</string></array>
     </dict></array>
 	<key>NSCameraUsageDescription</key>
-	<string>Chụp ảnh đại diện cho hồ sơ bé.</string>
+	<string>Chụp ảnh cho hồ sơ bé và quay video bé thực hiện hoạt động cho nhật ký.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ghi âm khi quay video bé thực hiện hoạt động cho nhật ký.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Chọn ảnh đại diện cho hồ sơ bé từ thư viện.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

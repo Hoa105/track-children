@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../../models/activity.dart';
+import '../../services/activity_api.dart';
 import '../../services/demo_store.dart';
 import '../../services/who_bmi_reference.dart';
+import 'activity_journal_screen.dart';
 
 part 'activities_discovery.dart';
 
@@ -22,6 +24,11 @@ const _secondary = TextStyle(
   color: AppColors.textSecondary,
   height: 1.5,
 );
+const _body = TextStyle(
+  fontSize: 15,
+  height: 1.6,
+  color: AppColors.textPrimary,
+);
 
 class ActivityListScreen extends StatefulWidget {
   const ActivityListScreen({super.key, required this.childId, this.group});
@@ -33,11 +40,42 @@ class ActivityListScreen extends StatefulWidget {
 
 class _ActivityListScreenState extends State<ActivityListScreen> {
   int _status = 0, _age = 0, _duration = 0, _sort = 0;
-  static const ages = [(0, 36), (0, 6), (6, 12), (12, 18), (18, 24), (24, 36)];
+  static const _ranges = [(0, 6), (6, 12), (12, 18), (18, 24), (24, 36)];
+  // Tuổi hiện tại của bé (tháng); null nếu chưa có ngày sinh.
+  late final int? _childMonths = _monthsOf(widget.childId);
+  // Lựa chọn độ tuổi: 0 = tất cả, 1 = đúng tuổi bé (nếu biết), sau đó là các khoảng cố định.
+  late final List<String> _ageLabels = [
+    'Tất cả độ tuổi',
+    if (_childMonths != null) 'Tuổi của bé · $_childMonths tháng',
+    for (final r in _ranges) '${r.$1}–${r.$2} tháng',
+  ];
+  int get _childAge => _childMonths == null ? 0 : 1;
   bool get _filtered => _status != 0 || _age != 0 || _duration != 0;
   void _reset() => setState(() {
     _status = _age = _duration = _sort = 0;
   });
+
+  static int? _monthsOf(String childId) {
+    final dob = DemoStore.instance.childById(childId)?['date_of_birth'];
+    if (dob is! String) return null;
+    return WhoBmiReference.ageMonths(DateTime.parse(dob), DateTime.now());
+  }
+
+  bool _matchesAge(ChildActivity a) {
+    if (_age == 0) return true;
+    if (_age == _childAge) {
+      return a.minMonths <= _childMonths! && _childMonths <= a.maxMonths;
+    }
+    final (lo, hi) = _ranges[_age - _childAge - 1];
+    // So sánh chặt để hoạt động chỉ chạm biên (vd. 6–12 với khoảng 12–18) không lọt vào.
+    return a.minMonths < hi && a.maxMonths > lo;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _age = _childAge;
+  }
 
   Future<void> _filters() async {
     var status = _status, age = _age, duration = _duration, sort = _sort;
@@ -84,14 +122,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                       ),
                       _choices(
                         'Độ tuổi',
-                        [
-                          'Tất cả độ tuổi',
-                          '0–6 tháng',
-                          '6–12 tháng',
-                          '12–18 tháng',
-                          '18–24 tháng',
-                          '24–36 tháng',
-                        ],
+                        _ageLabels,
                         age,
                         (v) => update(() => age = v),
                       ),
@@ -116,7 +147,8 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                     children: [
                       TextButton(
                         onPressed: () => update(() {
-                          status = age = duration = sort = 0;
+                          status = duration = sort = 0;
+                          age = _childAge;
                         }),
                         child: const Text('Đặt lại'),
                       ),
@@ -148,7 +180,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: DemoStore.instance,
+    listenable: Listenable.merge([DemoStore.instance, activityCatalogState]),
     builder: (context, _) {
       final store = DemoStore.instance;
       final child = store.childById(widget.childId);
@@ -170,10 +202,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
             _status == 2 && !done.contains(a.id)) {
           return false;
         }
-        if (_age != 0 &&
-            (a.minMonths > ages[_age].$2 || a.maxMonths < ages[_age].$1)) {
-          return false;
-        }
+        if (!_matchesAge(a)) return false;
         if (_duration != 0 && a.minutes == 0) return false;
         if (_duration == 1 && a.minutes > 5 ||
             _duration == 2 && (a.minutes < 5 || a.minutes > 10) ||
@@ -272,7 +301,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                           ),
                           child: Row(
                             children: [
-                              _PlayArt(groupId: group.id),
+                              _PlayArt(
+                                groupId: group.id,
+                                imageUrl: a.thumbnailUrl,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -281,7 +313,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                     Text(a.name, style: _title),
                                     const SizedBox(height: 6),
                                     Text(
-                                      '${a.ageLabel} · ${a.minutes == 0 ? 'Theo bữa' : '${a.minutes} phút'}',
+                                      '${a.ageLabel} · ${a.durationLabel}',
                                       style: _secondary,
                                     ),
                                     if (done.contains(a.id))
@@ -364,6 +396,29 @@ class ActivityDetailScreen extends StatefulWidget {
 
 class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _saving = false;
+  ActivityDetail? _detail;
+  bool _loadFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.activity.remote) _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loadFailed = false);
+    try {
+      final detail = await ActivityApi.instance.fetchDetail(widget.activity.id);
+      if (mounted) setState(() => _detail = detail);
+    } catch (_) {
+      if (mounted) setState(() => _loadFailed = true);
+    }
+  }
+
+  /// Guide sections: backend detail for library activities, bundled text otherwise.
+  List<(String, String)> get _guide =>
+      _detail?.guide ?? activitySections(widget.activity);
+
   Future<void> _save(bool favorite) async {
     setState(() => _saving = true);
     final store = DemoStore.instance;
@@ -450,17 +505,16 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 children: [
                   Hero(
                     tag: 'activity-art-${a.id}',
-                    child: Center(
-                      child: _PlayArt(groupId: group.id, large: true),
-                    ),
+                    child: a.thumbnailUrl == null
+                        ? Center(
+                            child: _PlayArt(groupId: group.id, large: true),
+                          )
+                        : _Photo(a.thumbnailUrl!, groupId: group.id),
                   ),
                   const SizedBox(height: 16),
                   Text(a.name, style: _heading),
                   const SizedBox(height: 8),
-                  Text(
-                    '${a.ageLabel} · ${a.minutes == 0 ? 'Theo bữa' : '${a.minutes} phút'}',
-                    style: _secondary,
-                  ),
+                  Text('${a.ageLabel} · ${a.durationLabel}', style: _secondary),
                   const SizedBox(height: 8),
                   Text(group.name, style: _secondary),
                   const SizedBox(height: 12),
@@ -497,49 +551,112 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            ...activitySections(a).map(
-              (section) => Padding(
+            if (a.remote && _detail == null)
+              Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: _Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(section.$1, style: _title),
-                      const SizedBox(height: 12),
-                      Text(
-                        section.$2,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: AppColors.textPrimary,
+                child: _loadFailed
+                    ? _Card(
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Chưa tải được hướng dẫn. Kiểm tra kết nối rồi thử lại.',
+                              textAlign: TextAlign.center,
+                              style: _secondary,
+                            ),
+                            TextButton(
+                              onPressed: _load,
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      )
+                    : const Center(child: CircularProgressIndicator()),
+              ),
+            if (_detail != null) ...[
+              for (final section in [
+                if (_detail!.goal != null) ('Mục tiêu', _detail!.goal!),
+                ..._detail!.sections,
+              ])
+                _GuideCard(section.$1, section.$2),
+              if (_detail!.steps.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Các bước thực hiện', style: _title),
+                        for (final step in _detail!.steps) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            '${step.number}. ${step.instruction}',
+                            style: _body,
+                          ),
+                          if (step.imageUrl != null) ...[
+                            const SizedBox(height: 8),
+                            _Photo(step.imageUrl!, groupId: group.id),
+                          ],
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              if (_detail!.lyrics != null)
+                _GuideCard('Lời bài hát', _detail!.lyrics!),
+            ],
+            if (!a.remote)
+              for (final section in activitySections(a))
+                _GuideCard(section.$1, section.$2),
           ],
         ),
         bottomNavigationBar: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: FilledButton(
-              onPressed: _saving || store.childById(widget.childId) == null
-                  ? null
-                  : () => _save(false),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  _saving
-                      ? 'Đang lưu…'
-                      : done
-                      ? 'Bỏ đánh dấu'
-                      : 'Đánh dấu đã thực hiện',
-                  textAlign: TextAlign.center,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: store.childById(widget.childId) == null
+                        ? null
+                        : () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => ActivityJournalScreen(
+                                childId: widget.childId,
+                                activity: a,
+                                guide: _guide,
+                              ),
+                            ),
+                          ),
+                    icon: const Icon(Icons.edit_note_rounded),
+                    label: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('Thêm nhật ký', textAlign: TextAlign.center),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed:
+                        _saving || store.childById(widget.childId) == null
+                        ? null
+                        : () => _save(false),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        _saving
+                            ? 'Đang lưu…'
+                            : done
+                            ? 'Bỏ đánh dấu'
+                            : 'Đánh dấu đã thực hiện',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -604,6 +721,48 @@ const activityInstructions = <String, List<(String, String)>>{
     ),
   ],
 };
+
+class _GuideCard extends StatelessWidget {
+  const _GuideCard(this.title, this.body);
+  final String title, body;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: _title),
+          const SizedBox(height: 12),
+          Text(body, style: _body),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Photo from the backend (`/static/...`); falls back to the group artwork offline.
+class _Photo extends StatelessWidget {
+  const _Photo(this.path, {required this.groupId});
+  final String path, groupId;
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(18),
+    child: AspectRatio(
+      aspectRatio: 4 / 3,
+      child: Image.network(
+        ActivityApi.instance.imageUrl(path),
+        fit: BoxFit.cover,
+        semanticLabel: 'Ảnh minh họa hoạt động',
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : const ColoredBox(color: AppColors.primarySoft),
+        errorBuilder: (_, _, _) =>
+            Center(child: _PlayArt(groupId: groupId, large: true)),
+      ),
+    ),
+  );
+}
 
 class _Card extends StatelessWidget {
   const _Card({required this.child, this.onTap});

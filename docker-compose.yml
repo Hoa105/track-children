@@ -37,6 +37,27 @@ services:
       timeout: 5s
       retries: 10
 
+  # Ảnh / video nhật ký (bucket tạo tự động khi backend lưu file đầu tiên)
+  minio:
+    # Image chính thức minio/minio đã ngừng phát hành bản miễn phí; Chainguard chỉ có tag latest
+    image: chainguard/minio:latest
+    container_name: track-children-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: track_children
+      MINIO_ROOT_PASSWORD: track_children_dev
+    ports:
+      - "9000:9000"   # S3 API: backend + link tải có thời hạn cho mobile
+      - "9001:9001"   # web console
+    volumes:
+      - track_children_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: ./backend
     volumes:
@@ -76,8 +97,18 @@ services:
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-Track Children}
       LEGAL_DOCUMENTS_PATH: ${LEGAL_DOCUMENTS_PATH:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-[]}
+      AI_SERVICE_URL: http://ai-service:8001
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      MINIO_ENDPOINT: minio:9000
+      # Link tải dùng host mà mobile gọi backend + cổng 9000; production đặt URL công khai
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-}
+    volumes:
+      # Ảnh hoạt động (kể cả ảnh admin tải lên) không mất khi build lại image
+      - ./backend/static:/app/static
     depends_on:
       db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
   ai-service:
@@ -89,6 +120,15 @@ services:
     environment:
       DATABASE_URL: postgresql://track_children:track_children_dev@ai-db:5432/track_children_ai
       BACKEND_API_URL: http://backend:8000
+      INTERNAL_TOKEN: ${AI_SERVICE_TOKEN:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash,gemini-3.5-flash-lite}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-opus-5-5}
+      VIDEO_DIR: /app/data/videos
+      POSE_MODEL_PATH: /app/models/pose_landmarker_full.task
+      HAND_MODEL_PATH: /app/models/hand_landmarker.task
     depends_on:
       ai-db:
         condition: service_healthy
@@ -106,3 +146,4 @@ services:
 volumes:
   track_children_postgres_data:
   track_children_ai_postgres_data:
+  track_children_minio_data:
