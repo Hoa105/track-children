@@ -4,6 +4,10 @@ import 'otp_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
+import '../../services/demo_store.dart';
+
+import 'package:flutter/foundation.dart';
+
 import 'auth_entrance_animation.dart';
 import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
@@ -32,7 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = true;
   bool _isLoading = false;
   String? _previewError;
 
@@ -81,7 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.login(
         _accountController.text,
         _passwordController.text,
-        remember: _rememberMe,
       );
       valid = true;
     } on AuthException catch (e) {
@@ -93,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
               challenge: Map<String, dynamic>.from(
                 e.details['registration'] as Map,
               ),
-              remember: _rememberMe,
             ) ==
             true;
       } else {
@@ -120,6 +121,18 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  Future<void> _quickLogin() async {
+    if (_isLoading) return;
+    final server = !AuthService.instance.demoMode;
+    _accountController.text = server
+        ? DemoStore.serverTestEmail
+        : DemoStore.demoEmail;
+    _passwordController.text = server
+        ? DemoStore.serverTestPassword
+        : DemoStore.password;
+    await _submit();
+  }
+
   Future<void> _socialLogin(SocialProvider provider) async {
     if (_isLoading) return;
     setState(() {
@@ -130,7 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.socialRegister(
         provider.name,
         acceptedTerms: true,
-        remember: _rememberMe,
       );
       if (mounted) widget.onLoginSuccess?.call();
     } on AuthException catch (e) {
@@ -271,22 +283,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 alignment: WrapAlignment.spaceBetween,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (value) => setState(
-                                          () => _rememberMe = value ?? false,
-                                        ),
-                                        activeColor: AppColors.primary,
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                      const Flexible(
-                                        child: Text('Ghi nhớ đăng nhập'),
-                                      ),
-                                    ],
-                                  ),
                                   TextButton(
                                     onPressed: _isLoading
                                         ? null
@@ -370,6 +366,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('Đăng nhập'),
                                 ),
                               ),
+                              if (AuthService.instance.demoMode ||
+                                  !kReleaseMode) ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _quickLogin,
+                                    icon: const Icon(Icons.flash_on_rounded),
+                                    label: Text(
+                                      AuthService.instance.demoMode
+                                          ? 'Đăng nhập nhanh tài khoản demo'
+                                          : 'Đăng nhập nhanh tài khoản test',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(52),
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(
+                                        color: AppColors.primary,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

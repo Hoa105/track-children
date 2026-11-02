@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.features.auth import social
 from app.features.auth.schemas import SocialRegister
 from app.features.auth.errors import AuthFailure
-from .test_registration_v2 import database, env  # isolated migrated PostgreSQL fixtures
+from .test_registration import database, env  # isolated migrated PostgreSQL fixtures
 
 
 @pytest.fixture

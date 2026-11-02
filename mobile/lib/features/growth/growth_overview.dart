@@ -1,31 +1,36 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
-import 'growth_visuals.dart';
+import '../../app_colors.dart';
 import 'growth_repository.dart';
 export 'growth_repository.dart';
-import 'growth_update_selector.dart';
-import 'growth_weight_detail.dart';
-import 'growth_stature_detail.dart';
-import 'growth_head_detail.dart';
-import 'growth_bmi_detail.dart';
-
+import 'growth_tracking_flow.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 
 class GrowthOverview extends StatefulWidget {
-  const GrowthOverview({super.key, this.repository, this.onNavigation});
+  const GrowthOverview({
+    super.key,
+    this.repository,
+    this.onNavigation,
+    this.openEditorOnStart = false,
+  });
   final GrowthRepository? repository;
   final ValueChanged<String>? onNavigation;
+  final bool openEditorOnStart;
   @override
   State<GrowthOverview> createState() => _GrowthOverviewState();
 }
 
 class _GrowthOverviewState extends State<GrowthOverview> {
-  late Future<List<GrowthMetricViewData>> _data;
-  // A lazy initializer also works for State objects retained by hot reload.
   late final GrowthRepository _repository =
       widget.repository ?? MockGrowthRepository();
-  bool _easyRead = false;
-  int _months = 3;
+  late Future<List<List<GrowthMeasurementDraft>>> _data;
+  GrowthMetric _metric = GrowthMetric.weight;
+  bool _didOpenEditor = false;
+  static const _teal = AppColors.primary;
+  static const _ink = AppColors.textPrimary;
+  static const _paper = AppColors.background;
   @override
   void initState() {
     super.initState();
@@ -33,106 +38,535 @@ class _GrowthOverviewState extends State<GrowthOverview> {
   }
 
   void _reload() {
-    _data = _repository.loadOverview();
-    // A retry can fail before the next frame attaches FutureBuilder's listener.
-    // Keep the original future for the error UI while handling early errors.
+    _data = () async {
+      await _repository.refreshMeasurements();
+      return Future.wait(GrowthMetric.values.map(_repository.measurements));
+    }();
+    _data.then((_) {
+      if (mounted) setState(() {});
+      if (mounted && widget.openEditorOnStart && !_didOpenEditor) {
+        _didOpenEditor = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _add();
+        });
+      }
+    }, onError: (Object _) {});
     _data.ignore();
   }
 
-  void _pending(String destination) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$destination sẽ được triển khai sau khi duyệt tổng quan.',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openUpdateSelector() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/growth/update-selector'),
-        builder: (_) => GrowthUpdateSelectorScreen(
-          easyReadMode: _easyRead,
-          repository: _repository,
-        ),
-      ),
-    );
+  Future<void> _open(Widget page) async {
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => page));
     if (mounted) setState(_reload);
   }
 
-  Future<void> _openWeightDetail() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/growth/weight-detail'),
-        builder: (_) => GrowthWeightDetailScreen(
-          repository: _repository,
-          easyReadMode: _easyRead,
-        ),
-      ),
-    );
-    if (mounted) setState(_reload);
+  Future<void> _add() async {
+    if (!_repository.canEdit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bạn chỉ có quyền xem số đo.')),
+      );
+      return;
+    }
+    if (await openTrackingEditor(context, _repository) && mounted) {
+      setState(_reload);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Đã lưu số đo')));
+    }
   }
 
-  Future<void> _openStatureDetail() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/growth/length-detail'),
-        builder: (_) => GrowthStatureDetailScreen(
-          repository: _repository,
-          easyReadMode: _easyRead,
+  String _date(DateTime day) => trackingDate(day);
+  List<GrowthMeasurementDraft> _sorted(List<GrowthMeasurementDraft> rows) =>
+      [...rows]..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
+
+  Widget _profile() {
+    final birth = _repository.dateOfBirth;
+    final months = birth == null
+        ? null
+        : growthChartAgeMonths(birth, DateTime.now())?.floor();
+    final age = months == null
+        ? null
+        : months < 12
+        ? '$months tháng tuổi'
+        : '${months ~/ 12} tuổi${months % 12 == 0 ? '' : ' ${months % 12} tháng'}';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      color: AppColors.primarySoft,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bé ${_repository.childLabel ?? 'của bạn'}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (age != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        age,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
-    if (mounted) setState(_reload);
   }
 
-  Future<void> _openBmiDetail() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/growth/bmi-detail'),
-        builder: (_) => GrowthBmiDetailScreen(
-          repository: _repository,
-          easyReadMode: _easyRead,
+  Widget _tile(GrowthMetric metric, List<GrowthMeasurementDraft> rows) {
+    final latest = rows.lastOrNull;
+    final (icon, tint, color) = switch (metric) {
+      GrowthMetric.weight => (
+        Icons.monitor_weight_outlined,
+        const Color(0xFFFFEFE5),
+        const Color(0xFFAD714F),
+      ),
+      GrowthMetric.lengthHeight => (
+        Icons.height,
+        const Color(0xFFE8F2EA),
+        const Color(0xFF4E8269),
+      ),
+      GrowthMetric.headCircumference => (
+        Icons.face_retouching_natural_outlined,
+        const Color(0xFFF0ECF8),
+        const Color(0xFF85709E),
+      ),
+    };
+    final title = metric == GrowthMetric.lengthHeight
+        ? latest?.method == GrowthMeasurementMethod.recumbent
+              ? 'Chiều dài'
+              : latest?.method == GrowthMeasurementMethod.standing
+              ? 'Chiều cao'
+              : 'Dài/cao'
+        : metric.title;
+    return Material(
+      color: tint,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(
+          TrackingHistoryScreen(repository: _repository, metric: metric),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(180),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, size: 20, color: color),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(150),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 17,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (latest == null)
+                const Text(
+                  'Chưa có',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                )
+              else
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: formatGrowthValue(latest.value),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' ${metric.unit}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 6),
+              Text(
+                latest == null ? 'Chưa có số đo' : _date(latest.measuredAt),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
-    if (mounted) setState(() => _data = _repository.loadOverview());
   }
 
-  Future<void> _openHeadDetail() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/growth/head-detail'),
-        builder: (_) => GrowthHeadDetailScreen(
-          repository: _repository,
-          easyReadMode: _easyRead,
+  Widget _summary(List<List<GrowthMeasurementDraft>> rows) => LayoutBuilder(
+    builder: (context, constraints) {
+      final cards = [
+        for (final metric in GrowthMetric.values)
+          _tile(metric, rows[metric.index]),
+      ];
+      if (constraints.maxWidth < 270 ||
+          MediaQuery.textScalerOf(context).scale(14) > 21) {
+        return Column(
+          children: [
+            for (final card in cards)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(width: double.infinity, child: card),
+              ),
+          ],
+        );
+      }
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(child: cards[i]),
+            ],
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _assessment() => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: AppColors.border),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      splashFactory: InkSparkle.splashFactory,
+      splashColor: AppColors.primarySoft,
+      highlightColor: AppColors.primarySoft.withAlpha(110),
+      onTap: () =>
+          _open(TrackingAssessmentScreen(repository: _repository, kind: 'bmi')),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Icon(
+                Icons.fact_check_outlined,
+                color: _teal,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tình trạng cân nặng',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (_repository.pairingInfo?['ready'] == false)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 3),
+                      child: Text(
+                        'Cần thêm số đo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF617B71),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: AppColors.primarySoft,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: _teal,
+                size: 19,
+              ),
+            ),
+          ],
         ),
       ),
-    );
-    if (mounted) setState(_reload);
-  }
+    ),
+  );
+
+  Widget _headAssessment() => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: AppColors.border),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      splashFactory: InkSparkle.splashFactory,
+      splashColor: AppColors.purpleSurfaceLight,
+      highlightColor: AppColors.purpleSurfaceLight.withAlpha(150),
+      onTap: () => _open(
+        TrackingAssessmentScreen(repository: _repository, kind: 'head'),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.purpleSurfaceLight,
+                borderRadius: BorderRadius.all(Radius.circular(13)),
+              ),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Icon(
+                  Icons.face_retouching_natural_outlined,
+                  color: AppColors.purpleText,
+                  size: 22,
+                ),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Tình trạng vòng đầu',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            SizedBox(width: 8),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: AppColors.purpleSurfaceLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: _teal,
+                size: 19,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  void _expand(List<GrowthMeasurementDraft> rows) =>
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(title: Text(_metric.title)),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: _MeasurementChart(
+                rows: rows,
+                birth: _repository.dateOfBirth,
+                metric: _metric,
+                zoom: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _chart(List<GrowthMeasurementDraft> rows) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(28),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const SizedBox(width: 4),
+            const Expanded(
+              child: Text(
+                'Biểu đồ số đo',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Phóng to',
+              onPressed: () => _expand(rows),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primarySoft,
+                foregroundColor: _teal,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.open_in_full, size: 17, color: _teal),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              for (final metric in GrowthMetric.values)
+                Expanded(
+                  child: ChoiceChip(
+                    showCheckmark: false,
+                    selected: _metric == metric,
+                    selectedColor: _teal,
+                    backgroundColor: AppColors.background,
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    padding: EdgeInsets.zero,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    onSelected: (_) => setState(() => _metric = metric),
+                    label: SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        metric == GrowthMetric.lengthHeight
+                            ? 'Dài/cao'
+                            : metric.title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _metric == metric
+                              ? Colors.white
+                              : const Color(0xFF71817E),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _MeasurementChart(
+          key: ValueKey(_metric),
+          rows: rows,
+          birth: _repository.dateOfBirth,
+          metric: _metric,
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Theme(
     data: Theme.of(context).copyWith(
-      scaffoldBackgroundColor: Colors.white,
-      textTheme: Theme.of(context).textTheme.apply(
-        fontFamily: 'Nunito',
-        bodyColor: growthInk,
-        displayColor: growthInk,
+      scaffoldBackgroundColor: _paper,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: _teal,
+        surface: Colors.white,
       ),
-      colorScheme: ColorScheme.fromSeed(seedColor: growthGreen),
+      textTheme: Theme.of(context).textTheme
+          .apply(fontFamily: 'Nunito', bodyColor: _ink, displayColor: _ink),
     ),
     child: Scaffold(
-      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: _paper,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Tăng trưởng',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: _ink,
+          ),
+        ),
+      ),
       bottomNavigationBar: AppBottomNavigationBar(
         selected: 'Theo dõi',
         onTap: (destination) {
           if (destination == 'Theo dõi') return;
           if (destination == 'Tạo ghi chép') {
-            _openUpdateSelector();
+            _add();
             return;
           }
           if (widget.onNavigation != null) {
@@ -140,301 +574,59 @@ class _GrowthOverviewState extends State<GrowthOverview> {
           } else if (destination == 'Trang chủ' &&
               Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
-          } else {
-            _pending(destination);
           }
         },
       ),
       body: SafeArea(
-        child: FutureBuilder<List<GrowthMetricViewData>>(
+        bottom: false,
+        child: FutureBuilder<List<List<GrowthMeasurementDraft>>>(
           future: _data,
           builder: (context, snapshot) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  semanticsLabel: 'Đang tải số đo',
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Chưa tải được số đo.'),
+                    TextButton(
+                      onPressed: () => setState(_reload),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            final rows =
+                (snapshot.data ??
+                        [
+                          for (final _ in GrowthMetric.values)
+                            <GrowthMeasurementDraft>[],
+                        ])
+                    .map(_sorted)
+                    .toList();
+            return RefreshIndicator(
+              onRefresh: () async {
+                setState(_reload);
+                await _data;
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                 children: [
-                  Row(
-                    children: [
-                      const GrowthAsset('overview-chart', size: 36),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Tăng trưởng',
-                          style: TextStyle(
-                            fontSize: _easyRead ? 28 : 26,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        tooltip: 'Tùy chọn hiển thị',
-                        onSelected: (_) =>
-                            setState(() => _easyRead = !_easyRead),
-                        itemBuilder: (_) => [
-                          CheckedPopupMenuItem(
-                            value: 'read',
-                            checked: _easyRead,
-                            child: const Text('Chế độ dễ đọc'),
-                          ),
-                        ],
-                        icon: const Icon(Icons.more_horiz, color: growthInk),
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Transform.rotate(
-                            angle: _easyRead ? 0 : -0.085,
-                            child: CustomPaint(
-                              painter: const GrowthNotePaperPainter(),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  20,
-                                  24,
-                                  24,
-                                ),
-                                child: Text(
-                                  '4 chỉ số chính\ngiúp theo dõi sự lớn khôn\ncủa con mỗi ngày',
-                                  style: TextStyle(
-                                    fontFamily: _easyRead
-                                        ? 'Nunito'
-                                        : 'DancingScript',
-                                    fontSize: _easyRead ? 20 : 25,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.15,
-                                    color: const Color(0xFF20365D),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (!_easyRead) ...[
-                          const SizedBox(width: 12),
-                          const GrowthAsset('overview-arrow', size: 48),
-                          const GrowthAsset('overview-trend', size: 42),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (snapshot.connectionState != ConnectionState.done)
-                    const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          semanticsLabel: 'Đang tải số đo',
-                        ),
-                      ),
-                    )
-                  else if (snapshot.hasError)
-                    Column(
-                      children: [
-                        const Text('Chưa tải được số đo.'),
-                        TextButton(
-                          onPressed: () => setState(_reload),
-                          child: const Text('Thử lại'),
-                        ),
-                      ],
-                    )
-                  else if (!snapshot.hasData || snapshot.data!.isEmpty)
-                    const Column(
-                      children: [
-                        GrowthAsset('no-measurements', size: 96),
-                        Text('Chưa có số đo'),
-                      ],
-                    )
-                  else ...[
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final stacked =
-                            constraints.maxWidth < 300 ||
-                            _easyRead ||
-                            MediaQuery.textScalerOf(context).scale(15) > 21;
-                        final tiles = [
-                          for (final metric in snapshot.data!)
-                            GrowthMetricTile(
-                              data: metric,
-                              easyRead: _easyRead,
-                              onTap: metric.asset == 'weight'
-                                  ? _openWeightDetail
-                                  : metric.asset == 'height'
-                                  ? _openStatureDetail
-                                  : metric.asset == 'head'
-                                  ? _openHeadDetail
-                                  : metric.asset == 'bmi'
-                                  ? _openBmiDetail
-                                  : () => _pending(
-                                      'Chi tiết ${metric.title.toLowerCase()}',
-                                    ),
-                            ),
-                        ];
-                        return stacked
-                            ? Column(
-                                children: [
-                                  for (final tile in tiles)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 16,
-                                      ),
-                                      child: tile,
-                                    ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  for (var i = 0; i < tiles.length; i += 2)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 16,
-                                      ),
-                                      child: IntrinsicHeight(
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            Expanded(child: tiles[i]),
-                                            if (i + 1 < tiles.length) ...[
-                                              const VerticalDivider(
-                                                width: 16,
-                                                color: Color(0xFFEEF0EC),
-                                              ),
-                                              Expanded(child: tiles[i + 1]),
-                                            ] else
-                                              const Expanded(child: SizedBox()),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: growthGreen,
-                      minimumSize: Size.fromHeight(_easyRead ? 60 : 52),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onPressed: _openUpdateSelector,
-                    child: const Row(
-                      children: [
-                        Icon(Icons.add),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Cập nhật chỉ số mới',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward),
-                      ],
-                    ),
-                  ),
-                  if (snapshot.hasData && snapshot.data!.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 12,
-                      children: [
-                        Text(
-                          'Xu hướng gần đây',
-                          style: TextStyle(
-                            fontSize: _easyRead ? 20 : 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        DropdownButton<int>(
-                          value: _months,
-                          underline: const SizedBox(),
-                          borderRadius: BorderRadius.circular(12),
-                          items: const [
-                            DropdownMenuItem(value: 3, child: Text('3 tháng')),
-                            DropdownMenuItem(value: 1, child: Text('1 tháng')),
-                          ],
-                          onChanged: (value) =>
-                              setState(() => _months = value!),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Semantics(
-                      label:
-                          'Xu hướng số đo trong $_months tháng. Mỗi đường dùng thang riêng; không dùng để đối chiếu WHO.',
-                      child: ExcludeSemantics(
-                        child: SizedBox(
-                          height: 110,
-                          child: CustomPaint(
-                            painter: _TrendPainter(
-                              snapshot.data!,
-                              months: _months,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (final label
-                            in (_months == 3
-                                ? ['Th1', 'Th2', 'Th3', 'Hiện tại']
-                                : ['Đầu tháng', 'Hiện tại']))
-                          Expanded(
-                            child: Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: growthMuted,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 16,
-                      runSpacing: 8,
-                      children: [
-                        for (final metric in snapshot.data!)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.circle, color: metric.color, size: 9),
-                              const SizedBox(width: 5),
-                              Text(
-                                metric.title,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Mỗi chỉ số dùng thang riêng để xem xu hướng.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: growthMuted),
-                    ),
-                  ],
+                  _profile(),
+                  _summary(rows),
+                  const SizedBox(height: 12),
+                  _assessment(),
+                  const SizedBox(height: 10),
+                  _headAssessment(),
+                  const SizedBox(height: 20),
+                  _chart(rows[_metric.index]),
                 ],
               ),
             );
@@ -445,138 +637,348 @@ class _GrowthOverviewState extends State<GrowthOverview> {
   );
 }
 
-class GrowthMetricTile extends StatelessWidget {
-  const GrowthMetricTile({
-    required this.data,
-    required this.onTap,
-    this.easyRead = false,
+class _MeasurementChart extends StatefulWidget {
+  const _MeasurementChart({
     super.key,
+    required this.rows,
+    required this.birth,
+    required this.metric,
+    this.zoom = false,
   });
-  final GrowthMetricViewData data;
-  final VoidCallback onTap;
-  final bool easyRead;
+  final List<GrowthMeasurementDraft> rows;
+  final DateTime? birth;
+  final GrowthMetric metric;
+  final bool zoom;
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label:
-        '${data.title}, ${data.value} ${data.unit}. '
-        'Z-score trung bình: ${data.averageZScoreText ?? 'chưa có dữ liệu'}. Mở chi tiết.',
-    child: ExcludeSemantics(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+  State<_MeasurementChart> createState() => _MeasurementChartState();
+}
+
+class _MeasurementChartState extends State<_MeasurementChart> {
+  static const _maxVisiblePoints = 60;
+  GrowthMeasurementDraft? _selected;
+  @override
+  Widget build(BuildContext context) {
+    final birth = widget.birth;
+    if (birth == null) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'Cần ngày sinh của bé để hiển thị biểu đồ.',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    final end = DateTime(
+      birth.year + 5,
+      birth.month,
+      birth.day.clamp(1, DateUtils.getDaysInMonth(birth.year + 5, birth.month)),
+    );
+    final validRows = widget.rows
+        .where(
+          (r) =>
+              r.value.isFinite &&
+              r.value > 0 &&
+              !r.measuredAt.isBefore(birth) &&
+              !r.measuredAt.isAfter(end),
+        )
+        .toList();
+    validRows.sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
+    if (validRows.isEmpty) {
+      return const AspectRatio(
+        aspectRatio: 1,
+        child: Center(child: Text('Chưa có số đo trong độ tuổi này.')),
+      );
+    }
+    final rows = validRows.length > _maxVisiblePoints
+        ? validRows.sublist(validRows.length - _maxVisiblePoints)
+        : validRows;
+    final selected = rows.contains(_selected) ? _selected! : rows.last;
+    final painter = _MeasurementPainter(
+      rows,
+      birth,
+      end,
+      widget.metric,
+      widget.zoom,
+      selected,
+    );
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F5F3),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              GrowthAsset('overview-${data.asset}', size: 42),
-              const SizedBox(height: 8),
-              Text(
-                data.title,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: easyRead ? 18 : 15),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${data.value} ${data.unit}',
-                textAlign: TextAlign.center,
+              const Text(
+                'LẦN ĐO ĐANG XEM',
                 style: TextStyle(
-                  fontSize: easyRead ? 36 : 24,
+                  color: Color(0xFF21847E),
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      'z ~ ${data.averageZScoreText ?? '__'}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, color: growthMuted),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right, size: 18, color: data.color),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 36,
-                width: double.infinity,
-                child: CustomPaint(
-                  painter: _TrendPainter([data], sparkline: true),
+              const SizedBox(height: 3),
+              Text(
+                '${formatGrowthValue(selected.value)} ${widget.metric.unit} · ${selected.measuredAt.day}/${selected.measuredAt.month}/${selected.measuredAt.year}',
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Color(0xFF233E47),
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    ),
-  );
-}
+        if (validRows.length > rows.length)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Đang hiển thị 60 số đo gần nhất để biểu đồ dễ đọc.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF667085)),
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, c) => SizedBox(
+            width: c.maxWidth,
+            height: c.maxWidth + 8,
+            child: MouseRegion(
+              onHover: (event) {
+                final nearest = _nearestRow(
+                  rows,
+                  painter,
+                  Size(c.maxWidth, c.maxWidth + 8),
+                  event.localPosition,
+                );
+                if (nearest != null && nearest != _selected) {
+                  setState(() {
+                    _selected = nearest;
+                  });
+                }
+              },
+              child: GestureDetector(
+                onTapDown: (event) {
+                  final size = Size(c.maxWidth, c.maxWidth + 8);
+                  final nearest = _nearestRow(
+                    rows,
+                    painter,
+                    size,
+                    event.localPosition,
+                  );
+                  if (nearest != null) setState(() => _selected = nearest);
+                },
+                child: Semantics(
+                  label:
+                      '${widget.metric.title}. ${validRows.length} lần đo${validRows.length > rows.length ? ', đang hiển thị ${rows.length} lần gần nhất' : ''}. Chạm để chọn số đo.',
+                  child: CustomPaint(painter: painter),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-class _TrendPainter extends CustomPainter {
-  _TrendPainter(this.metrics, {this.sparkline = false, this.months = 3});
-  final List<GrowthMetricViewData> metrics;
-  final bool sparkline;
-  final int months;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    if (!sparkline) {
-      paint.color = const Color(0xFFEEF0EC);
-      for (var i = 0; i < 4; i++) {
-        final x = 5 + (size.width - 10) * i / 3;
-        canvas.drawLine(Offset(x, 4), Offset(x, size.height - 4), paint);
+  GrowthMeasurementDraft? _nearestRow(
+    List<GrowthMeasurementDraft> rows,
+    _MeasurementPainter painter,
+    Size size,
+    Offset position,
+  ) {
+    GrowthMeasurementDraft? nearest;
+    var distance = 24.0;
+    for (final row in rows) {
+      final candidate = (painter.point(row, size) - position).distance;
+      if (candidate <= distance) {
+        distance = candidate;
+        nearest = row;
       }
     }
-    for (var m = 0; m < metrics.length; m++) {
-      final metric = metrics[m];
-      final values = months == 1
-          ? metric.points.sublist(
-              (metric.points.length - 2).clamp(0, metric.points.length),
-            )
-          : metric.points;
-      if (values.length < 2) continue;
-      final min = metric.points.reduce((a, b) => a < b ? a : b);
-      final max = metric.points.reduce((a, b) => a > b ? a : b);
-      final path = Path();
-      final points = <Offset>[];
-      for (var i = 0; i < values.length; i++) {
-        final normalized = max == min ? .5 : (values[i] - min) / (max - min);
-        final y = sparkline
-            ? size.height - 4 - normalized * (size.height - 8)
-            : size.height -
-                  10 -
-                  (normalized * .55 + m * .15) * (size.height - 16);
-        final point = Offset(
-          5 + i / (values.length - 1) * (size.width - 10),
-          y,
-        );
-        points.add(point);
-        if (i == 0) {
-          path.moveTo(point.dx, point.dy);
-        } else {
-          path.lineTo(point.dx, point.dy);
-        }
+    return nearest;
+  }
+}
+
+class _MeasurementPainter extends CustomPainter {
+  _MeasurementPainter(
+    this.rows,
+    this.birth,
+    this.end,
+    this.metric,
+    this.zoom,
+    this.selected,
+  );
+  final List<GrowthMeasurementDraft> rows;
+  final DateTime birth, end;
+  final GrowthMetric metric;
+  final bool zoom;
+  final GrowthMeasurementDraft selected;
+  static const color = Color(0xFF168B87);
+  double get low => math.max(
+    0,
+    rows.map((r) => r.value).reduce(math.min).floorToDouble() - 1,
+  );
+  double get high => math.max(
+    low + 2,
+    rows.map((r) => r.value).reduce(math.max).ceilToDouble() + 1,
+  );
+  DateTime get start => rows.first.measuredAt;
+  DateTime get stop {
+    final zoomEnd = rows.last.measuredAt.add(const Duration(days: 30));
+    return zoom && zoomEnd.isBefore(end) ? zoomEnd : end;
+  }
+
+  Rect plot(Size size) {
+    const rightMargin = 62.0;
+    return Rect.fromLTWH(46, 18, size.width - rightMargin, size.width - 62);
+  }
+
+  Offset point(GrowthMeasurementDraft row, Size size) {
+    final r = plot(size);
+    final span = math.max(1, stop.difference(start).inDays);
+    final day = DateUtils.dateOnly(row.measuredAt);
+    final sameDayRows = rows
+        .where((item) => DateUtils.isSameDay(item.measuredAt, day))
+        .toList();
+    final sameDayIndex = sameDayRows.indexOf(row);
+    final dayOffset = sameDayRows.length <= 1
+        ? 0.0
+        : (sameDayIndex - (sameDayRows.length - 1) / 2) *
+              math.min(8.0, r.width / (sameDayRows.length * 2));
+    return Offset(
+      r.left +
+          row.measuredAt.difference(start).inDays / span * r.width +
+          dayOffset,
+      r.bottom - (row.value - low) / (high - low) * r.height,
+    );
+  }
+
+  void label(
+    Canvas canvas,
+    String value,
+    Offset at, {
+    bool center = false,
+    bool right = false,
+  }) {
+    final text = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: const TextStyle(
+          fontFamily: 'Nunito',
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    text.paint(
+      canvas,
+      Offset(
+        center
+            ? at.dx - text.width / 2
+            : right
+            ? at.dx - text.width
+            : at.dx,
+        at.dy,
+      ),
+    );
+  }
+
+  String naturalLabel(double value) => value.round().toString();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = plot(size);
+    final grid = Paint()
+      ..color = const Color(0xFFD8E1DD)
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = r.bottom - r.height * i / 4;
+      canvas.drawLine(Offset(r.left, y), Offset(r.right, y), grid);
+      label(canvas, naturalLabel(low + (high - low) * i / 4), Offset(8, y - 7));
+    }
+    final firstAge = growthChartAgeMonths(birth, start) ?? 0;
+    final lastAge = growthChartAgeMonths(birth, stop) ?? 60;
+    final spanMonths = lastAge - firstAge;
+    final step = spanMonths <= 6
+        ? 1
+        : spanMonths <= 12
+        ? 3
+        : spanMonths <= 24
+        ? 6
+        : 12;
+    double xFor(DateTime day) =>
+        r.left +
+        day.difference(start).inDays /
+            math.max(1, stop.difference(start).inDays) *
+            r.width;
+    final ticks = <DateTime>[start];
+    for (
+      var month = (firstAge / step).floor() * step + step;
+      month < lastAge;
+      month += step
+    ) {
+      final anchor = DateTime(birth.year, birth.month + month);
+      final day = DateTime(
+        anchor.year,
+        anchor.month,
+        birth.day.clamp(1, DateUtils.getDaysInMonth(anchor.year, anchor.month)),
+      );
+      if (xFor(day) - xFor(ticks.last) > 42 && r.right - xFor(day) > 42) {
+        ticks.add(day);
       }
-      paint
-        ..color = metric.color
-        ..style = PaintingStyle.stroke;
-      canvas.drawPath(path, paint);
-      paint.style = PaintingStyle.fill;
-      for (final point in points) {
-        canvas.drawCircle(point, 3, paint);
+    }
+    if (stop.isAfter(start)) {
+      ticks.add(stop);
+    }
+    for (final date in ticks) {
+      final months = (growthChartAgeMonths(birth, date) ?? 60).floor();
+      label(canvas, '$months', Offset(xFor(date), r.bottom + 10), center: true);
+    }
+    label(canvas, metric.unit, Offset(r.left, 0));
+    label(canvas, 'Tháng', Offset(r.center.dx, r.bottom + 28), center: true);
+    final axis = Paint()
+      ..color = const Color(0xFF526B68)
+      ..strokeWidth = 1.5;
+    canvas.drawLine(r.topLeft, r.bottomLeft, axis);
+    canvas.drawLine(r.bottomLeft, r.bottomRight, axis);
+    final path = Path();
+    GrowthMeasurementDraft? previous;
+    for (final row in rows) {
+      final p = point(row, size);
+      if (previous == null ||
+          DateUtils.isSameDay(row.measuredAt, previous.measuredAt)) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
       }
+      previous = row;
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke,
+    );
+    for (final row in rows) {
+      final p = point(row, size);
+      if (identical(row, selected)) {
+        canvas.drawCircle(p, 9, Paint()..color = color.withValues(alpha: .15));
+      }
+      canvas.drawCircle(p, 4, Paint()..color = color);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _TrendPainter oldDelegate) =>
-      oldDelegate.metrics != metrics ||
-      oldDelegate.months != months ||
-      oldDelegate.sparkline != sparkline;
+  bool shouldRepaint(covariant _MeasurementPainter old) => true;
 }

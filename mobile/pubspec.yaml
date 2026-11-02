@@ -93,16 +93,7 @@ flutter:
           weight: 900
 
   assets:
-    - assets/data/who/weight_for_age_curves.json
-    - assets/data/who/weight_for_stature_curves.json
-    - assets/data/who/weight_velocity_1month.json
-    - assets/data/who/stature_velocity_2month.json
-    - assets/data/who/head_velocity_2month.json
-    - assets/data/who/stature_for_age_curves.json
-    - assets/data/who/head_for_age_curves.json
     - assets/growth/
-    - assets/data/who_bmi.json
-    - assets/data/who_growth.json
     - assets/images/scenery/backgrounds/
     - assets/images/scenery/characters/
     - assets/images/scenery/icons/care/

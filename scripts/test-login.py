@@ -26,9 +26,9 @@ def main():
     results = root / '.auth-test-logs'
     results.mkdir(exist_ok=True)
     raise SystemExit(pytest.main([
-        'backend/tests/auth/test_login_v2.py', 'backend/tests/auth/test_login_schema.py',
+        'backend/tests/auth/test_login.py', 'backend/tests/auth/test_login_schema.py',
         'backend/tests/auth/test_login_rate_limit.py',
-        'backend/tests/auth/test_social_auth.py', 'backend/tests/auth/test_registration_v2.py',
+        'backend/tests/auth/test_social_auth.py', 'backend/tests/auth/test_registration.py',
         'backend/tests/auth/test_auth_contract.py', '-q', '--tb=short',
         '-p', 'no:cacheprovider', f'--basetemp={results / ("pytest-login-" + uuid4().hex)}',
         f'--junitxml={results / "login-backend.xml"}', *sys.argv[1:]

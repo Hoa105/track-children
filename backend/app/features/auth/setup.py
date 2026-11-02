@@ -22,7 +22,7 @@ def install_auth(app):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         path = request.url.path
-        if path == "/api/v1/legal-documents" or path.startswith(("/api/v1/auth/", "/admin/auth/")):
+        if path == "/api/v1/legal-documents" or path.startswith(("/api/v1/auth/", "/admin/auth/")) or (path.startswith('/api/v1/children/') and '/growth' in path):
             fields = {
                 ".".join(str(p) for p in e["loc"][1:]): e["msg"] for e in exc.errors()
             }

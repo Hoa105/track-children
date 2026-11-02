@@ -16,7 +16,7 @@ from app.features.auth import rate_limit
 from app.features.auth.admin import repository, service
 from app.features.auth.admin.schemas import AdminLogin
 from app.main import app
-from .test_registration_v2 import database
+from .test_registration import database
 
 PASSWORD = ' Admin Password 123 '
 HEADERS = {'X-Requested-With':'TrackChildrenAdmin'}

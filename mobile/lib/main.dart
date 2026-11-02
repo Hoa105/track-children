@@ -14,19 +14,19 @@ import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/growth/growth_overview.dart';
-import 'features/growth/growth_weight_detail.dart';
-import 'features/growth/growth_stature_detail.dart';
-import 'features/growth/growth_head_detail.dart';
-import 'features/growth/growth_bmi_detail.dart';
-import 'features/growth/growth_conclusion_explanation.dart';
+import 'features/growth/api_growth_repository.dart';
+import 'features/growth/growth_tracking_flow.dart';
+
 import 'features/splash/splash_screen.dart';
 import 'features/splash/start_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DemoStore.instance.initialize();
-  await DemoStore.instance.logout();
   await AuthService.instance.restore();
+  if (!AuthService.instance.signedIn) {
+    await DemoStore.instance.logout();
+  }
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
   DemoStore.videoInsightRemote = VideoInsightApi();
@@ -57,7 +57,10 @@ class TrackChildrenApp extends StatefulWidget {
 
 class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
-  late final GrowthRepository _growthRepository = MockGrowthRepository();
+  GrowthRepository get _growthRepository =>
+      AuthService.instance.signedIn && !AuthService.instance.demoMode
+      ? ApiGrowthRepository()
+      : MockGrowthRepository();
 
   Future<void> _logout() async {
     final revocation = AuthService.instance.logout();
@@ -120,6 +123,29 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       await DemoStore.instance.bindAuthenticatedUser(
         AuthService.instance.user!,
       );
+      if (!AuthService.instance.demoMode) {
+        final owner = AuthService.instance.user!['id'] as String;
+        try {
+          final response = await AuthService.instance.authorizedRequest(
+            'GET',
+            '/children',
+          );
+          if (AuthService.instance.user?['id'] != owner) return;
+          await DemoStore.instance.cacheAuthenticatedChildren(
+            owner,
+            (response['children'] as List)
+                .map((c) => Map<String, dynamic>.from(c as Map))
+                .toList(),
+          );
+        } catch (error) {
+          if (mounted) {
+            ScaffoldMessenger.maybeOf(_navigatorKey.currentContext ?? context)
+                ?.showSnackBar(
+                  SnackBar(content: Text('Chưa tải được hồ sơ bé: $error')),
+                );
+          }
+        }
+      }
     }
     if (!mounted) return;
     _navigatorKey.currentState?.pushAndRemoveUntil(
@@ -164,43 +190,32 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       title: 'Bé Lớn Khôn',
       debugShowCheckedModeBanner: false,
       routes: {
-        '/growth/bmi-detail': (_) =>
-            GrowthBmiDetailScreen(repository: _growthRepository),
-        '/growth/head-detail': (_) =>
-            GrowthHeadDetailScreen(repository: _growthRepository),
-        '/growth/length-detail': (_) =>
-            GrowthStatureDetailScreen(repository: _growthRepository),
-        '/growth/weight-velocity-explanation': (_) =>
-            const GrowthConclusionExplanationScreen(
-              introText:
-                  'Cùng tìm hiểu dữ liệu và cách tính tốc độ tăng cân của bé.',
-              sources: {
-                'WHO Weight velocity': 'https://www.who.int/tools/child-growth-standards/standards/weight-velocity',
-              },
-              sections: [
-                GrowthExplanationSection(
-                  '1. Dữ liệu được sử dụng',
-                  'Chưa có lần đo được chọn. Hãy mở phần giải thích từ tab Tốc độ.',
-                ),
-                GrowthExplanationSection(
-                  '2. Cách tính',
-                  'Cần hai số đo và khoảng thời gian hợp lệ.',
-                ),
-                GrowthExplanationSection(
-                  '3. Xu hướng qua các tháng',
-                  'Chưa đủ dữ liệu nhận xét xu hướng.',
-                ),
-                GrowthExplanationSection(
-                  '4. Căn cứ WHO',
-                  'Chưa có kết quả đối chiếu WHO hợp lệ cho lần đo đang đánh giá.',
-                ),
-              ],
-            ),
-        '/growth/weight-explanation': (_) =>
-            const GrowthConclusionExplanationScreen(),
+        '/home': (_) => HomeScreen(
+          childName:
+              DemoStore.instance.child?['full_name'] as String? ?? 'Bé của bạn',
+          onLogout: _logout,
+        ),
+        '/growth/bmi-detail': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'bmi',
+        ),
+        '/growth/head-detail': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'head',
+        ),
+        '/growth/length-detail': (_) => TrackingHistoryScreen(
+          repository: _growthRepository,
+          metric: GrowthMetric.lengthHeight,
+        ),
+        '/growth/weight-explanation': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'bmi',
+        ),
         '/growth': (_) => GrowthOverview(repository: _growthRepository),
-        '/growth/weight-detail': (_) =>
-            GrowthWeightDetailScreen(repository: _growthRepository),
+        '/growth/weight-detail': (_) => TrackingHistoryScreen(
+          repository: _growthRepository,
+          metric: GrowthMetric.weight,
+        ),
       },
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);

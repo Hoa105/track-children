@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'demo_store.dart';
 import 'social_identity.dart';
+import 'api_config.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -101,6 +102,7 @@ class AuthService {
   final bool demoMode;
   Map<String, dynamic>? _pendingRegistration;
   static String get baseUrl => '$apiBaseUrl/api/v1';
+  static final baseUrl = apiBaseUrl;
   final http.Client _client;
   final FlutterSecureStorage _storage;
   final Future<Map<String, dynamic>> Function(String, String?)
@@ -114,23 +116,36 @@ class AuthService {
   Map<String, dynamic>? user;
   bool get signedIn => user != null;
 
+  /// Shared authenticated transport for child features; no second token store.
+  Future<Map<String, dynamic>> authorizedRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) => _request(path, body: body, authorized: true, method: method,
+      timeout: const Duration(seconds: 30));
+
   Future<Map<String, dynamic>> _request(
     String path, {
     Map<String, dynamic>? body,
     bool authorized = false,
     bool retry = true,
+    String? method,
+    Duration timeout = const Duration(seconds: 20),
   }) async {
+    final generation = _generation;
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
         if (authorized && _access != null) 'Authorization': 'Bearer $_access',
       };
       final uri = Uri.parse('$baseUrl$path');
-      final response =
-          await (body == null
-                  ? _client.get(uri, headers: headers)
-                  : _client.post(uri, headers: headers, body: jsonEncode(body)))
-              .timeout(const Duration(seconds: 20));
+      final request = http.Request(method ?? (body == null ? 'GET' : 'POST'), uri)
+        ..headers.addAll(headers);
+      if (body != null) request.body = jsonEncode(body);
+      final response = await http.Response.fromStream(
+        await _client.send(request).timeout(timeout),
+      ).timeout(timeout);
+      if (generation != _generation) throw AuthException('SESSION_CHANGED', {});
       var result = <String, dynamic>{};
       if (response.body.isNotEmpty) {
         try {
@@ -153,11 +168,14 @@ class AuthService {
             : <String, dynamic>{};
         if (authorized && retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
           await refresh();
+          if (generation != _generation) throw AuthException('SESSION_CHANGED', {});
           return await _request(
             path,
             body: body,
             authorized: true,
             retry: false,
+            method: method,
+            timeout: timeout,
           );
         }
         throw AuthException(
