@@ -84,21 +84,27 @@ class RemoteGrowthRepository {
   }
 
   Future<GrowthDocument> overview() => _get('');
-  Future<GrowthDocument> detail(
-    String metric, {
-    Map<String, String> query = const {},
-  }) => _get('/metrics/$metric', query);
-  Future<GrowthDocument> velocity(
-    String metric, {
-    String mode = 'actual',
-    int? period,
-    Map<String, String> query = const {},
-  }) => _get('/metrics/$metric/velocity', {
-    ...query,
-    'mode': mode,
-    if (period != null) 'intervalMonths': '$period',
-  });
-  Future<GrowthDocument> day(String day) => _get('/days/$day');
+  Future<GrowthDocument> tracking() => _get('/tracking');
+  Future<GrowthDocument> assessment(String kind, {String? selectedId}) =>
+      _get('/assessment/$kind', {'selectedMeasurementId': ?selectedId});
+  Future<void> createRecord(Map<String, dynamic> body) async {
+    final result = await _request('POST', '$base/measurements', body: body);
+    if (result['measurementSaved'] != true) {
+      throw const FormatException('Invalid save response');
+    }
+  }
+
+  Future<void> updateRecord(String id, Map<String, dynamic> body) async {
+    final result = await _request(
+      'PATCH',
+      '$base/measurements/$id',
+      body: body,
+    );
+    if (result['measurementSaved'] != true) {
+      throw const FormatException('Invalid save response');
+    }
+  }
+
   Future<GrowthDocument> save(String day, Map<String, dynamic> body) async {
     final result = await _request('PUT', '$base/days/$day', body: body);
     if (result['measurementSaved'] != true || result['day'] is! Map) {

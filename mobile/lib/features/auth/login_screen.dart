@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
+
+import 'package:flutter/foundation.dart';
+
 import 'auth_entrance_animation.dart';
 import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
@@ -120,8 +123,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _quickLogin() async {
     if (_isLoading) return;
-    _accountController.text = DemoStore.demoEmail;
-    _passwordController.text = DemoStore.password;
+    final server = !AuthService.instance.demoMode;
+    _accountController.text = server
+        ? DemoStore.serverTestEmail
+        : DemoStore.demoEmail;
+    _passwordController.text = server
+        ? DemoStore.serverTestPassword
+        : DemoStore.password;
     await _submit();
   }
 
@@ -358,15 +366,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('Đăng nhập'),
                                 ),
                               ),
-                              if (AuthService.instance.demoMode) ...[
+                              if (AuthService.instance.demoMode ||
+                                  !kReleaseMode) ...[
                                 const SizedBox(height: 12),
                                 SizedBox(
                                   width: double.infinity,
                                   child: OutlinedButton.icon(
                                     onPressed: _isLoading ? null : _quickLogin,
                                     icon: const Icon(Icons.flash_on_rounded),
-                                    label: const Text(
-                                      'Đăng nhập nhanh tài khoản test',
+                                    label: Text(
+                                      AuthService.instance.demoMode
+                                          ? 'Đăng nhập nhanh tài khoản demo'
+                                          : 'Đăng nhập nhanh tài khoản test',
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       minimumSize: const Size.fromHeight(52),

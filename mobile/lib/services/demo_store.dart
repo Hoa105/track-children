@@ -30,6 +30,8 @@ class DemoStore extends ChangeNotifier {
 
   static const storageKey = 'synchronized_demo_v1';
   static const demoEmail = 'demo@trackchildren.vn';
+  static const serverTestEmail = 'growth.parent@example.com';
+  static const serverTestPassword = 'BeLonKhon2026!';
   static const password = 'TreXanh123';
   Map<String, dynamic> _data;
   bool _loaded = false;

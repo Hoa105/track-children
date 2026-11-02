@@ -25,7 +25,7 @@ def child(db, child_id, user_id, *, edit=False, lock=False):
 def snapshot(child_id, user_id):
     with transaction() as db:
         db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
-        profile = child(db, child_id, user_id)
+        profile = child(db, child_id, user_id, lock=True)
         measurements = db.execute(
             "SELECT * FROM growth.measurements WHERE child_id=%s AND deleted_at IS NULL ORDER BY measured_on,metric",
             (child_id,),

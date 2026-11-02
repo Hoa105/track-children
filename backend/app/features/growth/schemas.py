@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
@@ -43,3 +43,11 @@ class SaveDay(Strict):
         ):
             raise ValueError("measuredAt must include timezone")
         return self
+class MeasurementWrite(Strict):
+    value: Value
+    measuredOn: date
+    measurePosition: Literal["lying", "standing"] | None = None
+
+
+class MeasurementCreate(MeasurementWrite):
+    metric: Literal["weight", "height", "head_circumference"]

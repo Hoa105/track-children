@@ -106,6 +106,18 @@ Build APK nhanh trên Windows:
 .\scripts\build-mobile.ps1
 ```
 
+Trong Git Bash:
+
+```bash
+./scripts/build-mobile
+```
+
+Lệnh này build và tự cài APK vào thiết bị Android đang kết nối. Chỉ build:
+
+```bash
+./scripts/build-mobile -NoInstall
+```
+
 Build release hoặc đổi địa chỉ backend:
 
 ```powershell

@@ -1,73 +1,34 @@
-from datetime import date, timedelta
+from datetime import date
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Response
 from app.features.auth.dependencies import current_user_id
-from . import service, velocity
+from . import service, tracking
 from .errors import GrowthError
-from .schemas import SaveDay
+from .schemas import SaveDay, MeasurementCreate, MeasurementWrite
 
 router = APIRouter(prefix="/api/v1/children/{childId}/growth", tags=["Mobile Growth"])
 
 
-@router.get("")
-def overview(
-    childId: UUID,
-    startOn: date | None = None,
-    endBefore: date | None = None,
-    user=Depends(current_user_id),
-):
-    return service.overview(service.read(childId, user, startOn, endBefore))
+@router.get("/tracking")
+def tracking_overview(childId: UUID, user=Depends(current_user_id)):
+    return tracking.snapshot(childId, user)
 
 
-@router.get("/metrics/{metric}")
-def detail(
-    childId: UUID,
-    metric: str,
-    startOn: date | None = None,
-    endBefore: date | None = None,
-    selectedMeasurementId: UUID | None = None,
-    weightForSizeIndicator: str | None = None,
-    statureView: str = "radius5",
-    user=Depends(current_user_id),
-):
-    if metric not in service.METRICS:
+@router.post("/measurements", status_code=201)
+def create_measurement(childId: UUID, body: MeasurementCreate, user=Depends(current_user_id)):
+    return tracking.write(childId, user, body)
+
+
+@router.patch("/measurements/{measurementId}")
+def edit_measurement(childId: UUID, measurementId: UUID, body: MeasurementWrite, user=Depends(current_user_id)):
+    return tracking.write(childId, user, body, measurementId)
+
+
+@router.get("/assessment/{kind}")
+def parent_assessment(childId: UUID, kind: str, selectedMeasurementId: UUID | None = None, user=Depends(current_user_id)):
+    if kind not in ("bmi", "head"):
         raise GrowthError(422, "INVALID_METRIC")
-    if (
-        weightForSizeIndicator not in (None, "wfl", "wfh")
-        or statureView not in ("radius5", "radius10", "all")
-        or (metric != "weight" and (weightForSizeIndicator or statureView != "radius5"))
-    ):
-        raise GrowthError(422, "INVALID_VALUE")
-    return service.detail(
-        service.read(childId, user, startOn, endBefore, selectedMeasurementId),
-        metric,
-        selectedMeasurementId,
-        weightForSizeIndicator,
-        statureView,
-    )
-
-
-@router.get("/metrics/{metric}/velocity")
-def get_velocity(
-    childId: UUID,
-    metric: str,
-    startOn: date | None = None,
-    endBefore: date | None = None,
-    mode: str = "actual",
-    intervalMonths: int | None = None,
-    user=Depends(current_user_id),
-):
-    return velocity.build(
-        service.read(childId, user, startOn, endBefore), metric, mode, intervalMonths
-    )
-
-
-@router.get("/days/{measuredOn}")
-def get_day(childId: UUID, measuredOn: date, user=Depends(current_user_id)):
-    return service.day_result(
-        service.read(childId, user, measuredOn, measuredOn + timedelta(days=1)),
-        measuredOn,
-    )
+    return tracking.read_assessment(childId, user, kind, selectedMeasurementId)
 
 
 @router.put("/days/{measuredOn}")
