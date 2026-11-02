@@ -79,3 +79,14 @@ backend/.runtime/
 
 # Ảnh admin tải lên cho hoạt động (dữ liệu, không phải mã nguồn)
 backend/static/activities/uploads/
+
+# R dependencies & local library
+.r-library/
+backend/.r-library/
+
+# Python & testing cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
