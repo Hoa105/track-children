@@ -468,7 +468,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         icon: const Icon(
           Icons.delete_outline_rounded,
-          color: Color(0xFFB44B42),
+          color: Color(0xFFDC2626),
           size: 32,
         ),
         title: const Text(
@@ -476,7 +476,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         content: Text(
-          'Bản ghi ${trackingValue(original.value)} ${widget.metric.unit} ngày ${trackingDate(original.measuredAt)} sẽ bị xóa khỏi lịch sử.',
+          'Lần đo ${trackingValue(original.value)} ${widget.metric.unit} ngày ${trackingDate(original.measuredAt)} sẽ bị xóa khỏi lịch sử.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -486,7 +486,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB44B42),
+              backgroundColor: const Color(0xFFDC2626),
             ),
             onPressed: () => Navigator.pop(dialog, true),
             child: const Text('Xóa'),
@@ -520,10 +520,43 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
         title: Text('${_original == null ? 'Thêm' : 'Sửa'} số đo'),
         actions: [
           if (_original != null)
-            IconButton(
-              tooltip: 'Xóa số đo',
-              onPressed: _busy ? null : _delete,
-              icon: const Icon(Icons.delete_outline),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Material(
+                  color: const Color(0xFFFEF2F2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFFFECACA), width: 1),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _busy ? null : _delete,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.delete_forever_rounded,
+                            size: 18,
+                            color: Color(0xFFDC2626),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Xóa',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
