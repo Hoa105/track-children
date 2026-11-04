@@ -9,6 +9,7 @@ import 'activity_api.dart';
 import 'api_config.dart';
 import 'journal_api.dart';
 import 'journal_media.dart';
+import 'teething_api.dart';
 import 'vaccination_remote.dart';
 import 'video_insight_api.dart';
 import 'who_bmi_reference.dart';
@@ -34,6 +35,9 @@ class DemoStore extends ChangeNotifier {
 
   /// Set in main(); null (as in tests) keeps vaccination records local only.
   static VaccinationRemote? vaccinationRemote;
+
+  /// Null in widget tests and demo mode; otherwise persists teeth remotely.
+  static TeethingRemote? teethingRemote;
 
   /// Set in main(); null disables AI comments on diary videos.
   static VideoInsightRemote? videoInsightRemote;
@@ -1198,7 +1202,7 @@ class DemoStore extends ChangeNotifier {
     return true;
   }
 
-  Future<void> saveTooth(String id, String toothId, DateTime date) {
+  Future<void> saveTooth(String id, String toothId, DateTime date) async {
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
     final day = DateTime(date.year, date.month, date.day);
@@ -1209,7 +1213,12 @@ class DemoStore extends ChangeNotifier {
         day.isAfter(DateTime(now.year, now.month, now.day))) {
       throw ArgumentError('Ngày mọc hoặc vị trí răng không hợp lệ');
     }
-    return _write((d) {
+    final remote = teethingRemote;
+    if (remote != null) {
+      final account = await _account(id);
+      if (account != null) await remote.save(account, toothId, day);
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       final records = c.putIfAbsent('teeth', () => <dynamic>[]) as List;
       records.removeWhere((r) => r['toothId'] == toothId);
@@ -1217,12 +1226,55 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
-  Future<void> removeTooth(String id, String toothId) {
+  Future<void> removeTooth(String id, String toothId) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
-    return _write((d) {
+    final remote = teethingRemote;
+    if (remote != null) {
+      final account = await _account(id);
+      if (account != null) await remote.remove(account, toothId);
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       (c['teeth'] as List?)?.removeWhere((r) => r['toothId'] == toothId);
     });
+  }
+
+  /// Replaces the local cache with the authenticated backend copy.
+  Future<bool> syncTeeth(String childId) async {
+    final remote = teethingRemote;
+    if (remote == null) return false;
+    try {
+      final account = await _account(childId);
+      if (account == null) return false;
+      final firstSync = !((_data['teethingSynced'] as List?) ?? const [])
+          .contains(childId);
+      final local = teeth(childId);
+      var records = await remote.fetch(account);
+      if (firstSync) {
+        final missing = local.entries
+            .where((entry) => !records.containsKey(entry.key))
+            .toList();
+        for (final entry in missing) {
+          await remote.save(account, entry.key, entry.value);
+        }
+        if (missing.isNotEmpty) records = await remote.fetch(account);
+      }
+      if (childById(childId) == null) return false;
+      await _write((d) {
+        final child = (d['children'] as List).firstWhere(
+          (item) => item['id'] == childId,
+        );
+        child['teeth'] = [
+          for (final entry in records.entries)
+            {'toothId': entry.key, 'date': entry.value.toIso8601String()},
+        ];
+        final synced = Set<String>.from(d['teethingSynced'] as List? ?? []);
+        d['teethingSynced'] = (synced..add(childId)).toList();
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> saveSharing(

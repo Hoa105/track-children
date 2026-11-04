@@ -2,6 +2,15 @@
 
 API contracts and integration documentation.
 
+## Mobile teething
+
+[OpenAPI 3.1 JSON](mobile-teething.openapi.json) — hợp đồng đã triển khai cho
+giao diện **Răng của bé**. API dùng Bearer JWT, mã răng sữa FDI và cung cấp thao
+tác tải danh sách, ghi nhận/cập nhật ngày mọc, bỏ đánh dấu. Backend cần chạy
+migration `018_primary_teeth_reference.sql`; mobile tự đồng bộ khi mở màn hình,
+giữ cache cục bộ khi mất mạng. Tab **Tham khảo** tiếp tục dùng bảng lịch 0–60
+tháng đóng gói trong ứng dụng và không gửi dữ liệu trẻ lên máy chủ.
+
 ## Mobile growth
 
 [OpenAPI 3.1 JSON](mobile-growth.openapi.json) — contract v1.0.0 ngày 29/10/2026

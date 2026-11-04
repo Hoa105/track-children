@@ -16,6 +16,7 @@ from app.features.diary.router import router as diary_router
 from app.features.diary_ai.router import router as diary_ai_router
 from app.features.vaccination.router import admin_router as vaccination_admin_router
 from app.features.vaccination.router import router as vaccination_router
+from app.features.teething.router import router as teething_router
 
 app = FastAPI(title="Track Children API", version="0.1.0")
 app.add_middleware(
@@ -33,6 +34,7 @@ app.add_middleware(
 app.include_router(activities_router)
 app.include_router(activities_admin_router)
 app.include_router(vaccination_router)
+app.include_router(teething_router)
 app.include_router(vaccination_admin_router)
 app.include_router(diary_router)
 app.include_router(diary_ai_router)
