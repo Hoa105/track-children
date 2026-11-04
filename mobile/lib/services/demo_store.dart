@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'activity_api.dart';
@@ -26,7 +27,8 @@ export 'vaccination_remote.dart';
 /// saved to the backend first and cached here. Diary entries are saved here
 /// first and copied to the backend ([journalRemote]).
 class DemoStore extends ChangeNotifier {
-  DemoStore({DateTime? today}) : _data = _fixture(today ?? DateTime.now());
+  DemoStore({DateTime? today})
+    : _data = _DemoFixture.create(today ?? DateTime.now());
   static DemoStore _instance = DemoStore();
   static DemoStore get instance => _instance;
   @visibleForTesting
@@ -54,13 +56,13 @@ class DemoStore extends ChangeNotifier {
   static const serverTestEmail = 'growth.parent@example.com';
   static const serverTestPassword = 'BeLonKhon2026!';
   static const password = 'TreXanh123';
+  static const _cache = _DemoLocalCache(storageKey);
   Map<String, dynamic> _data;
   bool _loaded = false;
   Future<void>? _loading;
   Future<void>? _queue;
   final Map<String, int> _growthRevisions = {};
-  final Map<String, int> _teethingRevisions = {};
-  final Map<String, TeethingSyncStatus> _teethingSyncStatuses = {};
+  late final _TeethingStore _teething = _TeethingStore(this);
   Map<String, dynamic> _copy(Map value) =>
       Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
   List<Map<String, dynamic>> get _parents =>
@@ -92,50 +94,13 @@ class DemoStore extends ChangeNotifier {
     return found.isEmpty ? null : found.first;
   }
 
-  String teethingAccess(String childId) {
-    final profile = childById(childId);
-    if (profile == null) return 'none';
-    if (profile['server'] != true) return 'edit';
-    return profile['teethingAccess'] as String? ?? 'none';
-  }
-
-  bool canViewTeething(String childId) => teethingAccess(childId) != 'none';
-  bool canEditTeething(String childId) => teethingAccess(childId) == 'edit';
+  String teethingAccess(String childId) => _teething.access(childId);
+  bool canViewTeething(String childId) => _teething.canView(childId);
+  bool canEditTeething(String childId) => _teething.canEdit(childId);
   TeethingSyncStatus teethingSyncStatus(String childId) =>
-      _teethingSyncStatuses[childId] ?? TeethingSyncStatus.idle;
-
-  void _setTeethingSyncStatus(String childId, TeethingSyncStatus status) {
-    if (_teethingSyncStatuses[childId] == status) return;
-    _teethingSyncStatuses[childId] = status;
-    notifyListeners();
-  }
-
-  Future<void> refreshTeethingAccess(String childId) async {
-    if (childById(childId)?['server'] != true ||
-        AuthService.instance.user == null) {
-      return;
-    }
-    final response = await AuthService.instance.authorizedRequest(
-      'GET',
-      '/children',
-    );
-    final profile = (response['children'] as List)
-        .cast<Map>()
-        .where((item) => item['id'] == childId)
-        .firstOrNull;
-    await _write((d) {
-      final matches = (d['children'] as List).where(
-        (item) => item['id'] == childId,
-      );
-      if (matches.isEmpty) return;
-      final child = matches.first as Map;
-      child['teethingAccess'] = profile?['teethingAccess'] ?? 'none';
-      child['growthAccess'] = profile?['growthAccess'] ?? 'none';
-      if (profile == null || profile['teethingAccess'] == 'none') {
-        child['teeth'] = <dynamic>[];
-      }
-    });
-  }
+      _teething.status(childId);
+  Future<void> refreshTeethingAccess(String childId) =>
+      _teething.refreshAccess(childId);
 
   String? childIdForName(String name) {
     final match = children.where((c) => c['full_name'] == name);
@@ -146,9 +111,8 @@ class DemoStore extends ChangeNotifier {
       _loaded ? Future.value() : _loading ??= _initialize();
   Future<void> _initialize() async {
     if (_loaded) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(storageKey);
-    if (raw != null) _data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    final cached = await _cache.load();
+    if (cached != null) _data = cached;
     _loaded = true;
     notifyListeners();
   }
@@ -165,10 +129,7 @@ class DemoStore extends ChangeNotifier {
       }
       final next = _copy(_data);
       change(next);
-      final prefs = await SharedPreferences.getInstance();
-      if (!await prefs.setString(storageKey, jsonEncode(next))) {
-        throw StateError('Không lưu được dữ liệu test');
-      }
+      await _cache.save(next);
       _data = next;
       notifyListeners();
     })();
@@ -1275,6 +1236,7 @@ class DemoStore extends ChangeNotifier {
     }
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
+    _teething.requireEdit(id);
     final day = DateTime(date.year, date.month, date.day);
     final now = DateTime.now();
     final dob = DateTime.parse(child['date_of_birth'] as String);
@@ -1299,7 +1261,7 @@ class DemoStore extends ChangeNotifier {
         'date': day.toIso8601String(),
         'note': savedNote,
       });
-      _teethingRevisions[id] = (_teethingRevisions[id] ?? 0) + 1;
+      _teething.markChanged(id);
     });
   }
 
@@ -1316,7 +1278,7 @@ class DemoStore extends ChangeNotifier {
     await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       (c['teeth'] as List?)?.removeWhere((r) => r['toothId'] == toothId);
-      _teethingRevisions[id] = (_teethingRevisions[id] ?? 0) + 1;
+      _teething.markChanged(id);
     });
   }
 
@@ -1325,11 +1287,11 @@ class DemoStore extends ChangeNotifier {
     final remote = teethingRemote;
     if (remote == null) return false;
     if (!canViewTeething(childId)) {
-      _setTeethingSyncStatus(childId, TeethingSyncStatus.noAccess);
+      _teething.setStatus(childId, TeethingSyncStatus.noAccess);
       return false;
     }
-    _setTeethingSyncStatus(childId, TeethingSyncStatus.loading);
-    final revision = _teethingRevisions[childId] ?? 0;
+    _teething.setStatus(childId, TeethingSyncStatus.loading);
+    final revision = _teething.revision(childId);
     try {
       final account = await _account(childId);
       if (account == null) return false;
@@ -1337,7 +1299,7 @@ class DemoStore extends ChangeNotifier {
           .contains(childId);
       final local = teeth(childId);
       var records = await remote.fetch(account);
-      if ((_teethingRevisions[childId] ?? 0) != revision) return false;
+      if (_teething.revision(childId) != revision) return false;
       if (firstSync && canEditTeething(childId)) {
         final missing = local.entries
             .where((entry) => !records.containsKey(entry.key))
@@ -1355,7 +1317,7 @@ class DemoStore extends ChangeNotifier {
       if (childById(childId) == null) return false;
       var applied = false;
       await _write((d) {
-        if ((_teethingRevisions[childId] ?? 0) != revision) return;
+        if (_teething.revision(childId) != revision) return;
         final child = (d['children'] as List).firstWhere(
           (item) => item['id'] == childId,
         );
@@ -1371,7 +1333,7 @@ class DemoStore extends ChangeNotifier {
         d['teethingSynced'] = (synced..add(childId)).toList();
         applied = true;
       });
-      _setTeethingSyncStatus(childId, TeethingSyncStatus.ready);
+      _teething.setStatus(childId, TeethingSyncStatus.ready);
       return applied;
     } on AuthException catch (error) {
       if (error.code == 'HTTP_404') {
@@ -1384,16 +1346,16 @@ class DemoStore extends ChangeNotifier {
             matches.first['teethingAccess'] = 'none';
           }
         });
-        _setTeethingSyncStatus(childId, TeethingSyncStatus.noAccess);
+        _teething.setStatus(childId, TeethingSyncStatus.noAccess);
       } else if (error.code == 'NETWORK_ERROR' ||
           error.code.startsWith('HTTP_5')) {
-        _setTeethingSyncStatus(childId, TeethingSyncStatus.offlineCache);
+        _teething.setStatus(childId, TeethingSyncStatus.offlineCache);
       } else {
-        _setTeethingSyncStatus(childId, TeethingSyncStatus.failed);
+        _teething.setStatus(childId, TeethingSyncStatus.failed);
       }
       return false;
     } catch (_) {
-      _setTeethingSyncStatus(childId, TeethingSyncStatus.failed);
+      _teething.setStatus(childId, TeethingSyncStatus.failed);
       return false;
     }
   }
@@ -1411,14 +1373,85 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> resetFixtures() async {
-    final next = _fixture(DateTime.now());
+    final next = _DemoFixture.create(DateTime.now());
     await _write((d) {
       d.clear();
       d.addAll(next);
     });
   }
 
-  static Map<String, dynamic> _fixture(DateTime now) {
+}
+
+/// Owns teething permissions and synchronization bookkeeping while the public
+/// API remains on [DemoStore] for backwards compatibility with existing UI.
+final class _TeethingStore {
+  _TeethingStore(this.root);
+
+  final DemoStore root;
+  final Map<String, int> _revisions = {};
+  final Map<String, TeethingSyncStatus> _statuses = {};
+
+  String access(String childId) {
+    final profile = root.childById(childId);
+    if (profile == null) return 'none';
+    if (profile['server'] != true) return 'edit';
+    return profile['teethingAccess'] as String? ?? 'none';
+  }
+
+  bool canView(String childId) => access(childId) != 'none';
+  bool canEdit(String childId) => access(childId) == 'edit';
+
+  void requireEdit(String childId) {
+    if (!canEdit(childId)) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
+  }
+
+  int revision(String childId) => _revisions[childId] ?? 0;
+  void markChanged(String childId) {
+    _revisions[childId] = revision(childId) + 1;
+  }
+
+  TeethingSyncStatus status(String childId) =>
+      _statuses[childId] ?? TeethingSyncStatus.idle;
+
+  void setStatus(String childId, TeethingSyncStatus status) {
+    if (_statuses[childId] == status) return;
+    _statuses[childId] = status;
+    root.notifyListeners();
+  }
+
+  Future<void> refreshAccess(String childId) async {
+    if (root.childById(childId)?['server'] != true ||
+        AuthService.instance.user == null) {
+      return;
+    }
+    final response = await AuthService.instance.authorizedRequest(
+      'GET',
+      '/children',
+    );
+    final profile = (response['children'] as List)
+        .cast<Map>()
+        .where((item) => item['id'] == childId)
+        .firstOrNull;
+    await root._write((data) {
+      final matches = (data['children'] as List).where(
+        (item) => item['id'] == childId,
+      );
+      if (matches.isEmpty) return;
+      final child = matches.first as Map;
+      child['teethingAccess'] = profile?['teethingAccess'] ?? 'none';
+      child['growthAccess'] = profile?['growthAccess'] ?? 'none';
+      if (profile == null || profile['teethingAccess'] == 'none') {
+        child['teeth'] = <dynamic>[];
+      }
+    });
+  }
+}
+
+/// Builds the fictional data used by demo mode and widget tests.
+abstract final class _DemoFixture {
+  static Map<String, dynamic> create(DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
     Map<String, dynamic> baby(
       String id,
@@ -1512,7 +1545,7 @@ class DemoStore extends ChangeNotifier {
           'email': 'demo@trackchildren.vn',
           'phone': '0900000001',
           'role': 'mother',
-          'password': password,
+          'password': DemoStore.password,
           'notifications': true,
           'biometric': false,
         },
@@ -1523,7 +1556,7 @@ class DemoStore extends ChangeNotifier {
           'email': 'bo@trackchildren.vn',
           'phone': '0900000002',
           'role': 'father',
-          'password': password,
+          'password': DemoStore.password,
           'notifications': false,
           'biometric': false,
         },
@@ -1561,7 +1594,31 @@ class DemoStore extends ChangeNotifier {
   }
 }
 
+/// Reads and writes the store snapshot without owning application state.
+final class _DemoLocalCache {
+  const _DemoLocalCache(this.key);
+
+  final String key;
+
+  Future<Map<String, dynamic>?> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    return raw == null
+        ? null
+        : Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  }
+
+  Future<void> save(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setString(key, jsonEncode(data))) {
+      throw StateError('Không lưu được dữ liệu test');
+    }
+  }
+}
+
 mixin DemoStoreBinding<T extends StatefulWidget> on State<T> {
+  bool _demoRefreshScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -1569,7 +1626,24 @@ mixin DemoStoreBinding<T extends StatefulWidget> on State<T> {
   }
 
   void _refreshDemo() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    // A remote sync can finish while this subtree is being built. Calling
+    // setState directly from ChangeNotifier in that phase makes Flutter throw
+    // "setState() or markNeedsBuild() called during build". Coalesce those
+    // notifications and rebuild safely after the current frame instead.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      if (_demoRefreshScheduled) return;
+      _demoRefreshScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _demoRefreshScheduled = false;
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+
+    setState(() {});
   }
 
   @override

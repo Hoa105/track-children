@@ -468,6 +468,32 @@ void main() {
     );
   });
 
+  test('view-only caregiver cannot bypass the UI to save a tooth', () async {
+    final store = DemoStore.instance;
+    final id = await store.saveChild(null, {
+      'full_name': 'Bé chỉ được xem',
+      'date_of_birth': '2025-01-01',
+      'gender': 'female',
+    });
+    await store.saveChild(id, {
+      'server': true,
+      'growthAccess': 'none',
+      'teethingAccess': 'view',
+    });
+
+    await expectLater(
+      store.saveTooth(id, PrimaryTooth.all.first.id, DateTime.now()),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'Bạn chỉ có quyền xem mục này',
+        ),
+      ),
+    );
+    expect(store.teeth(id), isEmpty);
+  });
+
   testWidgets('caregiver without teething access cannot see child records', (
     tester,
   ) async {
