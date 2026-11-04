@@ -9,7 +9,7 @@ from psycopg2.extensions import connection as Connection
 from app.core.database import get_db
 from app.features.auth.dependencies import current_user_id
 from app.features.teething import service
-from app.features.teething.schema import ToothRecord, ToothRecords, ToothUpsert
+from app.features.teething.schemas import ToothRecord, ToothRecords, ToothUpsert
 from app.shared.access import require_child_access
 
 router = APIRouter(prefix="/api/v1", tags=["mobile: teething"])

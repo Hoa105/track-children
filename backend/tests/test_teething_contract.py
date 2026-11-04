@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.features.teething.schema import ToothRecord, ToothUpsert
+from app.features.teething.schemas import ToothRecord, ToothUpsert
 from app.features.teething.router import router
 from app.features.teething.service import upsert_record, user_today
 

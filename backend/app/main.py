@@ -8,7 +8,7 @@ from app.features.activities.router import admin_router as activities_admin_rout
 from app.features.activities.router import router as activities_router
 from app.features.auth.setup import install_auth
 from app.features.growth.router import router as growth_router
-from app.features.growth.children_router import router as children_router
+from app.features.children.router import router as children_router
 from app.features.growth.errors import GrowthError
 from fastapi.responses import JSONResponse
 from app.features.dev.router import router as dev_router

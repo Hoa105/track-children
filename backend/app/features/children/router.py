@@ -1,8 +1,10 @@
-"""Authenticated profile selection for the growth screens."""
+"""Authenticated child profile selection shared across mobile features."""
 
 from fastapi import APIRouter, Depends, Response
+
 from app.core.database import transaction
 from app.features.auth.dependencies import current_user_id
+
 
 router = APIRouter(prefix="/api/v1", tags=["Children"])
 
@@ -31,14 +33,14 @@ def list_children(response: Response, user=Depends(current_user_id)):
     return {
         "children": [
             {
-                "id": str(c["id"]),
-                "fullName": c["full_name"],
-                "nickname": c["nickname"],
-                "dateOfBirth": c["date_of_birth"],
-                "gender": c["gender"],
-                "growthAccess": c["growth_access"],
-                "teethingAccess": c["teething_access"],
+                "id": str(child["id"]),
+                "fullName": child["full_name"],
+                "nickname": child["nickname"],
+                "dateOfBirth": child["date_of_birth"],
+                "gender": child["gender"],
+                "growthAccess": child["growth_access"],
+                "teethingAccess": child["teething_access"],
             }
-            for c in rows
+            for child in rows
         ]
     }
