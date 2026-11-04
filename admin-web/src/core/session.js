@@ -1,9 +1,6 @@
-// Mã vai trò khớp seed admin.roles.code (backend/migrations/003_admin_auth.sql)
+// Backend hiện dùng một lớp quyền duy nhất cho mọi tài khoản quản trị.
 export const ADMIN_ROLES = [
-  { code: "support", label: "Hỗ trợ người dùng" },
-  { code: "moderator", label: "Kiểm duyệt viên" },
-  { code: "content_manager", label: "Quản lý nội dung" },
-  { code: "super_admin", label: "Super Admin" },
+  { code: "admin", label: "Quản trị viên" },
 ];
 
 export const PERMISSIONS = [
@@ -26,12 +23,10 @@ export const PERMISSIONS = [
   { code: "audit.read", label: "Nhật ký hoạt động" },
 ];
 
-// Bản sao seed admin.role_permissions — khi có API, quyền lấy từ GET /admin/auth/me
+// Chỉ dùng để trình bày màn hình quản trị chưa nối API. Quyền phiên đăng nhập
+// luôn lấy từ payload backend.
 export const ROLE_PERMISSIONS = {
-  super_admin: PERMISSIONS.map((permission) => permission.code),
-  content_manager: ["report.read", "child.stats", "criteria.write", "activity.write", "health.write", "reference.write", "kb.manage", "chatbot.monitor", "notification.write", "legal.write"],
-  moderator: ["report.read", "user.read", "community.moderate"],
-  support: ["report.read", "user.read", "user.lock", "user.recover", "child.stats", "child.support_view"],
+  admin: PERMISSIONS.map((permission) => permission.code),
 };
 
 export function roleLabel(code) {
