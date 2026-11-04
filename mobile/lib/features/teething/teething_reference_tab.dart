@@ -4,13 +4,25 @@ import '../../app_colors.dart';
 import 'teething_reference_data.dart';
 import 'tooth_chart.dart';
 
-class TeethingReferenceTab extends StatelessWidget {
-  const TeethingReferenceTab({super.key, required this.initialAgeMonths});
+class TeethingReferenceTab extends StatefulWidget {
+  const TeethingReferenceTab({
+    super.key,
+    required this.initialAgeMonths,
+    this.onMonthSelected,
+  });
   final int initialAgeMonths;
+  final ValueChanged<int>? onMonthSelected;
+
+  @override
+  State<TeethingReferenceTab> createState() => _TeethingReferenceTabState();
+}
+
+class _TeethingReferenceTabState extends State<TeethingReferenceTab> {
+  String? _selectedToothId;
 
   @override
   Widget build(BuildContext context) {
-    final month = TeethingReferenceData.clampMonth(initialAgeMonths);
+    final month = TeethingReferenceData.clampMonth(widget.initialAgeMonths);
     final width = MediaQuery.sizeOf(context).width;
     final inset = width > 650 ? (width - 600) / 2 : 16.0;
     final count = TeethingReferenceData.possibleTeethCountAt(month);
@@ -46,8 +58,14 @@ class TeethingReferenceTab extends StatelessWidget {
         ToothChart(
           eruptedIds: const {},
           referenceIds: TeethingReferenceData.toothIdsAt(month),
+          selectedReferenceId: _selectedToothId,
           ageMonths: month,
-          onToothTap: null,
+          onToothTap: widget.onMonthSelected == null
+              ? null
+              : (tooth) {
+                  setState(() => _selectedToothId = tooth.id);
+                  widget.onMonthSelected!(tooth.eruptionMonths.$1);
+                },
           showPairNumbers: true,
         ),
       ],

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Track Children - Mobile Teething API",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "description": "Hợp đồng API cho tab Răng của bé. Mã răng dùng hệ FDI cho 20 răng sữa."
   },
   "servers": [{"url": "http://localhost:8000"}],
@@ -18,7 +18,7 @@
         "responses": {
           "200": {
             "description": "Danh sách hiện tại, có thể rỗng",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ToothRecords"}, "example": {"records": [{"toothCode": "71", "eruptedOn": "2026-08-12"}]}}}
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ToothRecords"}, "example": {"records": [{"toothCode": "71", "eruptedOn": "2026-08-12", "version": "00000000-0000-4000-8000-000000000001"}]}}}
           },
           "401": {"$ref": "#/components/responses/Unauthorized"},
           "404": {"$ref": "#/components/responses/ChildNotFound"}
@@ -37,17 +37,19 @@
         "security": [{"bearerAuth": []}],
         "requestBody": {
           "required": true,
-          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ToothUpsert"}, "example": {"eruptedOn": "2026-08-12", "timezoneOffsetMinutes": 420}}}
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ToothUpsert"}, "example": {"eruptedOn": "2026-08-12", "timezoneOffsetMinutes": 420, "expectedVersion": null}}}
         },
         "responses": {
           "200": {"description": "Bản ghi đã lưu", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ToothRecord"}}}},
           "401": {"$ref": "#/components/responses/Unauthorized"},
           "403": {"$ref": "#/components/responses/ReadOnly"},
           "404": {"$ref": "#/components/responses/ChildNotFound"},
-          "422": {"$ref": "#/components/responses/InvalidTooth"}
+          "422": {"$ref": "#/components/responses/InvalidTooth"},
+          "409": {"$ref": "#/components/responses/Conflict"}
         }
       },
       "delete": {
+        "parameters": [{"name": "expectedVersion", "in": "query", "schema": {"type": "string", "format": "uuid"}, "description": "Version from GET/PUT. Required to delete an existing record; omission only succeeds if already absent."}],
         "tags": ["mobile: teething"],
         "summary": "Bỏ đánh dấu răng đã mọc",
         "operationId": "deleteChildTooth",
@@ -56,7 +58,9 @@
           "204": {"description": "Đã xóa hoặc bản ghi vốn không tồn tại"},
           "401": {"$ref": "#/components/responses/Unauthorized"},
           "403": {"$ref": "#/components/responses/ReadOnly"},
-          "404": {"$ref": "#/components/responses/ChildNotFound"}
+          "404": {"$ref": "#/components/responses/ChildNotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "422": {"$ref": "#/components/responses/InvalidTooth"}
         }
       }
     }
@@ -72,10 +76,12 @@
     "schemas": {
       "ToothRecord": {
         "type": "object",
-        "required": ["toothCode", "eruptedOn"],
+        "required": ["toothCode", "eruptedOn", "version"],
         "properties": {
           "toothCode": {"type": "string", "pattern": "^[5-8][1-5]$", "example": "71"},
-          "eruptedOn": {"type": "string", "format": "date", "example": "2026-08-12"}
+          "eruptedOn": {"type": "string", "format": "date", "example": "2026-08-12"},
+          "version": {"type": "string", "format": "uuid"},
+          "note": {"type": ["string", "null"], "description": "Ghi chú riêng của răng; có thể trống"}
         }
       },
       "ToothRecords": {
@@ -86,9 +92,11 @@
       "ToothUpsert": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["eruptedOn", "timezoneOffsetMinutes"],
+        "required": ["eruptedOn", "timezoneOffsetMinutes", "expectedVersion"],
         "properties": {
           "eruptedOn": {"type": "string", "format": "date", "description": "Từ ngày sinh đến ngày hiện tại theo giờ thiết bị"},
+          "expectedVersion": {"type": ["string", "null"], "format": "uuid", "description": "Null to create; current version from GET/PUT to update. Stale versions return 409."},
+          "note": {"type": ["string", "null"], "maxLength": 1000, "description": "Ghi chú tùy chọn. Bỏ trường này để giữ ghi chú cũ; chuỗi trắng hoặc null để xóa."},
           "timezoneOffsetMinutes": {"type": "integer", "minimum": -720, "maximum": 840, "description": "Độ lệch UTC hiện tại từ hệ thống người dùng; Việt Nam là 420", "example": 420}
         }
       },
@@ -98,6 +106,7 @@
       }
     },
     "responses": {
+      "Conflict": {"description": "Record changed; reload and review before retrying. No automatic retry.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
       "Unauthorized": {"description": "Thiếu hoặc hết hạn phiên đăng nhập"},
       "ReadOnly": {"description": "Thành viên chỉ có quyền xem", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
       "ChildNotFound": {"description": "Không tìm thấy trẻ hoặc không có quyền xem", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},

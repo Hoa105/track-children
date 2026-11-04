@@ -71,7 +71,8 @@
           "fullName",
           "dateOfBirth",
           "gender",
-          "growthAccess"
+          "growthAccess",
+          "teethingAccess"
         ],
         "properties": {
           "id": {
@@ -98,6 +99,14 @@
             ]
           },
           "growthAccess": {
+            "enum": [
+              "none",
+              "view",
+              "edit"
+            ]
+          },
+          "teethingAccess": {
+            "description": "Current user's permission for child-specific teething records.",
             "enum": [
               "none",
               "view",

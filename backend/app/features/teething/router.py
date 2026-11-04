@@ -1,8 +1,9 @@
 """Authenticated API for the mobile teething screen."""
 
 from uuid import UUID
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from psycopg2.extensions import connection as Connection
 
 from app.core.database import get_db
@@ -12,6 +13,7 @@ from app.features.teething.schema import ToothRecord, ToothRecords, ToothUpsert
 from app.shared.access import require_child_access
 
 router = APIRouter(prefix="/api/v1", tags=["mobile: teething"])
+ToothCode = Annotated[str, Path(pattern=r"^[5-8][1-5]$")]
 
 
 @router.get("/children/{child_id}/teeth", response_model=ToothRecords)
@@ -24,12 +26,10 @@ def get_teeth(
     return {"records": service.list_records(conn, child_id)}
 
 
-@router.put(
-    "/children/{child_id}/teeth/{tooth_code}", response_model=ToothRecord
-)
+@router.put("/children/{child_id}/teeth/{tooth_code}", response_model=ToothRecord)
 def put_tooth(
     child_id: UUID,
-    tooth_code: str,
+    tooth_code: ToothCode,
     body: ToothUpsert,
     user_id: UUID = Depends(current_user_id),
     conn: Connection = Depends(get_db),
@@ -42,6 +42,9 @@ def put_tooth(
         tooth_code,
         body.erupted_on,
         body.timezone_offset_minutes,
+        expected_version=body.expected_version,
+        note=body.note,
+        note_provided="note" in body.model_fields_set,
     )
 
 
@@ -51,10 +54,11 @@ def put_tooth(
 )
 def delete_tooth(
     child_id: UUID,
-    tooth_code: str,
+    tooth_code: ToothCode,
+    expected_version: Annotated[UUID | None, Query(alias="expectedVersion")] = None,
     user_id: UUID = Depends(current_user_id),
     conn: Connection = Depends(get_db),
 ):
     require_child_access(conn, child_id, user_id, service.SCOPE, "edit")
-    service.delete_record(conn, child_id, user_id, tooth_code)
+    service.delete_record(conn, child_id, user_id, tooth_code, expected_version)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

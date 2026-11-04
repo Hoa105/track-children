@@ -237,4 +237,50 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('tapping a reference tooth selects its pair eruption month', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 900);
+    addTearDown(tester.view.reset);
+    var month = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            body: TeethingReferenceTab(
+              initialAgeMonths: month,
+              onMonthSelected: (value) => setState(() => month = value),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final tooth = PrimaryTooth.all.firstWhere(
+      (item) => item.pairCode == 10,
+    );
+    await tester.tap(find.byKey(Key('tooth-target-${tooth.id}')));
+    await tester.pumpAndSettle();
+
+    expect(month, tooth.eruptionMonths.$1);
+    expect(month, 25);
+    expect(tester.widget<ToothChart>(find.byType(ToothChart)).ageMonths, 25);
+    for (final pairTooth in TeethingReferenceData.pair(tooth.pairCode)) {
+      final selectedIllustration = tester.widget<ToothIllustration>(
+        find.descendant(
+          of: find.byKey(Key('tooth-target-${pairTooth.id}')),
+          matching: find.byType(ToothIllustration),
+        ),
+      );
+      expect(selectedIllustration.selectedReference, isTrue);
+    }
+    expect(
+      tester
+          .widget<ToothChart>(find.byType(ToothChart))
+          .selectedReferenceId,
+      tooth.id,
+    );
+  });
 }

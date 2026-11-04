@@ -13,6 +13,7 @@ class ToothChart extends StatelessWidget {
     required this.ageMonths,
     required this.onToothTap,
     this.referenceIds,
+    this.selectedReferenceId,
     this.showPairNumbers = false,
   });
   final Set<String> eruptedIds;
@@ -23,6 +24,7 @@ class ToothChart extends StatelessWidget {
   /// When supplied, the chart is in reference mode. Highlighted teeth are
   /// possible by age, not parent-confirmed erupted teeth.
   final Set<String>? referenceIds;
+  final String? selectedReferenceId;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -71,12 +73,26 @@ class ToothChart extends StatelessWidget {
     final y = center.dy + (upper ? -1 : 1) * (20 + b * math.sin(theta));
     final reference = referenceIds?.contains(tooth.id) ?? false;
     final erupted = referenceIds == null && eruptedIds.contains(tooth.id);
-    final expected = referenceIds == null ? false : reference;
+    final expected = referenceIds == null
+        ? !erupted && tooth.eruptionMonths.$1 <= ageMonths
+        : reference;
+    final selectedPairCode = selectedReferenceId == null
+        ? null
+        : PrimaryTooth.all
+              .where((item) => item.id == selectedReferenceId)
+              .firstOrNull
+              ?.pairCode;
+    final selectedReference =
+        referenceIds != null && selectedPairCode == tooth.pairCode;
     final state = referenceIds != null
         ? (reference
               ? 'Có thể đã bắt đầu mọc theo lịch tham khảo'
               : 'Chưa đến mốc tham khảo')
-        : (erupted ? 'Đã mọc' : 'Chưa ghi nhận mọc');
+        : (erupted
+              ? 'Đã mọc'
+              : expected
+              ? 'Có thể mọc theo tháng tuổi'
+              : 'Chưa đến mốc có thể mọc');
     final toothSize = (a * 2 * .21).clamp(56.0, 76.0);
     final rotation = upper
         ? math.atan2(b * math.cos(theta), a * math.sin(theta))
@@ -102,8 +118,8 @@ class ToothChart extends StatelessWidget {
                   ? Duration.zero
                   : const Duration(milliseconds: 250),
               opacity: referenceIds != null
-                  ? (reference ? 1 : .85)
-                  : (erupted ? 1 : .52),
+                  ? (reference ? 1 : .55)
+                  : (erupted ? 1 : .55),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -119,6 +135,7 @@ class ToothChart extends StatelessWidget {
                           erupted: erupted,
                           expected: expected,
                           reference: reference,
+                          selectedReference: selectedReference,
                           faceRotation: -rotation,
                         ),
                       ),
@@ -134,9 +151,11 @@ class ToothChart extends StatelessWidget {
                         child: Container(
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: referenceIds != null && !reference
+                                ? const Color(0xFFC5AAAD)
+                                : AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primarySoft),
+                            border: Border.all(color: Colors.white, width: 1.2),
                           ),
                           child: Text(
                             '${tooth.pairCode}',
@@ -146,9 +165,7 @@ class ToothChart extends StatelessWidget {
                               fontSize: 11,
                               height: 1,
                               fontWeight: FontWeight.w700,
-                              color: reference
-                                  ? AppColors.primaryDark
-                                  : AppColors.textPrimary,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -192,27 +209,39 @@ class ToothIllustration extends StatelessWidget {
     this.erupted = true,
     this.expected = false,
     this.reference = false,
+    this.selectedReference = false,
     this.faceRotation = 0,
   });
   final ToothType type;
   final bool erupted;
   final bool expected;
   final bool reference;
+  final bool selectedReference;
   final double faceRotation;
   @override
   Widget build(BuildContext context) {
-    final colors = reference
+    final colors = selectedReference
         ? const _ToothColors(
-            Color(0xFFF1FCF6),
-            Color(0xFFB4DEC9),
+            Colors.white,
+            Colors.white,
             AppColors.primary,
           )
+        : reference
+        ? const _ToothColors(
+            Colors.white,
+            Colors.white,
+            Color(0xFFE58FA3),
+          )
         : erupted
-        ? const _ToothColors(Colors.white, Color(0xFFECF5EE), AppColors.primary)
+        ? const _ToothColors(
+            Colors.white,
+            Color(0xFFFFF0F3),
+            Color(0xFFE58FA3),
+          )
         : _ToothColors(
             const Color(0xFFFFFEFB),
             const Color(0xFFF0E9E2),
-            expected ? const Color(0xFFD6A34C) : const Color(0xFFCAB8B5),
+            const Color(0xFFCAB8B5),
           );
     return TweenAnimationBuilder<_ToothColors>(
       tween: _ToothColorsTween(begin: colors, end: colors),
@@ -227,6 +256,7 @@ class ToothIllustration extends StatelessWidget {
           erupted,
           expected,
           reference,
+          selectedReference,
           value,
           faceRotation,
         ),
@@ -446,6 +476,7 @@ class _ToothPainter extends CustomPainter {
     this.erupted,
     this.expected,
     this.reference,
+    this.selectedReference,
     this.colors,
     this.faceRotation,
   );
@@ -455,6 +486,7 @@ class _ToothPainter extends CustomPainter {
   final bool erupted;
   final bool expected;
   final bool reference;
+  final bool selectedReference;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -565,7 +597,8 @@ class _ToothPainter extends CustomPainter {
       oldDelegate.type != type ||
       oldDelegate.erupted != erupted ||
       oldDelegate.expected != expected ||
-      oldDelegate.reference != reference;
+      oldDelegate.reference != reference ||
+      oldDelegate.selectedReference != selectedReference;
 }
 
 class ToothReferenceLegend extends StatelessWidget {
@@ -577,7 +610,7 @@ class ToothReferenceLegend extends StatelessWidget {
     spacing: 18,
     runSpacing: 8,
     children: [
-      _LegendDot(color: AppColors.primary, label: 'Có thể đã mọc'),
+      _LegendDot(color: Color(0xFFE58FA3), label: 'Có thể đã mọc'),
       _LegendDot(color: Color(0xFFC5AAAD), label: 'Chưa đến mốc'),
     ],
   );
@@ -611,8 +644,8 @@ class ToothChartLegend extends StatelessWidget {
     runSpacing: 8,
     children: [
       for (final item in [
-        (AppColors.primary, 'Đã mọc'),
-        (const Color(0xFFD6A34C), 'Đến tuổi mọc'),
+        (const Color(0xFFE58FA3), 'Đã mọc'),
+        (const Color(0xFFC5AAAD), 'Đến tuổi mọc'),
         (const Color(0xFFC5AAAD), 'Chưa đến tuổi'),
       ])
         Row(

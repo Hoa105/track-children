@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
+import '../../services/sharing_api.dart';
 
 enum AccessLevel { none, view, edit }
 
@@ -14,6 +17,7 @@ String _demoSharingCode(String? id) =>
 List<SharingMember> demoSharingMembers(String id) => [
   for (final m in DemoStore.instance.childById(id)?['members'] as List? ?? [])
     SharingMember(
+      id: m['id'] as String?,
       name: m['name'] as String,
       role: m['role'] as String,
       contact: m['contact'] as String,
@@ -26,6 +30,7 @@ List<SharingMember> demoSharingMembers(String id) => [
 
 class SharingMember {
   SharingMember({
+    this.id,
     required this.name,
     required this.role,
     required this.contact,
@@ -34,6 +39,7 @@ class SharingMember {
   }) : permissions = permissions ?? _defaultPermissions();
 
   final String name;
+  final String? id;
   final String role;
   final String contact;
   final String avatar;
@@ -52,6 +58,14 @@ const _modules = <String>[
   'Hoạt động',
 ];
 
+const _scopeForModule = <String, String>{
+  'Lượng sữa': 'growth',
+  'Tiêm chủng': 'vaccination',
+  'Mọc răng': 'teething',
+  'Nhật ký': 'diary',
+  'Hoạt động': 'activities',
+};
+
 class ChildSharingScreen extends StatefulWidget {
   const ChildSharingScreen({
     super.key,
@@ -69,6 +83,8 @@ class ChildSharingScreen extends StatefulWidget {
 }
 
 class _ChildSharingScreenState extends State<ChildSharingScreen> {
+  final _sharingApi = SharingApi();
+  bool _loading = false;
   late final String? _childId =
       widget.childId ?? DemoStore.instance.child?['id'] as String?;
   late final _members =
@@ -100,9 +116,81 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         )
       : widget.pending ?? <String>[];
 
+  bool get _usesServer =>
+      _childId != null &&
+      DemoStore.instance.childById(_childId!)?['server'] == true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_usesServer) unawaited(_loadSharing());
+  }
+
+  Future<void> _loadSharing() async {
+    setState(() => _loading = true);
+    try {
+      final result = await _sharingApi.fetch(_childId!);
+      final loaded = <SharingMember>[
+        for (final raw in result['members'] as List)
+          _memberFromApi(Map<String, dynamic>.from(raw as Map)),
+      ];
+      if (!mounted) return;
+      setState(() {
+        _members
+          ..clear()
+          ..addAll(loaded);
+        _pending
+          ..clear()
+          ..addAll([
+            for (final raw in result['invitations'] as List)
+              'Lời mời · ${raw['invitee_email'] ?? raw['invitee_phone'] ?? ''}',
+          ]);
+      });
+    } catch (error) {
+      if (mounted) _toast('Chưa tải được quyền chia sẻ: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  SharingMember _memberFromApi(Map<String, dynamic> raw) {
+    final scopes = Map<String, dynamic>.from(raw['permissions'] as Map? ?? {});
+    final name = raw['display_name'] as String? ?? 'Người chăm sóc';
+    return SharingMember(
+      id: raw['id'].toString(),
+      name: name,
+      role: raw['relationship'] as String? ?? 'Người chăm sóc',
+      contact: (raw['email'] ?? raw['phone'] ?? '') as String,
+      avatar: name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+      permissions: {
+        for (final module in _modules)
+          module: AccessLevel.values.byName(
+            scopes[_scopeForModule[module]] as String? ?? 'none',
+          ),
+      },
+    );
+  }
+
+  Map<String, String> _apiPermissions(SharingMember member) => {
+    for (final entry in member.permissions.entries)
+      _scopeForModule[entry.key]!: entry.value.name,
+  };
+
   Future<void> _persist() async {
     if (_childId == null) return;
     try {
+      if (_usesServer) {
+        await Future.wait([
+          for (final member in _members)
+            if (member.id != null)
+              _sharingApi.updateMember(
+                _childId!,
+                member.id!,
+                _apiPermissions(member),
+              ),
+        ]);
+        return;
+      }
       await DemoStore.instance.saveSharing(_childId, [
         for (final m in _members)
           {
@@ -114,7 +202,38 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           },
       ], _pending);
     } catch (_) {
-      if (mounted) _toast('Chưa lưu được dữ liệu chia sẻ test.');
+      if (mounted) _toast('Chưa lưu được thay đổi quyền chia sẻ. Vui lòng thử lại.');
+    }
+  }
+
+  Future<void> _revokeMember(SharingMember member) async {
+    try {
+      if (_usesServer && member.id != null) {
+        await _sharingApi.revokeMember(_childId!, member.id!);
+      }
+      if (!mounted) return;
+      setState(() => _members.remove(member));
+      if (!_usesServer) await _persist();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _toast('Đã thu hồi quyền truy cập của ${member.name}.');
+    } catch (_) {
+      if (mounted) _toast('Chưa thể thu hồi quyền truy cập. Vui lòng thử lại.');
+    }
+  }
+
+  Future<void> _sendInvitation(String contact) async {
+    try {
+      if (_usesServer) {
+        await _sharingApi.invite(_childId!, contact, {
+          for (final scope in _scopeForModule.values) scope: 'view',
+        });
+      }
+      if (!mounted) return;
+      setState(() => _pending.add('Lời mời · $contact'));
+      if (!_usesServer) await _persist();
+    } catch (_) {
+      if (mounted) _toast('Chưa thể gửi lời mời. Vui lòng kiểm tra thông tin và thử lại.');
     }
   }
 
@@ -124,10 +243,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         builder: (_) => SharingPermissionsScreen(
           member: member,
           onRevoke: () {
-            setState(() => _members.remove(member));
-            _persist();
-            Navigator.of(context).pop();
-            _toast('Đã thu hồi quyền truy cập của ${member.name}.');
+            unawaited(_revokeMember(member));
           },
         ),
       ),
@@ -152,8 +268,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         builder: (_) => InviteMemberScreen(
           childId: _childId,
           onSendInvite: (contact) {
-            setState(() => _pending.add('Lời mời · $contact'));
-            _persist();
+            unawaited(_sendInvitation(contact));
           },
         ),
       ),
@@ -202,6 +317,10 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
+          if (_loading) ...[
+            const LinearProgressIndicator(),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Expanded(

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 import '../../models/tooth.dart';
 import '../../services/demo_store.dart';
+import '../../services/teething_api.dart';
 import 'teething_reference_tab.dart';
 import 'tooth_chart.dart';
 import 'teething_date_picker.dart';
@@ -21,9 +22,38 @@ class TeethingScreen extends StatefulWidget {
 }
 
 class _TeethingScreenState extends State<TeethingScreen> {
-  int? _selectedMonth;
+  int? _referenceMonth;
+  int? _trackingMonth;
   int _mode = 0;
   String get childId => widget.childId;
+
+  void _showLatestRecords() {
+    if (!mounted) return;
+    setState(() {
+      _trackingMonth = null;
+      _mode = 1;
+    });
+  }
+
+  Future<void> _editTooth(PrimaryTooth tooth) async {
+    if (await _openEditor(context, childId, tooth: tooth) == true) {
+      _showLatestRecords();
+    }
+  }
+
+  Future<void> _retryTeething() async {
+    final store = DemoStore.instance;
+    try {
+      await store.refreshTeethingAccess(childId);
+      if (store.canViewTeething(childId)) await store.syncTeeth(childId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chưa kiểm tra lại được quyền truy cập.')),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -52,7 +82,10 @@ class _TeethingScreenState extends State<TeethingScreen> {
           body: const Center(child: Text('Không tìm thấy hồ sơ bé.')),
         );
       }
-      final allRecords = store.teeth(childId);
+      final canView = store.canViewTeething(childId);
+      final canEdit = store.canEditTeething(childId);
+      final syncStatus = store.teethingSyncStatus(childId);
+      final allRecords = canView ? store.teeth(childId) : <String, DateTime>{};
       final dob = DateTime.parse(child['date_of_birth'] as String);
       final now = DateTime.now();
       final months =
@@ -61,11 +94,13 @@ class _TeethingScreenState extends State<TeethingScreen> {
           dob.month -
           (now.day < dob.day ? 1 : 0);
       final currentMonth = months.clamp(0, 60);
-      final selectedMonth = (_selectedMonth ?? currentMonth).clamp(
+      final referenceMonth = (_referenceMonth ?? currentMonth).clamp(0, 60);
+      final trackingMonth = (_trackingMonth ?? currentMonth).clamp(
         0,
-        _mode == 1 ? currentMonth : 60,
+        currentMonth,
       );
-      final cutoff = DateTime(dob.year, dob.month + selectedMonth + 1, 1);
+      final selectedMonth = _mode == 0 ? referenceMonth : trackingMonth;
+      final cutoff = DateTime(dob.year, dob.month + trackingMonth + 1, 1);
       final cutoffDay = dob.day.clamp(
         1,
         DateTime(cutoff.year, cutoff.month + 1, 0).day,
@@ -73,7 +108,9 @@ class _TeethingScreenState extends State<TeethingScreen> {
       final endExclusive = DateTime(cutoff.year, cutoff.month, cutoffDay);
       final records = {
         for (final entry in allRecords.entries)
-          if (entry.value.isBefore(endExclusive)) entry.key: entry.value,
+          if (trackingMonth == currentMonth ||
+              entry.value.isBefore(endExclusive))
+            entry.key: entry.value,
       };
       final pending =
           PrimaryTooth.all
@@ -117,9 +154,6 @@ class _TeethingScreenState extends State<TeethingScreen> {
                   value: _mode,
                   onChanged: (value) => setState(() {
                     _mode = value;
-                    if (_mode == 1 && selectedMonth > currentMonth) {
-                      _selectedMonth = currentMonth;
-                    }
                   }),
                 ),
               ),
@@ -132,13 +166,26 @@ class _TeethingScreenState extends State<TeethingScreen> {
               month: selectedMonth,
               currentMonth: currentMonth,
               maxMonth: _mode == 1 ? currentMonth : 60,
-              onChanged: (month) => setState(() => _selectedMonth = month),
+              onChanged: (month) => setState(() {
+                if (_mode == 0) {
+                  _referenceMonth = month;
+                } else {
+                  _trackingMonth = month;
+                }
+              }),
             ),
             Expanded(
               child: IndexedStack(
                 index: _mode,
                 children: [
-                  TeethingReferenceTab(initialAgeMonths: selectedMonth),
+                  TeethingReferenceTab(
+                    initialAgeMonths: referenceMonth,
+                    onMonthSelected: (month) =>
+                        setState(() => _referenceMonth = month),
+                  ),
+                  if (!canView)
+                    _TeethingNoAccess(onRetry: _retryTeething)
+                  else
                   ListView(
                     key: const PageStorageKey('child-teething-tab'),
                     padding: EdgeInsets.symmetric(
@@ -148,6 +195,14 @@ class _TeethingScreenState extends State<TeethingScreen> {
                       vertical: 16,
                     ),
                     children: [
+                      if (syncStatus != TeethingSyncStatus.ready &&
+                          syncStatus != TeethingSyncStatus.idle) ...[
+                        _TeethingStatusBanner(
+                          status: syncStatus,
+                          onRetry: _retryTeething,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       Card(
                         elevation: 0,
                         color: Colors.white,
@@ -170,8 +225,10 @@ class _TeethingScreenState extends State<TeethingScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
-                                'Chạm vào răng để ghi nhận hoặc sửa',
+                              Text(
+                                canEdit
+                                    ? 'Chạm vào răng để ghi nhận hoặc sửa'
+                                    : 'Bạn đang có quyền xem dữ liệu mọc răng',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
@@ -179,10 +236,9 @@ class _TeethingScreenState extends State<TeethingScreen> {
                               ),
                               ToothChart(
                                 eruptedIds: records.keys.toSet(),
-                                ageMonths: selectedMonth,
+                                ageMonths: trackingMonth,
                                 showPairNumbers: true,
-                                onToothTap: (t) =>
-                                    _openEditor(context, childId, tooth: t),
+                                onToothTap: canEdit ? _editTooth : null,
                               ),
                             ],
                           ),
@@ -197,7 +253,10 @@ class _TeethingScreenState extends State<TeethingScreen> {
                           key: const Key('erupted-teeth-list-button'),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => ToothListScreen(childId: childId),
+                              builder: (_) => ToothListScreen(
+                                childId: childId,
+                                onRecordSaved: _showLatestRecords,
+                              ),
                             ),
                           ),
                           child: Padding(
@@ -258,6 +317,63 @@ class _TeethingScreenState extends State<TeethingScreen> {
       );
     },
   );
+}
+
+class _TeethingNoAccess extends StatelessWidget {
+  const _TeethingNoAccess({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline_rounded, size: 52, color: AppColors.textSecondary),
+          const SizedBox(height: 16),
+          const Text(
+            'Bạn không có quyền xem dữ liệu mọc răng của bé.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Thử lại'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _TeethingStatusBanner extends StatelessWidget {
+  const _TeethingStatusBanner({required this.status, required this.onRetry});
+  final TeethingSyncStatus status;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == TeethingSyncStatus.loading) {
+      return const LinearProgressIndicator();
+    }
+    final offline = status == TeethingSyncStatus.offlineCache;
+    return Material(
+      color: offline ? const Color(0xFFFFF3D9) : const Color(0xFFFFE9E9),
+      borderRadius: BorderRadius.circular(16),
+      child: ListTile(
+        leading: Icon(offline ? Icons.cloud_off_outlined : Icons.error_outline),
+        title: Text(
+          offline
+              ? 'Đang hiển thị dữ liệu đã lưu trên thiết bị.'
+              : 'Chưa tải được dữ liệu mọc răng.',
+        ),
+        trailing: TextButton(onPressed: onRetry, child: const Text('Thử lại')),
+      ),
+    );
+  }
 }
 
 class _TeethingModeSwitcher extends StatelessWidget {
@@ -571,12 +687,28 @@ class _ParentReminder extends StatelessWidget {
 }
 
 class ToothListScreen extends StatelessWidget {
-  const ToothListScreen({super.key, required this.childId});
+  const ToothListScreen({super.key, required this.childId, this.onRecordSaved});
   final String childId;
+  final VoidCallback? onRecordSaved;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: DemoStore.instance,
     builder: (context, _) {
+      final canView = DemoStore.instance.canViewTeething(childId);
+      final canEdit = DemoStore.instance.canEditTeething(childId);
+      if (!canView) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Răng đã mọc')),
+          body: _TeethingNoAccess(
+            onRetry: () async {
+              await DemoStore.instance.refreshTeethingAccess(childId);
+              if (DemoStore.instance.canViewTeething(childId)) {
+                await DemoStore.instance.syncTeeth(childId);
+              }
+            },
+          ),
+        );
+      }
       final records = DemoStore.instance.teeth(childId);
       final teeth =
           PrimaryTooth.all.where((t) => records.containsKey(t.id)).toList()
@@ -728,11 +860,20 @@ class ToothListScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.primary,
+                        trailing: Icon(
+                          canEdit
+                              ? Icons.chevron_right_rounded
+                              : Icons.visibility_outlined,
+                          color: canEdit
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                         ),
-                        onTap: () => _openEditor(context, childId, tooth: t),
+                        onTap: canEdit ? () async {
+                          if (await _openEditor(context, childId, tooth: t) ==
+                              true) {
+                            onRecordSaved?.call();
+                          }
+                        } : null,
                       ),
                     ),
                 ],
@@ -742,15 +883,23 @@ class ToothListScreen extends StatelessWidget {
   );
 }
 
-Future<void> _openEditor(
+Future<bool?> _openEditor(
   BuildContext context,
   String childId, {
   PrimaryTooth? tooth,
-}) => Navigator.of(context).push<void>(
-  MaterialPageRoute<void>(
-    builder: (_) => ToothEditorScreen(childId: childId, tooth: tooth),
-  ),
-);
+}) async {
+  if (!DemoStore.instance.canEditTeething(childId)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bạn chỉ có quyền xem mục này.')),
+    );
+    return false;
+  }
+  return Navigator.of(context).push<bool>(
+    MaterialPageRoute<bool>(
+      builder: (_) => ToothEditorScreen(childId: childId, tooth: tooth),
+    ),
+  );
+}
 
 class ToothEditorScreen extends StatefulWidget {
   const ToothEditorScreen({super.key, required this.childId, this.tooth});
@@ -763,6 +912,7 @@ class ToothEditorScreen extends StatefulWidget {
 class _ToothEditorState extends State<ToothEditorScreen> {
   String? _toothId;
   late DateTime _date;
+  late final TextEditingController _note;
   bool _busy = false;
   // A mounted editor may predate this field after a web hot reload.
   // Fall back to the saved record until the parent makes a selection.
@@ -775,9 +925,18 @@ class _ToothEditorState extends State<ToothEditorScreen> {
   void initState() {
     super.initState();
     _toothId = widget.tooth?.id;
+    _note = TextEditingController(
+      text: DemoStore.instance.toothNote(widget.childId, _toothId),
+    );
     _date =
         DemoStore.instance.teeth(widget.childId)[_toothId] ??
         DateUtils.dateOnly(DateTime.now());
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -820,9 +979,27 @@ class _ToothEditorState extends State<ToothEditorScreen> {
       if (remove) {
         await DemoStore.instance.removeTooth(widget.childId, _toothId!);
       } else {
-        await DemoStore.instance.saveTooth(widget.childId, _toothId!, _date);
+        await DemoStore.instance.saveTooth(
+          widget.childId,
+          _toothId!,
+          _date,
+          note: _note.text,
+        );
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
+    } on TeethingConflictException {
+      await DemoStore.instance.syncTeeth(widget.childId);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Dữ liệu răng đã thay đổi. Vui lòng mở lại để kiểm tra trước khi lưu.',
+            ),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -934,13 +1111,22 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                             () => _markedErupted = status.$1,
                                           ),
                                     child: SizedBox(
-                                      height: 56,
+                                      height: 68,
                                       child: Row(
                                         children: [
-                                          Radio<bool>(
-                                            value: status.$1,
-                                            enabled: !_busy,
-                                            activeColor: AppColors.primary,
+                                          SizedBox(
+                                            width: 60,
+                                            child: Center(
+                                              child: Transform.scale(
+                                                scale: 1.4,
+                                                child: Radio<bool>(
+                                                  value: status.$1,
+                                                  enabled: !_busy,
+                                                  activeColor:
+                                                      AppColors.primary,
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                           Expanded(
                                             child: FittedBox(
@@ -949,7 +1135,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                               child: Text(
                                                 status.$2,
                                                 style: const TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 17,
                                                   fontWeight: FontWeight.w600,
                                                   color: AppColors.primaryDark,
                                                 ),
@@ -987,6 +1173,60 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                         ],
                         if (_isErupted) ...[
                           const SizedBox(height: 16),
+                          TextField(
+                            key: const Key('tooth-note-field'),
+                            controller: _note,
+                            enabled: !_busy,
+                            minLines: 4,
+                            maxLines: 6,
+                            maxLength: 1000,
+                            textCapitalization: TextCapitalization.sentences,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Ghi chú',
+                              hintText: 'Nhập ghi chú về lần mọc răng của bé…',
+                              hintStyle: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                              counterText: '',
+                              alignLabelWithHint: true,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.all(18),
+                              labelStyle: TextStyle(
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(18),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(18),
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(18),
+                                ),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               const Expanded(
