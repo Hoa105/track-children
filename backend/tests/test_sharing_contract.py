@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.features.sharing.router import router
-from app.features.sharing.schema import InvitationCreate, PermissionUpdate
+from app.features.sharing.schemas import InvitationCreate, PermissionUpdate
 
 
 def test_sharing_routes_are_registered():

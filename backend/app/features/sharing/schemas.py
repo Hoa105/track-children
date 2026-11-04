@@ -28,4 +28,3 @@ class InvitationCreate(BaseModel):
             phone = "".join(ch for ch in self.phone if ch.isdigit() or ch == "+")
             self.phone = "+84" + phone[1:] if phone.startswith("0") else phone
         return self
-
