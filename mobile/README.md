@@ -31,6 +31,34 @@ Nếu terminal đang ở `mobile`, chạy `..\scripts\run-mobile-local.ps1`. Khi
 
 ### Auth trên Chrome
 
+Chạy bản web có bản sửa lỗi `ViewInsets cannot be negative` khi đóng bàn phím:
+
+```powershell
+# Từ gốc repository
+.\scripts\run-web-local.ps1
+```
+
+Script chuẩn bị Web SDK riêng tại `mobile/.dart_tool/web_engine/`, áp dụng bản
+sửa [Flutter #194020](https://github.com/flutter/flutter/pull/194020) cho engine
+3.47.5, rồi biên dịch lại cả debug JS và kernel cho bản build web. SDK cài trên máy
+không bị chỉnh sửa. Lần chuẩn bị tiếp theo dùng lại kết quả nếu engine không đổi.
+Cấu hình VS Code **Mobile Chrome (API)** cũng dùng SDK này. Dừng phiên debug cũ
+rồi chạy lại; hot reload/hot restart không thay thế engine đã tải trong trình duyệt.
+
+Kiểm tra hồi quy của handler resize đã biên dịch:
+
+```powershell
+cd mobile
+node tool/test_web_keyboard_fix.cjs
+```
+
+Nếu chạy `flutter run -d chrome` trực tiếp, công cụ vẫn dùng SDK gốc chưa có bản
+sửa. Để build với SDK riêng sau khi chuẩn bị:
+
+```powershell
+flutter --local-engine-src-path=.dart_tool/web_engine/src --local-web-sdk=keyboard_fix build web
+```
+
 Auth trên web mặc định gọi `http://localhost:8000/api/v1`.
 Nếu chạy backend bằng Docker Compose, thêm vào `.env` ở **gốc repository**:
 

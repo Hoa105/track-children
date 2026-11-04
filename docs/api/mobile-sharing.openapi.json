@@ -1,0 +1,35 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Track Children - Child sharing API",
+    "version": "1.0.0",
+    "description": "Owner-managed caregiver permissions. Teething is independent from vaccination from migration 020."
+  },
+  "servers": [{"url": "http://localhost:8000/api/v1"}],
+  "security": [{"BearerAuth": []}],
+  "paths": {
+    "/children/{childId}/sharing": {
+      "get": {"summary": "List active caregivers and pending invitations", "responses": {"200": {"description": "Sharing state"}, "404": {"description": "Not the child owner"}}}
+    },
+    "/children/{childId}/sharing/members/{memberId}": {
+      "put": {"summary": "Replace supplied permission levels", "responses": {"200": {"description": "Updated"}, "404": {"description": "Owner or member not found"}}},
+      "delete": {"summary": "Revoke caregiver membership", "responses": {"204": {"description": "Revoked"}}}
+    },
+    "/children/{childId}/sharing/invitations": {
+      "post": {"summary": "Create a seven-day invitation", "responses": {"201": {"description": "Invitation created"}}}
+    },
+    "/sharing/invitations/{invitationId}/accept": {
+      "post": {"summary": "Accept an invitation assigned to the current user", "responses": {"200": {"description": "Membership activated"}}}
+    },
+    "/sharing/invitations/{invitationId}/decline": {
+      "post": {"summary": "Decline an invitation assigned to the current user", "responses": {"204": {"description": "Declined"}}}
+    }
+  },
+  "components": {
+    "securitySchemes": {"BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}},
+    "schemas": {
+      "AccessLevel": {"enum": ["none", "view", "edit"]},
+      "PermissionScope": {"enum": ["growth", "assessment", "vaccination", "teething", "diary", "activities"]}
+    }
+  }
+}

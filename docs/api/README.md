@@ -2,6 +2,40 @@
 
 API contracts and integration documentation.
 
+## Mobile teething
+
+Mọc răng dùng quyền chia sẻ độc lập `teething` từ migration
+`020_teething_permissions.sql`. Chủ hồ sơ luôn có quyền `edit`; người chăm sóc
+nhận một trong `none`, `view`, `edit`. Xem hợp đồng quản lý thành viên và lời mời
+tại [mobile-sharing.openapi.json](mobile-sharing.openapi.json).
+
+API v2 requires migration `019_teething_versions.sql` after `018` and a matching
+mobile release. GET/PUT return an opaque UUID `version`. PUT requires
+`expectedVersion: null` to create, or the last observed version to update.
+DELETE sends `?expectedVersion=<version>`; omitting it only succeeds when the
+record is already absent. A stale version returns HTTP 409 without changing data;
+reload and review before retrying. Older clients must be updated before writing.
+The device sends its current UTC offset on every PUT; eruption dates remain
+calendar dates and are never converted into timestamps.
+Each record also returns nullable `note`. PUT accepts an optional note of up to
+1000 characters, trims surrounding whitespace, and clears the note for null or
+blank input. Omit `note` to preserve it on update. The existing database column
+is reused, so notes require no additional migration.
+
+Run backend unit tests from `backend` with
+`python -m pytest tests/test_teething_contract.py`.
+For database tests, set `TEETHING_TEST_DATABASE_URL` to a dedicated PostgreSQL
+database whose name ends in `_teething_test`, then run
+`python -m pytest tests/test_teething_integration.py`. The tests apply migrations
+and remove only their own generated children and users.
+
+[OpenAPI 3.1 JSON](mobile-teething.openapi.json) — hợp đồng đã triển khai cho
+giao diện **Răng của bé**. API dùng Bearer JWT, mã răng sữa FDI và cung cấp thao
+tác tải danh sách, ghi nhận/cập nhật ngày mọc, bỏ đánh dấu. Backend cần chạy
+migration `018_primary_teeth_reference.sql`; mobile tự đồng bộ khi mở màn hình,
+giữ cache cục bộ khi mất mạng. Tab **Tham khảo** tiếp tục dùng bảng lịch 0–60
+tháng đóng gói trong ứng dụng và không gửi dữ liệu trẻ lên máy chủ.
+
 ## Mobile growth
 
 [OpenAPI 3.1 JSON](mobile-growth.openapi.json) — contract v1.0.0 ngày 29/10/2026

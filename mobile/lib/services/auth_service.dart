@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'demo_store.dart';
 import 'social_identity.dart';
-import 'api_config.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -101,7 +100,6 @@ class AuthService {
   static AuthService instance = AuthService(demoMode: demoEnabled);
   final bool demoMode;
   Map<String, dynamic>? _pendingRegistration;
-  static String get baseUrl => '$apiBaseUrl/api/v1';
   static final baseUrl = apiBaseUrl;
   final http.Client _client;
   final FlutterSecureStorage _storage;

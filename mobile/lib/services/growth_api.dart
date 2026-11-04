@@ -116,6 +116,7 @@ class GrowthApi {
     'date_of_birth': c['dateOfBirth'],
     'gender': c['gender'],
     'growthAccess': c['growthAccess'],
+    'teethingAccess': c['teethingAccess'] ?? 'none',
     'records': <Map<String, dynamic>>[],
     'server': true,
     'members': [],

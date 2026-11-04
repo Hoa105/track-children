@@ -93,7 +93,6 @@ flutter:
           weight: 900
 
   assets:
-    - assets/growth/
     - assets/images/scenery/backgrounds/
     - assets/images/scenery/characters/
     - assets/images/scenery/icons/care/

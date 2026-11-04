@@ -8,7 +8,7 @@ from app.features.activities.router import admin_router as activities_admin_rout
 from app.features.activities.router import router as activities_router
 from app.features.auth.setup import install_auth
 from app.features.growth.router import router as growth_router
-from app.features.growth.children_router import router as children_router
+from app.features.children.router import router as children_router
 from app.features.growth.errors import GrowthError
 from fastapi.responses import JSONResponse
 from app.features.dev.router import router as dev_router
@@ -16,6 +16,8 @@ from app.features.diary.router import router as diary_router
 from app.features.diary_ai.router import router as diary_ai_router
 from app.features.vaccination.router import admin_router as vaccination_admin_router
 from app.features.vaccination.router import router as vaccination_router
+from app.features.teething.router import router as teething_router
+from app.features.sharing.router import router as sharing_router
 
 app = FastAPI(title="Track Children API", version="0.1.0")
 app.add_middleware(
@@ -33,6 +35,8 @@ app.add_middleware(
 app.include_router(activities_router)
 app.include_router(activities_admin_router)
 app.include_router(vaccination_router)
+app.include_router(teething_router)
+app.include_router(sharing_router)
 app.include_router(vaccination_admin_router)
 app.include_router(diary_router)
 app.include_router(diary_ai_router)

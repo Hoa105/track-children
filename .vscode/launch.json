@@ -40,9 +40,12 @@
       "toolArgs": [
         "--web-port",
         "5174",
-        "--dart-define=DEMO_MODE=false"
+        "--dart-define=DEMO_MODE=false",
+        "--local-engine-src-path=${workspaceFolder}/mobile/.dart_tool/web_engine/src",
+        "--local-web-sdk=keyboard_fix"
       ],
-      "cwd": "${workspaceFolder}/mobile"
+      "cwd": "${workspaceFolder}/mobile",
+      "preLaunchTask": "Prepare Flutter Web keyboard fix"
     }
   ]
 }

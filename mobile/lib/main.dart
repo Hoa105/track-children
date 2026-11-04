@@ -5,6 +5,7 @@ import 'models/activity.dart';
 import 'services/activity_api.dart';
 import 'services/demo_store.dart';
 import 'services/journal_api.dart';
+import 'services/teething_api.dart';
 import 'services/auth_service.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
@@ -32,6 +33,9 @@ Future<void> main() async {
   DemoStore.videoInsightRemote = VideoInsightApi();
   DemoStore.activityRemote = ActivityApi.instance;
   DemoStore.journalRemote = JournalApi();
+  DemoStore.teethingRemote = AuthService.instance.demoMode
+      ? null
+      : TeethingApi();
   // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.
   vaccinationApi.fetchSchedule().then(applyVaccineCatalog).catchError((_) {});
   // Kho hoạt động từ DB; lỗi thì giữ danh sách có sẵn trong app.
@@ -44,6 +48,7 @@ Future<void> main() async {
     DemoStore.instance.syncVaccinations(child['id'] as String);
     DemoStore.instance.syncActivities(child['id'] as String);
     DemoStore.instance.syncJournal(child['id'] as String);
+    DemoStore.instance.syncTeeth(child['id'] as String);
   }
   runApp(const TrackChildrenApp());
 }

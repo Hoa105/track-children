@@ -5,14 +5,45 @@
       "label": "Prepare Google emulator configuration",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/run-google-local.ps1", "-PrepareOnly", "-ApiBaseUrl", "http://10.0.2.2:8000/api/v1"],
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/run-google-local.ps1",
+        "-PrepareOnly",
+        "-ApiBaseUrl",
+        "http://10.0.2.2:8000/api/v1"
+      ],
       "problemMatcher": []
     },
     {
       "label": "Prepare Google mobile configuration",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/run-google-local.ps1", "-PrepareOnly", "-ConnectUsb"],
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/run-google-local.ps1",
+        "-PrepareOnly",
+        "-ConnectUsb"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Prepare Flutter Web keyboard fix",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/run-web-local.ps1",
+        "-PrepareOnly"
+      ],
       "problemMatcher": []
     }
   ]

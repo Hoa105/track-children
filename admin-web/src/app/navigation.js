@@ -32,10 +32,10 @@ export const navGroups = [
         actions: ["Quản lý nhóm: tên, emoji, màu, kiểu màn chi tiết (move / music / story)", "Soạn hoạt động: độ tuổi, thời lượng, mục tiêu, chuẩn bị, các bước, lưu ý an toàn", "Lời bài hát (music), đoạn truyện + câu hỏi gợi ý (story)", "Gắn lĩnh vực phát triển, upload ảnh / video / audio", "Draft → published → hidden"],
       },
       {
-        path: "/health", label: "Tiêm chủng & mọc răng", icon: "heart", permission: "health.write",
-        description: "Danh mục vắc xin, lịch tiêm TCMR và mốc mọc răng sữa (F16).",
+        path: "/health", label: "Tiêm chủng", icon: "heart", permission: "health.write",
+        description: "Danh mục vắc xin, lịch tiêm TCMR",
         tables: ["health.vaccines", "health.vaccine_schedules", "health.tooth_references"],
-        actions: ["Danh mục vắc xin TCMR / dịch vụ", "Lịch tiêm: mũi, nhãn liều, độ tuổi, khoảng cách tối thiểu", "20 răng sữa và khoảng tháng mọc thường gặp"],
+        actions: ["Danh mục vắc xin TCMR / dịch vụ", "Lịch tiêm: mũi, nhãn liều, độ tuổi, khoảng cách tối thiểu"],
       },
       {
         path: "/nutrition", label: "Dinh dưỡng & chuẩn WHO", icon: "drop", permission: "health.write",
@@ -92,10 +92,10 @@ export const navGroups = [
     label: "HỆ THỐNG",
     items: [
       {
-        path: "/admins", label: "Quản trị viên & vai trò", icon: "settings", permission: "admin.manage",
-        description: "Tài khoản quản trị và phân quyền theo vai trò (F11).",
-        tables: ["admin.admin_users", "admin.roles", "admin.permissions", "admin.role_permissions", "admin.admin_user_roles"],
-        actions: ["Mời / khóa quản trị viên", "Gán vai trò: super_admin, content_manager, moderator, support", "Ma trận vai trò × quyền"],
+        path: "/admins", label: "Quản trị viên", icon: "settings", permission: "admin.manage",
+        description: "Tài khoản quản trị; mọi admin đang hoạt động dùng chung một lớp quyền (F11).",
+        tables: ["admin.admin_users"],
+        actions: ["Thêm, khóa hoặc mở khóa quản trị viên", "Xem bộ quyền chung do backend cung cấp"],
       },
       {
         path: "/audit", label: "Nhật ký hoạt động", icon: "activity", permission: "audit.read",

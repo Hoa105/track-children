@@ -2,6 +2,30 @@
 from psycopg.types.json import Jsonb
 
 
+# The current auth design has one authorization class for every active admin.
+# Keep the concrete permission codes in the login/profile payload so clients do
+# not have to guess that an empty list means full access.
+ADMIN_PERMISSIONS = (
+    'report.read',
+    'user.read',
+    'user.lock',
+    'user.recover',
+    'child.stats',
+    'child.support_view',
+    'criteria.write',
+    'activity.write',
+    'health.write',
+    'reference.write',
+    'kb.manage',
+    'chatbot.monitor',
+    'community.moderate',
+    'notification.write',
+    'legal.write',
+    'admin.manage',
+    'audit.read',
+)
+
+
 def lock_by_email(db, email):
     return db.execute('SELECT * FROM admin.admin_users WHERE email=%s FOR UPDATE', (email,)).fetchone()
 
@@ -68,7 +92,7 @@ def profile(db, user):
     # All active admins have the same authorization class. Authorization is
     # enforced by the backend and is not persisted as role/permission rows.
     return dict(id=str(user['id']), email=str(user['email']), fullName=user['full_name'],
-                role='admin', roles=['admin'], permissions=[])
+                role='admin', roles=['admin'], permissions=list(ADMIN_PERMISSIONS))
 
 
 def find_access_identity(db, parameters):
