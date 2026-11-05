@@ -10,6 +10,27 @@ npm run dev      # http://localhost:5173
 Dev server proxy `/api/backend` → backend (`BACKEND_URL`, mặc định `http://localhost:8000`)
 và `/api/ai` → AI service (`AI_SERVICE_URL`, mặc định `http://localhost:8001`).
 
+## Khắc phục lỗi Vite proxy `ECONNREFUSED`
+
+Nếu log hiển thị `vite http proxy error: /admin/auth/refresh`, Vite đã rewrite
+đúng request từ `/api/backend/admin/auth/refresh`; lỗi thường có nghĩa backend
+chưa lắng nghe ở `BACKEND_URL`. Chạy từ thư mục gốc repository:
+
+```powershell
+docker compose up -d db minio backend
+Invoke-WebRequest http://localhost:8000/health
+cd admin-web
+npm run dev
+```
+
+Trong Docker Compose, `BACKEND_URL` phải là `http://backend:8000`; khi chạy
+Vite trực tiếp trên máy host, dùng mặc định `http://localhost:8000` hoặc đặt:
+
+```powershell
+$env:BACKEND_URL = "http://localhost:8000"
+npm run dev
+```
+
 ## Cấu trúc
 
 ```text
@@ -31,3 +52,7 @@ src/
   chức năng lấy từ `navigation.js`. Dựng màn thật thì thêm component vào `pages` trong `App.jsx`.
 - Các màn hiện dùng dữ liệu mẫu (có banner "Dữ liệu mẫu") cho tới khi backend có API `/admin/*`.
   API quản trị của AI service (kho tri thức, tiêu chí đề xuất, giám sát chatbot) đi qua backend.
+
+## Đánh giá phát triển
+
+Hai mục: **Bộ câu hỏi phát triển**, **Lời khuyên phát triển**. Hướng dẫn thiết lập, trạng thái, nhập/xuất và kiểm thử: [development-admin-implementation.md](../docs/development-admin-implementation.md).

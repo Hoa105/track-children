@@ -18,6 +18,7 @@ from app.features.vaccination.router import admin_router as vaccination_admin_ro
 from app.features.vaccination.router import router as vaccination_router
 from app.features.teething.router import router as teething_router
 from app.features.sharing.router import router as sharing_router
+from app.features.development.router import admin_router as development_admin_router
 
 app = FastAPI(title="Track Children API", version="0.1.0")
 app.add_middleware(
@@ -43,6 +44,7 @@ app.include_router(diary_ai_router)
 app.include_router(dev_router)
 app.include_router(growth_router)
 app.include_router(children_router)
+app.include_router(development_admin_router)
 install_auth(app)
 
 # Ảnh hoạt động (activity.activities.thumbnail_url, activity_steps.image_url, activity_media.url)

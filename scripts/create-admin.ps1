@@ -35,24 +35,14 @@ if ([Text.Encoding]::UTF8.GetByteCount($plain) -gt 72) {
 # Truyền giá trị qua biến psql (:'name') để không phải tự escape chuỗi SQL.
 $sql = @'
 BEGIN;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM admin.roles WHERE code = 'super_admin') THEN
-    RAISE EXCEPTION 'Missing super_admin role: apply migrations through 011 first';
-  END IF;
-END $$;
-WITH new_admin AS (
-  INSERT INTO admin.admin_users (email, password_hash, full_name)
-  VALUES (:'email', crypt(:'password', gen_salt('bf', 12)), :'full_name')
-  RETURNING id
-)
-INSERT INTO admin.admin_user_roles (admin_user_id, role_id)
-SELECT new_admin.id, r.id FROM new_admin, admin.roles r WHERE r.code = 'super_admin';
+INSERT INTO admin.admin_users (email, password_hash, full_name)
+VALUES (:'email', crypt(:'password', gen_salt('bf', 12)), :'full_name');
 COMMIT;
 '@
 
 $sql | & docker exec -i $Container psql -v ON_ERROR_STOP=1 -q -U track_children -d $Database `
     -v "email=$Email" -v "full_name=$FullName" -v "password=$plain"
 if ($LASTEXITCODE -ne 0) {
-    throw "Không tạo được admin (email đã tồn tại hoặc chưa chạy migration 011?)."
+    throw "Không tạo được admin (email đã tồn tại hoặc database chưa chạy migration auth?)."
 }
 Write-Host "Đã tạo super admin $Email."
