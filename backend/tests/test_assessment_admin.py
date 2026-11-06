@@ -1,11 +1,11 @@
-﻿"""Business regression tests; live cases use an explicitly disposable test DB."""
+"""Business regression tests; live cases use an explicitly disposable test DB."""
 import copy
 import os
 from uuid import uuid4
 import pytest
 from fastapi import HTTPException
-from app.features.development import service as s, transfer
-from app.features.development.schema import AdminContentRevisionCreate, AdminReviewCreate
+from app.features.assessment.admin import service as s, transfer
+from app.features.assessment.admin.schema import AdminContentRevisionCreate, AdminReviewCreate
 
 
 def test_bundled_drafts_have_159_skills_six_fixed_advice_variants():
@@ -48,7 +48,7 @@ def db():
     conn=psycopg2.connect(url,cursor_factory=RealDictCursor)
     if not conn.info.dbname.startswith('development_admin_test_'):raise RuntimeError('Disposable development_admin_test_* database required')
     with conn,conn.cursor() as cur:
-        cur.execute('TRUNCATE development.question_sets,development.content_items,admin.admin_users RESTART IDENTITY CASCADE')
+        cur.execute('TRUNCATE assessment.question_sets,assessment.content_items,admin.admin_users RESTART IDENTITY CASCADE')
     yield conn
     conn.close()
 
@@ -118,7 +118,7 @@ def test_live_order_validation_and_set_restore(db,actor):
 def test_live_http_editor_and_sandbox_result(db,actor):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.features.development.router import admin_router,admin
+    from app.features.assessment.admin.router import admin_router,admin
     from app.core.database import get_db
     seed(db,actor)
     app=FastAPI();app.include_router(admin_router)
@@ -126,28 +126,28 @@ def test_live_http_editor_and_sandbox_result(db,actor):
     def connection():yield db
     app.dependency_overrides[get_db]=connection
     with TestClient(app) as client:
-        sets=client.get('/admin/development/question-sets');assert sets.status_code==200,sets.text
+        sets=client.get('/admin/assessment/question-sets');assert sets.status_code==200,sets.text
         qs=sets.json()[-1]
-        response=client.get('/admin/development/question-sets/'+qs['id']+'/content');assert response.status_code==200,response.text
+        response=client.get('/admin/assessment/question-sets/'+qs['id']+'/content');assert response.status_code==200,response.text
         rows=response.json();assert rows
         item=rows[0]
-        response=client.get('/admin/development/content/'+item['id']+'/gate');assert response.status_code==200,response.text
+        response=client.get('/admin/assessment/content/'+item['id']+'/gate');assert response.status_code==200,response.text
         assert response.json()['blockers']
         # API serialization, pin validation and exact reference engine are exercised.
         answers={x['stableCode']:'achieved' for x in rows}
         for regression,concern,variant in [('no','no','CONTINUE_MONITORING'),('yes','no','CONTACT_REGRESSION_YES'),('unsure','no','CONTACT_REGRESSION_UNSURE'),('no','yes','CONTACT_CONCERN_ONLY')]:
-            response=client.post('/admin/development/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':regression,'caregiver_concern':concern})
+            response=client.post('/admin/assessment/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':regression,'caregiver_concern':concern})
             assert response.status_code==200,response.text
             view=response.json();assert view['release_status']=='sandbox_only'
             assert view['sections']['next_steps']['auto_play'] is False
             assert view['sections']['next_steps']['advice_items'][0]['variant_id']==variant
         enriched={**rows[0]['payload'],'skill_guidance':{'explanation':'Giải thích kỹ năng kiểm thử','support_steps':['Bước hỗ trợ kiểm thử 1','Bước hỗ trợ kiểm thử 2'],'discussion_points':'Ghi nhận kiểm thử'}}
-        saved=client.post('/admin/development/content/'+rows[0]['id']+'/revisions',json={'expectedRevision':rows[0]['currentRevision'],'payload':enriched,'sourceRefs':rows[0]['sourceRefs']})
+        saved=client.post('/admin/assessment/content/'+rows[0]['id']+'/revisions',json={'expectedRevision':rows[0]['currentRevision'],'payload':enriched,'sourceRefs':rows[0]['sourceRefs']})
         assert saved.status_code==200,saved.text
-        history=client.get('/admin/development/content/'+rows[0]['id']+'/revisions').json()
+        history=client.get('/admin/assessment/content/'+rows[0]['id']+'/revisions').json()
         assert 'skill_guidance' not in history[-1]['payload']
         keys=list(answers);answers[keys[0]]='not_yet';answers[keys[1]]='not_observed'
-        response=client.post('/admin/development/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'})
+        response=client.post('/admin/assessment/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'})
         assert response.status_code==200,response.text
         view=response.json();assert len(view['sections']['next_steps']['advice_items'])==2
         assert view['sections']['skills_to_note']['total']==2
@@ -159,8 +159,8 @@ def test_live_http_editor_and_sandbox_result(db,actor):
         assert 'Bước hỗ trợ kiểm thử 1' not in view['sections']['next_steps']['tts_text']
         assert len(view['preview_diagnostics']['selected_templates'])==2
         del answers[keys[0]]
-        assert client.post('/admin/development/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'}).status_code==422
-        assert client.post('/admin/development/question-sets',json={'code':'bad-age','ageMonths':3,'version':'v1','sourceName':'Test'}).status_code==422
+        assert client.post('/admin/assessment/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'}).status_code==422
+        assert client.post('/admin/assessment/question-sets',json={'code':'bad-age','ageMonths':3,'version':'v1','sourceName':'Test'}).status_code==422
 
 
 def test_live_unpublished_set_cannot_be_enabled(db,actor):
@@ -171,7 +171,7 @@ def test_live_unpublished_set_cannot_be_enabled(db,actor):
 def test_live_http_review_queue_uses_frontend_contract(db,actor):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.features.development.router import admin_router,admin
+    from app.features.assessment.admin.router import admin_router,admin
     from app.core.database import get_db
     seed(db,actor)
     app=FastAPI();app.include_router(admin_router)
@@ -179,7 +179,7 @@ def test_live_http_review_queue_uses_frontend_contract(db,actor):
     def connection():yield db
     app.dependency_overrides[get_db]=connection
     with TestClient(app) as client:
-        response=client.get('/admin/development/review-queue')
+        response=client.get('/admin/assessment/review-queue')
         assert response.status_code==200,response.text
         rows=response.json()
         assert len(rows)==165
@@ -194,8 +194,8 @@ def test_live_http_review_queue_uses_frontend_contract(db,actor):
 def test_live_http_set_and_question_can_both_turn_on_and_off(db,actor):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.features.development.router import admin_router,admin
-    from app.features.development.schema import AdminQuestionSetCreate,AdminContentCreate
+    from app.features.assessment.admin.router import admin_router,admin
+    from app.features.assessment.admin.schema import AdminQuestionSetCreate,AdminContentCreate
     from app.core.database import get_db
     seed(db,actor)
     for advice in s.list_content(db,kind='advice'):
@@ -216,21 +216,21 @@ def test_live_http_set_and_question_can_both_turn_on_and_off(db,actor):
     with TestClient(app) as client:
         for path in [f"/content/{item['id']}",f"/question-sets/{qs['id']}"]:
             for active in (True,False,True):
-                response=client.patch('/admin/development'+path+'/availability',json={'isActive':active})
+                response=client.patch('/admin/assessment'+path+'/availability',json={'isActive':active})
                 assert response.status_code==200,response.text
-                row=client.get('/admin/development'+path).json()
+                row=client.get('/admin/assessment'+path).json()
                 assert row['isActive'] is active
-                listed=client.get('/admin/development/question-sets').json()
+                listed=client.get('/admin/assessment/question-sets').json()
                 summary=next(record for record in listed if record['id']==str(qs['id']))
                 assert summary['visibleQuestionCount']==(int(active) if path.startswith('/content/') else 1)
-        response=client.post(f"/admin/development/question-sets/{qs['id']}/release")
+        response=client.post(f"/admin/assessment/question-sets/{qs['id']}/release")
         assert response.status_code==200,response.text
         assert response.json()['isActive'] is True
         assert response.json()['status']=='published'
-        client.patch(f"/admin/development/content/{item['id']}/availability",json={'isActive':False})
-        rejected=client.post(f"/admin/development/question-sets/{qs['id']}/release")
+        client.patch(f"/admin/assessment/content/{item['id']}/availability",json={'isActive':False})
+        rejected=client.post(f"/admin/assessment/question-sets/{qs['id']}/release")
         assert rejected.status_code==409,rejected.text
-        assert client.get(f"/admin/development/content/{item['id']}").json()['isActive'] is False
+        assert client.get(f"/admin/assessment/content/{item['id']}").json()['isActive'] is False
 
 
 def test_live_release_failure_preserves_draft_and_question_visibility(db,actor):
@@ -258,7 +258,7 @@ def test_import_template_matches_fixed_contract_without_mutating_bundled_data(ki
 def test_live_template_and_export_respect_kind_scope_and_soft_deletion(db,actor):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.features.development.router import admin_router,admin
+    from app.features.assessment.admin.router import admin_router,admin
     from app.core.database import get_db
     seed(db,actor)
     app=FastAPI();app.include_router(admin_router)
@@ -268,21 +268,21 @@ def test_live_template_and_export_respect_kind_scope_and_soft_deletion(db,actor)
     qs=s.list_question_sets(db)[0]
     questions=s.list_content(db,qs['id'])
     with TestClient(app) as client:
-        response=client.get('/admin/development/import/template?kind=skill')
+        response=client.get('/admin/assessment/import/template?kind=skill')
         assert response.status_code==200,response.text
         assert not transfer.normalize(response.json())[1]
-        assert client.get('/admin/development/import/template?kind=invalid').status_code==422
-        all_rows=client.get('/admin/development/export?kind=skill').json()
+        assert client.get('/admin/assessment/import/template?kind=invalid').status_code==422
+        all_rows=client.get('/admin/assessment/export?kind=skill').json()
         assert len(all_rows)==159
         params={'kind':'skill','set_ids':str(qs['id'])}
-        scoped=client.get('/admin/development/export',params=params).json()
+        scoped=client.get('/admin/assessment/export',params=params).json()
         assert len(scoped)==len(questions)
         assert {row['set_code'] for row in scoped}=={qs['code']}
         s.delete_content(db,actor,questions[0]['id'])
-        assert len(client.get('/admin/development/export',params=params).json())==len(questions)-1
+        assert len(client.get('/admin/assessment/export',params=params).json())==len(questions)-1
         s.lifecycle(db,actor,'question_set',qs['id'],'delete')
-        assert client.get('/admin/development/export',params=params).json()==[]
-        exported=client.get('/admin/development/export?kind=skill').json()
+        assert client.get('/admin/assessment/export',params=params).json()==[]
+        exported=client.get('/admin/assessment/export?kind=skill').json()
         assert qs['code'] not in {row['set_code'] for row in exported}
 
 def test_question_release_validates_data_without_reviews_and_preserves_visibility_on_failure(db,actor):
@@ -342,7 +342,7 @@ def test_updated_advice_samples_are_complete_and_keep_selection_rules():
 
 
 def test_local_advice_sample_update_is_versioned_idempotent_and_preserves_publication(db,actor):
-    from scripts.update_development_advice_samples import update_samples
+    from scripts.update_assessment_advice_samples import update_samples
     seed(db,actor)
     advice=s.list_content(db,kind='advice')[0]
     custom=s.create_content_revision(db,actor,advice['id'],AdminContentRevisionCreate(expectedRevision=advice['current_revision'],payload={**advice['payload'],'body_text':'Existing local content','custom_field':'keep this'},sourceRefs=advice['source_refs']))
@@ -358,7 +358,7 @@ def test_local_advice_sample_update_is_versioned_idempotent_and_preserves_public
     assert update_samples(db,apply=True)['unchanged']==6
 
 def test_exhaustive_advice_selection_counts_and_followup_answers():
-    from app.features.development.advice_audit import audit_advice_cases
+    from app.features.assessment.admin.advice_audit import audit_advice_cases
     rows=transfer.bundled()
     sets=[{'age_months':age,'question_ids':[row['stable_code'] for row in rows if row['kind']=='skill' and row['age_months']==age]} for age in s.AGES]
     report=audit_advice_cases(sets,[row['payload'] for row in rows if row['kind']=='advice'])
@@ -369,8 +369,8 @@ def test_exhaustive_advice_selection_counts_and_followup_answers():
 
 
 def test_advice_composition_removes_exact_duplicate_paragraphs_and_spoken_sentences():
-    from app.features.development.advice_resolver import resolve_advice,VERSION
-    from app.features.development.rule_engine import evaluate
+    from app.features.assessment.advice_resolver import resolve_advice,VERSION
+    from app.features.assessment.rule_engine import evaluate
     engine=evaluate(expected_question_ids=['a','b'],answers={'a':'not_yet','b':'not_observed'},regression='no',caregiver_concern='no',question_set_age_months=12)
     rows=[{**row['payload'],'content_version':VERSION} for row in transfer.bundled() if row['kind']=='advice']
     for row in rows:
@@ -391,8 +391,8 @@ def test_advice_preparation_fields_require_text():
 @pytest.mark.parametrize('regression',['no','yes','unsure'])
 @pytest.mark.parametrize('concern',['no','yes'])
 def test_action_plan_preserves_all_signals_and_orders_unique_actions(mode,regression,concern):
-    from app.features.development.advice_resolver import resolve_advice,VERSION
-    from app.features.development.rule_engine import evaluate
+    from app.features.assessment.advice_resolver import resolve_advice,VERSION
+    from app.features.assessment.rule_engine import evaluate
     patterns={'all_achieved':['achieved','achieved'],'not_yet':['not_yet','achieved'],'not_observed':['not_observed','achieved'],'mixed':['not_yet','not_observed']}
     answers=dict(zip(['q1','q2'],patterns[mode]));n='not_yet' in answers.values();o='not_observed' in answers.values()
     engine=evaluate(expected_question_ids=['q1','q2'],answers=answers,regression=regression,caregiver_concern=concern,question_set_age_months=12)
@@ -420,8 +420,8 @@ def test_action_plan_preserves_all_signals_and_orders_unique_actions(mode,regres
 @pytest.mark.parametrize('regression',['no','yes','unsure'])
 @pytest.mark.parametrize('concern',['no','yes'])
 def test_overall_commentary_is_descriptive_source_based_and_keeps_all_parent_signals(mode,regression,concern):
-    from app.features.development.rule_engine import evaluate
-    from app.features.development.overall_commentary import build_overall_commentary
+    from app.features.assessment.rule_engine import evaluate
+    from app.features.assessment.overall_commentary import build_overall_commentary
     patterns={'all_achieved':['achieved','achieved'],'not_yet':['not_yet','achieved'],'all_not_yet':['not_yet','not_yet'],'not_observed':['not_observed','achieved'],'mixed':['not_yet','not_observed'],'all_unobserved':['not_observed','not_observed']}
     answers=dict(zip(['q1','q2'],patterns[mode]));n=list(answers.values()).count('not_yet');o=list(answers.values()).count('not_observed')
     engine=evaluate(expected_question_ids=['q1','q2'],answers=answers,regression=regression,caregiver_concern=concern,question_set_age_months=12)
@@ -489,7 +489,7 @@ def test_deleted_parent_blocks_question_mutations_and_restore(db,actor):
 
 
 def test_restore_question_relocates_occupied_position_and_records_history(db,actor):
-    from app.features.development.schema import AdminContentCreate
+    from app.features.assessment.admin.schema import AdminContentCreate
     qs,item=small_workspace(db,actor)
     s.delete_content(db,actor,item['id'])
     replacement=s.create_content(db,actor,qs['id'],AdminContentCreate(stableCode='BLK-2-REPLACEMENT',appDomain='fine_motor',sourceDomain='cognitive',orderIndex=item['order_index'],payload=item['payload'],sourceRefs=item['source_refs']))
@@ -513,6 +513,33 @@ def test_revision_audit_includes_content_and_appears_in_parent_history(db,actor)
     assert event['after_data']['source_refs']==[{'document':'Nguồn mới'}]
     assert event['after_data']['code']==item['stable_code']
     assert event['actor']=='Admin kiểm thử'
+
+
+def test_schema_rename_preserves_content_legacy_tables_and_is_repeatable(db,actor):
+    from pathlib import Path
+    qs,item=small_workspace(db,actor)
+    migration=(Path(__file__).resolve().parents[1]/'migrations/025_rename_schema_to_assessment.sql').read_text(encoding='utf-8')
+    migration=migration.replace('BEGIN;','').replace('COMMIT;','')
+    with db,db.cursor() as cur:
+        cur.execute('ALTER SCHEMA assessment RENAME TO development')
+        cur.execute('CREATE SCHEMA assessment; CREATE TABLE assessment.assessments(id integer); CREATE TABLE assessment.assessment_answers(id integer); CREATE TABLE assessment.assessment_domain_results(id integer)')
+        cur.execute('INSERT INTO assessment.assessments VALUES (42)')
+        cur.execute(migration)
+        cur.execute(migration)
+        cur.execute('SELECT id FROM assessment_legacy.assessments')
+        assert cur.fetchone()['id']==42
+        cur.execute("SELECT to_regnamespace('development') AS old_schema")
+        assert cur.fetchone()['old_schema'] is None
+        cur.execute('DROP SCHEMA assessment_legacy CASCADE')
+    assert s.get_content(db,item['id'])['payload']==item['payload']
+    assert s.get_question_set(db,qs['id'])['id']==qs['id']
+
+
+def test_parent_audit_keeps_legacy_entity_names_visible(db,actor):
+    qs,item=small_workspace(db,actor)
+    with db,db.cursor() as cur:
+        cur.execute("UPDATE admin.admin_audit_logs SET entity_type='development.content_item' WHERE entity_id=%s",(str(item['id']),))
+    assert any(row['action']=='import' for row in s.audit_rows(db,qs['id']))
 
 
 @pytest.mark.parametrize('change',[{'age_months':4},{'set_version':'other'},{'locale':'en-US'},{'set_source_name':'Nguồn khác'}])
@@ -555,7 +582,7 @@ def test_export_import_preserves_set_source_and_creates_drafts_only(db,actor):
 def test_preview_http_validates_inputs_and_missing_or_deleted_sets_without_writes(db,actor):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from app.features.development.router import admin_router,admin
+    from app.features.assessment.admin.router import admin_router,admin
     from app.core.database import get_db
     qs,item=small_workspace(db,actor,with_advice=True)
     app=FastAPI();app.include_router(admin_router);app.dependency_overrides[admin]=lambda:actor
@@ -563,32 +590,32 @@ def test_preview_http_validates_inputs_and_missing_or_deleted_sets_without_write
     app.dependency_overrides[get_db]=connection
     body={'question_set_id':str(qs['id']),'answers':{item['stable_code']:'achieved'},'regression':'no','caregiver_concern':'no'}
     with TestClient(app) as client:
-        assert client.post('/admin/development/preview-result',json=body).status_code==200
-        missing=client.post('/admin/development/preview-result',json={**body,'answers':{}})
+        assert client.post('/admin/assessment/preview-result',json=body).status_code==200
+        missing=client.post('/admin/assessment/preview-result',json={**body,'answers':{}})
         assert missing.status_code==422 and 'thiếu 1' in missing.json()['detail']
-        assert client.post('/admin/development/preview-result',json={**body,'regression':'invalid'}).status_code==422
-        assert client.post('/admin/development/preview-result',json={**body,'answers':{item['stable_code']:'invalid'}}).status_code==422
-        assert client.get('/admin/development/question-sets/'+str(uuid4())+'/content').status_code==404
+        assert client.post('/admin/assessment/preview-result',json={**body,'regression':'invalid'}).status_code==422
+        assert client.post('/admin/assessment/preview-result',json={**body,'answers':{item['stable_code']:'invalid'}}).status_code==422
+        assert client.get('/admin/assessment/question-sets/'+str(uuid4())+'/content').status_code==404
         advice=s.list_content(db,kind='advice')[0]
         s.delete_content(db,actor,advice['id'])
-        absent=client.post('/admin/development/preview-result',json=body)
+        absent=client.post('/admin/assessment/preview-result',json=body)
         assert absent.status_code==422 and '6 mẫu' in absent.json()['detail']
         s.restore_content(db,actor,advice['id'])
-        empty=client.post('/admin/development/question-sets',json={'code':'empty-set','ageMonths':2,'version':'empty-v1','sourceName':'Nguồn thử'})
+        empty=client.post('/admin/assessment/question-sets',json={'code':'empty-set','ageMonths':2,'version':'empty-v1','sourceName':'Nguồn thử'})
         assert empty.status_code==201
-        no_questions=client.post('/admin/development/preview-result',json={**body,'question_set_id':empty.json()['id'],'answers':{}})
+        no_questions=client.post('/admin/assessment/preview-result',json={**body,'question_set_id':empty.json()['id'],'answers':{}})
         assert no_questions.status_code==422 and 'ít nhất một câu' in no_questions.json()['detail']
         s.lifecycle(db,actor,'question_set',qs['id'],'delete')
-        assert client.post('/admin/development/preview-result',json=body).status_code==409
+        assert client.post('/admin/assessment/preview-result',json=body).status_code==409
     with db.cursor() as cur:
-        cur.execute('SELECT count(*) AS count FROM development.assessments')
+        cur.execute('SELECT count(*) AS count FROM assessment.assessments')
         assert cur.fetchone()['count']==0
 
 
 def test_import_allows_existing_legacy_codes_but_rejects_new_ones(db,actor):
     qs,item=small_workspace(db,actor)
     with db,db.cursor() as cur:
-        cur.execute('UPDATE development.content_items SET stable_code=%s WHERE id=%s',('legacy-2m-question',item['id']))
+        cur.execute('UPDATE assessment.content_items SET stable_code=%s WHERE id=%s',('legacy-2m-question',item['id']))
     row=transfer.exported(db,qs['id'],'skill')[0]
     assert not transfer.preview(db,[row])['errors']
     row.update(stable_code='new-legacy-question',order_index=row['order_index']+1)
@@ -596,7 +623,7 @@ def test_import_allows_existing_legacy_codes_but_rejects_new_ones(db,actor):
 
 
 def test_import_and_revision_preserve_set_locale(db,actor):
-    from app.features.development.schema import AdminContentCreate
+    from app.features.assessment.admin.schema import AdminContentCreate
     row=transfer.template()[0];row['locale']='en-US'
     checked=transfer.preview(db,[row]);assert not checked['errors']
     transfer.commit(db,actor,checked['rows'],checked['fingerprint'])
@@ -618,8 +645,8 @@ def test_unchanged_incomplete_legacy_draft_can_roundtrip_but_cannot_publish_or_c
     qs,item=small_workspace(db,actor)
     legacy={'prompt':'Legacy question without current required fields','answerOptions':['A','B','C']}
     with db,db.cursor() as cur:
-        cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,payload,source_refs,created_by) VALUES (%s,2,%s::jsonb,%s::jsonb,%s)',(item['id'],__import__('json').dumps(legacy),'[]',actor['id']))
-        cur.execute('UPDATE development.content_items SET stable_code=%s,current_revision=2 WHERE id=%s',('legacy-incomplete',item['id']))
+        cur.execute('INSERT INTO assessment.content_revisions(content_item_id,revision,payload,source_refs,created_by) VALUES (%s,2,%s::jsonb,%s::jsonb,%s)',(item['id'],__import__('json').dumps(legacy),'[]',actor['id']))
+        cur.execute('UPDATE assessment.content_items SET stable_code=%s,current_revision=2 WHERE id=%s',('legacy-incomplete',item['id']))
     rows=transfer.exported(db,qs['id'],'skill')
     checked=transfer.preview(db,rows);assert not checked['errors'],checked['errors']
     assert transfer.commit(db,actor,checked['rows'],checked['fingerprint'])=={'created':0,'revised':0,'unchanged':1}

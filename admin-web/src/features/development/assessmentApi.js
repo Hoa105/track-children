@@ -1,5 +1,5 @@
 ﻿import { adminRequest } from '../../core/http.js';
-const base='/admin/development';
+const base='/admin/assessment';
 export const request=(admin,path,method='GET',body)=>adminRequest(admin,base+path,{method,body});
 export const listQuestionSets=(a)=>request(a,'/question-sets');
 export const getSet=(a,id)=>request(a,`/question-sets/${id}`);

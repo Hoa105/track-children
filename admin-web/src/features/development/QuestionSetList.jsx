@@ -4,7 +4,7 @@ import { navigate } from '../../core/useHashRoute.js';
 import { Badge, DataTable, Panel, stopRowClick } from '../../shared/ui.jsx';
 import { AGES, questionSetState, QUESTION_SET_STATES } from './model.js';
 import { ErrorBox, Modal, TransferTools } from './components.jsx';
-import * as api from './developmentApi.js';
+import * as api from './assessmentApi.js';
 import QuestionSetEditModal from './QuestionSetEditModal.jsx';
 
 export default function QuestionSetList({ onNotify }) {

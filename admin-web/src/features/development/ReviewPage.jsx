@@ -4,7 +4,7 @@ import { navigate } from '../../core/useHashRoute.js';
 import { Badge, DataTable, Panel, stopRowClick } from '../../shared/ui.jsx';
 import { REVIEW_TYPES, matches } from './model.js';
 import { ErrorBox } from './components.jsx';
-import * as api from './developmentApi.js';
+import * as api from './assessmentApi.js';
 
 export default function ReviewPage() {
   const { admin } = useAuth();

@@ -1,4 +1,4 @@
-﻿"""Run development regression tests in a new, empty PostgreSQL database."""
+"""Run development regression tests in a new, empty PostgreSQL database."""
 import os
 from pathlib import Path
 import subprocess
@@ -21,10 +21,10 @@ try:
     CREATE TABLE account.users(id uuid PRIMARY KEY);
     CREATE TABLE admin.admin_audit_logs(id bigserial PRIMARY KEY,admin_user_id uuid REFERENCES admin.admin_users(id),
      action text,entity_type text,entity_id text,before_data jsonb,after_data jsonb,created_at timestamptz DEFAULT now());''')
-   for prefix in ('021_','023_','024_'):
+   for prefix in ('021_','023_','024_','025_'):
     cur.execute(next((root/'backend/migrations').glob(prefix+'*.sql')).read_text(encoding='utf-8-sig'))
  env={**os.environ,'DEVELOPMENT_TEST_DATABASE_URL':base+name}
- result=subprocess.run([sys.executable,'-m','pytest','backend/tests/test_development_admin.py','-q','-p','no:cacheprovider'],cwd=root,env=env)
+ result=subprocess.run([sys.executable,'-m','pytest','backend/tests/test_assessment_admin.py','backend/tests/test_assessment_mobile.py','-q','-p','no:cacheprovider'],cwd=root,env=env)
  sys.exit(result.returncode)
 finally:
  with admin.cursor() as cur:

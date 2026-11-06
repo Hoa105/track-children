@@ -55,4 +55,4 @@ src/
 
 ## Đánh giá phát triển
 
-Hai mục: **Bộ câu hỏi phát triển**, **Lời khuyên phát triển**. Hướng dẫn thiết lập, trạng thái, nhập/xuất và kiểm thử: [development-admin-implementation.md](../docs/development-admin-implementation.md).
+Hai mục: **Bộ câu hỏi phát triển**, **Lời khuyên phát triển**. Hướng dẫn thiết lập, trạng thái, nhập/xuất và kiểm thử: [assessment-admin-implementation.md](../docs/assessment-admin-implementation.md).

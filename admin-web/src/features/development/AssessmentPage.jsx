@@ -11,7 +11,7 @@ import AdvicePage, { AdviceWorkspace } from './AdvicePage.jsx';
 import QuestionSetList from './QuestionSetList.jsx';
 import QuestionSetEditModal from './QuestionSetEditModal.jsx';
 import QuestionCreateModal from './QuestionCreateModal.jsx';
-import * as api from './developmentApi.js';
+import * as api from './assessmentApi.js';
 
 export default function DevelopmentPage({ id, onNotify }) {
   const route = developmentRoute(id);

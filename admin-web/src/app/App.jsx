@@ -21,7 +21,7 @@ import VaccinationPage from "../features/health/VaccinationPage.jsx";
 import ActivitiesPage from "../features/activities/ActivitiesPage.jsx";
 import ActivityDetailPage from "../features/activities/ActivityDetailPage.jsx";
 import ModulePage from "../features/modules/ModulePage.jsx";
-import DevelopmentPage from "../features/development/DevelopmentPage.jsx";
+import DevelopmentPage from "../features/development/AssessmentPage.jsx";
 
 const pages = {
   "/": DashboardPage,

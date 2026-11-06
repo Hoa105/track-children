@@ -5,7 +5,7 @@ import { PageHeading, Panel, Tabs } from '../../shared/ui.jsx';
 import { DOMAINS, OPTIONS, VARIANT_LABELS, editorPayload, questionVersion, updatedDate } from './model.js';
 import { AuditPanel, Availability, ErrorBox, QuestionActions, SpeakButton } from './components.jsx';
 import { MediaEditor, QuestionPreview, mediaEntries } from './QuestionMedia.jsx';
-import * as api from './developmentApi.js';
+import * as api from './assessmentApi.js';
 
 export default function ContentEditorPage({ contentId, onNotify, initialTab = 'detail' }) {
   const { admin } = useAuth();

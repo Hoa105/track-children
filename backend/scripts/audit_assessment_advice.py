@@ -1,11 +1,11 @@
-﻿import argparse,json,sys
+import argparse,json,sys
 from pathlib import Path
 from urllib.parse import urlparse
 import psycopg2
 from psycopg2.extras import RealDictCursor
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from app.features.development import service
-from app.features.development.advice_audit import audit_advice_cases
+from app.features.assessment.admin import service
+from app.features.assessment.admin.advice_audit import audit_advice_cases
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description='Read-only exhaustive audit of local advice results')

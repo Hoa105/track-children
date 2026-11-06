@@ -1,4 +1,4 @@
-﻿"""Update only the six existing local advice templates as new drafts. Never publish."""
+"""Update only the six existing local advice templates as new drafts. Never publish."""
 import argparse
 import sys
 from pathlib import Path
@@ -6,13 +6,13 @@ from urllib.parse import urlparse
 import psycopg2
 from psycopg2.extras import RealDictCursor
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from app.features.development import service,transfer
-from app.features.development.advice_samples import enrich_advice_row
+from app.features.assessment.admin import service,transfer
+from app.features.assessment.admin.advice_samples import enrich_advice_row
 
 
 def update_samples(db,apply=False):
     if apply:
-        with db.cursor() as cur: cur.execute('LOCK TABLE development.question_sets,development.content_items IN EXCLUSIVE MODE')
+        with db.cursor() as cur: cur.execute('LOCK TABLE assessment.question_sets,assessment.content_items IN EXCLUSIVE MODE')
     existing=service.list_content(db,kind='advice')
     if {row['stable_code'] for row in existing}!=set(service.VARIANTS):
         raise ValueError('Expected the six existing advice variants; no changes made')

@@ -7,7 +7,7 @@ import {OPTIONS,VARIANT_LABELS,matches,questionState,questionVersion,updatedDate
 import {Availability,ErrorBox,QuestionActions,Modal,SpeakButton} from './components.jsx';
 import ResultPreviewView from './ResultPreviewView.jsx';
 import ContentEditorPage from './ContentEditorPage.jsx';
-import * as api from './developmentApi.js';
+import * as api from './assessmentApi.js';
 export default function AdvicePage({id,onNotify}){
  if(id){const [contentId,tab]=id.split('/');return <ContentEditorPage contentId={contentId} initialTab={['edit','history'].includes(tab)?tab:'detail'} onNotify={onNotify}/>;}
  return <AdviceList/>;
