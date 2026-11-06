@@ -3,7 +3,7 @@
 
 BEGIN;
 
-INSERT INTO development.question_sets
+INSERT INTO assessment.question_sets
     (id, code, age_months, version, locale, source_name, status, created_by)
 VALUES
     (
@@ -18,7 +18,7 @@ VALUES
     )
 ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO development.content_items
+INSERT INTO assessment.content_items
     (id, kind, stable_code, question_set_id, source_domain, app_domain, order_index, created_by, updated_by)
 SELECT
     seed.id,
@@ -39,11 +39,11 @@ FROM (
         ('a7a7d2e4-6bc4-4cc4-9ec4-2b6e887a1205'::uuid, 'demo-12m-social-01', 'social_emotional', 'social_emotional', 5),
         ('a7a7d2e4-6bc4-4cc4-9ec4-2b6e887a1206'::uuid, 'demo-12m-language-02', 'language_communication', 'language_communication', 6)
 ) AS seed(id, stable_code, source_domain, app_domain, order_index)
-JOIN development.question_sets qs ON qs.code = 'demo-12m-v1'
+JOIN assessment.question_sets qs ON qs.code = 'demo-12m-v1'
 LEFT JOIN admin.admin_users admin ON admin.email = 'sample.admin@trackchildren.vn'
 ON CONFLICT (kind, stable_code) DO NOTHING;
 
-INSERT INTO development.content_revisions
+INSERT INTO assessment.content_revisions
     (content_item_id, revision, locale, payload, source_refs, created_by)
 SELECT
     ci.id,
@@ -61,7 +61,7 @@ FROM (
         ('demo-12m-social-01', '{"prompt":"Bé có bắt chước các cử chỉ đơn giản của người lớn không?","answerOptions":["Đạt","Chưa đạt","Chưa quan sát"]}'),
         ('demo-12m-language-02', '{"prompt":"Bé có sử dụng âm hoặc từ đơn giản để yêu cầu điều mình muốn không?","answerOptions":["Đạt","Chưa đạt","Chưa quan sát"]}')
 ) AS seed(stable_code, payload)
-JOIN development.content_items ci
+JOIN assessment.content_items ci
   ON ci.stable_code = seed.stable_code AND ci.kind = 'skill'
 LEFT JOIN admin.admin_users admin ON admin.email = 'sample.admin@trackchildren.vn'
 ON CONFLICT (content_item_id, revision) DO NOTHING;

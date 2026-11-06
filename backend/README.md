@@ -29,7 +29,7 @@ Cache lỗi thì API trả `503 RATE_LIMIT_UNAVAILABLE`, không bỏ qua giới 
 ## Growth tracking
 
 See [setup and API usage](../docs/api/mobile-growth.md),
-[OpenAPI contract](../docs/api/mobile-growth.openapi.json),
+[OpenAPI contract](../docs/api/mobile-growth.openapi.yaml),
 [test plan](../docs/api/mobile-growth-test-plan.md) and
 [test results](../docs/api/mobile-growth-test-results.md).
 
@@ -74,5 +74,5 @@ c?a ch?nh ph? huynh trong request; endpoint n?y kh?ng t?o t?i kho?n.
 
 ## Admin authentication
 
-[Setup and API](../docs/api/admin-auth.md), [OpenAPI JSON](../docs/api/admin-auth.openapi.json).
+[Setup and API](../docs/api/admin-auth.md), [OpenAPI YAML](../docs/api/admin-auth.openapi.yaml).
 Implementation: `app/features/auth/admin/`. Requires migrations through 011.

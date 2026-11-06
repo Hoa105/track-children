@@ -42,11 +42,11 @@ def test_import_duplicate_codes_rejected_before_writes():
 @pytest.fixture
 def db():
     import psycopg2
-    url=os.environ.get('DEVELOPMENT_TEST_DATABASE_URL')
-    if not url:pytest.skip('DEVELOPMENT_TEST_DATABASE_URL required')
+    url=os.environ.get('ASSESSMENT_TEST_DATABASE_URL')
+    if not url:pytest.skip('ASSESSMENT_TEST_DATABASE_URL required')
     from psycopg2.extras import RealDictCursor
     conn=psycopg2.connect(url,cursor_factory=RealDictCursor)
-    if not conn.info.dbname.startswith('development_admin_test_'):raise RuntimeError('Disposable development_admin_test_* database required')
+    if not conn.info.dbname.startswith('assessment_admin_test_'):raise RuntimeError('Disposable assessment_admin_test_* database required')
     with conn,conn.cursor() as cur:
         cur.execute('TRUNCATE assessment.question_sets,assessment.content_items,admin.admin_users RESTART IDENTITY CASCADE')
     yield conn
@@ -58,7 +58,7 @@ def actor(db):
     uid=uuid4()
     with db,db.cursor() as cur:
         cur.execute('INSERT INTO admin.admin_users(id,full_name) VALUES (%s,%s)',(str(uid),'Admin kiểm thử'))
-    return {'id':uid,'permission':'development.read'}
+    return {'id':uid,'permission':'assessment.read'}
 
 
 def seed(db,actor):
@@ -515,30 +515,35 @@ def test_revision_audit_includes_content_and_appears_in_parent_history(db,actor)
     assert event['actor']=='Admin kiểm thử'
 
 
-def test_schema_rename_preserves_content_legacy_tables_and_is_repeatable(db,actor):
+def test_normalized_schema_preserves_legacy_tables_and_is_repeatable(db,actor):
     from pathlib import Path
     qs,item=small_workspace(db,actor)
-    migration=(Path(__file__).resolve().parents[1]/'migrations/025_rename_schema_to_assessment.sql').read_text(encoding='utf-8')
-    migration=migration.replace('BEGIN;','').replace('COMMIT;','')
+    migrations=Path(__file__).resolve().parents[1]/'migrations'
+    normalized=(migrations/'021_assessment_normalized.sql').read_text(encoding='utf-8')
+    preserve=normalized[normalized.index('DO $$'):normalized.index('CREATE SCHEMA IF NOT EXISTS assessment;')]
+    refresh=(migrations/'025_rename_schema_to_assessment.sql').read_text(encoding='utf-8')
+    refresh=refresh.replace('BEGIN;','').replace('COMMIT;','')
     with db,db.cursor() as cur:
-        cur.execute('ALTER SCHEMA assessment RENAME TO development')
+        cur.execute('ALTER SCHEMA assessment RENAME TO assessment_test_saved')
         cur.execute('CREATE SCHEMA assessment; CREATE TABLE assessment.assessments(id integer); CREATE TABLE assessment.assessment_answers(id integer); CREATE TABLE assessment.assessment_domain_results(id integer)')
         cur.execute('INSERT INTO assessment.assessments VALUES (42)')
-        cur.execute(migration)
-        cur.execute(migration)
+        cur.execute(preserve)
+        cur.execute(preserve)
         cur.execute('SELECT id FROM assessment_legacy.assessments')
         assert cur.fetchone()['id']==42
-        cur.execute("SELECT to_regnamespace('development') AS old_schema")
-        assert cur.fetchone()['old_schema'] is None
+        cur.execute('ALTER SCHEMA assessment_test_saved RENAME TO assessment')
+        cur.execute(refresh)
+        cur.execute(refresh)
         cur.execute('DROP SCHEMA assessment_legacy CASCADE')
     assert s.get_content(db,item['id'])['payload']==item['payload']
     assert s.get_question_set(db,qs['id'])['id']==qs['id']
 
 
-def test_parent_audit_keeps_legacy_entity_names_visible(db,actor):
+@pytest.mark.parametrize('entity_type',['assessment.content_item','development.content_item'])
+def test_parent_audit_includes_current_and_legacy_content_events(db,actor,entity_type):
     qs,item=small_workspace(db,actor)
     with db,db.cursor() as cur:
-        cur.execute("UPDATE admin.admin_audit_logs SET entity_type='development.content_item' WHERE entity_id=%s",(str(item['id']),))
+        cur.execute('UPDATE admin.admin_audit_logs SET entity_type=%s WHERE entity_id=%s',(entity_type,str(item['id'])))
     assert any(row['action']=='import' for row in s.audit_rows(db,qs['id']))
 
 

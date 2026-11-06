@@ -77,7 +77,7 @@ def build_result_view_model(*,step1_result:dict[str,Any],step3_advice:dict[str,A
     internal_plan=step3_advice.get('action_plan') or {}
     public_plan={key:value for key,value in internal_plan.items() if key not in ('facts','preparation_variants')} if internal_plan else None
     view={
-      'schema_version':'development-result-view-v1.5.0',
+      'schema_version':'assessment-result-view-v1.5.0',
       'rules_version':step1_result.get('rules_version'),
       'advice_content_version':step3_advice.get('advice_content_version'),
       'question_set_age_months':age,

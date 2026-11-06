@@ -1,5 +1,5 @@
 -- Rename the existing schema without copying or dropping assessment data.
--- Keep migrations 021-024 unchanged so existing installations can upgrade.
+-- Compatibility bridge for installations that used the previous schema name.
 BEGIN;
 
 DO $$

@@ -1,4 +1,4 @@
-"""Run development regression tests in a new, empty PostgreSQL database."""
+"""Run assessment regression tests in a new, empty PostgreSQL database."""
 import os
 from pathlib import Path
 import subprocess
@@ -8,7 +8,7 @@ import psycopg2
 from psycopg2 import sql
 
 root=Path(__file__).resolve().parents[2]
-name='development_admin_test_'+uuid4().hex
+name='assessment_admin_test_'+uuid4().hex
 base='postgresql://track_children:track_children_dev@localhost:5433/'
 admin=psycopg2.connect(base+'postgres',connect_timeout=5);admin.autocommit=True
 try:
@@ -23,7 +23,7 @@ try:
      action text,entity_type text,entity_id text,before_data jsonb,after_data jsonb,created_at timestamptz DEFAULT now());''')
    for prefix in ('021_','023_','024_','025_'):
     cur.execute(next((root/'backend/migrations').glob(prefix+'*.sql')).read_text(encoding='utf-8-sig'))
- env={**os.environ,'DEVELOPMENT_TEST_DATABASE_URL':base+name}
+ env={**os.environ,'ASSESSMENT_TEST_DATABASE_URL':base+name}
  result=subprocess.run([sys.executable,'-m','pytest','backend/tests/test_assessment_admin.py','backend/tests/test_assessment_mobile.py','-q','-p','no:cacheprovider'],cwd=root,env=env)
  sys.exit(result.returncode)
 finally:

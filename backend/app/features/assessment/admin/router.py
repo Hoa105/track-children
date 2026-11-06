@@ -12,7 +12,7 @@ from .schema import (AdminContentCreate,AdminContentRow,AdminContentRevision,Adm
 
 admin_router=APIRouter(prefix='/admin/assessment',tags=['admin: assessment'])
 # All active admins share the same rights; identity is retained for audit.
-admin=require_admin_user('development.read')
+admin=require_admin_user('assessment.read')
 
 class ImportBody(BaseModel):
     rows: list[dict[str,Any]] = Field(max_length=500)

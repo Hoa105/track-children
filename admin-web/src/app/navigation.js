@@ -20,9 +20,9 @@ export const navGroups = [
     label: "NỘI DUNG CHUYÊN MÔN",
     items: [
       {
-        path: "/development", label: "Bộ câu hỏi & Lời khuyên", icon: "clipboard", permission: "development.read",
+        path: "/assessment", label: "Bộ câu hỏi & Lời khuyên", icon: "clipboard", permission: "assessment.read",
         description: "Bộ câu hỏi đánh giá theo tuổi và sáu mẫu lời khuyên phát triển.",
-        tables: ["development.question_sets", "development.content_items", "development.content_revisions"],
+        tables: ["assessment.question_sets", "assessment.content_items", "assessment.content_revisions"],
         actions: ["Tạo bộ câu hỏi nháp", "Xem nội dung theo bộ và revision", "Quản lý trạng thái hiển thị và lời khuyên"],
       },
       {

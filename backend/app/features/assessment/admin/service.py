@@ -1,4 +1,4 @@
-"""Normalized development content administration. All authenticated admins are equal."""
+"""Normalized assessment content administration. All authenticated admins are equal."""
 import csv
 import hashlib
 import io

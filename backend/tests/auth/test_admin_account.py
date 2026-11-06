@@ -1,5 +1,6 @@
 """Admin account update/password contracts, security boundaries and transactions."""
 from concurrent.futures import ThreadPoolExecutor
+import yaml
 import json
 from pathlib import Path
 
@@ -40,7 +41,7 @@ def test_update_profile_persists_and_audits(admin_env,name,normalized):
     assert audit['action']=='profile.update' and audit['admin_user_id']==user['id']
     assert audit['before_data']=={'fullName':'Test Admin'}
     assert audit['after_data']=={'fullName':normalized}
-    document=json.loads((Path(__file__).parents[3]/'docs/api/admin-auth.openapi.json').read_text(encoding='utf-8'))
+    document=yaml.safe_load((Path(__file__).parents[3]/'docs/api/admin-auth.openapi.yaml').read_text(encoding='utf-8'))
     Draft202012Validator({'$ref':'#/components/schemas/AdminProfile','components':document['components']}).validate(result)
 
 

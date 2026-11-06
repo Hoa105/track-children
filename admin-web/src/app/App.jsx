@@ -21,7 +21,7 @@ import VaccinationPage from "../features/health/VaccinationPage.jsx";
 import ActivitiesPage from "../features/activities/ActivitiesPage.jsx";
 import ActivityDetailPage from "../features/activities/ActivityDetailPage.jsx";
 import ModulePage from "../features/modules/ModulePage.jsx";
-import DevelopmentPage from "../features/development/AssessmentPage.jsx";
+import AssessmentPage from "../features/assessment/AssessmentPage.jsx";
 
 const pages = {
   "/": DashboardPage,
@@ -33,15 +33,15 @@ const pages = {
   "/community/reports": ReportsPage,
   "/activities": ActivitiesPage,
   "/health": VaccinationPage,
-  "/development": DevelopmentPage,
-  "/criteria": DevelopmentPage,
+  "/assessment": AssessmentPage,
+  "/criteria": AssessmentPage,
   "/admins": AdminsPage,
   "/account": AccountPage,
 };
 
 // Trang chi tiết: #/users/:id … — cần quyền của mục cha, cộng thêm permission riêng nếu có
 const detailPages = {
-  "/development": { Page: DevelopmentPage },
+  "/assessment": { Page: AssessmentPage },
   "/users": { Page: UserDetailPage },
   "/admins": { Page: AdminDetailPage },
   "/activities": { Page: ActivityDetailPage },
@@ -75,7 +75,7 @@ function Router() {
 }
 
 function Shell({ path: requestedPath }) {
-  const path = requestedPath.replace(/^\/development-advice(?=\/|$)/, "/development/advice");
+  const path = requestedPath.replace(/^\/assessment-advice(?=\/|$)/, "/assessment/advice");
   const { admin, logout } = useAuth();
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
@@ -117,7 +117,7 @@ function Shell({ path: requestedPath }) {
         </div>
       </aside>
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumb"><span>Quản trị</span><i>/</i>{detailId && !(item.path === "/development" && detailId === "advice") ? <><button className="breadcrumb-link" onClick={() => navigate(item.path)}>{item.label}</button><i>/</i><b>Chi tiết</b></> : <b>{item.label}</b>}</div><div className="top-actions">{can(admin, "user.read") && <div className="global-search"><Icon name="search" size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm người dùng..." onKeyDown={(event) => event.key === "Enter" && navigate("/users")} /></div>}<button className="top-avatar avatar-blue" title="Tài khoản của tôi" onClick={() => navigate("/account")}>{initialsOf(admin.fullName)}</button></div></header>
+        <header className="topbar"><div className="breadcrumb"><span>Quản trị</span><i>/</i>{detailId && !(item.path === "/assessment" && detailId === "advice") ? <><button className="breadcrumb-link" onClick={() => navigate(item.path)}>{item.label}</button><i>/</i><b>Chi tiết</b></> : <b>{item.label}</b>}</div><div className="top-actions">{can(admin, "user.read") && <div className="global-search"><Icon name="search" size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm người dùng..." onKeyDown={(event) => event.key === "Enter" && navigate("/users")} /></div>}<button className="top-avatar avatar-blue" title="Tài khoản của tôi" onClick={() => navigate("/account")}>{initialsOf(admin.fullName)}</button></div></header>
         <div className="page">
           {!missingPermission
             ? <Page key={detailId ?? item.path} item={item} id={detailId} query={query} onNotify={notify} />

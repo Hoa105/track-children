@@ -7,7 +7,7 @@ API contracts and integration documentation.
 Mọc răng dùng quyền chia sẻ độc lập `teething` từ migration
 `020_teething_permissions.sql`. Chủ hồ sơ luôn có quyền `edit`; người chăm sóc
 nhận một trong `none`, `view`, `edit`. Xem hợp đồng quản lý thành viên và lời mời
-tại [mobile-sharing.openapi.json](mobile-sharing.openapi.json).
+tại [mobile-sharing.openapi.yaml](mobile-sharing.openapi.yaml).
 
 API v2 requires migration `019_teething_versions.sql` after `018` and a matching
 mobile release. GET/PUT return an opaque UUID `version`. PUT requires
@@ -29,7 +29,7 @@ database whose name ends in `_teething_test`, then run
 `python -m pytest tests/test_teething_integration.py`. The tests apply migrations
 and remove only their own generated children and users.
 
-[OpenAPI 3.1 JSON](mobile-teething.openapi.json) — hợp đồng đã triển khai cho
+[OpenAPI 3.1 YAML](mobile-teething.openapi.yaml) — hợp đồng đã triển khai cho
 giao diện **Răng của bé**. API dùng Bearer JWT, mã răng sữa FDI và cung cấp thao
 tác tải danh sách, ghi nhận/cập nhật ngày mọc, bỏ đánh dấu. Backend cần chạy
 migration `018_primary_teeth_reference.sql`; mobile tự đồng bộ khi mở màn hình,
@@ -38,42 +38,29 @@ tháng đóng gói trong ứng dụng và không gửi dữ liệu trẻ lên m�
 
 ## Mobile growth
 
-[OpenAPI 3.1 JSON](mobile-growth.openapi.json) — contract v1.0.0 ngày 29/10/2026
-cho giao diện growth mới, base `/api/v1`, Bearer phiên mobile hiện hành,
-JSON camelCase. Gồm 6 operations: overview, metric detail/chart/history,
-velocity, đọc ngày, upsert ngày và xóa mềm số đo. Import vào Swagger Editor/Postman.
+[OpenAPI 3.1 YAML](mobile-growth.openapi.yaml) l? ??c t? ??c l?p cho API growth.
+Ch?nh s?a tr?c ti?p file YAML; kh?ng c?n c?c t?i li?u growth ngu?n ?? x?a.
 
-Trạng thái: **IMPLEMENTED — đã có backend và Flutter remote**;
-hướng dẫn môi trường, kiểm thử và giới hạn tại
-[Growth runtime](../core_growth/GROWTH-RUNTIME-README.md). Chưa deploy production.
-Status/mapping theo [contract 2.1](../core_growth/GROWTH-STATUS-CONTRACT.md);
-đối chiếu màn hình với operation tại `x-screen-operations` trong JSON.
-Ví dụ là dữ liệu tổng hợp kiểm tra contract, không phải dữ liệu trẻ thật hoặc
-tuyên bố bộ reference đã VERIFIED. Chưa có API hồ sơ trẻ thì tích hợp phải
-dùng child UUID được provision trong database test, không tự upload dữ liệu demo.
-
-Kiểm tra từ thư mục gốc (môi trường Python có jsonschema/openapi-spec-validator):
+C?i dependency v? ki?m tra ??c t? t? th? m?c g?c d? ?n:
 
 ```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 .\.venv\Scripts\python.exe docs/api/tools/validate_growth_openapi.py
 ```
 
-JSON là artifact import độc lập, không cần các file core để resolve `$ref`.
-Khi sửa status nguồn hoặc generator, dựng lại bằng
-`docs/api/tools/build_growth_openapi.py` rồi chạy validator. Validator kiểm tra
-OpenAPI, references, examples, enum/reason đồng bộ và các trường hợp dữ liệu sai;
-không phải test endpoint đã hoạt động.
+Validator ki?m tra OpenAPI, references, examples, t?nh nh?t qu?n enum/reason
+v? c?c tr??ng h?p d? li?u sai; kh?ng ki?m tra endpoint ?ang ch?y.
 
 ## Mobile auth
 
-[OpenAPI 3.1 JSON](mobile-auth.openapi.json) — import vào Swagger Editor hoặc Postman.
+[OpenAPI 3.1 YAML](mobile-auth.openapi.yaml) — import vào Swagger Editor hoặc Postman.
 
 [API xác thực phụ huynh](mobile-auth.md): đăng ký, SMS OTP, đăng nhập, refresh,
 đăng xuất và thông tin tài khoản. Đã triển khai với migration `007_mobile_auth.sql`.
 
 ## Admin auth (`/admin/auth/*`)
 
-[OpenAPI 3.1 JSON](admin-auth.openapi.json) is the implemented contract.
+[OpenAPI 3.1 YAML](admin-auth.openapi.yaml) is the implemented contract.
 Setup and test commands: [admin-auth.md](admin-auth.md).
 
 Implemented: `POST /admin/auth/login`, `POST /admin/auth/refresh`,

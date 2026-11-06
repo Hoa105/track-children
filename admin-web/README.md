@@ -44,7 +44,7 @@ src/
 ```
 
 - Authentication uses backend `/admin/auth/*` through `/api/backend`.
-  OpenAPI contract: `docs/api/admin-auth.openapi.json`; setup: `docs/api/admin-auth.md`.
+  OpenAPI contract: `docs/api/admin-auth.openapi.yaml`; setup: `docs/api/admin-auth.md`.
   No demo account can log in. Create an actual super admin after migration 011.
   Password-reset/invitation screens are not connected and show an explicit error.
 - Mục menu chỉ hiển thị khi admin có `permission` tương ứng (mã trong `admin.permissions`).
