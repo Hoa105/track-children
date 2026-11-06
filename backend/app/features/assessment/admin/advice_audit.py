@@ -1,8 +1,8 @@
-﻿"""Exhaustive advice selection audit over every answer-count and follow-up combination."""
+"""Exhaustive advice selection audit over every answer-count and follow-up combination."""
 from collections import Counter
 import re
-from .advice_resolver import resolve_advice, VERSION, text_key
-from .rule_engine import evaluate
+from ..advice_resolver import resolve_advice, VERSION, text_key
+from ..rule_engine import evaluate
 
 
 def audit_advice_cases(question_sets,advice_rows):

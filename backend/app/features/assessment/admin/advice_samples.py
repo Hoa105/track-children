@@ -1,4 +1,4 @@
-﻿"""Versioned Vietnamese advice samples, adapted for local product testing."""
+"""Versioned Vietnamese advice samples, adapted for local product testing."""
 import copy
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ SAMPLE_VERSION='advice-local-test-v5-2026-11-06'
 
 def enrich_advice_row(row):
     if row['kind']!='advice': return row
-    samples=json.loads((Path(__file__).parent/'data/advice-test-content.json').read_text(encoding='utf-8-sig'))
+    samples=json.loads((Path(__file__).resolve().parent/'data/advice-test-content.json').read_text(encoding='utf-8-sig'))
     sample=next((item for item in samples if item['variant_id']==row['stable_code']),None)
     if sample is None: return row
     result=copy.deepcopy(row)

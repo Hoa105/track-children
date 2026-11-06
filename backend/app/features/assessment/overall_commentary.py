@@ -1,4 +1,4 @@
-﻿"""Source-traceable descriptive commentary, separate from actionable next steps."""
+"""Source-traceable descriptive commentary, separate from actionable next steps."""
 import json
 from functools import lru_cache
 from pathlib import Path

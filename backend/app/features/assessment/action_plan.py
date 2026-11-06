@@ -1,4 +1,4 @@
-﻿"""Compose one ordered action plan; preserve every supplied signal without duplicating actions."""
+"""Compose one ordered action plan; preserve every supplied signal without duplicating actions."""
 from .advice_resolver import text_key
 
 

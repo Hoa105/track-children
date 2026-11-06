@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 from uuid import UUID
 from typing import Literal
 from fastapi import APIRouter, Depends, Query
@@ -10,7 +10,7 @@ from . import service, transfer
 from .schema import (AdminContentCreate,AdminContentRow,AdminContentRevision,AdminContentRevisionCreate,
  AdminQuestionSet,AdminQuestionSetCreate,AdminQuestionSetUpdate,AdminReviewCreate,AdminReviewRow,AvailabilityUpdate,QuestionOrder,PublishRevision)
 
-admin_router=APIRouter(prefix='/admin/development',tags=['admin: development'])
+admin_router=APIRouter(prefix='/admin/assessment',tags=['admin: assessment'])
 # All active admins share the same rights; identity is retained for audit.
 admin=require_admin_user('development.read')
 
@@ -146,9 +146,9 @@ class PreviewBody(BaseModel):
 
 @admin_router.post('/preview-result')
 def preview_result(body:PreviewBody,actor=Depends(admin),conn:Connection=Depends(get_db)):
-    from .rule_engine import evaluate
-    from .advice_resolver import resolve_advice, VERSION
-    from .result_presenter import build_result_view_model
+    from ..rule_engine import evaluate
+    from ..advice_resolver import resolve_advice, VERSION
+    from ..result_presenter import build_result_view_model
     qs=service.get_question_set(conn,body.question_set_id)
     if qs['deleted_at']: service.fail('Khôi phục bộ câu hỏi trước khi thử kết quả',409)
     skills=[x for x in service.list_content(conn,body.question_set_id,kind='skill') if not x['deleted_at']]

@@ -1,17 +1,18 @@
-﻿"""Validated, optimistic, transactional content import/export."""
+"""Validated, optimistic, transactional content import/export."""
 import csv
 import copy
 import hashlib
 import io
 import json
 from pathlib import Path
+from fastapi import HTTPException
 from . import service as s
 from .advice_samples import enrich_advice_row
 
 MAX_ROWS=500
 
 def bundled():
-    return [enrich_advice_row(row) for row in json.loads((Path(__file__).parent/'data/cdc-draft.json').read_text(encoding='utf-8'))]
+    return [enrich_advice_row(row) for row in json.loads((Path(__file__).resolve().parent/'data/cdc-draft.json').read_text(encoding='utf-8'))]
 
 def template(kind='skill'):
     row=copy.deepcopy(next(item for item in bundled() if item['kind']==kind))
@@ -38,9 +39,9 @@ def exported(conn,set_id=None,kind=None,set_ids=None):
 
 def fingerprint(conn):
     with conn.cursor() as cur:
-        cur.execute('SELECT id,current_revision,published_revision,is_active,deleted_at,updated_at FROM development.content_items ORDER BY id')
+        cur.execute('SELECT id,current_revision,published_revision,is_active,deleted_at,updated_at FROM assessment.content_items ORDER BY id')
         items=cur.fetchall()
-        cur.execute('SELECT id,code,updated_at FROM development.question_sets ORDER BY id')
+        cur.execute('SELECT id,code,updated_at FROM assessment.question_sets ORDER BY id')
         sets=cur.fetchall()
     return hashlib.sha256(json.dumps([items,sets],default=str,sort_keys=True).encode()).hexdigest()
 
@@ -101,7 +102,7 @@ def normalize(rows, *, unchanged_payloads=None):
                     if canonical is None: s.fail('Mã CDC không có trong tài liệu chuẩn')
                     if canonical['age_months']!=x['age_months']: s.fail('Mã câu CDC không thuộc mốc tuổi của bộ')
             normalized.append(x)
-        except (s.HTTPException,ValueError,TypeError) as error:
+        except (HTTPException,ValueError,TypeError) as error:
             errors.append({'row':number,'message':str(getattr(error,'detail',error))})
     return normalized,errors
 
@@ -120,19 +121,19 @@ def preview(conn,rows):
             action='create' if old is None else 'unchanged' if old['payload']==x['payload'] and old['source_refs']==x['source_refs'] else 'revision'
             if old and old['deleted_at']: errors.append({'row':index,'message':x['stable_code']+': cần khôi phục trước khi nhập'})
             if old and old['kind']=='skill':
-                qs=s.one(cur,'SELECT code,age_months,version FROM development.question_sets WHERE id=%s',(old['question_set_id'],))
+                qs=s.one(cur,'SELECT code,age_months,version FROM assessment.question_sets WHERE id=%s',(old['question_set_id'],))
                 if (qs['code'],qs['age_months'],qs['version'])!=(x['set_code'],x['age_months'],x['set_version']): errors.append({'row':index,'message':x['stable_code']+': không được chuyển bộ tuổi'})
                 if old['order_index']!=x['order_index'] or old['app_domain']!=x['app_domain'] or old['source_domain']!=x['source_domain']: errors.append({'row':index,'message':x['stable_code']+': đổi lĩnh vực/thứ tự trong trang chỉnh sửa trước khi nhập'})
             if x['kind']=='skill':
-                cur.execute('SELECT id,age_months,version,locale,source_name,deleted_at FROM development.question_sets WHERE code=%s',(x['set_code'],))
+                cur.execute('SELECT id,age_months,version,locale,source_name,deleted_at FROM assessment.question_sets WHERE code=%s',(x['set_code'],))
                 qs=cur.fetchone()
                 if qs:
                     if qs['deleted_at'] or (qs['age_months'],qs['version'],qs['locale'])!=(x['age_months'],x['set_version'],x['locale']): errors.append({'row':index,'message':'Bộ '+x['set_code']+' đã xóa hoặc khác tuổi/phiên bản/ngôn ngữ'})
                     if x.get('set_source_name') is not None and x['set_source_name']!=qs['source_name']: errors.append({'row':index,'message':'Nguồn nội dung bộ khác dữ liệu hiện tại; sửa nguồn ở thông tin bộ trước khi nhập'})
-                    cur.execute('SELECT stable_code FROM development.content_items WHERE question_set_id=%s AND order_index=%s AND deleted_at IS NULL AND stable_code<>%s',(qs['id'],x['order_index'],x['stable_code']))
+                    cur.execute('SELECT stable_code FROM assessment.content_items WHERE question_set_id=%s AND order_index=%s AND deleted_at IS NULL AND stable_code<>%s',(qs['id'],x['order_index'],x['stable_code']))
                     if cur.fetchone(): errors.append({'row':index,'message':x['stable_code']+': thứ tự đã được câu khác sử dụng'})
                 else:
-                    cur.execute('SELECT code FROM development.question_sets WHERE age_months=%s AND version=%s AND locale=%s',(x['age_months'],x['set_version'],x['locale']))
+                    cur.execute('SELECT code FROM assessment.question_sets WHERE age_months=%s AND version=%s AND locale=%s',(x['age_months'],x['set_version'],x['locale']))
                     if cur.fetchone(): errors.append({'row':index,'message':'Tuổi, phiên bản và ngôn ngữ đã thuộc một bộ khác; đổi phiên bản hoặc dùng đúng mã bộ'})
             changes.append({'code':x['stable_code'],'action':action,'before':old['payload'] if old else None,'after':x['payload'],'before_sources':old['source_refs'] if old else [],'after_sources':x['source_refs']})
     return {'rows':normalized,'errors':errors,'changes':changes,'fingerprint':fingerprint(conn)}
@@ -141,7 +142,7 @@ def commit(conn,actor,rows,expected):
     try:
         with conn,conn.cursor() as cur:
             # Exclusive table locks serialize preview validation with all content writes.
-            cur.execute('LOCK TABLE development.question_sets,development.content_items IN EXCLUSIVE MODE')
+            cur.execute('LOCK TABLE assessment.question_sets,assessment.content_items IN EXCLUSIVE MODE')
             if fingerprint(conn)!=expected: s.fail('Dữ liệu đã thay đổi. Xem trước tệp lần nữa',409)
             checked=preview(conn,rows)
             if checked['errors']: s.fail('Tệp còn lỗi. Xem trước và sửa trước khi nhập',422)
@@ -153,17 +154,17 @@ def commit(conn,actor,rows,expected):
                     counts['unchanged']+=1; continue
                 if old:
                     item_id=old['id']; revision=old['current_revision']+1; counts['revised']+=1
-                    cur.execute('UPDATE development.content_items SET current_revision=%s,updated_by=%s,updated_at=now() WHERE id=%s',(revision,s.actor_id(actor),item_id))
+                    cur.execute('UPDATE assessment.content_items SET current_revision=%s,updated_by=%s,updated_at=now() WHERE id=%s',(revision,s.actor_id(actor),item_id))
                 else:
                     set_id=None
                     if x['kind']=='skill':
-                        cur.execute('''INSERT INTO development.question_sets(code,age_months,version,locale,source_name,created_by)
+                        cur.execute('''INSERT INTO assessment.question_sets(code,age_months,version,locale,source_name,created_by)
                           VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (code) DO NOTHING''',(x['set_code'],x['age_months'],x['set_version'],x.get('locale') or 'vi-VN',x.get('set_source_name') or ('Bé lớn khôn' if x['stable_code'].startswith('BLK-') else 'CDC Developmental Milestones'),s.actor_id(actor)))
-                        set_id=s.one(cur,'SELECT id FROM development.question_sets WHERE code=%s',(x['set_code'],))['id']
-                    item_id=s.one(cur,'''INSERT INTO development.content_items(kind,stable_code,question_set_id,app_domain,source_domain,order_index,created_by,updated_by)
+                        set_id=s.one(cur,'SELECT id FROM assessment.question_sets WHERE code=%s',(x['set_code'],))['id']
+                    item_id=s.one(cur,'''INSERT INTO assessment.content_items(kind,stable_code,question_set_id,app_domain,source_domain,order_index,created_by,updated_by)
                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',(x['kind'],x['stable_code'],set_id,x.get('app_domain'),x.get('source_domain'),x.get('order_index'),s.actor_id(actor),s.actor_id(actor)))['id']
                     revision=1; counts['created']+=1
-                cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,locale,payload,source_refs,created_by) VALUES (%s,%s,%s,%s::jsonb,%s::jsonb,%s)',(item_id,revision,x.get('locale') or 'vi-VN',json.dumps(x['payload']),json.dumps(x['source_refs']),s.actor_id(actor)))
+                cur.execute('INSERT INTO assessment.content_revisions(content_item_id,revision,locale,payload,source_refs,created_by) VALUES (%s,%s,%s,%s::jsonb,%s::jsonb,%s)',(item_id,revision,x.get('locale') or 'vi-VN',json.dumps(x['payload']),json.dumps(x['source_refs']),s.actor_id(actor)))
                 s.log(cur,actor,'import','content_item',item_id,
                       before={'revision':old['current_revision'],'payload':old['payload'],'source_refs':old['source_refs']} if old else None,
                       after={'code':x['stable_code'],'revision':revision,'payload':x['payload'],'source_refs':x['source_refs']})
