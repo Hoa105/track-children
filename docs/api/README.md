@@ -2,6 +2,29 @@
 
 API contracts and integration documentation.
 
+## Assessment — đánh giá phát triển của trẻ
+
+- [Mobile assessment](mobile-assessment.openapi.yaml): 6 thao tác xem tổng quan, lịch sử,
+  bắt đầu/tiếp tục bài, xem bài, lưu đáp án và hoàn thành bài.
+- [Admin assessment](admin-assessment.openapi.yaml): 31 thao tác quản lý bộ câu hỏi,
+  nội dung và phiên bản, công bố/ẩn/khôi phục, kiểm duyệt, nhập/xuất, lịch sử và thử kết quả.
+
+Hai đặc tả phản ánh backend hiện tại, có đầy đủ tiền tố đường dẫn và xác thực Bearer JWT.
+Mobile yêu cầu quyền chia sẻ `assessment` mức `view`/`edit`; admin yêu cầu `assessment.read`.
+Mobile dùng trường snake_case; các model admin dùng camelCase, còn phản hồi hành động,
+nhập/xuất, lịch sử và thử kết quả dùng snake_case theo service.
+Kết quả giúp theo dõi mốc phát triển, không thay thế sàng lọc hoặc chẩn đoán.
+
+[Kết quả kiểm thử local qua HTTP và PostgreSQL](assessment-test-results.md).
+
+Tạo lại đặc tả và kiểm tra từ thư mục gốc dự án:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/export-assessment-openapi.py
+$env:PYTHONPATH = "$PWD/backend"
+.\.venv\Scripts\python.exe -m pytest backend/tests/test_assessment_openapi.py -q
+```
+
 ## Mobile teething
 
 Mọc răng dùng quyền chia sẻ độc lập `teething` từ migration

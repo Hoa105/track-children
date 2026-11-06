@@ -24,7 +24,8 @@ try:
    for prefix in ('021_','023_','024_','025_'):
     cur.execute(next((root/'backend/migrations').glob(prefix+'*.sql')).read_text(encoding='utf-8-sig'))
  env={**os.environ,'ASSESSMENT_TEST_DATABASE_URL':base+name}
- result=subprocess.run([sys.executable,'-m','pytest','backend/tests/test_assessment_admin.py','backend/tests/test_assessment_mobile.py','-q','-p','no:cacheprovider'],cwd=root,env=env)
+ tests=sys.argv[1:] or ['backend/tests/test_assessment_admin.py','backend/tests/test_assessment_mobile.py','backend/tests/test_assessment_live_http.py','backend/tests/test_assessment_openapi.py']
+ result=subprocess.run([sys.executable,'-m','pytest',*tests,'-q','-p','no:cacheprovider'],cwd=root,env=env)
  sys.exit(result.returncode)
 finally:
  with admin.cursor() as cur:
