@@ -16,7 +16,7 @@ export function editorPayload(payload={},kind='skill') {
 export function publication(row){return row.publishedRevision==null?'Chưa công bố':row.currentRevision!==row.publishedRevision?`Đang dùng bản ${row.publishedRevision} · Có nháp ${row.currentRevision}`:`Đã công bố bản ${row.publishedRevision}`;}
 export function matches(row,q){return `${row.stableCode??row.code} ${row.payload?.question_vi??row.payload?.prompt??''} ${row.payload?.skill_name??''} ${row.payload?.title??''} ${row.payload?.body_text??''}`.toLocaleLowerCase('vi').includes(q.toLocaleLowerCase('vi'));}
 export function download(rows,format,name){
- const text=format==='json'?JSON.stringify(rows,null,2):'\ufeff'+['kind,stable_code,age_months,set_code,set_version,locale,app_domain,source_domain,order_index,payload,source_refs',...rows.map(row=>['kind','stable_code','age_months','set_code','set_version','locale','app_domain','source_domain','order_index','payload','source_refs'].map(k=>'"'+String(typeof row[k]==='object'&&row[k]!==null?JSON.stringify(row[k]):row[k]??'').replaceAll('"','""')+'"').join(','))].join('\r\n');
+ const text=format==='json'?JSON.stringify(rows,null,2):'\ufeff'+['kind,stable_code,age_months,set_code,set_version,set_source_name,locale,app_domain,source_domain,order_index,payload,source_refs',...rows.map(row=>['kind','stable_code','age_months','set_code','set_version','set_source_name','locale','app_domain','source_domain','order_index','payload','source_refs'].map(k=>'"'+String(typeof row[k]==='object'&&row[k]!==null?JSON.stringify(row[k]):row[k]??'').replaceAll('"','""')+'"').join(','))].join('\r\n');
  const url=URL.createObjectURL(new Blob([text],{type:format==='json'?'application/json;charset=utf-8':'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`${name}.${format}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 export function parseImport(text,name){
@@ -31,6 +31,7 @@ export function parseImport(text,name){
 export function developmentRoute(id = '') {
  const parts = (id || '').split('/').filter(Boolean);
  if (!parts.length) return { page: 'hub', tab: 'sets' };
+ if (parts[0] === 'advice' && parts[1] === 'skills') return { page: 'hub', tab: 'advice' };
  if (parts[0] === 'advice') return parts[1] ? { page: 'advice', id: parts.slice(1).join('/') } : { page: 'hub', tab: 'advice' };
  if (parts[0] === 'review') return { page: 'hub', tab: 'sets' };
  if (['set', 'question-sets'].includes(parts[0]) && parts[1]) return { page: 'set', id: parts[1], tab: parts[2] === 'history' ? 'history' : parts[2] === 'edit' ? 'edit' : 'questions' };

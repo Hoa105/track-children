@@ -6,6 +6,7 @@ export const getSet=(a,id)=>request(a,`/question-sets/${id}`);
 export const createQuestionSet=(a,b)=>request(a,'/question-sets','POST',b);
 export const updateQuestionSet=(a,id,b)=>request(a,`/question-sets/${id}`,'PATCH',b);
 export const listContent=(a,id)=>request(a,`/question-sets/${id}/content?activeOnly=false`);
+export const listSkills=(a)=>request(a,'/content?kind=skill');
 export const listAdvice=(a)=>request(a,'/content?kind=advice');
 export const createContent=(a,id,b)=>request(a,`/question-sets/${id}/content`,'POST',b);
 export const getContent=(a,id)=>request(a,`/content/${id}`);

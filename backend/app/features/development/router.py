@@ -1,5 +1,6 @@
 ﻿from typing import Any
 from uuid import UUID
+from typing import Literal
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from psycopg2.extensions import connection as Connection
@@ -139,9 +140,9 @@ def import_commit(body:ImportBody,actor=Depends(admin),conn:Connection=Depends(g
 
 class PreviewBody(BaseModel):
     question_set_id: UUID
-    answers: dict[str,str] = Field(max_length=200)
-    regression: str
-    caregiver_concern: str
+    answers: dict[str,Literal['achieved','not_yet','not_observed']]
+    regression: Literal['yes','no','unsure']
+    caregiver_concern: Literal['yes','no']
 
 @admin_router.post('/preview-result')
 def preview_result(body:PreviewBody,actor=Depends(admin),conn:Connection=Depends(get_db)):
@@ -149,16 +150,24 @@ def preview_result(body:PreviewBody,actor=Depends(admin),conn:Connection=Depends
     from .advice_resolver import resolve_advice, VERSION
     from .result_presenter import build_result_view_model
     qs=service.get_question_set(conn,body.question_set_id)
-    skills=[x for x in service.list_content(conn,body.question_set_id) if not x['deleted_at']]
+    if qs['deleted_at']: service.fail('Khôi phục bộ câu hỏi trước khi thử kết quả',409)
+    skills=[x for x in service.list_content(conn,body.question_set_id,kind='skill') if not x['deleted_at']]
+    if not skills: service.fail('Thêm ít nhất một câu hỏi trước khi thử kết quả')
+    expected={x['stable_code'] for x in skills}
+    missing=expected-set(body.answers);extra=set(body.answers)-expected
+    if missing or extra:
+        service.fail(f'Đáp án không khớp bộ câu hỏi: thiếu {len(missing)} câu, thừa {len(extra)} câu. Tải lại bộ và chọn đủ đáp án')
     advice=[{**x['payload'],'content_version':VERSION} for x in service.list_content(conn,kind='advice') if not x['deleted_at']]
+    if len(advice)!=6 or {x.get('variant_id') for x in advice}!=set(service.VARIANTS):
+        service.fail('Cần đủ 6 mẫu lời khuyên chưa xóa để thử kết quả')
     try:
         engine=evaluate(expected_question_ids=[x['stable_code'] for x in skills],answers=body.answers,
           regression=body.regression,caregiver_concern=body.caregiver_concern,question_set_age_months=qs['age_months'],
           domain_by_question={x['stable_code']:x['app_domain'] for x in skills},environment='sandbox')
         resolved=resolve_advice(step1_result=engine,regression=body.regression,caregiver_concern=body.caregiver_concern,advice_rows=advice,environment='sandbox')
-        mapped={x['stable_code']:{**x['payload'],'app_domain':x['app_domain'],'age_months':qs['age_months']} for x in skills}
+        mapped={x['stable_code']:{**x['payload'],'app_domain':x['app_domain'],'age_months':qs['age_months'],'content_id':str(x['id']),'revision':x['current_revision'],'source_refs':x['source_refs']} for x in skills}
         for skill in mapped.values():
-            if any(not skill.get(k) for k in ('skill_name','not_yet_comment','not_observed_comment','observation_guide')): service.fail('Bổ sung đủ nhận xét kỹ năng trước khi xem trước kết quả')
+            if any(not isinstance(skill.get(k),str) or not skill[k].strip() for k in ('skill_name','not_yet_comment','not_observed_comment','observation_guide')): service.fail('Bổ sung tên kỹ năng, nhận xét và cách quan sát cho câu '+skill['content_id']+' trước khi thử kết quả')
         return build_result_view_model(step1_result=engine,step3_advice=resolved,skills_by_id=mapped)
     except (ValueError,KeyError) as error:
         service.fail('Không dựng được kết quả thử: kiểm tra đủ câu trả lời, 6 lời khuyên và nội dung kỹ năng')

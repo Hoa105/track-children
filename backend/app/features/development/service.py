@@ -70,6 +70,13 @@ def lock_item(cur,item_id):
     if item['question_set_id']: lock_set(cur,item['question_set_id'])
     return one(cur,'SELECT * FROM development.content_items WHERE id=%s FOR UPDATE',(item_id,))
 
+
+def editable_parent(cur,item):
+    if item['question_set_id']:
+        parent=lock_set(cur,item['question_set_id'])
+        if parent['deleted_at']: fail('Khôi phục bộ câu hỏi trước khi thay đổi câu hỏi',409)
+        return parent
+
 def list_question_sets(conn,status_filter=None):
     with conn.cursor() as cur:
         cur.execute(SET_SELECT+(' WHERE qs.status=%s' if status_filter else '')+' GROUP BY qs.id ORDER BY qs.age_months,qs.version DESC', (status_filter,) if status_filter else ())
@@ -104,6 +111,7 @@ def list_content(conn,question_set_id=None,kind=None,active_only=False):
     if kind: clauses.append('ci.kind=%s'); params.append(kind)
     if active_only: clauses.append('ci.is_active AND ci.deleted_at IS NULL')
     with conn.cursor() as cur:
+        if question_set_id: one(cur,'SELECT id FROM development.question_sets WHERE id=%s',(question_set_id,))
         cur.execute(CONTENT_SELECT+(' WHERE '+' AND '.join(clauses) if clauses else '')+' ORDER BY ci.order_index NULLS LAST,ci.stable_code',params)
         return cur.fetchall()
 
@@ -143,6 +151,8 @@ def _validate_payload(payload,kind='skill',stable_code=None):
         if (payload.get('advice_key'),payload.get('variant_priority'),payload.get('match_condition'))!=expected: fail('Không được thay đổi điều kiện chọn mẫu lời khuyên')
         for key in ('title','body_text','tts_text','cta_label','action_kind'):
             if not isinstance(payload.get(key),str) or not payload[key].strip(): fail('Mẫu lời khuyên thiếu trường '+key)
+        for key in ('preparation_text','preparation_common'):
+            if key in payload and not isinstance(payload[key],str): fail('Nội dung chuẩn bị trao đổi phải là văn bản')
         return
     question=payload.get('question_vi') or payload.get('prompt')
     if not isinstance(question,str) or len(question.strip())<10: fail('Câu hỏi phải có ít nhất 10 ký tự')
@@ -167,8 +177,8 @@ def create_content(conn,actor,set_id,body):
             payload={**body.payload,'source_name':'app_authored'}
             row=one(cur,'''INSERT INTO development.content_items(kind,stable_code,question_set_id,source_domain,app_domain,order_index,created_by,updated_by)
               VALUES ('skill',%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
-              (code,set_id,body.source_domain,body.app_domain,body.order_index,actor_id(actor),actor_id(actor)))
-            cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,payload,source_refs,created_by) VALUES (%s,1,%s::jsonb,%s::jsonb,%s)',(row['id'],json.dumps(payload),json.dumps(body.source_refs),actor_id(actor)))
+              (code,set_id,'movement_physical' if body.app_domain in ('gross_motor','fine_motor') else body.app_domain,body.app_domain,body.order_index,actor_id(actor),actor_id(actor)))
+            cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,locale,payload,source_refs,created_by) VALUES (%s,1,%s,%s::jsonb,%s::jsonb,%s)',(row['id'],qs['locale'],json.dumps(payload),json.dumps(body.source_refs),actor_id(actor)))
             log(cur,actor,'create','content_item',row['id'],after={'code':code})
         return get_content(conn,row['id'])
     except errors.IntegrityError as error: integrity(error)
@@ -178,6 +188,7 @@ def create_content_revision(conn,actor,item_id,body):
         with conn,conn.cursor() as cur:
             item=lock_item(cur,item_id)
             if item['deleted_at']: fail('Khôi phục nội dung trước khi sửa',409)
+            parent=editable_parent(cur,item)
             if item['current_revision']!=body.expected_revision: fail('Nội dung đã thay đổi. Tải lại trước khi lưu',409)
             if item['kind']=='advice' and body.app_domain is not None: fail('Mẫu lời khuyên không gắn lĩnh vực')
             if item['published_revision'] and body.app_domain is not None and body.app_domain!=item['app_domain']:
@@ -188,12 +199,15 @@ def create_content_revision(conn,actor,item_id,body):
             if item['kind']=='advice':
                 old=one(cur,'SELECT payload FROM development.content_revisions WHERE content_item_id=%s AND revision=%s',(item_id,item['current_revision']))['payload']
                 if body.payload.get('action_kind')!=old.get('action_kind'): fail('Không được thay đổi hành động hệ thống của mẫu lời khuyên')
+            old_content=one(cur,'SELECT payload,source_refs,locale FROM development.content_revisions WHERE content_item_id=%s AND revision=%s',(item_id,item['current_revision']))
             revision=item['current_revision']+1
-            cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,payload,source_refs,created_by) VALUES (%s,%s,%s::jsonb,%s::jsonb,%s)',(item_id,revision,json.dumps(body.payload),json.dumps(body.source_refs),actor_id(actor)))
+            cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,locale,payload,source_refs,created_by) VALUES (%s,%s,%s,%s::jsonb,%s::jsonb,%s)',(item_id,revision,parent['locale'] if parent else old_content['locale'],json.dumps(body.payload),json.dumps(body.source_refs),actor_id(actor)))
             source_domain='movement_physical' if body.app_domain in ('gross_motor','fine_motor') else body.app_domain
             cur.execute('''UPDATE development.content_items SET current_revision=%s,updated_by=%s,updated_at=now(),
              app_domain=COALESCE(%s,app_domain),source_domain=COALESCE(%s,source_domain) WHERE id=%s''',(revision,actor_id(actor),body.app_domain,source_domain,item_id))
-            log(cur,actor,'create_revision','content_item',item_id,{'revision':item['current_revision']},{'revision':revision})
+            log(cur,actor,'create_revision','content_item',item_id,
+                {'revision':item['current_revision'],'payload':old_content['payload'],'source_refs':old_content['source_refs'],'app_domain':item['app_domain']},
+                {'revision':revision,'payload':body.payload,'source_refs':body.source_refs,'app_domain':body.app_domain or item['app_domain']})
         return get_content(conn,item_id)
     except errors.IntegrityError as error: integrity(error)
 
@@ -209,7 +223,7 @@ def blockers(cur,item,revision=None):
     payload=content['payload']
     try: _validate_payload(payload,item['kind'],item['stable_code'])
     except HTTPException as error: result.append(str(error.detail))
-    if not content['source_refs'] or not any(isinstance(ref,dict) and any(str(ref.get(k) or '').strip() for k in ('url','document','organization','label')) for ref in content['source_refs']):
+    if not content['source_refs'] or not any(isinstance(ref,dict) and any(isinstance(ref.get(k),str) and ref[k].strip() for k in ('url','document','organization','label')) for ref in content['source_refs']):
         result.append('Thiếu nguồn tham khảo')
     if item['kind']=='skill':
         try: validate_media(payload.get('media'), strict=True)
@@ -230,6 +244,8 @@ def get_gate(conn,item_id):
         item=one(cur,'SELECT * FROM development.content_items WHERE id=%s',(item_id,))
         reasons=blockers(cur,item)
         if item['deleted_at']: reasons.append('Nội dung đã xóa')
+        if item['question_set_id'] and one(cur,'SELECT deleted_at FROM development.question_sets WHERE id=%s',(item['question_set_id'],))['deleted_at']:
+            reasons.append('Bộ câu hỏi đã xóa')
         return {'revision':item['current_revision'],'blockers':reasons,'reviews':latest_reviews(cur,item_id,item['current_revision'])}
 
 def create_review(conn,reviewer_id,actor,item_id,body):
@@ -257,6 +273,7 @@ def publish_content(conn,actor,item_id,expected_revision):
     with conn,conn.cursor() as cur:
         item=lock_item(cur,item_id)
         if item['deleted_at']: fail('Khôi phục nội dung trước khi công bố',409)
+        editable_parent(cur,item)
         if item['current_revision']!=expected_revision: fail('Phiên bản đã thay đổi. Tải lại trước khi công bố',409)
         reasons=blockers(cur,item)
         if reasons: fail('; '.join(reasons),409)
@@ -308,6 +325,7 @@ def lifecycle(conn,actor,entity,entity_id,action,active=None):
         if action=='availability':
             if item['deleted_at']: fail('Khôi phục trước khi bật sử dụng',409)
             if active:
+                if entity!='question_set': editable_parent(cur,item)
                 if entity=='question_set':
                     if item['status']!='published': fail('Công bố bộ trước khi bật sử dụng',409)
                     cur.execute('SELECT * FROM development.content_items WHERE question_set_id=%s AND is_active AND deleted_at IS NULL',(entity_id,))
@@ -326,8 +344,16 @@ def lifecycle(conn,actor,entity,entity_id,action,active=None):
             cur.execute(f'UPDATE development.{table} SET is_active=false,deleted_at=COALESCE(deleted_at,now()),updated_at=now() WHERE id=%s',(entity_id,))
         else:
             if not item['deleted_at']: fail('Nội dung chưa bị xóa',409)
+            if entity!='question_set':
+                editable_parent(cur,item)
+                if item['kind']=='skill':
+                    cur.execute('SELECT 1 FROM development.content_items WHERE question_set_id=%s AND order_index=%s AND deleted_at IS NULL',(item['question_set_id'],item['order_index']))
+                    if cur.fetchone():
+                        position=one(cur,'SELECT COALESCE(MAX(order_index),0)+1 AS next FROM development.content_items WHERE question_set_id=%s AND deleted_at IS NULL',(item['question_set_id'],))['next']
+                        cur.execute('UPDATE development.content_items SET order_index=%s WHERE id=%s',(position,entity_id))
             cur.execute(f'UPDATE development.{table} SET is_active=false,deleted_at=NULL,updated_at=now() WHERE id=%s',(entity_id,))
-        log(cur,actor,action,entity,entity_id,item,{'is_active':active if action=='availability' else False})
+        after=one(cur,f'SELECT * FROM development.{table} WHERE id=%s',(entity_id,))
+        log(cur,actor,action,entity,entity_id,item,after)
     return {'saved':True}
 
 def delete_content(conn,actor,item_id): return lifecycle(conn,actor,'content_item',item_id,'delete')
@@ -349,9 +375,13 @@ def reorder(conn,actor,set_id,ids):
 
 def audit_rows(conn,item_id):
     with conn.cursor() as cur:
-        cur.execute('''SELECT a.id,a.action,a.created_at,a.before_data,a.after_data,u.full_name AS actor
+        cur.execute('''SELECT a.id,a.action,a.created_at,a.before_data,
+         CASE WHEN ci.question_set_id=%s THEN COALESCE(a.after_data,'{}'::jsonb)||jsonb_build_object('code',ci.stable_code)
+         ELSE a.after_data END AS after_data,u.full_name AS actor
          FROM admin.admin_audit_logs a LEFT JOIN admin.admin_users u ON u.id=a.admin_user_id
-         WHERE a.entity_id=%s AND a.entity_type LIKE 'development.%%' ORDER BY a.created_at DESC LIMIT 100''',(str(item_id),))
+         LEFT JOIN development.content_items ci ON ci.id::text=a.entity_id AND a.entity_type='development.content_item'
+         WHERE (a.entity_id=%s OR ci.question_set_id=%s) AND a.entity_type LIKE 'development.%%'
+         ORDER BY a.created_at DESC,a.id DESC LIMIT 100''',(item_id,str(item_id),item_id))
         return cur.fetchall()
 
 

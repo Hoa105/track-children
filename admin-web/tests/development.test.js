@@ -1,6 +1,17 @@
 ﻿import assert from 'node:assert/strict';
 import test from 'node:test';
-import {editorPayload,parseImport,OPTIONS} from '../src/features/development/model.js';
+import {editorPayload,parseImport,download,OPTIONS} from '../src/features/development/model.js';
+
+test('CSV export and import preserve the question set source name',async()=>{
+ const originalDocument=globalThis.document,createURL=URL.createObjectURL;let blob;
+ globalThis.document={createElement:()=>({click(){}})};
+ URL.createObjectURL=value=>{blob=value;return createURL(value);};
+ try{
+  download([{kind:'skill',stable_code:'BLK-2-TEST',set_source_name:'Nguồn bộ, "bản thử"',payload:{question_vi:'Câu hỏi'},source_refs:[]}],'csv','test');
+  const rows=parseImport(await blob.text(),'test.csv');
+  assert.equal(rows[0].set_source_name,'Nguồn bộ, "bản thử"');
+ }finally{URL.createObjectURL=createURL;if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;}
+});
 test('editing preserves all skill comments, unknown fields and every media entry',()=>{
  const original={question_vi:'A question',skill_name:'Skill',not_yet_comment:'Not yet',not_observed_comment:'Unobserved',observation_guide:'Observe',custom:{version:2},media:[{type:'image',url:'https://www.cdc.gov/a.png'},{type:'youtube',youtube_id:'abcdefghijk'}]};
  const draft=editorPayload(original);assert.equal(draft.media.length,2);assert.equal(draft.not_yet_comment,'Not yet');assert.deepEqual(draft.custom,{version:2});draft.media[0].url='changed';assert.notEqual(original.media[0].url,'changed');

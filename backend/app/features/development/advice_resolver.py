@@ -5,6 +5,8 @@ Draft advice may only render in sandbox. This is not a medical screening tool.
 """
 from __future__ import annotations
 import csv
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,21 @@ def load_advice_rows(path: str | Path) -> list[dict[str,str]]:
     if len(rows)!=6 or len({r['variant_id'] for r in rows})!=6:
         raise AdviceValidationError("Missing or duplicate advice variant")
     return rows
+
+def text_key(text):
+    return ' '.join(unicodedata.normalize('NFC',text).casefold().split())
+
+
+def unique_text_blocks(text,seen,spoken=False):
+    # Only exact textual duplicates are removed; no fuzzy medical paraphrasing.
+    units=re.split(r'(?<=[.!?])\s+',text.strip()) if spoken else re.split(r'\n\s*\n',text.strip())
+    kept=[]
+    for unit in units:
+        key=text_key(unit)
+        if key and key not in seen:
+            seen.add(key);kept.append(unit.strip())
+    return (' ' if spoken else '\n\n').join(kept)
+
 
 def resolve_advice(*, step1_result: dict[str,Any], regression: str,
                    caregiver_concern: str, advice_rows: list[dict[str,str]],
@@ -80,6 +97,16 @@ def resolve_advice(*, step1_result: dict[str,Any], regression: str,
         if any(r.get('release_status')!='approved' or r.get('clinical_review_status')!='approved' or r.get('language_review_status')!='approved' or not r.get('approval_by') or not r.get('approved_at') for r in advice_rows):
             raise AdviceValidationError('RELEASE_GATE_BLOCKED: advice not approved')
     out=[{k:r[k] for k in ('advice_key','variant_id','title','body_text','tts_text','cta_label','action_kind','content_version')} for r in selected]
-    return {'advice_content_version':VERSION,'advice_count':len(out),
-            'advice_items':out,'tts_short_text':' '.join(r['tts_text'] for r in selected),
+    seen_body=set();seen_speech=set()
+    composition=[]
+    for item in out:
+        if item['variant_id']=='OBSERVE_UNCHECKED' and should_contact:
+            item['composition_mode']='combined'
+            composition.append('observation_complements_contact')
+        item['body_text']=unique_text_blocks(item['body_text'],seen_body)
+        item['tts_text']=unique_text_blocks(item['tts_text'],seen_speech,spoken=True)
+    from .action_plan import build_action_plan
+    plan=build_action_plan(summary=summary,regression=regression,concern=caregiver_concern,by_variant=by_variant,items=out)
+    return {'action_plan':plan,'composition':composition,'advice_content_version':VERSION,'advice_count':len(out),
+            'advice_items':out,'tts_short_text':plan['tts_text'],
             'is_medical_screening':False,'release_status':'sandbox_only' if environment=='sandbox' else 'production'}

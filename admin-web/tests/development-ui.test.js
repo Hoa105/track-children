@@ -10,7 +10,7 @@ Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLEle
 Object.defineProperty(globalThis,'navigator',{value:dom.window.navigator,configurable:true});window.confirm=()=>true;
 const React=await import('react');const {act}=React;const {createRoot}=await import('react-dom/client');
 globalThis.__developmentAuth={admin:{id:'admin-test',fullName:'Admin kiểm thử',role:'admin',permissions:['development.read','development.write','development.review','development.publish']},loading:false,logout(){}};
-const names=['listQuestionSets','getSet','createQuestionSet','updateQuestionSet','listContent','listAdvice','createContent','getContent','listRevisions','createRevision','getGate','createReview','publishContent','publishQuestionSet','releaseQuestionSet','releaseContent','lifecycle','reorder','audit','exported','seedPreview','importPreview','importCommit','importTemplate','reviewQueue','request'];
+const names=['listQuestionSets','getSet','createQuestionSet','updateQuestionSet','listContent','listAdvice','listSkills','createContent','getContent','listRevisions','createRevision','getGate','createReview','publishContent','publishQuestionSet','releaseQuestionSet','releaseContent','lifecycle','reorder','audit','exported','seedPreview','importPreview','importCommit','importTemplate','reviewQueue','request'];
 const built=await build({entryPoints:[resolve('src/app/App.jsx')],bundle:true,platform:'node',format:'esm',write:false,external:['react','react-dom','react-dom/client'],plugins:[{name:'isolated-api',setup(builder){
  builder.onResolve({filter:/core\/auth\.jsx$/},()=>({path:'auth',namespace:'test'}));builder.onResolve({filter:/developmentApi\.js$/},()=>({path:'api',namespace:'test'}));
  builder.onLoad({filter:/.*/,namespace:'test'},({path})=>({contents:path==='auth'?'export const useAuth=()=>globalThis.__developmentAuth;export const AuthProvider=({children})=>children;':names.map(name=>`export const ${name}=(...args)=>globalThis.__developmentApi.${name}(...args);`).join('\n'),loader:'js'}));
@@ -20,7 +20,7 @@ const clone=x=>structuredClone(x);let sets,questions,calls,root;
 function reset(){calls=[];sets=[{id:'set-12',code:'cdc-12m-v1',ageMonths:12,version:'v1',sourceName:'CDC',locale:'vi-VN',updatedAt:'2026-11-05T12:00:00Z',status:'published',contentCount:2,publishedCount:2,isActive:true,deletedAt:null}];
  const base={kind:'skill',questionSetId:'set-12',appDomain:'gross_motor',currentRevision:1,publishedRevision:1,isActive:true,deletedAt:null,sourceRefs:[{organization:'CDC'}]};
  questions=[{...clone(base),id:'q-image',stableCode:'CDC-12-01',orderIndex:1,payload:{question_vi:'Bé có thể tự đứng lên không?',instruction_vi:'Quan sát bé trên nền phẳng an toàn.',skill_name:'Tự đứng',not_yet_comment:'Chưa ghi nhận tự đứng.',not_observed_comment:'Chưa có dịp quan sát.',observation_guide:'Quan sát khi bé sẵn sàng.',media:[{type:'image',url:'https://www.cdc.gov/example.png',alt:'Bé đứng',attribution:'CDC'}]}},{...clone(base),id:'q-video',stableCode:'CDC-12-02',orderIndex:2,payload:{question_vi:'Bé có bước đi khi được hỗ trợ không?',instruction_vi:'Người lớn ở bên cạnh bé.',media:[{type:'youtube',url:'https://www.youtube-nocookie.com/embed/abcdefghijk',youtube_id:'abcdefghijk',alt:'Video bước đi',attribution:'CDC'}]}}];
- globalThis.__developmentApi={releaseContent:async(_a,id,v)=>{calls.push({type:'content',id,action:'release',isActive:true});const row=questions.find(x=>x.id===id);row.isActive=true;row.publishedRevision=v;return clone(row);},listQuestionSets:async()=>clone(sets),getSet:async(_a,id)=>clone(sets.find(x=>x.id===id)),listContent:async()=>clone(questions),getContent:async(_a,id)=>clone(questions.find(x=>x.id===id)),listRevisions:async(_a,id)=>[{revision:1,createdAt:'2026-11-05T12:00:00Z',payload:clone(questions.find(x=>x.id===id).payload),sourceRefs:[]}],getGate:async()=>({revision:1,blockers:[],reviews:Object.fromEntries(['medical','language','media_rights','qa'].map(type=>[type,{decision:'approved'}]))}),lifecycle:async(_a,type,id,action,isActive)=>{calls.push({type,id,action,isActive});const row=(type==='question-sets'?sets:questions).find(x=>x.id===id);if(action==='delete'){row.deletedAt='2026-11-05T12:00:00Z';row.isActive=false;}else if(action==='restore'){row.deletedAt=null;row.isActive=false;}else row.isActive=isActive;return {saved:true};},reviewQueue:async()=>questions.map(x=>({contentItemId:x.id,stableCode:x.stableCode,questionSetId:x.questionSetId,kind:'skill',revision:1,payload:clone(x.payload),reviews:{}})),audit:async()=>[],listAdvice:async()=>[],publishQuestionSet:async()=>({}),releaseQuestionSet:async(_a,id)=>{calls.push({type:'question-sets',id,action:'release',isActive:true});const row=sets.find(x=>x.id===id);row.isActive=true;row.status='published';return clone(row);}};
+ globalThis.__developmentApi={listSkills:async()=>clone(questions.filter(row=>row.kind==='skill')),releaseContent:async(_a,id,v)=>{calls.push({type:'content',id,action:'release',isActive:true});const row=questions.find(x=>x.id===id);row.isActive=true;row.publishedRevision=v;return clone(row);},listQuestionSets:async()=>clone(sets),getSet:async(_a,id)=>clone(sets.find(x=>x.id===id)),listContent:async()=>clone(questions),getContent:async(_a,id)=>clone(questions.find(x=>x.id===id)),listRevisions:async(_a,id)=>[{revision:1,createdAt:'2026-11-05T12:00:00Z',payload:clone(questions.find(x=>x.id===id).payload),sourceRefs:[]}],getGate:async()=>({revision:1,blockers:[],reviews:Object.fromEntries(['medical','language','media_rights','qa'].map(type=>[type,{decision:'approved'}]))}),lifecycle:async(_a,type,id,action,isActive)=>{calls.push({type,id,action,isActive});const row=(type==='question-sets'?sets:questions).find(x=>x.id===id);if(action==='delete'){row.deletedAt='2026-11-05T12:00:00Z';row.isActive=false;}else if(action==='restore'){row.deletedAt=null;row.isActive=false;}else row.isActive=isActive;return {saved:true};},reviewQueue:async()=>questions.map(x=>({contentItemId:x.id,stableCode:x.stableCode,questionSetId:x.questionSetId,kind:'skill',revision:1,payload:clone(x.payload),reviews:{}})),audit:async()=>[],listAdvice:async()=>[],publishQuestionSet:async()=>({}),releaseQuestionSet:async(_a,id)=>{calls.push({type:'question-sets',id,action:'release',isActive:true});const row=sets.find(x=>x.id===id);row.isActive=true;row.status='published';return clone(row);}};
 }
 async function flush(){await act(async()=>{await new Promise(resolve=>setTimeout(resolve,30));});}
 async function mount(path='/development',configure){reset();configure?.();window.history.replaceState(null,'',`#${path}`);root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(App)));await flush();}
@@ -255,5 +255,94 @@ test('combined development menu switches between sets and advice with one active
   assert.equal(document.querySelectorAll('.nav-item.active').length,1);assert.equal(document.querySelector('.nav-item.active span').textContent,'Bộ câu hỏi & Lời khuyên');
   assert.ok(!document.querySelector('.breadcrumb').textContent.includes('Chi tiết'));
   await click('Bộ câu hỏi');assert.equal(window.location.hash,'#/development');assert.ok(document.querySelector('.question-set-table'));
+ }finally{await unmount();}
+});
+
+test('result preview explains parent inputs and sends the selected simulation values',async()=>{
+ await mount('/development/advice',()=>{
+  globalThis.__developmentApi.request=async(_admin,path,method,body)=>{calls.push({path,method,body});return {sections:{overview:{achieved:2,not_yet:0,not_observed:0},skills_to_note:{total:0,has_more:false},next_steps:{advice_items:[],tts_text:''}},disclaimer:'Dữ liệu giả lập'};};
+ });try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]');
+  const set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();
+  assert.ok(dialog.textContent.includes('Bé có mất kỹ năng từng làm được không?'));assert.ok(dialog.textContent.includes('Phụ huynh có lo ngại về sự phát triển của bé không?'));assert.ok(dialog.textContent.includes('chưa chọn kỹ năng cụ thể'));assert.ok(dialog.textContent.includes('chưa nhập nội dung lo ngại cụ thể'));
+  const regression=dialog.querySelector('#preview-regression'),concern=dialog.querySelector('#preview-concern');
+  assert.deepEqual([...regression.options].map(x=>x.textContent),['Không','Có','Chưa chắc']);assert.equal(concern.options.length,2);
+  await act(async()=>{regression.value='unsure';regression.dispatchEvent(new Event('change',{bubbles:true}));concern.value='yes';concern.dispatchEvent(new Event('change',{bubbles:true}));});await click('Xem kết quả thử',dialog);
+  assert.equal(calls.at(-1).body.regression,'unsure');assert.equal(calls.at(-1).body.caregiver_concern,'yes');assert.equal(calls.at(-1).path,'/preview-result');assert.deepEqual(Object.values(calls.at(-1).body.answers),['achieved','achieved']);
+ }finally{await unmount();}
+});
+
+test('removed skill advice routes show situational templates without skill editors',async()=>{
+ for(const path of ['/development/advice/skills','/development/advice/skills/q-image/edit']){
+  await mount(path);try{
+   assert.ok(!document.querySelector('.skill-guidance-table'));
+   assert.ok(!document.body.textContent.includes('Theo kỹ năng'));
+   assert.ok(document.body.textContent.includes('Thử kết quả đánh giá'));
+  }finally{await unmount();}
+ }
+ await mount('/development/question/q-image/edit');try{
+  assert.ok(!document.body.textContent.includes('GIẢI THÍCH KỸ NĂNG'));
+  assert.ok(!document.body.textContent.includes('Thêm bước hỗ trợ'));
+ }finally{await unmount();}
+});
+
+test('preview renders one next steps section with situational advice only',async()=>{
+ await mount('/development/advice',()=>{
+  globalThis.__developmentApi.request=async()=>({sections:{overview:{achieved:1,not_yet:1,not_observed:0},skills_to_note:{total:1,all:[{question_id:'q1',skill_name:'Kỹ năng thử',status:'not_yet'}]},next_steps:{advice_items:[{variant_id:'CONTACT_NOT_YET',title:'Hướng xử lý chung',body_text:'Nội dung chung đã biên soạn.'}],skill_guidance:[{question_id:'q1',skill_name:'Kỹ năng thử',status:'not_yet',domain:'gross_motor',comment:'Nhận xét đã biên soạn.',explanation:'Giải thích chuyên sâu thử nghiệm.',how_to_observe:'Cách quan sát thử nghiệm.',support_steps:['Hỗ trợ bước một.','Hỗ trợ bước hai.'],discussion_points:'Điều cần ghi lại.',source_refs:[{organization:'Nguồn kiểm thử'}],extended_content_complete:true,revision:2,content_id:'q-image'}],tts_text:'Văn bản đọc.'}},preview_diagnostics:{selected_templates:[{variant_id:'CONTACT_NOT_YET',reason:'Có kỹ năng chưa làm được'}],missing_extended_guidance:[]},disclaimer:'Kết quả giả lập'});
+ });try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),select=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{select.value='set-12';select.dispatchEvent(new Event('change',{bubbles:true}));});await flush();await click('Xem kết quả thử',dialog);
+  assert.equal([...dialog.querySelectorAll('h3')].filter(x=>x.textContent==='Hướng dẫn tiếp theo').length,1);
+  const next=dialog.querySelector('[aria-label="Hướng dẫn tiếp theo"]');assert.ok(next.textContent.includes('Nội dung chung đã biên soạn.'));for(const text of ['Giải thích chuyên sâu thử nghiệm.','Hỗ trợ bước một.','Điều cần ghi lại.','Nguồn kiểm thử'])assert.ok(!next.textContent.includes(text));
+  const summary=dialog.querySelector('[aria-label="Kỹ năng cần chú ý"]');assert.ok(!summary.textContent.includes('Hỗ trợ bước một.'));assert.ok(dialog.querySelector('.preview-diagnostics').textContent.includes('Có kỹ năng chưa làm được'));
+ }finally{await unmount();}
+});
+
+test('preview discards a response when the simulated inputs changed during the request',async()=>{
+ let finish;
+ await mount('/development/advice',()=>{globalThis.__developmentApi.request=()=>new Promise(resolve=>{finish=resolve;});});try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();await click('Xem kết quả thử',dialog);assert.ok(finish);
+  const concern=dialog.querySelector('#preview-concern');await act(async()=>{concern.value='yes';concern.dispatchEvent(new Event('change',{bubbles:true}));});await flush();
+  await act(async()=>finish({sections:{overview:{achieved:2,not_yet:0,not_observed:0},skills_to_note:{total:0},next_steps:{advice_items:[],tts_text:''}}}));await flush();assert.equal(dialog.querySelector('.development-preview-result'),null);assert.equal(button('Xem kết quả thử',dialog).disabled,false);
+ }finally{await unmount();}
+});
+
+test('preview hides an advice card whose repeated body was fully removed',async()=>{
+ await mount('/development/advice',()=>{globalThis.__developmentApi.request=async()=>({sections:{overview:{achieved:2,not_yet:0,not_observed:0},skills_to_note:{total:0},next_steps:{advice_items:[{variant_id:'A',title:'Hướng dẫn chính',body_text:'Nội dung duy nhất.'},{variant_id:'B',title:'Thẻ đã bị loại vì trùng',body_text:''}],tts_text:'Nội dung duy nhất.'}}});});try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();await click('Xem kết quả thử',dialog);
+  assert.equal(dialog.querySelectorAll('.preview-general-advice article').length,1);assert.ok(!dialog.querySelector('.preview-next-steps').textContent.includes('Thẻ đã bị loại vì trùng'));
+ }finally{await unmount();}
+});
+
+test('mixed result shows one ordered plan and all parent signals without concatenating template articles',async()=>{
+ await mount('/development/advice',()=>{globalThis.__developmentApi.request=async()=>({sections:{overview:{achieved:0,not_yet:1,not_observed:1},skills_to_note:{total:2,all:[]},next_steps:{advice_items:[{variant_id:'CONTACT',title:'Không ghép tiêu đề này',body_text:'Nội dung thừa của mẫu nguyên bài.'}],action_plan:{facts:[{id:'not_yet',text:'Có kỹ năng chưa làm được.'},{id:'not_observed',text:'Có kỹ năng chưa được quan sát.'},{id:'regression_yes',text:'Phụ huynh báo mất kỹ năng.'},{id:'caregiver_concern',text:'Phụ huynh có lo ngại.'}],actions:[{id:'contact',title:'Trao đổi với bác sĩ',body:'Hành động chính.',items:[]},{id:'prepare',title:'Chuẩn bị thông tin trao đổi',body:'',items:['Ghi thay đổi.','Ghi điều lo ngại.']},{id:'observe',title:'Bổ sung quan sát',body:'Cập nhật khi có thông tin.',items:[]}],observation_timing:'Có thể bổ sung quan sát song song.'},tts_text:'Văn bản đọc.'}}});});try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();await click('Xem kết quả thử',dialog);
+  const next=dialog.querySelector('[aria-label="Hướng dẫn tiếp theo"]');assert.deepEqual([...next.querySelectorAll('[data-action]')].map(x=>x.dataset.action),['contact','prepare','observe']);assert.equal(next.querySelectorAll('[data-signal]').length,0);assert.ok(!next.textContent.includes('Phụ huynh báo mất kỹ năng.'));assert.ok(!next.textContent.includes('Phụ huynh có lo ngại.'));assert.equal(next.querySelector('[data-signal=not_yet]'),null);assert.equal(next.querySelector('[data-signal=not_observed]'),null);assert.ok(!next.textContent.includes('Nội dung thừa của mẫu nguyên bài.'));assert.equal(next.querySelectorAll('h3').length,1);assert.equal(next.querySelectorAll('[data-action=contact]').length,1);assert.equal(next.querySelectorAll('h4,h5,ol').length,0);assert.equal(next.querySelectorAll('ul').length,1);assert.deepEqual([...next.querySelectorAll('[data-action=prepare] li')].map(item=>item.textContent),['Ghi thay đổi.','Ghi điều lo ngại.']);assert.equal(next.querySelector('[data-action=contact]').tagName,'P');
+ }finally{await unmount();}
+});
+
+test('skill answer presets preserve both parent flags and parent presets preserve skill answers',async()=>{
+ await mount('/development/advice',()=>{globalThis.__developmentApi.request=async(_a,path,method,body)=>{calls.push({body});return {sections:{overview:{achieved:0,not_yet:1,not_observed:1},skills_to_note:{total:0},next_steps:{advice_items:[],tts_text:''}}};};});try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();
+  const selected=label=>{const node=button(label,dialog);assert.equal(node.getAttribute('aria-pressed'),'true');assert.ok(node.classList.contains('primary'));};
+  selected('Đã làm được hết');
+  await click('Có mất kỹ năng từng làm được',dialog);await click('Có lo ngại về phát triển',dialog);await click('Có kỹ năng chưa làm và chưa quan sát',dialog);
+  selected('Có kỹ năng chưa làm và chưa quan sát');selected('Có mất kỹ năng từng làm được');selected('Có lo ngại về phát triển');
+  assert.equal(button('Đã làm được hết',dialog).getAttribute('aria-pressed'),'false');
+  assert.equal(dialog.querySelector('#preview-regression').value,'yes');assert.equal(dialog.querySelector('#preview-concern').value,'yes');
+  await click('Chưa chắc về mất kỹ năng',dialog);await click('Xem kết quả thử',dialog);assert.deepEqual(Object.values(calls.at(-1).body.answers),['not_yet','not_observed']);assert.equal(calls.at(-1).body.regression,'unsure');assert.equal(calls.at(-1).body.caregiver_concern,'yes');
+  selected('Chưa chắc về mất kỹ năng');selected('Có lo ngại về phát triển');assert.equal(button('Có mất kỹ năng từng làm được',dialog).getAttribute('aria-pressed'),'false');
+  const answer=dialog.querySelector('.development-answer select');await act(async()=>{answer.value='not_observed';answer.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.equal(dialog.querySelectorAll('.preview-scenarios [aria-pressed="true"]').length,0);
+  const parent=dialog.querySelector('#preview-concern');await act(async()=>{parent.value='no';parent.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(button('Có lo ngại về phát triển',dialog).getAttribute('aria-pressed'),'false');selected('Chưa chắc về mất kỹ năng');
+  await click('Đặt lại toàn bộ',dialog);assert.equal(dialog.querySelector('#preview-regression').value,'no');assert.equal(dialog.querySelector('#preview-concern').value,'no');
+  selected('Đã làm được hết');assert.equal(dialog.querySelectorAll('.preview-parent-presets [aria-pressed="true"]').length,0);
+ }finally{await unmount();}
+});
+
+test('general commentary precedes next steps, shows sources and never leaks into instructions',async()=>{
+ await mount('/development/advice',()=>{globalThis.__developmentApi.request=async()=>({sections:{overview:{achieved:1,not_yet:1,not_observed:0},skills_to_note:{total:1,all:[]},overall_comment:{paragraphs:[{id:'interpretation',text:'Nhận xét có căn cứ về thông tin được ghi nhận.'},{id:'professional',text:'Cần trao đổi với bác sĩ hoặc nhân viên y tế có chuyên môn.'}],domain_observations:[{domain:'gross_motor',text:'Vận động thô: 1 kỹ năng chưa làm được.'}],sources:[{id:'cdc',organization:'CDC',title:'Developmental Monitoring and Screening',url:'https://www.cdc.gov/act-early/about/developmental-monitoring-and-screening.html'}],tts_text:'Văn bản nhận xét.'},next_steps:{advice_items:[],action_plan:{actions:[{id:'contact',body:'Hướng dẫn hành động.',items:[]}],observation_timing:''},tts_text:'Văn bản hướng dẫn.'}},disclaimer:'Phạm vi nhận xét.'});});try{
+  await click('Thử kết quả đánh giá');const dialog=document.querySelector('[role=dialog]'),set=dialog.querySelector('[aria-label="Chọn bộ câu hỏi để thử"]');await act(async()=>{set.value='set-12';set.dispatchEvent(new Event('change',{bubbles:true}));});await flush();await click('Xem kết quả thử',dialog);
+  const comment=dialog.querySelector('[aria-label="Nhận xét chung"]'),next=dialog.querySelector('[aria-label="Hướng dẫn tiếp theo"]');assert.ok(comment);assert.ok(comment.textContent.includes('nhân viên y tế có chuyên môn'));assert.equal(comment.querySelector('a').hostname,'www.cdc.gov');assert.ok(!comment.textContent.includes('Vận động thô'));
+  const sections=[...dialog.querySelectorAll('.development-preview-result > section')];assert.ok(sections.indexOf(comment)<sections.indexOf(next));assert.ok(!next.textContent.includes('Nhận xét có căn cứ'));assert.ok(next.textContent.includes('Hướng dẫn hành động.'));
  }finally{await unmount();}
 });

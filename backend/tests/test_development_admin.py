@@ -141,11 +141,23 @@ def test_live_http_editor_and_sandbox_result(db,actor):
             view=response.json();assert view['release_status']=='sandbox_only'
             assert view['sections']['next_steps']['auto_play'] is False
             assert view['sections']['next_steps']['advice_items'][0]['variant_id']==variant
+        enriched={**rows[0]['payload'],'skill_guidance':{'explanation':'Giải thích kỹ năng kiểm thử','support_steps':['Bước hỗ trợ kiểm thử 1','Bước hỗ trợ kiểm thử 2'],'discussion_points':'Ghi nhận kiểm thử'}}
+        saved=client.post('/admin/development/content/'+rows[0]['id']+'/revisions',json={'expectedRevision':rows[0]['currentRevision'],'payload':enriched,'sourceRefs':rows[0]['sourceRefs']})
+        assert saved.status_code==200,saved.text
+        history=client.get('/admin/development/content/'+rows[0]['id']+'/revisions').json()
+        assert 'skill_guidance' not in history[-1]['payload']
         keys=list(answers);answers[keys[0]]='not_yet';answers[keys[1]]='not_observed'
         response=client.post('/admin/development/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'})
         assert response.status_code==200,response.text
         view=response.json();assert len(view['sections']['next_steps']['advice_items'])==2
         assert view['sections']['skills_to_note']['total']==2
+        assert set(view['sections'])=={'overview','overall_comment','skills_to_note','next_steps'}
+        assert [step['id'] for step in view['sections']['next_steps']['action_plan']['actions']]==['contact','prepare','observe']
+        assert 'facts' not in view['sections']['next_steps']['action_plan']
+        assert {fact['id'] for fact in view['preview_diagnostics']['reported_signals']}=={'not_yet','not_observed'}
+        assert 'skill_guidance' not in view['sections']['next_steps']
+        assert 'Bước hỗ trợ kiểm thử 1' not in view['sections']['next_steps']['tts_text']
+        assert len(view['preview_diagnostics']['selected_templates'])==2
         del answers[keys[0]]
         assert client.post('/admin/development/preview-result',json={'question_set_id':qs['id'],'answers':answers,'regression':'no','caregiver_concern':'no'}).status_code==422
         assert client.post('/admin/development/question-sets',json={'code':'bad-age','ageMonths':3,'version':'v1','sourceName':'Test'}).status_code==422
@@ -308,3 +320,310 @@ def test_advice_release_is_atomic_without_reviews_and_preserves_locked_condition
         s.release_content(db,actor,item['id'],revision['current_revision'])
     unchanged=s.get_content(db,item['id'])
     assert unchanged['is_active'] is True and unchanged['published_revision']==item['current_revision']
+
+@pytest.mark.parametrize('guidance',[None,[],{'explanation':'Legacy draft','support_steps':[]}])
+def test_removed_skill_advice_does_not_block_question_validation(guidance):
+    row=copy.deepcopy(next(x for x in transfer.bundled() if x['kind']=='skill'))
+    row['payload']['skill_guidance']=guidance
+    s._validate_payload(row['payload'],'skill',row['stable_code'])
+    assert row['payload']['skill_guidance']==guidance
+
+def test_updated_advice_samples_are_complete_and_keep_selection_rules():
+    rows=[row for row in transfer.bundled() if row['kind']=='advice']
+    assert {row['stable_code'] for row in rows}==set(s.VARIANTS)
+    for row in rows:
+        payload=row['payload']
+        assert len(payload['body_text'])>80
+        assert 'mốc' not in payload['body_text'].casefold()
+        assert payload['editorial_version'].startswith('advice-local-test-v5')
+        assert payload['source_name'].endswith('CDC')
+        assert all(ref.get('url','').startswith('https://www.cdc.gov/') for ref in row['source_refs'])
+        s._validate_payload(payload,'advice',row['stable_code'])
+
+
+def test_local_advice_sample_update_is_versioned_idempotent_and_preserves_publication(db,actor):
+    from scripts.update_development_advice_samples import update_samples
+    seed(db,actor)
+    advice=s.list_content(db,kind='advice')[0]
+    custom=s.create_content_revision(db,actor,advice['id'],AdminContentRevisionCreate(expectedRevision=advice['current_revision'],payload={**advice['payload'],'body_text':'Existing local content','custom_field':'keep this'},sourceRefs=advice['source_refs']))
+    s.release_content(db,actor,advice['id'],custom['current_revision'])
+    before=[(row['id'],row['current_revision']) for row in s.list_content(db,kind='skill')]
+    result=update_samples(db,apply=True)
+    assert result['revised']==1 and result['unchanged']==5
+    updated=s.get_content(db,advice['id'])
+    assert updated['current_revision']==custom['current_revision']+1
+    assert updated['published_revision']==custom['current_revision'] and updated['is_active'] is True
+    assert updated['payload']['custom_field']=='keep this'
+    assert [(row['id'],row['current_revision']) for row in s.list_content(db,kind='skill')]==before
+    assert update_samples(db,apply=True)['unchanged']==6
+
+def test_exhaustive_advice_selection_counts_and_followup_answers():
+    from app.features.development.advice_audit import audit_advice_cases
+    rows=transfer.bundled()
+    sets=[{'age_months':age,'question_ids':[row['stable_code'] for row in rows if row['kind']=='skill' and row['age_months']==age]} for age in s.AGES]
+    report=audit_advice_cases(sets,[row['payload'] for row in rows if row['kind']=='advice'])
+    assert report['cases']==7950 and report['sets']==12
+    assert len(report['selection_paths'])==10
+    assert len(report['context_patterns'])==24
+    assert report['combined_cases']>0
+
+
+def test_advice_composition_removes_exact_duplicate_paragraphs_and_spoken_sentences():
+    from app.features.development.advice_resolver import resolve_advice,VERSION
+    from app.features.development.rule_engine import evaluate
+    engine=evaluate(expected_question_ids=['a','b'],answers={'a':'not_yet','b':'not_observed'},regression='no',caregiver_concern='no',question_set_age_months=12)
+    rows=[{**row['payload'],'content_version':VERSION} for row in transfer.bundled() if row['kind']=='advice']
+    for row in rows:
+        if row['variant_id']=='CONTACT_NOT_YET':row.update(body_text='Repeated paragraph.\n\nUnique contact paragraph.',tts_text='Repeated sentence. Unique contact sentence.')
+        if row['variant_id']=='OBSERVE_UNCHECKED':row.update(body_text='Repeated paragraph.\n\nUnique observation paragraph.',tts_text='Repeated sentence. Unique observation sentence.')
+    result=resolve_advice(step1_result=engine,regression='no',caregiver_concern='no',advice_rows=rows)
+    assert sum(row['body_text'].count('Repeated paragraph.') for row in result['advice_items'])==1
+    assert 'Unique observation paragraph.' in result['advice_items'][1]['body_text']
+    assert result['tts_short_text'].count('Repeated sentence.')==1
+    assert 'Unique contact sentence.' in result['tts_short_text'] and 'Unique observation sentence.' in result['tts_short_text']
+
+def test_advice_preparation_fields_require_text():
+    item=next(row for row in transfer.bundled() if row['stable_code']=='CONTACT_NOT_YET')
+    payload=copy.deepcopy(item['payload']);payload['preparation_text']=5
+    with pytest.raises(HTTPException):s._validate_payload(payload,'advice',item['stable_code'])
+
+@pytest.mark.parametrize('mode',['all_achieved','not_yet','not_observed','mixed'])
+@pytest.mark.parametrize('regression',['no','yes','unsure'])
+@pytest.mark.parametrize('concern',['no','yes'])
+def test_action_plan_preserves_all_signals_and_orders_unique_actions(mode,regression,concern):
+    from app.features.development.advice_resolver import resolve_advice,VERSION
+    from app.features.development.rule_engine import evaluate
+    patterns={'all_achieved':['achieved','achieved'],'not_yet':['not_yet','achieved'],'not_observed':['not_observed','achieved'],'mixed':['not_yet','not_observed']}
+    answers=dict(zip(['q1','q2'],patterns[mode]));n='not_yet' in answers.values();o='not_observed' in answers.values()
+    engine=evaluate(expected_question_ids=['q1','q2'],answers=answers,regression=regression,caregiver_concern=concern,question_set_age_months=12)
+    rows=[{**row['payload'],'content_version':VERSION} for row in transfer.bundled() if row['kind']=='advice']
+    by_id={row['variant_id']:row for row in rows}
+    result=resolve_advice(step1_result=engine,regression=regression,caregiver_concern=concern,advice_rows=rows)
+    plan=result['action_plan'];contact=bool(n or regression!='no' or concern=='yes')
+    expected_actions=(['contact','prepare'] if contact else [])+(['observe'] if o else [])+(['continue'] if not contact and not o else [])
+    assert [action['id'] for action in plan['actions']]==expected_actions
+    expected_facts=({'not_yet'} if n else set())|({'not_observed'} if o else set())|({'all_achieved'} if not n and not o else set())|({'regression_'+regression} if regression!='no' else set())|({'caregiver_concern'} if concern=='yes' else set())
+    assert {fact['id'] for fact in plan['facts']}==expected_facts
+    prep=next((action['items'] for action in plan['actions'] if action['id']=='prepare'),[])
+    if n:assert by_id['CONTACT_NOT_YET']['preparation_text'] in prep
+    if concern=='yes':assert by_id['CONTACT_CONCERN_ONLY']['preparation_text'] in prep
+    if regression!='no':assert by_id['CONTACT_REGRESSION_YES' if regression=='yes' else 'CONTACT_REGRESSION_UNSURE']['preparation_text'] in prep
+    assert len(prep)==len(set(prep))
+    assert bool(plan['observation_timing'])==(contact and o)
+    for action in plan['actions']:
+        assert 'mốc' not in action['body'].lower()
+        if action['id']=='observe':assert 'bác sĩ' not in action['body']
+    assert result['tts_short_text']==plan['tts_text']
+    assert all(fact['text'] not in plan['tts_text'] for fact in plan['facts'])
+
+@pytest.mark.parametrize('mode',['all_achieved','not_yet','all_not_yet','not_observed','mixed','all_unobserved'])
+@pytest.mark.parametrize('regression',['no','yes','unsure'])
+@pytest.mark.parametrize('concern',['no','yes'])
+def test_overall_commentary_is_descriptive_source_based_and_keeps_all_parent_signals(mode,regression,concern):
+    from app.features.development.rule_engine import evaluate
+    from app.features.development.overall_commentary import build_overall_commentary
+    patterns={'all_achieved':['achieved','achieved'],'not_yet':['not_yet','achieved'],'all_not_yet':['not_yet','not_yet'],'not_observed':['not_observed','achieved'],'mixed':['not_yet','not_observed'],'all_unobserved':['not_observed','not_observed']}
+    answers=dict(zip(['q1','q2'],patterns[mode]));n=list(answers.values()).count('not_yet');o=list(answers.values()).count('not_observed')
+    engine=evaluate(expected_question_ids=['q1','q2'],answers=answers,regression=regression,caregiver_concern=concern,question_set_age_months=12)
+    comment=build_overall_commentary(step1_result=engine,skills_by_id={'q1':{'app_domain':'gross_motor'},'q2':{'app_domain':'language_communication'}})
+    ids=[row['id'] for row in comment['paragraphs']]
+    assert len(ids)==len(set(ids))
+    assert ('regression_yes' in ids)==(regression=='yes')
+    assert ('regression_unsure' in ids)==(regression=='unsure')
+    assert ('caregiver_concern' in ids)==(concern=='yes')
+    contact=bool(n or regression!='no' or concern=='yes')
+    assert comment['professional_review_recommended']==contact
+    assert ('professional_contact' in ids)==contact
+    if mode=='all_unobserved':assert ids[0]=='all_unobserved'
+    if mode=='mixed':assert ids[0]=='mixed'
+    if mode=='all_achieved':assert ids[0]==('all_recorded_context' if contact else 'all_recorded')
+    assert sum(row['total'] for row in comment['domain_observations'])==2
+    assert sum(row['not_observed'] for row in comment['domain_observations'])==o
+    source_ids={source['id'] for source in comment['sources']}
+    assert all(set(row['source_ids'])<=source_ids for row in comment['paragraphs'])
+    assert 'không thay thế việc sàng lọc' in comment['paragraphs'][-1]['text']
+    first=comment['paragraphs'][0]['text']
+    if mode in ('not_yet','mixed','all_not_yet'):assert 'vận động thô' in first
+    if mode=='not_yet':assert 'ngôn ngữ và giao tiếp' not in first
+    if mode in ('mixed','all_not_yet'):assert 'ngôn ngữ và giao tiếp' in first
+    if mode=='not_observed':
+        assert 'vận động thô' in first
+        assert 'ngôn ngữ và giao tiếp' not in first
+    if mode in ('all_achieved','all_unobserved','not_yet','all_not_yet','mixed'):assert '12 tháng' in first
+    assert '{' not in comment['tts_text']
+    assert first.startswith(('Kết quả bài đánh giá','Tất cả kỹ năng trong bài đánh giá'))
+    assert all(phrase not in comment['tts_text'].lower() for phrase in ['bạn cho biết','gia đình cho biết','phụ huynh cho biết'])
+    assert len(comment['tts_text'].split()) <= 230
+    assert all(row['text'] not in comment['tts_text'] for row in comment['domain_observations'])
+    assert all(word not in comment['tts_text'] for word in ['nguy cơ cao','bé bị chậm','phát triển bình thường'])
+
+
+def small_workspace(db,actor,with_advice=False):
+    rows=transfer.template('skill')
+    rows[0]['payload']['media']=[]
+    rows[0]['set_source_name']='Nguồn bộ kiểm thử'
+    if with_advice: rows += [copy.deepcopy(x) for x in transfer.bundled() if x['kind']=='advice']
+    checked=transfer.preview(db,rows)
+    assert not checked['errors'],checked['errors']
+    transfer.commit(db,actor,checked['rows'],checked['fingerprint'])
+    qs=s.list_question_sets(db)[0]
+    return qs,s.list_content(db,qs['id'])[0]
+
+
+def test_deleted_parent_blocks_question_mutations_and_restore(db,actor):
+    qs,item=small_workspace(db,actor)
+    s.release_content(db,actor,item['id'],1)
+    s.lifecycle(db,actor,'question_set',qs['id'],'delete')
+    actions=[lambda:s.create_content_revision(db,actor,item['id'],AdminContentRevisionCreate(expectedRevision=1,payload=item['payload'],sourceRefs=item['source_refs'])),
+             lambda:s.publish_content(db,actor,item['id'],1),lambda:s.release_content(db,actor,item['id'],1),
+             lambda:s.lifecycle(db,actor,'content_item',item['id'],'availability',True)]
+    for action in actions:
+        with pytest.raises(HTTPException) as rejected:action()
+        assert rejected.value.status_code==409
+    assert len(s.list_content_revisions(db,item['id']))==1
+    s.delete_content(db,actor,item['id'])
+    with pytest.raises(HTTPException):s.restore_content(db,actor,item['id'])
+    s.lifecycle(db,actor,'question_set',qs['id'],'restore')
+    s.restore_content(db,actor,item['id'])
+    assert s.get_content(db,item['id'])['is_active'] is False
+
+
+def test_restore_question_relocates_occupied_position_and_records_history(db,actor):
+    from app.features.development.schema import AdminContentCreate
+    qs,item=small_workspace(db,actor)
+    s.delete_content(db,actor,item['id'])
+    replacement=s.create_content(db,actor,qs['id'],AdminContentCreate(stableCode='BLK-2-REPLACEMENT',appDomain='fine_motor',sourceDomain='cognitive',orderIndex=item['order_index'],payload=item['payload'],sourceRefs=item['source_refs']))
+    assert replacement['source_domain']=='movement_physical'
+    s.restore_content(db,actor,item['id'])
+    restored=s.get_content(db,item['id'])
+    assert restored['order_index']>replacement['order_index']
+    assert restored['is_active'] is False and restored['published_revision'] is None
+    event=next(x for x in s.audit_rows(db,item['id']) if x['action']=='restore')
+    assert event['after_data']['order_index']==restored['order_index']
+    assert event['after_data']['deleted_at'] is None
+
+
+def test_revision_audit_includes_content_and_appears_in_parent_history(db,actor):
+    qs,item=small_workspace(db,actor)
+    payload={**item['payload'],'question_vi':'Nội dung câu hỏi đã được chỉnh sửa để kiểm tra lịch sử'}
+    s.create_content_revision(db,actor,item['id'],AdminContentRevisionCreate(expectedRevision=1,payload=payload,sourceRefs=[{'document':'Nguồn mới'}]))
+    event=next(x for x in s.audit_rows(db,qs['id']) if x['action']=='create_revision')
+    assert event['before_data']['payload']==item['payload']
+    assert event['after_data']['payload']==payload
+    assert event['after_data']['source_refs']==[{'document':'Nguồn mới'}]
+    assert event['after_data']['code']==item['stable_code']
+    assert event['actor']=='Admin kiểm thử'
+
+
+@pytest.mark.parametrize('change',[{'age_months':4},{'set_version':'other'},{'locale':'en-US'},{'set_source_name':'Nguồn khác'}])
+def test_import_rejects_inconsistent_set_metadata_within_file(change):
+    first=transfer.template()[0];second=copy.deepcopy(first)
+    second.update(stable_code='BLK-2-MAU-02',order_index=first['order_index']+1,**change)
+    _,errors=transfer.normalize([first,second])
+    assert errors and errors[0]['row']==2
+
+
+@pytest.mark.parametrize('change',[{'order_index':1.5},{'order_index':True},{'source_domain':'cognitive'},{'set_source_name':'   '}])
+def test_import_rejects_invalid_identity_domain_and_numbers(change):
+    row=transfer.template()[0];row.update(change)
+    assert transfer.normalize([row])[1]
+
+
+def test_import_preview_detects_existing_set_identity_collision_before_commit(db,actor):
+    qs,item=small_workspace(db,actor)
+    row=transfer.template()[0];row.update(set_code='another-set',stable_code='BLK-2-OTHER')
+    checked=transfer.preview(db,[{},row])
+    assert any(x['row']==2 and 'phiên bản' in x['message'] for x in checked['errors'])
+    with pytest.raises(HTTPException) as rejected:transfer.commit(db,actor,[row],checked['fingerprint'])
+    assert rejected.value.status_code==422
+    assert len(s.list_question_sets(db))==1 and len(s.list_content_revisions(db,item['id']))==1
+
+
+def test_export_import_preserves_set_source_and_creates_drafts_only(db,actor):
+    qs,item=small_workspace(db,actor)
+    row=transfer.exported(db,qs['id'],'skill')[0]
+    assert row['set_source_name']=='Nguồn bộ kiểm thử'
+    row.update(stable_code='BLK-2-CLONE',set_code='clone-set',set_version='clone-v1')
+    checked=transfer.preview(db,[row]);assert not checked['errors'],checked['errors']
+    transfer.commit(db,actor,checked['rows'],checked['fingerprint'])
+    clone=next(x for x in s.list_question_sets(db) if x['code']=='clone-set')
+    assert clone['source_name']==qs['source_name']
+    assert clone['status']=='draft' and clone['is_active'] is False
+    assert s.list_content(db,clone['id'])[0]['published_revision'] is None
+
+
+def test_preview_http_validates_inputs_and_missing_or_deleted_sets_without_writes(db,actor):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.features.development.router import admin_router,admin
+    from app.core.database import get_db
+    qs,item=small_workspace(db,actor,with_advice=True)
+    app=FastAPI();app.include_router(admin_router);app.dependency_overrides[admin]=lambda:actor
+    def connection():yield db
+    app.dependency_overrides[get_db]=connection
+    body={'question_set_id':str(qs['id']),'answers':{item['stable_code']:'achieved'},'regression':'no','caregiver_concern':'no'}
+    with TestClient(app) as client:
+        assert client.post('/admin/development/preview-result',json=body).status_code==200
+        missing=client.post('/admin/development/preview-result',json={**body,'answers':{}})
+        assert missing.status_code==422 and 'thiếu 1' in missing.json()['detail']
+        assert client.post('/admin/development/preview-result',json={**body,'regression':'invalid'}).status_code==422
+        assert client.post('/admin/development/preview-result',json={**body,'answers':{item['stable_code']:'invalid'}}).status_code==422
+        assert client.get('/admin/development/question-sets/'+str(uuid4())+'/content').status_code==404
+        advice=s.list_content(db,kind='advice')[0]
+        s.delete_content(db,actor,advice['id'])
+        absent=client.post('/admin/development/preview-result',json=body)
+        assert absent.status_code==422 and '6 mẫu' in absent.json()['detail']
+        s.restore_content(db,actor,advice['id'])
+        empty=client.post('/admin/development/question-sets',json={'code':'empty-set','ageMonths':2,'version':'empty-v1','sourceName':'Nguồn thử'})
+        assert empty.status_code==201
+        no_questions=client.post('/admin/development/preview-result',json={**body,'question_set_id':empty.json()['id'],'answers':{}})
+        assert no_questions.status_code==422 and 'ít nhất một câu' in no_questions.json()['detail']
+        s.lifecycle(db,actor,'question_set',qs['id'],'delete')
+        assert client.post('/admin/development/preview-result',json=body).status_code==409
+    with db.cursor() as cur:
+        cur.execute('SELECT count(*) AS count FROM development.assessments')
+        assert cur.fetchone()['count']==0
+
+
+def test_import_allows_existing_legacy_codes_but_rejects_new_ones(db,actor):
+    qs,item=small_workspace(db,actor)
+    with db,db.cursor() as cur:
+        cur.execute('UPDATE development.content_items SET stable_code=%s WHERE id=%s',('legacy-2m-question',item['id']))
+    row=transfer.exported(db,qs['id'],'skill')[0]
+    assert not transfer.preview(db,[row])['errors']
+    row.update(stable_code='new-legacy-question',order_index=row['order_index']+1)
+    assert any('Câu mới' in x['message'] for x in transfer.preview(db,[row])['errors'])
+
+
+def test_import_and_revision_preserve_set_locale(db,actor):
+    from app.features.development.schema import AdminContentCreate
+    row=transfer.template()[0];row['locale']='en-US'
+    checked=transfer.preview(db,[row]);assert not checked['errors']
+    transfer.commit(db,actor,checked['rows'],checked['fingerprint'])
+    qs=s.list_question_sets(db)[0];item=s.list_content(db,qs['id'])[0]
+    assert s.list_content_revisions(db,item['id'])[0]['locale']=='en-US'
+    edited=s.create_content_revision(db,actor,item['id'],AdminContentRevisionCreate(expectedRevision=1,payload=item['payload'],sourceRefs=item['source_refs']))
+    assert s.list_content_revisions(db,edited['id'])[0]['locale']=='en-US'
+    created=s.create_content(db,actor,qs['id'],AdminContentCreate(stableCode='BLK-2-LOCALE',appDomain='fine_motor',orderIndex=99,payload=item['payload']))
+    assert s.list_content_revisions(db,created['id'])[0]['locale']=='en-US'
+
+
+@pytest.mark.parametrize('change',[{'order_index':1},{'app_domain':'cognitive'},{'set_code':'not-allowed'}])
+def test_import_advice_cannot_acquire_question_metadata(change):
+    row=transfer.template('advice')[0];row.update(change)
+    assert transfer.normalize([row])[1]
+
+
+def test_unchanged_incomplete_legacy_draft_can_roundtrip_but_cannot_publish_or_change(db,actor):
+    qs,item=small_workspace(db,actor)
+    legacy={'prompt':'Legacy question without current required fields','answerOptions':['A','B','C']}
+    with db,db.cursor() as cur:
+        cur.execute('INSERT INTO development.content_revisions(content_item_id,revision,payload,source_refs,created_by) VALUES (%s,2,%s::jsonb,%s::jsonb,%s)',(item['id'],__import__('json').dumps(legacy),'[]',actor['id']))
+        cur.execute('UPDATE development.content_items SET stable_code=%s,current_revision=2 WHERE id=%s',('legacy-incomplete',item['id']))
+    rows=transfer.exported(db,qs['id'],'skill')
+    checked=transfer.preview(db,rows);assert not checked['errors'],checked['errors']
+    assert transfer.commit(db,actor,checked['rows'],checked['fingerprint'])=={'created':0,'revised':0,'unchanged':1}
+    assert len(s.list_content_revisions(db,item['id']))==2
+    with pytest.raises(HTTPException):s.release_content(db,actor,item['id'],2)
+    rows[0]['payload']['prompt']='Changed but still incomplete legacy question'
+    assert transfer.preview(db,rows)['errors']

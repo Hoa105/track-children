@@ -1,16 +1,21 @@
-﻿import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {useAuth} from '../../core/auth.jsx';
 import {navigate} from '../../core/useHashRoute.js';
 import Icon from '../../shared/Icon.jsx';
 import {DataTable,Panel,stopRowClick} from '../../shared/ui.jsx';
 import {OPTIONS,VARIANT_LABELS,matches,questionState,questionVersion,updatedDate,QUESTION_STATES} from './model.js';
 import {Availability,ErrorBox,QuestionActions,Modal,SpeakButton} from './components.jsx';
+import ResultPreviewView from './ResultPreviewView.jsx';
 import ContentEditorPage from './ContentEditorPage.jsx';
 import * as api from './developmentApi.js';
 export default function AdvicePage({id,onNotify}){
  if(id){const [contentId,tab]=id.split('/');return <ContentEditorPage contentId={contentId} initialTab={['edit','history'].includes(tab)?tab:'detail'} onNotify={onNotify}/>;}
  return <AdviceList/>;
 }
+export function AdviceWorkspace() {
+ return <AdviceList />;
+}
+
 export function AdviceList(){
  const {admin}=useAuth();const [rows,setRows]=useState(null),[q,setQ]=useState(''),[state,setState]=useState('all'),[error,setError]=useState(''),[preview,setPreview]=useState(false);
  async function load(){try{setRows(await api.listAdvice(admin));setError('');}catch(e){setError(e.message);}}
@@ -39,9 +44,58 @@ export function AdviceList(){
 }
 
 function ResultPreview({admin,onClose}){
- const [sets,setSets]=useState([]),[setId,setSetId]=useState(''),[questions,setQuestions]=useState([]),[answers,setAnswers]=useState({}),[regression,setRegression]=useState('no'),[concern,setConcern]=useState('no'),[view,setView]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[all,setAll]=useState(false);
+ const [sets,setSets]=useState([]),[setId,setSetId]=useState(''),[questions,setQuestions]=useState([]),[answers,setAnswers]=useState({}),[regression,setRegression]=useState('no'),[concern,setConcern]=useState('no'),[view,setView]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  useEffect(()=>{api.listQuestionSets(admin).then(x=>setSets(x.filter(r=>!r.deletedAt))).catch(e=>setError(e.message));},[]);
  useEffect(()=>{setView(null);setQuestions([]);setAnswers({});if(!setId)return;let cancelled=false;setBusy(true);api.listContent(admin,setId).then(rows=>{if(cancelled)return;const qs=rows.filter(r=>!r.deletedAt);setQuestions(qs);setAnswers(Object.fromEntries(qs.map(r=>[r.stableCode,'achieved'])));}).catch(e=>!cancelled&&setError(e.message)).finally(()=>!cancelled&&setBusy(false));return()=>{cancelled=true;};},[setId]);
- function scenario(key){const next=Object.fromEntries(questions.map(r=>[r.stableCode,'achieved']));setRegression(key==='regression'?'yes':key==='unsure'?'unsure':'no');setConcern(key==='concern'?'yes':'no');if(key==='not_yet'||key==='mixed')next[questions[0]?.stableCode]='not_yet';if(key==='observe')next[questions[0]?.stableCode]='not_observed';if(key==='mixed'&&questions[1])next[questions[1].stableCode]='not_observed';setAnswers(next);setView(null);}
- return <Modal className="advice-preview-dialog" title="Thử kết quả đánh giá" wide onClose={onClose}><p className="detail-alert">Dùng bản nháp hiện hành, kể cả nội dung đang ẩn. Không tạo hồ sơ, bài đánh giá hoặc kết quả thật.</p><ErrorBox message={error}/><label>Bộ câu hỏi<select value={setId} onChange={e=>setSetId(e.target.value)}><option value="">Chọn bộ câu hỏi</option>{sets.map(r=><option key={r.id} value={r.id}>{r.ageMonths} tháng · {r.code}</option>)}</select></label>{questions.length>0&&<><div className="development-toolbar">{[['all','Đã làm được hết'],['not_yet','Một kỹ năng chưa làm'],['observe','Một kỹ năng chưa quan sát'],['mixed','Cả hai loại'],['regression','Báo mất kỹ năng'],['unsure','Chưa chắc mất kỹ năng'],['concern','Phụ huynh lo ngại']].map(([k,v])=><button className="button secondary" key={k} onClick={()=>scenario(k)}>{v}</button>)}</div><div className="development-scroll">{questions.map(r=><label className="development-answer" key={r.id}><span>{r.payload.question_vi||r.payload.prompt}</span><select value={answers[r.stableCode]??'achieved'} onChange={e=>{setAnswers(x=>({...x,[r.stableCode]:e.target.value}));setView(null);}}>{OPTIONS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select></label>)}</div><div className="development-toolbar"><label>Mất kỹ năng<select value={regression} onChange={e=>{setRegression(e.target.value);setView(null);}}><option value="no">Không</option><option value="yes">Có</option><option value="unsure">Chưa chắc</option></select></label><label>Phụ huynh lo ngại<select value={concern} onChange={e=>{setConcern(e.target.value);setView(null);}}><option value="no">Không</option><option value="yes">Có</option></select></label></div></>}<button className="button primary" disabled={busy||!questions.length} onClick={async()=>{setBusy(true);setError('');setView(null);try{setView(await api.request(admin,'/preview-result','POST',{question_set_id:setId,answers,regression,caregiver_concern:concern}));setAll(false);}catch(e){setError(e.message);}finally{setBusy(false);}}}>{busy?'Đang xử lý…':'Xem kết quả thử'}</button>{view&&<div className="development-preview-result"><h3>Tổng quan</h3><p>Đã làm được: {view.sections.overview.achieved} · Chưa làm được: {view.sections.overview.not_yet} · Chưa quan sát: {view.sections.overview.not_observed}</p><h3>Kỹ năng cần chú ý</h3>{view.sections.skills_to_note.total===0?<p>Không có kỹ năng cần liệt kê trong tình huống này.</p>:(all?view.sections.skills_to_note.all:view.sections.skills_to_note.preview).map(x=><article key={x.question_id}><h4>{x.skill_name}</h4><p>{x.comment}</p><p>{x.how_to_observe}</p>{x.safety_note&&<p>Lưu ý: {x.safety_note}</p>}</article>)}{view.sections.skills_to_note.has_more&&<button className="link-button" onClick={()=>setAll(!all)}>{all?'Thu gọn':'Xem tất cả kỹ năng'}</button>}<h3>Hướng dẫn tiếp theo</h3>{view.sections.next_steps.advice_items.map(x=><article key={x.variant_id}><h4>{x.title}</h4><p>{x.body_text}</p></article>)}<SpeakButton text={view.sections.next_steps.tts_text}/><p>{view.disclaimer}</p></div>}</Modal>;
+ function presetAnswers(key){
+  return Object.fromEntries(questions.map((row,index)=>[row.stableCode,
+   index===0&&(key==='not_yet'||key==='mixed')?'not_yet':
+   (index===0&&key==='observe')||(index===1&&key==='mixed')?'not_observed':'achieved']));
+ }
+ function skillPresetSelected(key){
+  if(!questions.length||(key==='mixed'&&questions.length<2))return false;
+  return Object.entries(presetAnswers(key)).every(([code,value])=>answers[code]===value);
+ }
+ function parentPresetSelected(key){
+  return key==='concern'?concern==='yes':regression===(key==='regression'?'yes':'unsure');
+ }
+ function scenario(key){
+  setView(null);
+  if(key==='regression'||key==='unsure'){setRegression(key==='regression'?'yes':'unsure');return;}
+  if(key==='concern'){setConcern('yes');return;}
+  const next=presetAnswers(key);
+  if(key==='reset'){setRegression('no');setConcern('no');}
+  setAnswers(next);
+ }
+
+ const previewVersion=useRef(0);
+ useEffect(()=>{previewVersion.current++;setView(null);},[setId,answers,regression,concern]);
+ async function runPreview(){
+  const version=++previewVersion.current;
+  setBusy(true);setError('');setView(null);
+  try{
+   const result=await api.request(admin,'/preview-result','POST',{question_set_id:setId,answers,regression,caregiver_concern:concern});
+   if(version===previewVersion.current)setView(result);
+  }catch(problem){if(version===previewVersion.current)setError(problem.message);}
+  finally{setBusy(false);}
+ }
+
+ return <Modal className="advice-preview-dialog" title="Thử kết quả đánh giá" wide onClose={onClose}><p className="detail-alert">Thử tình huống giả lập bằng bản nháp mới nhất, gồm cả nội dung đang ẩn. Kết quả chỉ dùng để xem trước; không lưu bài đánh giá hoặc hồ sơ trẻ.</p><ErrorBox message={error}/><label>1. Chọn bộ câu hỏi<select aria-label="Chọn bộ câu hỏi để thử" value={setId} onChange={e=>setSetId(e.target.value)}><option value="">Chọn bộ câu hỏi</option>{sets.map(r=><option key={r.id} value={r.id}>{r.ageMonths} tháng · {r.code}</option>)}</select></label>{questions.length>0&&<><h3 className="preview-section-title">2. Chọn đáp án cho các kỹ năng</h3><p className="preview-help">Điền nhanh đáp án kỹ năng, sau đó chỉnh từng câu bên dưới. Các lựa chọn này giữ nguyên thông tin phụ huynh đã nhập.</p><div className="development-toolbar preview-scenarios">{[['all','Đã làm được hết'],['not_yet','Một kỹ năng chưa làm'],['observe','Một kỹ năng chưa quan sát'],['mixed','Có kỹ năng chưa làm và chưa quan sát']].map(([k,v])=><button type="button" className={`button ${skillPresetSelected(k)?'primary':'secondary'}`} aria-pressed={skillPresetSelected(k)} disabled={k==='mixed'&&questions.length<2} key={k} onClick={()=>scenario(k)}>{v}</button>)}</div><div className="development-scroll">{questions.map(r=><label className="development-answer" key={r.id}><span>{r.payload.question_vi||r.payload.prompt}</span><select value={answers[r.stableCode]??'achieved'} onChange={e=>{setAnswers(x=>({...x,[r.stableCode]:e.target.value}));setView(null);}}>{OPTIONS.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select></label>)}</div><h3 className="preview-section-title">3. Giả lập thông tin phụ huynh cung cấp</h3>
+<p className="preview-help">Thông tin phụ huynh được chọn độc lập với đáp án kỹ năng.</p><div className="development-toolbar preview-parent-presets">{[['regression','Có mất kỹ năng từng làm được'],['unsure','Chưa chắc về mất kỹ năng'],['concern','Có lo ngại về phát triển']].map(([key,label])=><button type="button" className={`button ${parentPresetSelected(key)?'primary':'secondary'}`} aria-pressed={parentPresetSelected(key)} key={key} onClick={()=>scenario(key)}>{label}</button>)}</div>
+<div className="preview-parent-inputs">
+  <div className="preview-parent-field">
+    <label htmlFor="preview-regression">Bé có mất kỹ năng từng làm được không?</label>
+    <p id="preview-regression-help">Bé từng làm được một kỹ năng nhưng hiện không còn làm được. Có thể thuộc bất kỳ lĩnh vực phát triển nào.</p>
+    <select id="preview-regression" aria-describedby="preview-regression-help preview-regression-scope" value={regression} onChange={e=>{setRegression(e.target.value);setView(null);}}><option value="no">Không</option><option value="yes">Có</option><option value="unsure">Chưa chắc</option></select>
+    <small id="preview-regression-scope">Bản thử chỉ ghi nhận câu trả lời tổng quát, chưa chọn kỹ năng cụ thể.</small>
+  </div>
+  <div className="preview-parent-field">
+    <label htmlFor="preview-concern">Phụ huynh có lo ngại về sự phát triển của bé không?</label>
+    <p id="preview-concern-help">Lo ngại về vận động, ngôn ngữ và giao tiếp, nhận thức, cảm xúc hoặc tương tác xã hội của bé.</p>
+    <select id="preview-concern" aria-describedby="preview-concern-help preview-concern-scope" value={concern} onChange={e=>{setConcern(e.target.value);setView(null);}}><option value="no">Không</option><option value="yes">Có</option></select>
+    <small id="preview-concern-scope">Bản thử chỉ ghi nhận Có/Không, chưa nhập nội dung lo ngại cụ thể.</small>
+  </div>
+</div>
+<p className="preview-help">Hai câu trả lời này dùng để chọn mẫu lời khuyên phù hợp, không thay đổi số kỹ năng Đã làm được / Chưa làm được / Chưa quan sát. Đây là thông tin phụ huynh báo, không phải kết luận của hệ thống.</p>
+</>}<div className="preview-submit-actions"><button type="button" className="button secondary" disabled={!questions.length||busy} onClick={()=>scenario('reset')}>Đặt lại toàn bộ</button><button className="button primary" disabled={busy||!questions.length} onClick={runPreview}>{busy?'Đang xử lý…':'Xem kết quả thử'}</button></div>{view&&<ResultPreviewView view={view}/>}</Modal>;
 }

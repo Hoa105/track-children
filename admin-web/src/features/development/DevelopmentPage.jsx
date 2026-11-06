@@ -7,7 +7,7 @@ import { DOMAINS, developmentRoute, matches, questionState, questionVersion, upd
 import { AuditPanel, Availability, ErrorBox, QuestionActions } from './components.jsx';
 import { mediaEntries } from './QuestionMedia.jsx';
 import ContentEditorPage from './ContentEditorPage.jsx';
-import AdvicePage, { AdviceList } from './AdvicePage.jsx';
+import AdvicePage, { AdviceWorkspace } from './AdvicePage.jsx';
 import QuestionSetList from './QuestionSetList.jsx';
 import QuestionSetEditModal from './QuestionSetEditModal.jsx';
 import QuestionCreateModal from './QuestionCreateModal.jsx';
@@ -26,7 +26,7 @@ function QuestionSetsHub({ initialTab, onNotify }) {
   return <div className="development-workspace">
     <PageHeading eyebrow="NỘI DUNG CHUYÊN MÔN" title="Bộ câu hỏi & Lời khuyên" subtitle="Quản lý câu hỏi theo tuổi, mẫu lời khuyên và trạng thái hiển thị trên app." />
     <Tabs active={initialTab} onChange={tab => navigate(tab === 'advice' ? '/development/advice' : '/development')} tabs={[{ id: 'sets', label: 'Bộ câu hỏi' }, { id: 'advice', label: 'Lời khuyên' }]} />
-    {initialTab === 'advice' ? <AdviceList /> : <QuestionSetList onNotify={onNotify} />}
+    {initialTab === 'advice' ? <AdviceWorkspace /> : <QuestionSetList onNotify={onNotify} />}
   </div>;
 }
 
