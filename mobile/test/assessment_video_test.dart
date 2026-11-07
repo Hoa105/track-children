@@ -10,6 +10,64 @@ import 'package:track_children/features/assessment/assessment_widgets.dart';
 
 void main() {
   testWidgets(
+    'one video surface follows scroll and survives fullscreen moves',
+    (tester) async {
+      final fullscreen = ValueNotifier(false);
+      final scroll = ScrollController();
+      var disposed = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AssessmentVideoViewport(
+              child: ListView(
+                controller: scroll,
+                children: [
+                  const SizedBox(height: 160),
+                  SizedBox(
+                    height: 220,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: fullscreen,
+                      builder: (_, value, _) => AssessmentVideoSurface(
+                        fullscreen: value,
+                        onExitFullscreen: () => fullscreen.value = false,
+                        child: _FakePlayer(onDispose: () => disposed++),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 1000),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final player = find.byType(_FakePlayer);
+      final state = tester.state(player);
+      final originalTop = tester.getTopLeft(player).dy;
+      scroll.jumpTo(70);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(player).dy, closeTo(originalTop - 70, 0.1));
+      expect(player, findsOneWidget);
+      fullscreen.value = true;
+      await tester.pumpAndSettle();
+      expect(player, findsOneWidget);
+      expect(tester.state(player), same(state));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(fullscreen.value, isFalse);
+      expect(player, findsOneWidget);
+      expect(tester.state(player), same(state));
+      expect(tester.getTopLeft(player).dy, closeTo(originalTop - 70, 0.1));
+      expect(disposed, 0);
+      await tester.pumpWidget(const SizedBox());
+      expect(disposed, 1);
+      fullscreen.dispose();
+      scroll.dispose();
+    },
+  );
+
+  testWidgets(
     'question progress scrolls with content and resets on next question',
     (tester) async {
       SharedPreferences.setMockInitialValues({});

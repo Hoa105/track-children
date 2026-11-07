@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../../app_colors.dart';
@@ -24,7 +25,7 @@ abstract final class AssessmentVideoPlayback {
   }
 }
 
-/// Keeps the player's mobile OverlayPortal inside the scroll viewport.
+/// Hosts the fullscreen portal inside the question screen's viewport.
 /// The question screen expands this viewport to the screen during fullscreen.
 class AssessmentVideoViewport extends StatefulWidget {
   const AssessmentVideoViewport({super.key, required this.child});
@@ -54,6 +55,73 @@ class _AssessmentVideoViewportState extends State<AssessmentVideoViewport> {
   @override
   Widget build(BuildContext context) =>
       ClipRect(child: Overlay(initialEntries: [entry]));
+}
+
+/// Inline playback belongs to the scroll tree. Only fullscreen uses an overlay.
+/// A shared key moves the existing surface without creating a second WebView.
+class AssessmentVideoSurface extends StatefulWidget {
+  const AssessmentVideoSurface({
+    super.key,
+    required this.fullscreen,
+    required this.onExitFullscreen,
+    required this.child,
+  });
+  final bool fullscreen;
+  final VoidCallback onExitFullscreen;
+  final Widget child;
+
+  @override
+  State<AssessmentVideoSurface> createState() => _AssessmentVideoSurfaceState();
+}
+
+class _AssessmentVideoSurfaceState extends State<AssessmentVideoSurface> {
+  final portal = OverlayPortalController();
+  final surfaceKey = GlobalKey();
+  bool fullscreen = false;
+
+  void syncFullscreen() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || fullscreen == widget.fullscreen) return;
+      widget.fullscreen ? portal.show() : portal.hide();
+      setState(() => fullscreen = widget.fullscreen);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    syncFullscreen();
+  }
+
+  @override
+  void didUpdateWidget(AssessmentVideoSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.fullscreen != oldWidget.fullscreen) {
+      syncFullscreen();
+    }
+  }
+
+  Widget surface() => KeyedSubtree(key: surfaceKey, child: widget.child);
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !fullscreen,
+    onPopInvokedWithResult: (popped, _) {
+      if (!popped && fullscreen) widget.onExitFullscreen();
+    },
+    child: OverlayPortal(
+      controller: portal,
+      overlayChildBuilder: (_) => Positioned.fill(
+        child: ColoredBox(
+          color: Colors.black,
+          child: Center(
+            child: AspectRatio(aspectRatio: 16 / 9, child: surface()),
+          ),
+        ),
+      ),
+      child: fullscreen ? const SizedBox.expand() : surface(),
+    ),
+  );
 }
 
 /// Lazy inline player: history lists do not allocate a WebView per question.
@@ -123,7 +191,6 @@ class _AssessmentVideoFrameState extends State<AssessmentVideoFrame> {
                           _InlineYoutubePlayer(
                             key: ValueKey('$id-$retry'),
                             videoId: id,
-                            aspectRatio: width / height,
                             onRetry: () => setState(() => retry++),
                           )
                     : _preview(),
@@ -193,11 +260,9 @@ class _InlineYoutubePlayer extends StatefulWidget {
   const _InlineYoutubePlayer({
     super.key,
     required this.videoId,
-    required this.aspectRatio,
     required this.onRetry,
   });
   final String videoId;
-  final double aspectRatio;
   final VoidCallback onRetry;
   @override
   State<_InlineYoutubePlayer> createState() => _InlineYoutubePlayerState();
@@ -229,10 +294,21 @@ class _InlineYoutubePlayerState extends State<_InlineYoutubePlayer>
       );
       active = controller;
       controller!.setFullScreenListener(AssessmentVideoPlayback.setFullscreen);
+      final player = controller!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          player.initWithParams(params: player.params).catchError((_) {
+            if (mounted) setState(() => initializationFailed = true);
+          }),
+        );
+      });
     } catch (_) {
       controller = null;
     }
   }
+
+  bool initializationFailed = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -258,7 +334,9 @@ class _InlineYoutubePlayerState extends State<_InlineYoutubePlayer>
   @override
   Widget build(BuildContext context) {
     final player = controller;
-    if (player == null) return _VideoError(onRetry: widget.onRetry);
+    if (player == null || initializationFailed) {
+      return _VideoError(onRetry: widget.onRetry);
+    }
     return YoutubeValueBuilder(
       controller: player,
       builder: (context, value) {
@@ -270,12 +348,10 @@ class _InlineYoutubePlayerState extends State<_InlineYoutubePlayer>
           }
           return _VideoError(onRetry: widget.onRetry);
         }
-        return YoutubePlayer(
-          controller: player,
-          aspectRatio: widget.aspectRatio,
-          autoFullScreen: false,
-          enableFullScreenOnVerticalDrag: false,
-          backgroundColor: const Color(0xFF15221D),
+        return AssessmentVideoSurface(
+          fullscreen: value.fullScreenOption.enabled,
+          onExitFullscreen: player.exitFullScreen,
+          child: WebViewWidget(controller: player.webViewController),
         );
       },
     );
