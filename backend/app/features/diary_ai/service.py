@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
+from psycopg2.extensions import connection as Connection
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -46,8 +47,26 @@ def check_video(video: UploadFile) -> None:
         raise HTTPException(413, f"Video vượt quá {settings.ai_video_max_mb} MB")
 
 
+def kdst_item_for(conn: Connection, activity_id: str) -> str | None:
+    """Bài K-DST gắn với hoạt động (activity.activities.kdst_item). Hoạt động có sẵn trên
+    mobile (id dạng g0-9) không nằm trong DB → None."""
+    try:
+        activity_uuid = UUID(activity_id)
+    except ValueError:
+        return None
+    with conn.cursor() as cur:
+        cur.execute("SELECT kdst_item FROM activity.activities WHERE id = %s", (str(activity_uuid),))
+        row = cur.fetchone()
+    return row["kdst_item"] if row else None
+
+
 def build_meta(
-    child_id: UUID, user_id: UUID, date_of_birth: dt.date, activity: ActivityInfo, note: str
+    child_id: UUID,
+    user_id: UUID,
+    date_of_birth: dt.date,
+    activity: ActivityInfo,
+    note: str,
+    kdst_item: str | None = None,
 ) -> dict:
     group = criteria.GROUPS[activity.group]
     now = dt.datetime.now(dt.timezone.utc)
@@ -56,7 +75,8 @@ def build_meta(
         "requestedBy": str(user_id),
         "consentedAt": now.isoformat(),
         "context": {
-            "activity": activity.model_dump(mode="json", by_alias=True),
+            # kdstItem: ai-service chấm bằng model tự train thay vì gọi LLM
+            "activity": {**activity.model_dump(mode="json", by_alias=True), "kdstItem": kdst_item},
             "criteria": {"name": group["name"], "focus": group["focus"], "avoid": group["avoid"]},
             "childAgeMonths": age_in_months(date_of_birth, now.date()),
             "parentNote": note.strip(),
@@ -73,13 +93,18 @@ def _ai_call(call):
 
 
 def create_insight(
-    child: dict, user_id: UUID, video: UploadFile, activity_json: str, consent: bool, note: str
+    child: dict,
+    user_id: UUID,
+    video: UploadFile,
+    activity: ActivityInfo,
+    consent: bool,
+    note: str,
+    kdst_item: str | None = None,
 ) -> dict:
     if not consent:
         raise HTTPException(422, "Cần ba mẹ đồng ý gửi video cho dịch vụ AI trước khi phân tích")
-    activity = parse_activity(activity_json)
     check_video(video)
-    meta = build_meta(child["id"], user_id, child["date_of_birth"], activity, note)
+    meta = build_meta(child["id"], user_id, child["date_of_birth"], activity, note, kdst_item)
     return _ai_call(
         lambda: ai_service.create_video_insight(
             video.file,
@@ -96,3 +121,21 @@ def get_insight(child_id: UUID, insight_id: UUID) -> dict:
     if insight is None or insight.get("childId") != str(child_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy nhận xét")
     return insight
+
+
+def create_progress_review(child_id: UUID, user_id: UUID, insight_ids: list[UUID]) -> dict:
+    """ai-service kiểm tra các video thuộc bé này và đã nhận xét xong."""
+    body = {"childId": str(child_id), "requestedBy": str(user_id),
+            "insightIds": [str(i) for i in insight_ids]}
+    return _ai_call(lambda: ai_service.create_progress_review(body))
+
+
+def list_progress_reviews(child_id: UUID, activity_ref: str | None) -> list[dict]:
+    return _ai_call(lambda: ai_service.list_progress_reviews(child_id, activity_ref))
+
+
+def get_progress_review(child_id: UUID, review_id: UUID) -> dict:
+    review = _ai_call(lambda: ai_service.get_progress_review(child_id, review_id))
+    if review is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy đánh giá")
+    return review

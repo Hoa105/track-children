@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.features.activities.router import admin_router as activities_admin_router
 from app.features.activities.router import router as activities_router
+from app.features.admin_dashboard.router import admin_router as dashboard_admin_router
 from app.features.auth.setup import install_auth
 from app.features.growth.router import router as growth_router
 from app.features.children.router import router as children_router
@@ -34,6 +35,7 @@ app.add_middleware(
 
 app.include_router(activities_router)
 app.include_router(activities_admin_router)
+app.include_router(dashboard_admin_router)
 app.include_router(vaccination_router)
 app.include_router(teething_router)
 app.include_router(sharing_router)

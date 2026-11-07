@@ -1,0 +1,113 @@
+{
+  "version": "kdst_v1",
+  "normalization_version": 1,
+  "seq_len": 64,
+  "joints": [
+    "nose",
+    "l_eye",
+    "r_eye",
+    "l_ear",
+    "r_ear",
+    "l_shoulder",
+    "r_shoulder",
+    "l_elbow",
+    "r_elbow",
+    "l_wrist",
+    "r_wrist",
+    "l_hip",
+    "r_hip",
+    "l_knee",
+    "r_knee",
+    "l_ankle",
+    "r_ankle",
+    "l_heel",
+    "r_heel",
+    "l_toe",
+    "r_toe"
+  ],
+  "items": [
+    {
+      "code": "A01",
+      "name": "Đi lên cầu thang",
+      "age_from_months": 20,
+      "age_to_months": 35
+    },
+    {
+      "code": "A02",
+      "name": "Đi xuống cầu thang",
+      "age_from_months": 20,
+      "age_to_months": 35
+    },
+    {
+      "code": "A03",
+      "name": "Ném bóng qua đầu",
+      "age_from_months": 20,
+      "age_to_months": 35
+    },
+    {
+      "code": "A04",
+      "name": "Đứng một chân 1 giây",
+      "age_from_months": 20,
+      "age_to_months": 35
+    },
+    {
+      "code": "B01",
+      "name": "Đứng một chân trên 3 giây",
+      "age_from_months": 36,
+      "age_to_months": 53
+    },
+    {
+      "code": "B02",
+      "name": "Nhảy lò cò 2–3 bước",
+      "age_from_months": 36,
+      "age_to_months": 53
+    },
+    {
+      "code": "B03",
+      "name": "Bật xa bằng hai chân",
+      "age_from_months": 36,
+      "age_to_months": 53
+    },
+    {
+      "code": "B04",
+      "name": "Bắt bóng",
+      "age_from_months": 36,
+      "age_to_months": 53
+    },
+    {
+      "code": "C01",
+      "name": "Chặn bóng lăn bằng chân",
+      "age_from_months": 54,
+      "age_to_months": 71
+    },
+    {
+      "code": "C02",
+      "name": "Đập bóng nảy",
+      "age_from_months": 54,
+      "age_to_months": 71
+    },
+    {
+      "code": "C03",
+      "name": "Nhảy qua dây",
+      "age_from_months": 54,
+      "age_to_months": 71
+    },
+    {
+      "code": "C04",
+      "name": "Nhảy dây",
+      "age_from_months": 54,
+      "age_to_months": 71
+    }
+  ],
+  "score_labels": [
+    "not_yet",
+    "unsteady",
+    "steady"
+  ],
+  "min_confidence": 0.7,
+  "test": {
+    "accuracy": 0.7043592264831203,
+    "macro_f1": 0.5715654382104349,
+    "item_recognition_accuracy": 0.8367748279252704
+  }
+}

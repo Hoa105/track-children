@@ -12,12 +12,14 @@ import 'auth_service.dart';
 import 'journal_api.dart';
 import 'journal_media.dart';
 import 'teething_api.dart';
+import 'progress_review_api.dart';
 import 'vaccination_remote.dart';
 import 'video_insight_api.dart';
 import 'who_bmi_reference.dart';
 import 'growth_api.dart';
 import '../models/tooth.dart';
 import '../models/activity.dart';
+import '../models/progress_review.dart';
 import '../models/video_insight.dart';
 
 export 'vaccination_remote.dart';
@@ -44,6 +46,9 @@ class DemoStore extends ChangeNotifier {
 
   /// Set in main(); null disables AI comments on diary videos.
   static VideoInsightRemote? videoInsightRemote;
+
+  /// Set in main(); null disables AI progress reviews across diary videos.
+  static ProgressReviewRemote? progressReviewRemote;
 
   /// Set in main(); null (as in tests) keeps "Đã làm" / "Yêu thích" local only.
   static ActivityRemote? activityRemote;
@@ -1135,6 +1140,39 @@ class DemoStore extends ChangeNotifier {
       await saveJournalEntry(childId, {...entry, 'insight': insight.toJson()});
     }
     return insight;
+  }
+
+  /// Journal entries with an AI comment request (`insight`), in diary order.
+  List<Map<String, dynamic>> analysedJournalEntries(String childId) =>
+      journalEntries(childId).where((e) => e['insight'] != null).toList();
+
+  Future<(ProgressReviewRemote, VaccinationAccount)> _reviewAccount(
+    String childId,
+  ) async {
+    final remote = progressReviewRemote;
+    final account = remote == null ? null : await linkedAccount(childId);
+    if (remote == null || account == null) {
+      throw ApiException(0, 'Cần kết nối máy chủ để đánh giá tổng hợp');
+    }
+    return (remote, account);
+  }
+
+  /// AI summary of the analysed videos [insightIds] of [childId].
+  Future<ProgressReview> createProgressReview(
+    String childId,
+    List<String> insightIds,
+  ) async {
+    final (remote, account) = await _reviewAccount(childId);
+    return remote.create(account, insightIds);
+  }
+
+  /// Earlier progress reviews, newest first.
+  Future<List<ProgressReview>> progressReviews(
+    String childId, {
+    String? activityRef,
+  }) async {
+    final (remote, account) = await _reviewAccount(childId);
+    return remote.list(account, activityRef: activityRef);
   }
 
   /// Saves to the backend first, so a failed request leaves the local book unchanged.

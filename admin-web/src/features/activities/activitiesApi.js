@@ -26,3 +26,11 @@ export const STATUS = {
   published: { label: "Đã xuất bản", tone: "green" },
   hidden: { label: "Đã ẩn", tone: "gray" },
 };
+
+// 12 bài vận động thô K-DST ai-service chấm được bằng model tự train (ai-service/app/kdst/items.py)
+export const KDST_ITEMS = [
+  ["A01", "Đi lên cầu thang"], ["A02", "Đi xuống cầu thang"], ["A03", "Ném bóng qua đầu"],
+  ["A04", "Đứng một chân 1 giây"], ["B01", "Đứng một chân trên 3 giây"], ["B02", "Nhảy lò cò 2–3 bước"],
+  ["B03", "Bật xa bằng hai chân"], ["B04", "Bắt bóng"], ["C01", "Chặn bóng lăn bằng chân"],
+  ["C02", "Đập bóng nảy"], ["C03", "Nhảy qua dây"], ["C04", "Nhảy dây"],
+];

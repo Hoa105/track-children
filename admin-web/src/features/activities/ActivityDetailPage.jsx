@@ -73,6 +73,7 @@ function InfoPanel({ activity, groups, onSave }) {
     durationMinutes: activity.durationMinutes ?? "", summary: activity.summary ?? "", goal: activity.goal ?? "",
     materials: activity.materials ?? "", materialItems: activity.materialItems.join("\n"), safetyNote: activity.safetyNote ?? "",
     needsAdult: activity.needsAdult, lyrics: activity.lyrics ?? "", content: activity.content,
+    kdstItem: activity.kdstItem ?? "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -84,6 +85,7 @@ function InfoPanel({ activity, groups, onSave }) {
       durationMinutes: numberOrNull(v.durationMinutes), summary: blankToNull(v.summary), goal: blankToNull(v.goal),
       materials: blankToNull(v.materials), materialItems: v.materialItems.split("\n").map((line) => line.trim()).filter(Boolean),
       safetyNote: blankToNull(v.safetyNote), needsAdult: v.needsAdult, lyrics: blankToNull(v.lyrics), content: v.content,
+      kdstItem: blankToNull(v.kdstItem),
     });
     setSaving(false);
   }
@@ -105,6 +107,8 @@ function InfoPanel({ activity, groups, onSave }) {
       <label>LỜI BÀI HÁT / ĐỒNG DAO<textarea rows={3} {...bind("lyrics")} /></label>
       <label>NỘI DUNG CHI TIẾT (MARKDOWN)<textarea rows={12} className="mono" {...bind("content")} /></label>
       <p className="auth-hint">Mỗi tiêu đề <code>## …</code> thành một mục trên mobile (vd <code>## Chuẩn bị</code>, <code>## Hướng dẫn của chuyên gia</code>). Mục "Các bước thực hiện" lấy từ khối Các bước bên cạnh.</p>
+      <label>BÀI K-DST (AI CHẤM VIDEO KHÔNG CẦN API)<select {...bind("kdstItem")}><option value="">Không — AI nhận xét qua API như hoạt động khác</option>{api.KDST_ITEMS.map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}</select></label>
+      <p className="auth-hint">Chỉ chọn khi hoạt động đúng là một trong 12 bài vận động thô K-DST: video nhật ký của hoạt động sẽ được model tự train chấm và nhận xét.</p>
       <div className="verify-list"><label><input type="checkbox" {...check("needsAdult")} />Cần người lớn ngồi cạnh</label></div>
       <div className="modal-actions"><button className="button primary" disabled={saving}>{saving ? "Đang lưu…" : "Lưu thông tin"}</button></div>
     </form>

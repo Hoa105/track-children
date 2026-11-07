@@ -11,14 +11,15 @@ TOKEN = "test-internal-token"
 
 
 @pytest.fixture
-def client(store, tmp_path, monkeypatch):
+def client(store, review_store, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "internal_token", TOKEN)
     monkeypatch.setattr(settings, "worker_enabled", False)
     monkeypatch.setattr(settings, "video_dir", str(tmp_path / "videos"))
     app.state.insight_store = store
+    app.state.review_store = review_store
     with TestClient(app) as c:
         yield c
-    del app.state.insight_store
+    del app.state.insight_store, app.state.review_store
 
 
 def post(client, tmp_path, headers=None, meta=None):

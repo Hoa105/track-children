@@ -434,6 +434,34 @@ class AuthService {
 
   Future<void> refresh() =>
       _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  /// Access token for the child APIs (see AuthorizedClient), refreshed when it
+  /// expires within a minute. Null when signed out or in demo mode.
+  Future<String?> accessToken() async {
+    if (demoMode || _access == null) return null;
+    if (_expiresSoon(_access!) && _refresh != null) {
+      try {
+        await refresh();
+      } on AuthException {
+        // The request goes out with the old token and gets a 401.
+      }
+    }
+    return _access;
+  }
+
+  static bool _expiresSoon(String jwt) {
+    try {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(jwt.split('.')[1]))),
+      );
+      final expiry = DateTime.fromMillisecondsSinceEpoch(
+        (payload['exp'] as int) * 1000,
+      );
+      return expiry.isBefore(DateTime.now().add(const Duration(minutes: 1)));
+    } catch (_) {
+      return false;
+    }
+  }
   bool _invalidSession(String code) => const {
     'REFRESH_TOKEN_INVALID',
     'REFRESH_TOKEN_REUSED',

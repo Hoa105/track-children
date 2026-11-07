@@ -56,3 +56,17 @@ def create_video_insight(video: BinaryIO, filename: str, content_type: str, meta
 def get_video_insight(insight_id: UUID) -> dict | None:
     response = _send(lambda c: c.get(f"/internal/video-insights/{insight_id}"))
     return None if response.status_code == 404 else response.json()
+
+
+def create_progress_review(body: dict) -> dict:
+    return _send(lambda c: c.post("/internal/progress-reviews", json=body)).json()
+
+
+def list_progress_reviews(child_id: UUID, activity_ref: str | None = None) -> list[dict]:
+    params = {"activity_ref": activity_ref} if activity_ref else None
+    return _send(lambda c: c.get(f"/internal/children/{child_id}/progress-reviews", params=params)).json()
+
+
+def get_progress_review(child_id: UUID, review_id: UUID) -> dict | None:
+    response = _send(lambda c: c.get(f"/internal/children/{child_id}/progress-reviews/{review_id}"))
+    return None if response.status_code == 404 else response.json()

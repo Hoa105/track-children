@@ -11,6 +11,9 @@ from app.insights.repository import PgInsightStore
 from app.insights.router import router as insights_router
 from app.insights.service import ProcessOptions
 from app.insights.worker import InsightWorker
+from app.kdst import scorer as kdst_scorer
+from app.reviews.repository import PgReviewStore
+from app.reviews.router import router as reviews_router
 from app.pose import model_files
 from app.pose.evidence import PoseModels
 
@@ -30,6 +33,8 @@ def process_options() -> ProcessOptions:
             hand_model_path=settings.hand_model_path,
             sample_fps=settings.pose_sample_fps,
         ),
+        kdst=kdst_scorer.load(settings.kdst_model_path) if settings.pose_enabled else None,
+        kdst_llm_fallback=settings.kdst_llm_fallback,
     )
 
 
@@ -56,6 +61,9 @@ def video_analyzer():
 async def lifespan(app: FastAPI):
     store = getattr(app.state, "insight_store", None) or PgInsightStore()
     app.state.insight_store = store
+    app.state.review_store = getattr(app.state, "review_store", None) or PgReviewStore()
+    analyzer = getattr(app.state, "review_writer", None) or video_analyzer()
+    app.state.review_writer = analyzer  # cùng AI với video, chỉ gửi văn bản
     worker = None
     if settings.worker_enabled and settings.pose_enabled:
         # Image build không tải được model (lỗi mạng) thì tải ở nền, không chặn khởi động
@@ -68,7 +76,7 @@ async def lifespan(app: FastAPI):
     if settings.worker_enabled:
         worker = InsightWorker(
             store,
-            video_analyzer(),
+            analyzer,
             process_options(),
             poll_seconds=settings.worker_poll_seconds,
             stale_after=dt.timedelta(minutes=settings.stale_running_minutes),
@@ -81,6 +89,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Track Children AI Service", version="0.1.0", lifespan=lifespan)
 app.include_router(insights_router)
+app.include_router(reviews_router)
 
 
 @app.get("/health", tags=["system"])

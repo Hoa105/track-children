@@ -6,12 +6,16 @@ Chạy nhiều tiến trình ai-service cũng an toàn: mỗi job chỉ một wo
 import datetime as dt
 import logging
 import threading
+import time
 
 from app.insights import service
 from app.insights.repository import InsightStore
 from app.llm.client import VideoAnalyzer
 
 log = logging.getLogger(__name__)
+
+# Kiểm tra job treo (worker chết giữa chừng, container bị tạo lại) định kỳ, không chỉ lúc khởi động
+REQUEUE_EVERY_SECONDS = 60
 
 
 class InsightWorker:
@@ -39,14 +43,20 @@ class InsightWorker:
         service.process(job, self.store, self.analyzer, self.options)
         return True
 
-    def _loop(self) -> None:
+    def requeue_stale(self) -> None:
         try:
             requeued = self.store.requeue_stale(self.stale_after)
             if requeued:
                 log.warning("Requeued %d stale video insight jobs", requeued)
         except Exception:  # noqa: BLE001
             log.exception("Could not requeue stale jobs")
+
+    def _loop(self) -> None:
+        last_requeue = 0.0
         while not self._stop.is_set():
+            if time.monotonic() - last_requeue >= REQUEUE_EVERY_SECONDS:
+                self.requeue_stale()
+                last_requeue = time.monotonic()
             try:
                 busy = self.run_once()
             except Exception:  # noqa: BLE001 — mất kết nối DB…: chờ rồi thử lại

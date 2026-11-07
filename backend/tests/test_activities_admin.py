@@ -157,3 +157,12 @@ def test_group_create_and_update(client):
     hidden = client.patch(f"/admin/activity-groups/{group['id']}", headers=ADMIN, json={"isActive": False})
     assert hidden.json()["isActive"] is False
     assert "test_outdoor" not in {g["code"] for g in client.get("/activity-groups").json()}
+
+
+def test_set_and_clear_kdst_item(client):
+    activity = new_activity(client, "test-Đứng một chân", (36, 53))
+    assert activity["kdstItem"] is None
+    url = f"/admin/activities/{activity['id']}"
+    assert client.patch(url, headers=ADMIN, json={"kdstItem": "B01"}).json()["kdstItem"] == "B01"
+    assert client.patch(url, headers=ADMIN, json={"kdstItem": "D01"}).status_code == 422
+    assert client.patch(url, headers=ADMIN, json={"kdstItem": None}).json()["kdstItem"] is None

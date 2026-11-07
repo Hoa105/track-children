@@ -83,6 +83,8 @@ class ActivityDetail(ActivitySummary):
 Status = Literal["draft", "published", "hidden"]
 DetailKind = Literal["move", "music", "story"]
 _CODE = r"^[a-z0-9_]{2,40}$"
+# Bài vận động thô K-DST mà ai-service chấm được bằng model tự train
+_KDST = r"^[ABC]0[1-4]$"
 _HEX = r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
 
 
@@ -162,6 +164,7 @@ class AdminActivity(CamelModel):
     needs_adult: bool
     lyrics: str | None
     thumbnail_url: str | None
+    kdst_item: str | None
     published_at: dt.datetime | None
     created_at: dt.datetime
     updated_at: dt.datetime
@@ -185,6 +188,7 @@ class AdminActivityUpdate(CamelModel):
     needs_adult: bool | None = None
     lyrics: str | None = None
     thumbnail_url: str | None = None
+    kdst_item: str | None = Field(None, pattern=_KDST)
 
 
 class AdminActivityCreate(CamelModel):

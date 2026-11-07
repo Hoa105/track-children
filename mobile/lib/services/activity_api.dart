@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/activity.dart';
 import 'api_config.dart';
+import 'authorized_client.dart';
 import 'vaccination_remote.dart';
 
 /// Backend storage for "Đã làm" (per child) and "Yêu thích" (per parent).
@@ -24,7 +25,7 @@ abstract class ActivityRemote {
 /// like [VaccinationApi].
 class ActivityApi implements ActivityRemote {
   ActivityApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
+    : _client = client ?? AuthorizedClient(),
       _baseUrl = baseUrl ?? apiBaseUrl;
 
   static ActivityApi instance = ActivityApi();

@@ -18,10 +18,12 @@ COLUMNS = """
 class InsightStore(Protocol):
     def create(self, new: NewInsight, video_path: str) -> dict: ...
     def get(self, insight_id: UUID) -> dict | None: ...
+    def get_many(self, insight_ids: list[UUID]) -> list[dict]: ...
     def claim_next(self) -> dict | None: ...
     def requeue_stale(self, older_than: dt.timedelta) -> int: ...
     def complete(self, insight_id: UUID, *, result: dict, evidence: dict | None,
-                 video_seconds: float, model: str, prompt_version: str, usage: dict) -> None: ...
+                 video_seconds: float, model: str, prompt_version: str, usage: dict,
+                 assessment: dict | None = None) -> None: ...
     def reject(self, insight_id: UUID, message: str, video_seconds: float | None) -> None: ...
     def retry_later(self, insight_id: UUID, error: str, run_after: dt.datetime) -> None: ...
     def fail(self, insight_id: UUID, error: str, message: str) -> None: ...
@@ -58,6 +60,13 @@ class PgInsightStore:
                 (insight_id,),
             ).fetchone()
 
+    def get_many(self, insight_ids: list[UUID]) -> list[dict]:
+        with connect() as conn:
+            return conn.execute(
+                f"SELECT {COLUMNS} FROM ai_vision.diary_video_insights WHERE id = ANY(%s)",
+                (list(insight_ids),),
+            ).fetchall()
+
     def claim_next(self) -> dict | None:
         with connect() as conn:
             return conn.execute(
@@ -86,18 +95,20 @@ class PgInsightStore:
                 (older_than,),
             ).rowcount
 
-    def complete(self, insight_id, *, result, evidence, video_seconds, model, prompt_version, usage):
+    def complete(self, insight_id, *, result, evidence, video_seconds, model, prompt_version, usage,
+                 assessment=None):
         with connect() as conn:
             conn.execute(
                 """
                 UPDATE ai_vision.diary_video_insights
                 SET status = 'done', result = %s, evidence = %s, video_seconds = %s,
-                    llm_model = %s, prompt_version = %s, usage = %s,
+                    llm_model = %s, prompt_version = %s, usage = %s, kdst_assessment = %s,
                     error = NULL, message = NULL, finished_at = now()
                 WHERE id = %s
                 """,
                 (Jsonb(result), Jsonb(evidence) if evidence else None, video_seconds,
-                 model, prompt_version, Jsonb(usage), insight_id),
+                 model, prompt_version, Jsonb(usage), Jsonb(assessment) if assessment else None,
+                 insight_id),
             )
 
     def reject(self, insight_id, message, video_seconds):

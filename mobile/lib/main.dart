@@ -6,6 +6,7 @@ import 'services/activity_api.dart';
 import 'services/demo_store.dart';
 import 'services/journal_api.dart';
 import 'services/teething_api.dart';
+import 'services/progress_review_api.dart';
 import 'services/auth_service.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
@@ -31,6 +32,7 @@ Future<void> main() async {
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
   DemoStore.videoInsightRemote = VideoInsightApi();
+  DemoStore.progressReviewRemote = ProgressReviewApi();
   DemoStore.activityRemote = ActivityApi.instance;
   DemoStore.journalRemote = JournalApi();
   DemoStore.teethingRemote = AuthService.instance.demoMode

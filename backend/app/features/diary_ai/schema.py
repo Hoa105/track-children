@@ -63,3 +63,49 @@ class VideoInsight(CamelModel):
     evidence: Evidence | None = None
     created_at: dt.datetime
     finished_at: dt.datetime | None = None
+
+
+# ---------------------------------------------------------------------
+# Đánh giá tổng hợp nhiều video (theo dõi lâu dài)
+# ---------------------------------------------------------------------
+class NewProgressReview(CamelModel):
+    """Các video đã phân tích xong (một hoặc nhiều hoạt động, vd. mọi video trong
+    khoảng thời gian ba mẹ chọn)."""
+
+    insight_ids: list[UUID] = Field(min_length=2, max_length=60)
+
+
+class ProgressReviewResult(CamelModel):
+    summary: str
+    progress: list[str] = []
+    keep_practicing: list[str] = []
+    next_steps: list[str] = []
+    see_specialist: bool = False
+    specialist_note: str = ""
+
+
+class MetricPoint(CamelModel):
+    insight_id: UUID
+    at: dt.datetime
+    value: float
+
+
+class MetricTrend(CamelModel):
+    key: str
+    label: str
+    unit: str
+    points: list[MetricPoint]
+    change: float | None = None
+
+
+class ProgressReview(CamelModel):
+    id: UUID
+    activity_ref: str | None = None
+    activity_group: ActivityGroup | None = None  # None khi gộp nhiều nhóm hoạt động
+    activity_title: str
+    insight_ids: list[UUID]
+    period_from: dt.datetime
+    period_to: dt.datetime
+    result: ProgressReviewResult
+    metrics: list[MetricTrend] = []
+    created_at: dt.datetime

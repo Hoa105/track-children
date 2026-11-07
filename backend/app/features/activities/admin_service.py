@@ -28,7 +28,7 @@ _GROUP_COLUMNS = {"code", "name", "description", "emoji", "tint_hex", "detail_ki
 _ACTIVITY_COLUMNS = {
     "title", "summary", "content", "group_id", "status", "age_from_months", "age_to_months",
     "duration_minutes", "materials", "material_items", "goal", "safety_note", "needs_adult",
-    "lyrics", "thumbnail_url",
+    "lyrics", "thumbnail_url", "kdst_item",
 }
 
 
@@ -127,7 +127,8 @@ def _activity(cur, activity_id: UUID) -> dict:
         """
         SELECT id, title, summary, content, group_id, status, age_from_months, age_to_months,
                duration_minutes, materials, coalesce(material_items, '{}') AS material_items, goal,
-               safety_note, needs_adult, lyrics, thumbnail_url, published_at, created_at, updated_at
+               safety_note, needs_adult, lyrics, thumbnail_url, kdst_item, published_at, created_at,
+               updated_at
         FROM activity.activities WHERE id = %s
         """,
         (str(activity_id),),

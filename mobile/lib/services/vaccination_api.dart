@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/vaccination.dart';
 import 'api_config.dart';
+import 'authorized_client.dart';
 import 'vaccination_remote.dart';
 
 export 'vaccination_remote.dart';
@@ -14,7 +15,7 @@ export 'vaccination_remote.dart';
 /// difference on the wire is `date`, sent as `yyyy-mm-dd`.
 class VaccinationApi implements VaccinationRemote {
   VaccinationApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
+    : _client = client ?? AuthorizedClient(),
       _baseUrl = baseUrl ?? apiBaseUrl;
 
   final http.Client _client;
@@ -26,7 +27,7 @@ class VaccinationApi implements VaccinationRemote {
 
   Map<String, String> _headers(VaccinationAccount account) => {
     'Content-Type': 'application/json',
-    // Dev-only identity until the backend has real login (DEV_AUTH=true).
+    // Legacy dev header; the backend authenticates via AuthorizedClient (JWT).
     'X-User-Id': account.userId,
   };
 

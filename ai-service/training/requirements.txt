@@ -1,0 +1,6 @@
+# Chỉ dùng khi train (không cài vào image ai-service).
+# PyTorch cài riêng theo GPU, vd. Quadro P2000 (Pascal):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+numpy>=1.26
+onnx>=1.16
+onnxruntime>=1.18

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/activity.dart';
 import '../models/video_insight.dart';
 import 'api_config.dart';
+import 'authorized_client.dart';
 import 'vaccination_remote.dart';
 
 /// AI group codes used by the backend (backend/app/features/diary_ai/criteria.py).
@@ -34,7 +35,7 @@ abstract class VideoInsightRemote {
 /// REST client for backend/app/features/diary_ai/router.py.
 class VideoInsightApi implements VideoInsightRemote {
   VideoInsightApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
+    : _client = client ?? AuthorizedClient(),
       _baseUrl = baseUrl ?? apiBaseUrl;
 
   final http.Client _client;
@@ -77,7 +78,7 @@ class VideoInsightApi implements VideoInsightRemote {
     required String note,
   }) {
     final request = http.MultipartRequest('POST', _uri(account))
-      // Dev-only identity until the backend has real login (DEV_AUTH=true).
+      // Legacy dev header; the backend authenticates via AuthorizedClient (JWT).
       ..headers['X-User-Id'] = account.userId
       ..fields['consent'] = 'true'
       ..fields['note'] = note

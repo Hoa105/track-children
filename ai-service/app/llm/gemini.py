@@ -10,7 +10,7 @@ import json
 import httpx
 from google import genai
 from google.genai import errors, types
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.llm.client import Analysis, LLMError, TransientLLMError
 from app.llm.prompts import OUTPUT_SCHEMA, PROMPT_VERSION, SYSTEM_PROMPT, context_text
@@ -54,29 +54,36 @@ class GeminiVideoAnalyzer:
         return self._client
 
     def analyze(self, context, frames, duration_seconds, quality_notes, evidence) -> Analysis:
-        contents = [
-            types.Content(
-                role="user",
-                parts=build_parts(context, frames, duration_seconds, quality_notes, evidence),
-            )
-        ]
+        parts = build_parts(context, frames, duration_seconds, quality_notes, evidence)
+        return self.generate(SYSTEM_PROMPT, parts, OUTPUT_SCHEMA, InsightResult, PROMPT_VERSION)
+
+    def generate_text(self, system: str, text: str, schema: dict,
+                      result_type: type[BaseModel], prompt_version: str) -> Analysis:
+        parts = [types.Part.from_text(text=text)]
+        return self.generate(system, parts, schema, result_type, prompt_version)
+
+    def generate(self, system: str, parts: list[types.Part], schema: dict,
+                 result_type: type[BaseModel], prompt_version: str) -> Analysis:
+        """Một lượt gọi Gemini với structured output → result_type, thử lần lượt các model."""
+        contents = [types.Content(role="user", parts=parts)]
         for i, model in enumerate(self.models):
             try:
-                return self._analyze(model, contents)
+                return self._generate(model, contents, system, schema, result_type, prompt_version)
             except TransientLLMError:
                 if i == len(self.models) - 1:
                     raise  # hết model dự phòng: worker xếp lịch thử lại
         raise LLMError("Chưa cấu hình GEMINI_MODEL")
 
-    def _analyze(self, model: str, contents) -> Analysis:
+    def _generate(self, model: str, contents, system: str, schema: dict,
+                  result_type: type[BaseModel], prompt_version: str) -> Analysis:
         try:
             response = self.client.models.generate_content(
                 model=model,
                 contents=contents,
                 config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
+                    system_instruction=system,
                     response_mime_type="application/json",
-                    response_json_schema=OUTPUT_SCHEMA,
+                    response_json_schema=schema,
                     max_output_tokens=16000,
                     http_options=types.HttpOptions(timeout=self.timeout_ms),
                 ),
@@ -98,13 +105,13 @@ class GeminiVideoAnalyzer:
         candidate = response.candidates[0] if response.candidates else None
         reason = getattr(candidate.finish_reason, "name", str(candidate.finish_reason)) if candidate else None
         if reason in _BLOCKED:
-            raise LLMError(f"Gemini từ chối phân tích video này ({reason})")
+            raise LLMError(f"Gemini từ chối yêu cầu này ({reason})")
         if reason == "MAX_TOKENS":
             raise LLMError("Phản hồi bị cắt do vượt max_output_tokens")
         if not response.text:
             raise LLMError("Phản hồi không có nội dung")
         try:
-            result = InsightResult.model_validate(json.loads(response.text))
+            result = result_type.model_validate(json.loads(response.text))
         except (json.JSONDecodeError, ValidationError) as e:
             raise LLMError(f"Đầu ra không đúng định dạng: {e}") from e
 
@@ -118,6 +125,6 @@ class GeminiVideoAnalyzer:
         return Analysis(
             result=result,
             model=getattr(response, "model_version", None) or model,
-            prompt_version=PROMPT_VERSION,
+            prompt_version=prompt_version,
             usage=usage,
         )

@@ -33,8 +33,10 @@ export function roleLabel(code) {
   return ADMIN_ROLES.find((role) => role.code === code)?.label ?? code;
 }
 
+// Backend hiện cấp toàn quyền cho mọi admin đang hoạt động (role "admin", permissions rỗng)
 export function can(admin, permission) {
-  return !permission || (admin?.permissions ?? []).includes(permission);
+  if (!permission || admin?.role === "admin") return true;
+  return (admin?.permissions ?? []).includes(permission);
 }
 
 export function initialsOf(name) {
