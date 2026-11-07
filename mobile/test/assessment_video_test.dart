@@ -9,6 +9,98 @@ import 'package:track_children/features/assessment/assessment_video.dart';
 import 'package:track_children/features/assessment/assessment_widgets.dart';
 
 void main() {
+  testWidgets(
+    'question progress scrolls with content and resets on next question',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 650);
+      addTearDown(tester.view.reset);
+      final repo = FakeAssessmentRepository();
+      final attempt = await repo.start('child_an', 'scroll-progress');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AssessmentQuestionScreen(
+            childId: 'child_an',
+            attempt: attempt,
+            repository: repo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final progress = find.byType(AssessmentProgress);
+      final initialY = tester.getTopLeft(progress).dy;
+      await tester.drag(find.byType(ListView), const Offset(0, -80));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(progress).dy, lessThan(initialY - 40));
+      expect(find.text('Câu tiếp theo').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Câu tiếp theo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Câu 2/2').hitTestable(), findsOneWidget);
+      expect(tester.getTopLeft(progress).dy, closeTo(initialY, 1));
+      AssessmentVideoPlayback.fullscreen.value = true;
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBar), findsNothing);
+      expect(find.text('Câu tiếp theo'), findsNothing);
+      expect(
+        tester.getSize(find.byType(AssessmentVideoViewport)),
+        const Size(390, 650),
+      );
+      AssessmentVideoPlayback.fullscreen.value = false;
+      await tester.pumpAndSettle();
+      expect(find.text('Câu tiếp theo').hitTestable(), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('inline video portals cannot cover controls above the viewport', (
+    tester,
+  ) async {
+    final portal = OverlayPortalController();
+    var headerTaps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              SizedBox(
+                height: 80,
+                child: TextButton(
+                  onPressed: () => headerTaps++,
+                  child: const Text('Header'),
+                ),
+              ),
+              Expanded(
+                child: AssessmentVideoViewport(
+                  child: OverlayPortal(
+                    controller: portal,
+                    overlayChildBuilder: (_) => Positioned(
+                      top: -80,
+                      left: 0,
+                      right: 0,
+                      height: 300,
+                      child: GestureDetector(
+                        onTap: () {},
+                        child: const ColoredBox(color: Colors.black),
+                      ),
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    portal.show();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Header'));
+    expect(headerTaps, 1);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('Back in fullscreen does not leave or complete the assessment', (
     tester,
   ) async {

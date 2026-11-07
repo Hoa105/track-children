@@ -59,7 +59,10 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       var raw = prefs.getString(cacheKey);
-      final legacyKey = cacheKey.replaceFirst('assessment_pending/', 'development_pending/');
+      final legacyKey = cacheKey.replaceFirst(
+        'assessment_pending/',
+        'development_pending/',
+      );
       if (raw == null) {
         raw = prefs.getString(legacyKey);
         if (raw != null && await prefs.setString(cacheKey, raw)) {
@@ -231,7 +234,9 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
                 selected: i == index,
                 selectedTileColor: AppColors.primarySoft,
                 leading: AssessmentIconBadge(
-                  assessmentDomainIcon(attempt.questions[i]['domain'] as String?),
+                  assessmentDomainIcon(
+                    attempt.questions[i]['domain'] as String?,
+                  ),
                   color: assessmentDomainColor(
                     attempt.questions[i]['domain'] as String?,
                   ),
@@ -258,7 +263,9 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
             ListTile(
               selected: index >= attempt.questions.length,
               selectedTileColor: AppColors.primarySoft,
-              leading: const AssessmentIconBadge(Icons.chat_bubble_outline_rounded),
+              leading: const AssessmentIconBadge(
+                Icons.chat_bubble_outline_rounded,
+              ),
               title: const Text('Thông tin bổ sung'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -392,93 +399,104 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
         },
         child: AssessmentScaffold(
           backgroundColor: AppColors.background,
-          appBar: assessmentAppBar(
-            'Mốc ${attempt.age} tháng',
-            back: submitting ? () {} : _exit,
-          ),
+          appBar: videoFullscreen
+              ? null
+              : assessmentAppBar(
+                  'Mốc ${attempt.age} tháng',
+                  back: submitting ? () {} : _exit,
+                ),
           body: restoring
               ? const Center(child: CircularProgressIndicator())
               : SafeArea(
                   top: false,
+                  bottom: !videoFullscreen,
                   child: Column(
                     children: [
-                      if (widget.repository.isDemo)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: AssessmentDemoNote(),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  follow
-                                      ? 'Kiểm tra bài'
-                                      : 'Câu ${index + 1}/${questions.length}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: AssessmentVideoViewport(
+                          child: ListView(
+                            controller: scroll,
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            children: [
+                              if (widget.repository.isDemo)
+                                const Padding(
+                                  padding: EdgeInsets.zero,
+                                  child: AssessmentDemoNote(),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Wrap(
+                                      alignment: WrapAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Text(
+                                          follow
+                                              ? 'Kiểm tra bài'
+                                              : 'Câu ${index + 1}/${questions.length}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: submitting
+                                              ? null
+                                              : _navigator,
+                                          child: const Text('Xem các câu'),
+                                        ),
+                                      ],
+                                    ),
+                                    AssessmentProgress(
+                                      value: answers.length / questions.length,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Đã trả lời ${answers.length}/${questions.length} · ${saving
+                                            ? 'Đang lưu…'
+                                            : dirty
+                                            ? localSaved
+                                                  ? 'Đã lưu trên máy · chưa đồng bộ'
+                                                  : 'Chưa lưu'
+                                            : 'Đã lưu'}',
+                                        style: assessmentMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (error != null) ...[
+                                AssessmentError(
+                                  message: error!,
+                                  retry: () {
+                                    _save();
+                                  },
+                                  extra: TextButton(
+                                    onPressed: saving ? null : _reload,
+                                    child: const Text('Tải lại bài'),
                                   ),
                                 ),
-                                TextButton(
-                                  onPressed: submitting ? null : _navigator,
-                                  child: const Text('Xem các câu'),
-                                ),
+                                const SizedBox(height: 16),
                               ],
-                            ),
-                            AssessmentProgress(
-                              value: answers.length / questions.length,
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Đã trả lời ${answers.length}/${questions.length} · ${saving
-                                    ? 'Đang lưu…'
-                                    : dirty
-                                    ? localSaved
-                                          ? 'Đã lưu trên máy · chưa đồng bộ'
-                                          : 'Chưa lưu'
-                                    : 'Đã lưu'}',
-                                style: assessmentMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView(
-                          controller: scroll,
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          children: [
-                            if (error != null) ...[
-                              AssessmentError(
-                                message: error!,
-                                retry: () {
-                                  _save();
-                                },
-                                extra: TextButton(
-                                  onPressed: saving ? null : _reload,
-                                  child: const Text('Tải lại bài'),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
+                              if (!follow)
+                                AssessmentReveal(
+                                  key: ValueKey('question-$index'),
+                                  child: _question(q!, payload!),
+                                )
+                              else
+                                ..._followUp(missing),
                             ],
-                            if (!follow)
-                              AssessmentReveal(
-                                key: ValueKey('question-$index'),
-                                child: _question(q!, payload!),
-                              )
-                            else
-                              ..._followUp(missing),
-                          ],
+                          ),
                         ),
                       ),
-                      _footer(follow, missing.isEmpty),
+                      if (!videoFullscreen) _footer(follow, missing.isEmpty),
                     ],
                   ),
                 ),
@@ -487,7 +505,10 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
     );
   }
 
-  Widget _question(Map<String, dynamic> q, Map<String, dynamic> p) => AssessmentCard(
+  Widget _question(
+    Map<String, dynamic> q,
+    Map<String, dynamic> p,
+  ) => AssessmentCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

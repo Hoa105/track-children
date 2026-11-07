@@ -24,6 +24,38 @@ abstract final class AssessmentVideoPlayback {
   }
 }
 
+/// Keeps the player's mobile OverlayPortal inside the scroll viewport.
+/// The question screen expands this viewport to the screen during fullscreen.
+class AssessmentVideoViewport extends StatefulWidget {
+  const AssessmentVideoViewport({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<AssessmentVideoViewport> createState() =>
+      _AssessmentVideoViewportState();
+}
+
+class _AssessmentVideoViewportState extends State<AssessmentVideoViewport> {
+  late final entry = OverlayEntry(builder: (_) => widget.child);
+
+  @override
+  void didUpdateWidget(AssessmentVideoViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    entry.markNeedsBuild();
+  }
+
+  @override
+  void dispose() {
+    entry.remove();
+    entry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ClipRect(child: Overlay(initialEntries: [entry]));
+}
+
 /// Lazy inline player: history lists do not allocate a WebView per question.
 class AssessmentVideoFrame extends StatefulWidget {
   const AssessmentVideoFrame({

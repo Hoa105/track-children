@@ -299,6 +299,9 @@ void main() {
       await tester.tap(find.text('Đã làm được'));
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
+      // Save status now scrolls with the question instead of staying pinned.
+      await tester.drag(find.byType(ListView), const Offset(0, 600));
+      await tester.pumpAndSettle();
       expect(find.textContaining('chưa đồng bộ'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       expect(
