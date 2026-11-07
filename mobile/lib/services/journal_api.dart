@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'api_config.dart';
+import 'authorized_client.dart';
 import 'journal_media.dart';
 import 'vaccination_remote.dart';
 
@@ -47,7 +48,7 @@ const journalDomainCodes = {
 /// X-User-Id header like [VaccinationApi].
 class JournalApi implements JournalRemote {
   JournalApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
+    : _client = client ?? AuthorizedClient(),
       _baseUrl = baseUrl ?? apiBaseUrl;
 
   final http.Client _client;

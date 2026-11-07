@@ -121,6 +121,7 @@ DROP TABLE IF EXISTS account.user_consents;
 DROP TABLE IF EXISTS account.legal_documents;
 
 -- Admins share one authorization class; no role/permission tables remain.
+DROP TABLE IF EXISTS admin.admin_invitations;
 DROP TABLE IF EXISTS admin.admin_user_roles;
 DROP TABLE IF EXISTS admin.role_permissions;
 DROP TABLE IF EXISTS admin.permissions;

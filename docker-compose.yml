@@ -67,6 +67,8 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # Ảnh hoạt động (kể cả ảnh admin tải lên) không mất khi build lại image
+      - ./backend/static:/app/static
     ports:
       - "8000:8000"
     env_file:
@@ -75,6 +77,8 @@ services:
       DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
       AUTH_SECRET: ${AUTH_SECRET:-}
       APP_ENV: ${APP_ENV:-production}
+      # Chỉ có tác dụng khi APP_ENV=local (PUT /dev/profiles cho mobile)
+      DEV_AUTH: ${DEV_AUTH:-false}
       AUTH_SKIP_OTP: ${AUTH_SKIP_OTP:-false}
       AUTH_OTP_PREVIEW: ${AUTH_OTP_PREVIEW:-false}
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-[]}
@@ -102,9 +106,6 @@ services:
       MINIO_ENDPOINT: minio:9000
       # Link tải dùng host mà mobile gọi backend + cổng 9000; production đặt URL công khai
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-}
-    volumes:
-      # Ảnh hoạt động (kể cả ảnh admin tải lên) không mất khi build lại image
-      - ./backend/static:/app/static
     depends_on:
       db:
         condition: service_healthy
@@ -129,6 +130,11 @@ services:
       VIDEO_DIR: /app/data/videos
       POSE_MODEL_PATH: /app/models/pose_landmarker_full.task
       HAND_MODEL_PATH: /app/models/hand_landmarker.task
+      # false: bài K-DST model chấm không chắc → nhờ quay lại, không gọi Gemini
+      KDST_LLM_FALLBACK: ${KDST_LLM_FALLBACK:-true}
+    volumes:
+      # Video tạm chờ phân tích: giữ lại khi container bị tạo lại (build lại image)
+      - track_children_ai_videos:/app/data/videos
     depends_on:
       ai-db:
         condition: service_healthy
@@ -147,3 +153,4 @@ volumes:
   track_children_postgres_data:
   track_children_ai_postgres_data:
   track_children_minio_data:
+  track_children_ai_videos:

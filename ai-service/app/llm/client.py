@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import anthropic
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.llm.prompts import OUTPUT_SCHEMA, PROMPT_VERSION, SYSTEM_PROMPT, context_text
 from app.schemas.insight import Evidence, InsightContext, InsightResult
@@ -27,7 +27,7 @@ class LLMError(Exception):
 
 @dataclass
 class Analysis:
-    result: InsightResult
+    result: InsightResult  # ReviewResult khi tổng hợp nhiều nhận xét (app/reviews)
     model: str
     prompt_version: str
     usage: dict
@@ -42,6 +42,13 @@ class VideoAnalyzer(Protocol):
         quality_notes: list[str],
         evidence: Evidence | None,
     ) -> Analysis: ...
+
+
+class TextGenerator(Protocol):
+    """Gọi AI chỉ với văn bản (vd. tổng hợp nhiều nhận xét, app/reviews)."""
+
+    def generate_text(self, system: str, text: str, schema: dict,
+                      result_type: type[BaseModel], prompt_version: str) -> Analysis: ...
 
 
 def build_content(
@@ -87,22 +94,25 @@ class ClaudeVideoAnalyzer:
         return self._client
 
     def analyze(self, context, frames, duration_seconds, quality_notes, evidence) -> Analysis:
+        content = build_content(context, frames, duration_seconds, quality_notes, evidence)
+        return self.generate(SYSTEM_PROMPT, content, OUTPUT_SCHEMA, InsightResult, PROMPT_VERSION)
+
+    def generate_text(self, system: str, text: str, schema: dict,
+                      result_type: type[BaseModel], prompt_version: str) -> Analysis:
+        return self.generate(system, [{"type": "text", "text": text}], schema, result_type, prompt_version)
+
+    def generate(self, system: str, content: list[dict], schema: dict,
+                 result_type: type[BaseModel], prompt_version: str) -> Analysis:
+        """Một lượt gọi Claude với structured output → result_type."""
         request = dict(
             model=self.model,
             max_tokens=16000,
-            system=SYSTEM_PROMPT,
+            system=system,
             output_config={
                 "effort": self.effort,
-                "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA},
+                "format": {"type": "json_schema", "schema": schema},
             },
-            messages=[
-                {
-                    "role": "user",
-                    "content": build_content(
-                        context, frames, duration_seconds, quality_notes, evidence
-                    ),
-                }
-            ],
+            messages=[{"role": "user", "content": content}],
         )
         try:
             if self.model in _FALLBACK_MODELS:
@@ -126,14 +136,14 @@ class ClaudeVideoAnalyzer:
             raise LLMError(f"{e.status_code}: {e.message}") from e
 
         if response.stop_reason == "refusal":
-            raise LLMError("Claude từ chối phân tích video này")
+            raise LLMError("Claude từ chối yêu cầu này")
         if response.stop_reason == "max_tokens":
             raise LLMError("Phản hồi bị cắt do vượt max_tokens")
         text = next((b.text for b in response.content if b.type == "text"), None)
         if text is None:
             raise LLMError("Phản hồi không có nội dung")
         try:
-            result = InsightResult.model_validate(json.loads(text))
+            result = result_type.model_validate(json.loads(text))
         except (json.JSONDecodeError, ValidationError) as e:
             raise LLMError(f"Đầu ra không đúng định dạng: {e}") from e
 
@@ -142,4 +152,4 @@ class ClaudeVideoAnalyzer:
             "output_tokens": response.usage.output_tokens,
             "request_id": getattr(response, "_request_id", None),
         }
-        return Analysis(result=result, model=response.model, prompt_version=PROMPT_VERSION, usage=usage)
+        return Analysis(result=result, model=response.model, prompt_version=prompt_version, usage=usage)

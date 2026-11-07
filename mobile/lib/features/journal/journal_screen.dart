@@ -9,6 +9,7 @@ import '../../app_layout.dart';
 import '../../models/video_insight.dart';
 import '../../services/demo_store.dart';
 import '../../services/journal_media.dart';
+import 'ai_videos_screen.dart';
 import 'journal_media_view.dart';
 import 'video_insight_view.dart';
 
@@ -104,6 +105,16 @@ class _JournalScreenState extends State<JournalScreen> {
           backgroundColor: AppColors.background,
           title: const Text('Nhật ký', style: _heading),
           actions: [
+            if (child != null)
+              IconButton(
+                tooltip: 'Video đã phân tích AI',
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => AiVideosScreen(childId: widget.childId),
+                  ),
+                ),
+                icon: const Icon(Icons.insights_outlined),
+              ),
             IconButton(
               tooltip: 'Lọc theo thời gian',
               onPressed: _filter,

@@ -64,8 +64,13 @@ def compute(series, keys: list[str], source: str) -> list[EvidenceMetric]:
     return out
 
 
-def measure(path: str, info: VideoInfo, keys: list[str], models: PoseModels) -> Evidence | None:
-    """None khi hoạt động không cần số đo. Lỗi MediaPipe không làm hỏng job — chỉ bỏ số đo."""
+def measure(
+    path: str, info: VideoInfo, keys: list[str], models: PoseModels, pose: m.PoseSeries | None = None
+) -> Evidence | None:
+    """None khi hoạt động không cần số đo. Lỗi MediaPipe không làm hỏng job — chỉ bỏ số đo.
+
+    `pose`: khung xương đã trích sẵn (khi chấm K-DST) để không chạy MediaPipe lần nữa.
+    """
     keys = [k for k in keys if k in METRICS]
     if not keys:
         return None
@@ -79,9 +84,10 @@ def measure(path: str, info: VideoInfo, keys: list[str], models: PoseModels) -> 
         result: list[EvidenceMetric] = []
         ratio = None
         if "pose" in sources:
-            if not Path(models.pose_model_path).is_file():
-                return _unavailable("Máy chủ chưa tải model đo vận động")
-            pose = landmarks.extract_pose(path, info, models.pose_model_path, models.sample_fps)
+            if pose is None:
+                if not Path(models.pose_model_path).is_file():
+                    return _unavailable("Máy chủ chưa tải model đo vận động")
+                pose = landmarks.extract_pose(path, info, models.pose_model_path, models.sample_fps)
             ratio = round(m.detection_ratio(pose), 2)
             if ratio < MIN_POSE_DETECTION:
                 return _unavailable("Không nhận diện đủ rõ cơ thể bé trong video", ratio)

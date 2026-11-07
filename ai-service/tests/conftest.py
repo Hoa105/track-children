@@ -42,6 +42,9 @@ class MemoryInsightStore:
         row = self.rows.get(insight_id)
         return dict(row) if row else None
 
+    def get_many(self, insight_ids):
+        return [dict(self.rows[i]) for i in insight_ids if i in self.rows]
+
     def claim_next(self):
         now = dt.datetime.now(dt.timezone.utc)
         for row in sorted(self.rows.values(), key=lambda r: r["created_at"]):
@@ -56,9 +59,11 @@ class MemoryInsightStore:
     def _finish(self, insight_id, **fields):
         self.rows[insight_id].update(finished_at=dt.datetime.now(dt.timezone.utc), **fields)
 
-    def complete(self, insight_id, *, result, evidence, video_seconds, model, prompt_version, usage):
+    def complete(self, insight_id, *, result, evidence, video_seconds, model, prompt_version, usage,
+                 assessment=None):
         self._finish(insight_id, status="done", result=result, evidence=evidence,
-                     video_seconds=video_seconds, model=model, usage=usage)
+                     video_seconds=video_seconds, model=model, prompt_version=prompt_version,
+                     usage=usage, kdst_assessment=assessment)
 
     def reject(self, insight_id, message, video_seconds):
         self._finish(insight_id, status="rejected", message=message, video_seconds=video_seconds)
@@ -82,6 +87,37 @@ class MemoryInsightStore:
         return paths
 
 
+class MemoryReviewStore:
+    """ReviewStore trong bộ nhớ, cùng hành vi với PgReviewStore."""
+
+    def __init__(self):
+        self.rows: dict[uuid.UUID, dict] = {}
+
+    def create(self, review):
+        row = {"id": uuid.uuid4(), "created_at": dt.datetime.now(dt.timezone.utc), **review}
+        self.rows[row["id"]] = row
+        return dict(row)
+
+    def find(self, child_id, insight_ids, prompt_version):
+        for row in self.rows.values():
+            if (row["child_id"], row["insight_ids"], row["prompt_version"]) == (
+                    child_id, list(insight_ids), prompt_version):
+                return dict(row)
+        return None
+
+    def get(self, review_id):
+        row = self.rows.get(review_id)
+        return dict(row) if row else None
+
+    def list_for_child(self, child_id, activity_ref=None):
+        rows = [r for r in self.rows.values() if r["child_id"] == child_id
+                and (activity_ref is None or r["activity_ref"] == activity_ref)]
+        return sorted(rows, key=lambda r: r["created_at"], reverse=True)
+
+    def delete_for_child(self, child_id):
+        self.rows = {k: r for k, r in self.rows.items() if r["child_id"] != child_id}
+
+
 def write_video(path: Path, seconds: float, brightness: int = 160, fps: int = 10,
                 size=(320, 240)) -> Path:
     """Video tổng hợp: nền xám + hình chữ nhật di chuyển."""
@@ -95,7 +131,7 @@ def write_video(path: Path, seconds: float, brightness: int = 160, fps: int = 10
     return path
 
 
-def new_insight(group="gross_motor", metrics=None, note="") -> NewInsight:
+def new_insight(group="gross_motor", metrics=None, note="", kdst_item=None) -> NewInsight:
     return NewInsight.model_validate({
         "childId": str(uuid.uuid4()),
         "requestedBy": str(uuid.uuid4()),
@@ -108,6 +144,7 @@ def new_insight(group="gross_motor", metrics=None, note="") -> NewInsight:
                 "ageFromMonths": 20,
                 "ageToMonths": 30,
                 "guide": [{"title": "Cùng bé thực hiện", "text": "Ba mẹ làm mẫu rồi mời bé nhảy."}],
+                "kdstItem": kdst_item,
             },
             "criteria": {"name": "Vận động thô", "focus": ["Tư thế", "Thăng bằng"], "avoid": []},
             "childAgeMonths": 24,
@@ -120,3 +157,8 @@ def new_insight(group="gross_motor", metrics=None, note="") -> NewInsight:
 @pytest.fixture
 def store():
     return MemoryInsightStore()
+
+
+@pytest.fixture
+def review_store():
+    return MemoryReviewStore()

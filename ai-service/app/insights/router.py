@@ -85,8 +85,9 @@ def get_insight(insight_id: UUID, store: InsightStore = Depends(get_store)):
 
 
 @router.delete("/children/{child_id}/video-insights", status_code=status.HTTP_204_NO_CONTENT)
-def delete_child_insights(child_id: UUID, store: InsightStore = Depends(get_store)):
-    """Xóa hết video tạm + nhận xét của một bé (xóa hồ sơ trẻ / phụ huynh yêu cầu)."""
+def delete_child_insights(child_id: UUID, request: Request, store: InsightStore = Depends(get_store)):
+    """Xóa hết video tạm + nhận xét + đánh giá tổng hợp của một bé (xóa hồ sơ trẻ / phụ huynh yêu cầu)."""
+    request.app.state.review_store.delete_for_child(child_id)
     for path in store.delete_for_child(child_id):
         Path(path).unlink(missing_ok=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

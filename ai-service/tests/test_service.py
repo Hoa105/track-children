@@ -44,7 +44,7 @@ class FakeAnalyzer:
 def fake_evidence(monkeypatch):
     calls = []
 
-    def measure(path, info, keys, models):
+    def measure(path, info, keys, models, pose=None):
         calls.append(keys)
         return Evidence(available=True, detection_ratio=0.9,
                         metrics=[EvidenceMetric(key="jump_count", label="Số lần bật nhảy", value=3, unit="lần")])

@@ -33,6 +33,9 @@ class ActivityContext(CamelModel):
     age_from_months: int = Field(ge=0, le=120)
     age_to_months: int = Field(ge=0, le=120)
     guide: list[GuideSection] = Field(default_factory=list, max_length=12)
+    # Bài K-DST tương ứng (activity.activities.kdst_item bên backend) → chấm bằng model
+    # tự train (app/kdst) thay vì gọi LLM
+    kdst_item: str | None = Field(default=None, pattern=r"^[ABC]0[1-4]$")
 
 
 class GroupCriteria(CamelModel):

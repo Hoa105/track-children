@@ -18,6 +18,8 @@ COPY app/pose/__init__.py app/pose/model_files.py ./app/pose/
 RUN python scripts/download_models.py /app/models \
     || echo "WARNING: chưa tải được model MediaPipe, sẽ tải khi khởi động"
 COPY app ./app
+# Model K-DST tự train (training/), commit sẵn trong repo vì nhỏ (~2 MB)
+COPY models/kdst ./models/kdst
 
 EXPOSE 8001
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

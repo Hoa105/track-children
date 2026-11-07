@@ -28,8 +28,31 @@ ACTIVITY = {
 
 
 class FakeConn:
+    """Chỉ trả activity.activities.kdst_item cho hoạt động lấy từ DB."""
+
+    kdst_items: dict[str, str] = {}
+
     def rollback(self):
         pass
+
+    def cursor(self):
+        conn = self
+
+        class Cursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def execute(self, sql, params):
+                self.activity_id = params[0]
+
+            def fetchone(self):
+                item = conn.kdst_items.get(self.activity_id)
+                return {"kdst_item": item} if self.activity_id in conn.kdst_items else None
+
+        return Cursor()
 
 
 @pytest.fixture
@@ -88,6 +111,21 @@ def test_create_forwards_video_with_criteria_and_metrics(calls):
     assert context["activity"]["guide"][0]["title"] == "Cùng bé thực hiện"
 
 
+def test_kdst_item_from_db_is_forwarded(calls, monkeypatch):
+    activity_id = str(uuid.uuid4())
+    monkeypatch.setattr(FakeConn, "kdst_items", {activity_id: "B01"})
+    assert post(activity={**ACTIVITY, "id": activity_id}).status_code == 202
+    assert calls["create"][0]["meta"]["context"]["activity"]["kdstItem"] == "B01"
+
+
+def test_kdst_item_none_for_bundled_or_non_motor_activities(calls, monkeypatch):
+    activity_id = str(uuid.uuid4())
+    monkeypatch.setattr(FakeConn, "kdst_items", {activity_id: "B01"})
+    post()  # id dạng g0-9: không tra DB
+    post(activity={**ACTIVITY, "id": activity_id, "group": "language"})
+    assert [c["meta"]["context"]["activity"]["kdstItem"] for c in calls["create"]] == [None, None]
+
+
 def test_requires_consent(calls):
     response = post(consent="false")
     assert response.status_code == 422
@@ -132,3 +170,62 @@ def test_age_in_months():
     assert service.age_in_months(dt.date(2024, 5, 20), dt.date(2026, 5, 19)) == 23
     assert service.age_in_months(dt.date(2024, 5, 20), dt.date(2026, 5, 20)) == 24
     assert service.age_in_months(dt.date(2026, 6, 1), dt.date(2026, 5, 1)) == 0
+
+
+def review(**extra):
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    return {"id": str(uuid.uuid4()), "childId": str(CHILD), "activityRef": "g0-9",
+            "activityGroup": "gross_motor", "activityTitle": "Nhảy tại chỗ hai chân",
+            "insightIds": [str(uuid.uuid4()), str(uuid.uuid4())], "periodFrom": now, "periodTo": now,
+            "result": {"summary": "Bé nhảy tự tin hơn.", "progress": ["Tự nhảy không cần vịn"]},
+            "metrics": [], "createdAt": now, **extra}
+
+
+def test_progress_review_forwards_child_user_and_videos(calls, monkeypatch):
+    sent = []
+    monkeypatch.setattr(ai_service, "create_progress_review", lambda body: sent.append(body) or review())
+    ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+    response = TestClient(app).post(f"/children/{CHILD}/diary/progress-reviews", json={"insightIds": ids})
+    assert response.status_code == 201, response.text
+    assert response.json()["result"]["keepPracticing"] == []
+    assert "childId" not in response.json()
+    assert sent == [{"childId": str(CHILD), "requestedBy": str(USER), "insightIds": ids}]
+    assert calls["access"][-1][3] == "edit"
+
+
+def test_progress_review_needs_two_videos(calls):
+    response = TestClient(app).post(f"/children/{CHILD}/diary/progress-reviews",
+                                    json={"insightIds": [str(uuid.uuid4())]})
+    assert response.status_code == 422
+
+
+def test_progress_review_errors_pass_through(calls, monkeypatch):
+    def busy(body):
+        raise ai_service.AiServiceError(503, "AI đang bận, ba mẹ thử lại sau ít phút nhé")
+
+    monkeypatch.setattr(ai_service, "create_progress_review", busy)
+    response = TestClient(app).post(f"/children/{CHILD}/diary/progress-reviews",
+                                    json={"insightIds": [str(uuid.uuid4()), str(uuid.uuid4())]})
+    assert response.status_code == 503 and "AI đang bận" in response.json()["detail"]
+
+
+def test_progress_review_list_and_get(calls, monkeypatch):
+    asked = []
+    monkeypatch.setattr(ai_service, "list_progress_reviews",
+                        lambda child, ref: asked.append((child, ref)) or [review()])
+    monkeypatch.setattr(ai_service, "get_progress_review", lambda child, rid: None)
+    client = TestClient(app)
+    listed = client.get(f"/children/{CHILD}/diary/progress-reviews", params={"activityRef": "g0-9"})
+    assert listed.status_code == 200 and len(listed.json()) == 1
+    assert asked == [(CHILD, "g0-9")] and calls["access"][-1][3] == "view"
+    assert client.get(f"/children/{CHILD}/diary/progress-reviews/{uuid.uuid4()}").status_code == 404
+
+
+def test_progress_review_across_all_activities(calls, monkeypatch):
+    monkeypatch.setattr(ai_service, "create_progress_review",
+                        lambda body: review(activityRef=None, activityGroup=None,
+                                            activityTitle="Tất cả hoạt động"))
+    ids = [str(uuid.uuid4()) for _ in range(30)]
+    response = TestClient(app).post(f"/children/{CHILD}/diary/progress-reviews", json={"insightIds": ids})
+    assert response.status_code == 201, response.text
+    assert response.json()["activityGroup"] is None

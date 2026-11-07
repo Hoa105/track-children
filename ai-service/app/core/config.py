@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     hand_model_path: str = "./models/hand_landmarker.task"
     pose_sample_fps: float = 10
 
+    # Model tự train chấm 12 bài K-DST (ai-service/training). Thiếu file → các bài đó dùng LLM.
+    kdst_model_path: str = "./models/kdst/kdst_v1.onnx"
+    # Model không chắc chắn: true = hỏi LLM; false = nhờ ba mẹ quay lại (không gọi API)
+    kdst_llm_fallback: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

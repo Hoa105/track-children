@@ -1,4 +1,8 @@
-"""Xử lý một job: kiểm tra video → (vận động) đo MediaPipe → gọi AI → lưu kết quả.
+"""Xử lý một job: kiểm tra video → (vận động) đo MediaPipe → nhận xét → lưu kết quả.
+
+Hoạt động gắn với bài K-DST (context.activity.kdstItem): model tự train chấm mức và
+trả nhận xét mẫu, không gọi API. Model không chắc chắn → gọi LLM như các hoạt động
+khác (hoặc nhờ ba mẹ quay lại, nếu tắt KDST_LLM_FALLBACK).
 
 Video luôn bị xóa khi job kết thúc (done / rejected / failed); chỉ giữ lại khi
 còn chờ thử lại.
@@ -9,9 +13,12 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.kdst import scorer as kdst_scorer
+from app.kdst import templates as kdst_templates
 from app.llm.client import LLMError, TransientLLMError, VideoAnalyzer
 from app.insights.repository import InsightStore
 from app.pose import evidence as pose_evidence
+from app.pose import metrics as pose_metrics
 from app.schemas.insight import MOTOR_GROUPS, Evidence, Insight, InsightContext
 from app.video import frames as video_frames
 from app.video import quality
@@ -30,6 +37,8 @@ class ProcessOptions:
     max_attempts: int
     pose_enabled: bool
     pose_models: pose_evidence.PoseModels
+    kdst: kdst_scorer.KdstScorer | None = None
+    kdst_llm_fallback: bool = True
 
 
 def retry_delay(attempt: int) -> dt.timedelta:
@@ -41,10 +50,31 @@ def _remove(path: str | None) -> None:
         Path(path).unlink(missing_ok=True)
 
 
-def measure_evidence(path, info, context: InsightContext, options: ProcessOptions) -> Evidence | None:
+def measure_evidence(path, info, context: InsightContext, options: ProcessOptions,
+                     pose: pose_metrics.PoseSeries | None = None) -> Evidence | None:
     if not options.pose_enabled or context.activity.group not in MOTOR_GROUPS:
         return None
-    return pose_evidence.measure(path, info, context.metrics, options.pose_models)
+    return pose_evidence.measure(path, info, context.metrics, options.pose_models, pose)
+
+
+def assess_kdst(path, info, context: InsightContext, options: ProcessOptions):
+    """(khung xương, kết quả chấm) cho hoạt động K-DST; (None, None) khi không chấm bằng model."""
+    item = context.activity.kdst_item
+    if not item or options.kdst is None or not options.pose_enabled:
+        return None, None
+    model_path = options.pose_models.pose_model_path
+    if not Path(model_path).is_file():
+        return None, None
+    try:
+        from app.pose import landmarks
+
+        pose = landmarks.extract_pose(path, info, model_path, options.pose_models.sample_fps)
+    except Exception:  # noqa: BLE001 — lỗi MediaPipe: quay về nhánh LLM
+        log.exception("K-DST pose extraction failed for %s", path)
+        return None, None
+    if pose_metrics.detection_ratio(pose) < pose_evidence.MIN_POSE_DETECTION:
+        return pose, options.kdst.unusable(item, kdst_scorer.NO_BODY)
+    return pose, options.kdst.assess(pose.kp, item)
 
 
 def read_video(path: str, options: ProcessOptions) -> tuple[str, video_frames.VideoInfo, list]:
@@ -91,7 +121,25 @@ def process(job: dict, store: InsightStore, analyzer: VideoAnalyzer, options: Pr
             store.reject(insight_id, report.reject_reason, round(info.seconds, 1))
             return
 
-        evidence = measure_evidence(readable, info, context, options)
+        pose, assessment = assess_kdst(readable, info, context, options)
+        evidence = measure_evidence(readable, info, context, options, pose)
+        if assessment is not None and (assessment.confident or not options.kdst_llm_fallback):
+            result = (
+                kdst_templates.render(assessment, context.child_age_months)
+                if assessment.confident else kdst_templates.uncertain(assessment)
+            )
+            store.complete(
+                insight_id,
+                result=result.model_dump(mode="json", by_alias=True),
+                evidence=evidence.model_dump(mode="json", by_alias=True) if evidence else None,
+                video_seconds=round(info.seconds, 1),
+                model=assessment.model_version,
+                prompt_version=kdst_templates.VERSION,
+                usage={},
+                assessment=assessment.to_json(),
+            )
+            return
+
         try:
             analysis = analyzer.analyze(context, frames, info.seconds, report.notes, evidence)
         except TransientLLMError as e:
@@ -115,6 +163,7 @@ def process(job: dict, store: InsightStore, analyzer: VideoAnalyzer, options: Pr
             model=analysis.model,
             prompt_version=analysis.prompt_version,
             usage=analysis.usage,
+            assessment=assessment.to_json() if assessment else None,  # đối chiếu model ↔ LLM
         )
     except Exception as e:  # noqa: BLE001 — lỗi không lường trước: đánh dấu failed, không treo job
         log.exception("Video insight %s failed", insight_id)
