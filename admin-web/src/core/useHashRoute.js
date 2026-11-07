@@ -10,7 +10,16 @@ function currentRoute() {
 export function useHashRoute() {
   const [route, setRoute] = useState(currentRoute);
   useEffect(() => {
-    const onChange = () => setRoute(currentRoute());
+    let previousHash=window.location.hash;
+    const onChange = () => {
+      const event=new Event("admin:navigate", {cancelable:true});
+      if (!window.dispatchEvent(event)) {
+        window.history.replaceState(null,"",window.location.pathname+window.location.search+previousHash);
+        return;
+      }
+      previousHash=window.location.hash;
+      setRoute(currentRoute());
+    };
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);

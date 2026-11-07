@@ -18,6 +18,7 @@ import '../navigation/app_bottom_navigation_bar.dart';
 import '../settings/settings_screen.dart';
 import '../child/child_profile_screen.dart';
 import '../growth/growth_screen.dart';
+import '../assessment/assessment_home_card.dart';
 import '../teething/teething_screen.dart';
 import '../vaccination/vaccination_screen.dart';
 import '../feeding/milk_calculator_screen.dart';
@@ -250,20 +251,32 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
       ),
       builder: (sheetContext) => SafeArea(
         top: false,
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(label, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text(message),
-              const SizedBox(height: 16),
-              if (label != 'Thông báo')
-                const Text(
-                  'Thông tin tổng quan. Tính năng ghi chép và chi tiết mục này chưa khả dụng.',
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(message),
+                      const SizedBox(height: 16),
+                      if (label != 'Thông báo')
+                        const Text(
+                          'Thông tin tổng quan. Tính năng ghi chép và chi tiết mục này chưa khả dụng.',
+                        ),
+                    ],
+                  ),
                 ),
+              ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.pop(sheetContext),
@@ -451,6 +464,10 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList.list(
                 children: [
+                  if (active != null) ...[
+                    AssessmentHomeCard(childId: active['id'] as String),
+                    const SizedBox(height: 16),
+                  ],
                   _GrowthCards(onTap: (metric) => _openGrowth(metric: metric)),
                   const SizedBox(height: 16),
                   _TimelineCard(
@@ -1409,12 +1426,14 @@ class _TimelineCardState extends State<_TimelineCard> {
                 ),
               ),
             ),
-            TextButton(
-              onPressed: widget.onTap,
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: const Text(
-                'Tổng quan  ›',
-                style: TextStyle(color: AppColors.primary, fontSize: 12),
+            Flexible(
+              child: TextButton(
+                onPressed: widget.onTap,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: const Text(
+                  'Tổng quan  ›',
+                  style: TextStyle(color: AppColors.primary, fontSize: 12),
+                ),
               ),
             ),
           ],
@@ -1579,11 +1598,13 @@ class _JournalCard extends StatelessWidget {
                 ),
               ),
             ),
-            TextButton(
-              onPressed: onTap,
-              child: const Text(
-                'Xem chi tiết  ›',
-                style: TextStyle(color: AppColors.primary, fontSize: 12),
+            Flexible(
+              child: TextButton(
+                onPressed: onTap,
+                child: const Text(
+                  'Xem chi tiết  ›',
+                  style: TextStyle(color: AppColors.primary, fontSize: 12),
+                ),
               ),
             ),
           ],

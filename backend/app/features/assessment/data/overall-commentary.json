@@ -1,0 +1,129 @@
+{
+  "version": "overall-commentary-v5-2026-11-06",
+  "sources": [
+    {
+      "id": "cdc_monitoring",
+      "organization": "CDC",
+      "title": "Developmental Monitoring and Screening",
+      "url": "https://www.cdc.gov/act-early/about/developmental-monitoring-and-screening.html",
+      "reviewed_on": "2026-11-06"
+    },
+    {
+      "id": "cdc_concerns",
+      "organization": "CDC",
+      "title": "Concerned About Your Child's Development?",
+      "url": "https://www.cdc.gov/act-early/families/concerned.html",
+      "reviewed_on": "2026-11-06"
+    },
+    {
+      "id": "cdc_checklists",
+      "organization": "CDC",
+      "title": "Key Points about CDC's Developmental Milestone Checklists",
+      "url": "https://www.cdc.gov/act-early/milestones/key-points.html",
+      "reviewed_on": "2026-11-06"
+    },
+    {
+      "id": "aap_surveillance",
+      "organization": "American Academy of Pediatrics",
+      "title": "Developmental Surveillance and Screening Patient Care",
+      "url": "https://www.aap.org/en/patient-care/developmental-surveillance-and-screening-patient-care/",
+      "reviewed_on": "2026-11-06"
+    },
+    {
+      "id": "who_ccd",
+      "organization": "WHO / UNICEF",
+      "title": "Care for Child Development – Participant Manual, pp. 33–34",
+      "url": "https://www.unicef.org/media/91176/file/3-CCD-Participant-Manual.pdf",
+      "reviewed_on": "2026-11-06"
+    },
+    {
+      "id": "who_primary_care",
+      "organization": "WHO Europe",
+      "title": "Pocket book of primary health care for children and adolescents, p. 65",
+      "url": "https://www.who.int/europe/publications/i/item/9789289057622",
+      "reviewed_on": "2026-11-06"
+    }
+  ],
+  "texts": {
+    "all_recorded": {
+      "text": "Kết quả bài đánh giá ở mốc {age_months} tháng ghi nhận bé đã làm được tất cả kỹ năng được hỏi. Đây là điểm tích cực, dù bài đánh giá chưa phản ánh hết mọi mặt phát triển của bé.",
+      "source_ids": [
+        "cdc_checklists",
+        "who_ccd"
+      ]
+    },
+    "mixed": {
+      "text": "Kết quả bài đánh giá ở mốc {age_months} tháng ghi nhận bé chưa làm được {not_yet_skills} về {not_yet_domains}. Một số kỹ năng về {unobserved_domains} chưa được quan sát nên chưa thể xác định bé đã làm được hay chưa.",
+      "source_ids": [
+        "cdc_monitoring",
+        "cdc_concerns"
+      ]
+    },
+    "not_yet": {
+      "text": "Kết quả bài đánh giá ở mốc {age_months} tháng ghi nhận bé chưa làm được {not_yet_skills} về {not_yet_domains}. Đây là những kỹ năng cần chú ý để xác định bé có cần hỗ trợ thêm hay không.",
+      "source_ids": [
+        "cdc_concerns"
+      ]
+    },
+    "unobserved": {
+      "text": "Kết quả bài đánh giá ghi nhận bé đã làm được các kỹ năng đã được quan sát. Một số kỹ năng về {unobserved_domains} chưa được quan sát nên phần này còn thiếu thông tin.",
+      "source_ids": [
+        "cdc_monitoring"
+      ]
+    },
+    "all_unobserved": {
+      "text": "Tất cả kỹ năng trong bài đánh giá ở mốc {age_months} tháng đều ở trạng thái Chưa quan sát. Kết quả chưa đủ thông tin để nhận xét bé đã làm được gì hoặc đang gặp khó khăn ở đâu.",
+      "source_ids": [
+        "cdc_monitoring"
+      ]
+    },
+    "regression_yes": {
+      "text": "Thông tin bổ sung có ghi nhận việc bé không còn làm được kỹ năng từng có. Thay đổi này cần được bác sĩ đánh giá sớm, kể cả khi các kỹ năng khác trong bài đã làm được.",
+      "source_ids": [
+        "who_primary_care"
+      ]
+    },
+    "regression_unsure": {
+      "text": "Thông tin bổ sung chưa xác định rõ bé có mất kỹ năng từng có hay không. Điểm này cần được làm rõ, chưa thể kết luận bé đã mất kỹ năng.",
+      "source_ids": [
+        "aap_surveillance"
+      ]
+    },
+    "caregiver_concern": {
+      "text": "{concern_context}",
+      "source_ids": [
+        "aap_surveillance"
+      ]
+    },
+    "professional_contact": {
+      "text": "Bác sĩ hoặc nhân viên y tế có chuyên môn cần gặp và quan sát bé để hiểu rõ hơn, từ đó xác định bé có cần hỗ trợ hay không.",
+      "source_ids": [
+        "cdc_concerns"
+      ]
+    },
+    "professional_routine": {
+      "text": "Bạn có thể chia sẻ kết quả này với bác sĩ trong lần khám định kỳ.",
+      "source_ids": [
+        "aap_surveillance"
+      ]
+    },
+    "professional_incomplete": {
+      "text": "Nếu bạn vẫn băn khoăn về khả năng của bé, hãy trao đổi với bác sĩ hoặc nhân viên y tế có chuyên môn.",
+      "source_ids": [
+        "cdc_monitoring"
+      ]
+    },
+    "scope": {
+      "text": "Nhận xét được tổng hợp từ kết quả bài đánh giá, không thay thế việc sàng lọc hay đánh giá trực tiếp của người có chuyên môn.",
+      "source_ids": [
+        "cdc_checklists"
+      ]
+    },
+    "all_recorded_context": {
+      "text": "Kết quả bài đánh giá ở mốc {age_months} tháng ghi nhận bé đã làm được tất cả kỹ năng được hỏi. Đây là điểm tích cực, dù bài đánh giá chưa phản ánh hết mọi mặt phát triển của bé.",
+      "source_ids": [
+        "aap_surveillance"
+      ]
+    }
+  }
+}

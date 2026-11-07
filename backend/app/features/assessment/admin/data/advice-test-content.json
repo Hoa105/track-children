@@ -1,0 +1,80 @@
+[
+  {
+    "variant_id": "CONTACT_REGRESSION_YES",
+    "title": "Trao đổi về kỹ năng bé không còn làm được",
+    "body_text": "Liên hệ sớm với bác sĩ đang theo dõi bé. Khi đặt lịch, nêu rõ kỹ năng bé từng thực hiện nhưng hiện không còn thực hiện để được hướng dẫn bước tiếp theo. Hỏi bác sĩ về sàng lọc phát triển và việc đánh giá thêm.",
+    "tts_text": "Liên hệ sớm với bác sĩ đang theo dõi bé. Khi đặt lịch, nêu rõ kỹ năng bé từng thực hiện nhưng hiện không còn thực hiện để được hướng dẫn bước tiếp theo. Hỏi bác sĩ về sàng lọc phát triển và việc đánh giá thêm.",
+    "cta_label": "Chuẩn bị thông tin trao đổi",
+    "sources": [
+      "https://www.cdc.gov/act-early/milestones/1-year.html",
+      "https://www.cdc.gov/act-early/families/concerned.html"
+    ],
+    "preparation_text": "Ghi bé từng làm được điều gì, hiện thay đổi ra sao, thời điểm và hoàn cảnh nhận thấy thay đổi.",
+    "preparation_common": "Mang theo kết quả theo dõi hiện tại và các ghi chú liên quan."
+  },
+  {
+    "variant_id": "CONTACT_REGRESSION_UNSURE",
+    "title": "Trao đổi khi chưa chắc bé có mất kỹ năng",
+    "body_text": "Nhờ bác sĩ làm rõ những thay đổi bạn chưa chắc về kỹ năng của bé. Chia sẻ điều đã quan sát trực tiếp và hỏi liệu có cần sàng lọc hoặc đánh giá thêm.",
+    "tts_text": "Nhờ bác sĩ làm rõ những thay đổi bạn chưa chắc về kỹ năng của bé. Chia sẻ điều đã quan sát trực tiếp và hỏi liệu có cần sàng lọc hoặc đánh giá thêm.",
+    "cta_label": "Ghi lại thay đổi cần làm rõ",
+    "sources": [
+      "https://www.cdc.gov/act-early/milestones/1-year.html",
+      "https://www.cdc.gov/act-early/about/developmental-monitoring-and-screening.html"
+    ],
+    "preparation_text": "Ghi riêng điều đã quan sát trực tiếp và điều chưa đủ thông tin về kỹ năng bé từng làm được.",
+    "preparation_common": "Mang theo kết quả theo dõi hiện tại và các ghi chú liên quan."
+  },
+  {
+    "variant_id": "CONTACT_NOT_YET",
+    "title": "Trao đổi về kỹ năng chưa làm được",
+    "body_text": "Trao đổi với bác sĩ về những câu đã chọn Chưa làm được trong bộ câu hỏi phù hợp với tuổi của bé. Hỏi về sàng lọc phát triển và bước hỗ trợ tiếp theo.",
+    "tts_text": "Trao đổi với bác sĩ về những câu đã chọn Chưa làm được trong bộ câu hỏi phù hợp với tuổi của bé. Hỏi về sàng lọc phát triển và bước hỗ trợ tiếp theo.",
+    "cta_label": "Chuẩn bị kết quả để trao đổi",
+    "sources": [
+      "https://www.cdc.gov/act-early/about/developmental-monitoring-and-screening.html",
+      "https://www.cdc.gov/act-early/milestones/key-points.html"
+    ],
+    "preparation_text": "Ghi các câu đã chọn Chưa làm được và điều bé hiện có thể thực hiện trong sinh hoạt.",
+    "preparation_common": "Mang theo kết quả theo dõi hiện tại và các ghi chú liên quan."
+  },
+  {
+    "variant_id": "CONTACT_CONCERN_ONLY",
+    "title": "Trao đổi điều gia đình đang lo ngại",
+    "body_text": "Chủ động trao đổi với bác sĩ về điều gia đình đang lo ngại. Đặt câu hỏi cụ thể về việc bé chơi, giao tiếp, học hỏi hoặc vận động mà bạn muốn được làm rõ; hỏi liệu có cần sàng lọc hoặc đánh giá thêm.",
+    "tts_text": "Chủ động trao đổi với bác sĩ về điều gia đình đang lo ngại. Đặt câu hỏi cụ thể về việc bé chơi, giao tiếp, học hỏi hoặc vận động mà bạn muốn được làm rõ; hỏi liệu có cần sàng lọc hoặc đánh giá thêm.",
+    "cta_label": "Ghi điều gia đình muốn hỏi",
+    "sources": [
+      "https://www.cdc.gov/act-early/families/concerned.html",
+      "https://www.cdc.gov/act-early/milestones/key-points.html"
+    ],
+    "preparation_text": "Mô tả điều gia đình đang lo ngại bằng tình huống cụ thể, thời điểm và hoàn cảnh xuất hiện.",
+    "preparation_common": "Mang theo kết quả theo dõi hiện tại và các ghi chú liên quan."
+  },
+  {
+    "variant_id": "OBSERVE_UNCHECKED",
+    "title": "Bổ sung thông tin cho kỹ năng chưa quan sát",
+    "body_text": "Đọc lại hướng dẫn của những câu đã chọn Chưa quan sát. Quan sát trong lúc bé chơi, giao tiếp hoặc sinh hoạt hằng ngày và hỏi thêm người chăm sóc khác nếu cần. Sau đó, cập nhật từng đáp án dựa trên điều đã quan sát được.",
+    "tts_text": "Đọc lại hướng dẫn của những câu đã chọn Chưa quan sát. Quan sát trong lúc bé chơi, giao tiếp hoặc sinh hoạt hằng ngày và hỏi thêm người chăm sóc khác nếu cần. Sau đó, cập nhật từng đáp án dựa trên điều đã quan sát được.",
+    "cta_label": "Cập nhật câu chưa quan sát",
+    "sources": [
+      "https://www.cdc.gov/act-early/about/developmental-monitoring-and-screening.html",
+      "https://www.cdc.gov/act-early/milestones/index.html"
+    ],
+    "preparation_text": "",
+    "preparation_common": ""
+  },
+  {
+    "variant_id": "CONTINUE_MONITORING",
+    "title": "Tiếp tục tương tác và theo dõi",
+    "body_text": "Dành thời gian chơi, trò chuyện và tương tác với bé trong sinh hoạt hằng ngày. Lưu kết quả và tiếp tục theo dõi bằng bộ câu hỏi phù hợp với tuổi. Chia sẻ quá trình phát triển trong các lần khám định kỳ; trao đổi với bác sĩ nếu có thay đổi hoặc điều cần được giải đáp.",
+    "tts_text": "Dành thời gian chơi, trò chuyện và tương tác với bé trong sinh hoạt hằng ngày. Lưu kết quả và tiếp tục theo dõi bằng bộ câu hỏi phù hợp với tuổi. Chia sẻ quá trình phát triển trong các lần khám định kỳ; trao đổi với bác sĩ nếu có thay đổi hoặc điều cần được giải đáp.",
+    "cta_label": "Lưu kết quả theo dõi",
+    "sources": [
+      "https://www.cdc.gov/act-early/milestones/index.html",
+      "https://www.cdc.gov/act-early/milestones/key-points.html"
+    ],
+    "preparation_text": "",
+    "preparation_common": ""
+  }
+]

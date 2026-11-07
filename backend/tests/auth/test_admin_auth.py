@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from uuid import uuid4
+import yaml
 import json
 from pathlib import Path
 
@@ -323,7 +324,7 @@ def test_database_failure_has_safe_error(monkeypatch):
 
 def test_admin_openapi_contract():
     from openapi_spec_validator import validate
-    document=json.loads((Path(__file__).parents[3]/'docs/api/admin-auth.openapi.json').read_text(encoding='utf-8'))
+    document=yaml.safe_load((Path(__file__).parents[3]/'docs/api/admin-auth.openapi.yaml').read_text(encoding='utf-8'))
     validate(document)
     actual=app.openapi()['paths']
     for path,operations in document['paths'].items():
