@@ -17,6 +17,42 @@ def test_bundled_drafts_have_159_skills_six_fixed_advice_variants():
     assert {x['age_months'] for x in rows if x['kind']=='skill'}==set(s.AGES)
 
 
+def test_seed_loads_all_bundled_content_and_preserves_edits_on_rerun(db):
+    from pathlib import Path
+    seed=(Path(__file__).resolve().parents[1]/'migrations/022_assessment_sample_data.sql').read_text(encoding='utf-8')
+    seed=seed.replace('BEGIN;','').replace('COMMIT;','')
+    expected={(row['kind'],row['stable_code']):row for row in transfer.bundled()}
+    with db,db.cursor() as cur:
+        cur.execute(seed)
+    with db,db.cursor() as cur:
+        cur.execute('SELECT * FROM assessment.question_sets ORDER BY code')
+        sets=cur.fetchall()
+        assert len(sets)==13  # 12 CDC sets plus the existing demo set.
+        assert {row['age_months'] for row in sets if row['code'].startswith('cdc-')}==set(s.AGES)
+        cur.execute('''SELECT ci.*, cr.payload, cr.source_refs, cr.locale
+            FROM assessment.content_items ci JOIN assessment.content_revisions cr
+            ON cr.content_item_id=ci.id AND cr.revision=1 ORDER BY ci.stable_code''')
+        before=cur.fetchall()
+        assert len(before)==171
+        for row in before:
+            source=expected.get((row['kind'],row['stable_code']))
+            if source:
+                assert row['payload']==source['payload']
+                assert row['source_refs']==source['source_refs']
+                assert row['locale']==source.get('locale','vi-VN')
+                assert not row['is_active'] and row['published_revision'] is None
+        cur.execute("UPDATE assessment.question_sets SET source_name='Edited by admin' WHERE code='cdc-02m-v1'")
+    with db,db.cursor() as cur:
+        cur.execute(seed)
+    with db.cursor() as cur:
+        cur.execute('''SELECT ci.*, cr.payload, cr.source_refs, cr.locale
+            FROM assessment.content_items ci JOIN assessment.content_revisions cr
+            ON cr.content_item_id=ci.id AND cr.revision=1 ORDER BY ci.stable_code''')
+        assert cur.fetchall()==before
+        cur.execute("SELECT source_name FROM assessment.question_sets WHERE code='cdc-02m-v1'")
+        assert cur.fetchone()['source_name']=='Edited by admin'
+
+
 def test_advice_conditions_are_locked():
     row=next(x for x in transfer.bundled() if x['kind']=='advice')
     payload=copy.deepcopy(row['payload']);payload['match_condition']='anything'
@@ -519,9 +555,9 @@ def test_normalized_schema_preserves_legacy_tables_and_is_repeatable(db,actor):
     from pathlib import Path
     qs,item=small_workspace(db,actor)
     migrations=Path(__file__).resolve().parents[1]/'migrations'
-    normalized=(migrations/'021_assessment_normalized.sql').read_text(encoding='utf-8')
+    normalized=(migrations/'021_assessment_schema.sql').read_text(encoding='utf-8')
     preserve=normalized[normalized.index('DO $$'):normalized.index('CREATE SCHEMA IF NOT EXISTS assessment;')]
-    refresh=(migrations/'025_rename_schema_to_assessment.sql').read_text(encoding='utf-8')
+    refresh=normalized
     refresh=refresh.replace('BEGIN;','').replace('COMMIT;','')
     with db,db.cursor() as cur:
         cur.execute('ALTER SCHEMA assessment RENAME TO assessment_test_saved')

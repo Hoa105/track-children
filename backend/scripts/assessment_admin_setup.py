@@ -1,4 +1,4 @@
-"""Apply migrations 024-025 and optionally import supplied CDC drafts. Never publish."""
+"""Apply assessment migrations 021-022 and optionally import supplied CDC drafts. Never publish."""
 import argparse
 from pathlib import Path
 import sys
@@ -9,12 +9,12 @@ from app.core.config import settings
 from app.features.assessment.admin import transfer
 
 parser=argparse.ArgumentParser()
-parser.add_argument('--apply',action='store_true',help='Apply lifecycle and assessment schema migrations')
+parser.add_argument('--apply',action='store_true',help='Apply consolidated assessment schema and sample data migrations')
 parser.add_argument('--seed',action='store_true',help='Import bundled text as unpublished, inactive drafts')
 args=parser.parse_args()
 versions=(
- ('024_development_admin_lifecycle','024_assessment_admin_lifecycle.sql'),
- ('025_rename_development_to_assessment','025_rename_schema_to_assessment.sql'),
+ ('021_assessment_schema','021_assessment_schema.sql'),
+ ('022_assessment_sample_data','022_assessment_sample_data.sql'),
 )
 db=psycopg2.connect(settings.database_url,cursor_factory=RealDictCursor)
 with db:
@@ -29,7 +29,7 @@ with db:
    text=text.replace('BEGIN;','').replace('COMMIT;','')
    cur.execute(text)
    cur.execute('INSERT INTO public.schema_migrations(version) VALUES (%s)',(version,))
-print('Migrations 024-025 applied or already present.')
+print('Migrations 021-022 applied or already present.')
 if args.seed:
  preview=transfer.preview(db,transfer.bundled())
  if preview['errors']:

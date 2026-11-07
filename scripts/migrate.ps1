@@ -69,17 +69,6 @@ function Invoke-Migrations {
 
     foreach ($file in $files) {
         $version = $file.BaseName
-        # File names changed; keep the identities already recorded in databases.
-        $legacyVersions = @{
-            '021_assessment_normalized' = '021_development_assessment_normalized'
-            '022_assessment_sample_data' = '022_development_sample_data'
-            '023_assessment_review_types' = '023_development_review_types'
-            '024_assessment_admin_lifecycle' = '024_development_admin_lifecycle'
-            '025_rename_schema_to_assessment' = '025_rename_development_to_assessment'
-        }
-        if ($Name -eq 'backend' -and $legacyVersions.ContainsKey($version)) {
-            $version = $legacyVersions[$version]
-        }
         $applied = & docker exec $database.Container psql -At -U track_children `
             -d $database.Database -c "SELECT 1 FROM public.schema_migrations WHERE version = '$version';"
         if ($LASTEXITCODE -ne 0) {

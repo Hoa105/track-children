@@ -1,4 +1,4 @@
--- 021 - Normalized CDC developmental assessment schema.
+-- 021 - Consolidated assessment schema (formerly migrations 021, 023-025).
 --
 -- This is a new canonical schema for the CDC developmental assessment flow.
 -- Legacy assessment tables are preserved in assessment_legacy for compatibility.
@@ -6,6 +6,31 @@
 -- PostgreSQL 15+; run inside the migration runner transaction.
 
 BEGIN;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'development') THEN
+        IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'assessment') THEN
+            -- Migration 001 created an older, unrelated assessment model.
+            -- Preserve it under a separate name; never merge incompatible tables.
+            IF to_regclass('assessment.assessment_domain_results') IS NULL
+               OR to_regclass('assessment.assessments') IS NULL
+               OR to_regclass('assessment.assessment_answers') IS NULL
+               OR EXISTS (
+                   SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                   WHERE n.nspname = 'assessment' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+                     AND c.relname NOT IN ('assessments', 'assessment_answers', 'assessment_domain_results')
+               )
+               OR EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'assessment_legacy') THEN
+                RAISE EXCEPTION 'Unexpected assessment schema or existing assessment_legacy; resolve the conflict before migrating';
+            END IF;
+            ALTER SCHEMA assessment RENAME TO assessment_legacy;
+        END IF;
+        ALTER SCHEMA development RENAME TO assessment;
+
+    END IF;
+END;
+$$;
 
 -- Preserve the original assessment tables before creating the normalized model.
 DO $$
@@ -41,6 +66,8 @@ CREATE TABLE IF NOT EXISTS assessment.question_sets (
     version         text NOT NULL,
     locale          text NOT NULL DEFAULT 'vi-VN',
     source_name     text NOT NULL DEFAULT 'CDC Developmental Milestones',
+    is_active       boolean NOT NULL DEFAULT false,
+    deleted_at      timestamptz,
     status          text NOT NULL DEFAULT 'draft'
                     CHECK (status IN ('draft','in_review','published','archived')),
     created_by      uuid REFERENCES admin.admin_users(id) ON DELETE SET NULL,
@@ -48,6 +75,9 @@ CREATE TABLE IF NOT EXISTS assessment.question_sets (
     updated_at      timestamptz NOT NULL DEFAULT now(),
     UNIQUE (age_months, version, locale)
 );
+
+CREATE INDEX IF NOT EXISTS ix_assessment_sets_available
+    ON assessment.question_sets(age_months) WHERE is_active AND deleted_at IS NULL;
 
 -- One identity row for either a skill or an advice variant. This replaces
 -- separate question/content identity tables.
@@ -61,7 +91,7 @@ CREATE TABLE IF NOT EXISTS assessment.content_items (
     order_index       integer,
     current_revision  integer NOT NULL DEFAULT 1 CHECK (current_revision >= 1),
     published_revision integer CHECK (published_revision IS NULL OR published_revision >= 1),
-    is_active         boolean NOT NULL DEFAULT true,
+    is_active         boolean NOT NULL DEFAULT false,
     deleted_at        timestamptz,
     created_by        uuid REFERENCES admin.admin_users(id) ON DELETE SET NULL,
     updated_by        uuid REFERENCES admin.admin_users(id) ON DELETE SET NULL,
@@ -109,7 +139,7 @@ CREATE TABLE IF NOT EXISTS assessment.content_reviews (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     content_item_id uuid NOT NULL,
     revision        integer NOT NULL,
-    review_type     text NOT NULL CHECK (review_type IN ('clinical','language','qa','rights')),
+    review_type     text NOT NULL CHECK (review_type IN ('medical','language','media_rights','qa')),
     decision        text NOT NULL CHECK (decision IN ('approved','rejected')),
     reviewer_id     uuid NOT NULL REFERENCES admin.admin_users(id) ON DELETE RESTRICT,
     evidence_ref    text,

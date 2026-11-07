@@ -16,12 +16,12 @@ try:
  with psycopg2.connect(base+name) as db:
   with db.cursor() as cur:
    cur.execute('''CREATE SCHEMA admin;CREATE SCHEMA child;CREATE SCHEMA account;
-    CREATE TABLE admin.admin_users(id uuid PRIMARY KEY,full_name text);
+    CREATE TABLE admin.admin_users(id uuid PRIMARY KEY,full_name text,email text);
     CREATE TABLE child.children(id uuid PRIMARY KEY);
     CREATE TABLE account.users(id uuid PRIMARY KEY);
     CREATE TABLE admin.admin_audit_logs(id bigserial PRIMARY KEY,admin_user_id uuid REFERENCES admin.admin_users(id),
      action text,entity_type text,entity_id text,before_data jsonb,after_data jsonb,created_at timestamptz DEFAULT now());''')
-   for prefix in ('021_','023_','024_','025_'):
+   for prefix in ('021_',):
     cur.execute(next((root/'backend/migrations').glob(prefix+'*.sql')).read_text(encoding='utf-8-sig'))
  env={**os.environ,'ASSESSMENT_TEST_DATABASE_URL':base+name}
  tests=sys.argv[1:] or ['backend/tests/test_assessment_admin.py','backend/tests/test_assessment_mobile.py','backend/tests/test_assessment_live_http.py','backend/tests/test_assessment_openapi.py']
