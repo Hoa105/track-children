@@ -1,4 +1,4 @@
- """Dashboard admin: đếm trực tiếp trên các bảng nghiệp vụ, không lưu bảng tổng hợp."""
+"""Dashboard admin: đếm trực tiếp trên các bảng nghiệp vụ, không lưu bảng tổng hợp."""
 
 import datetime as dt
 
