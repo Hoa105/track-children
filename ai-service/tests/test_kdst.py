@@ -91,9 +91,52 @@ def test_younger_child_is_reassured():
     assert "từ 36 tháng" in r.comment and not r.see_specialist
 
 
-def test_uncertain_asks_to_record_again():
-    r = templates.uncertain(assessment(reason=scorer.OTHER_ITEM))
-    assert not r.can_assess and "chưa đúng bài" in r.video_issue
+def unsure(item="A01", reason=scorer.OTHER_ITEM, predicted="B02"):
+    return scorer.KdstAssessment(model_version="kdst_test", item=item, level="unsteady", confidence=0.7,
+                                 predicted_item=predicted, item_confidence=0.4, reason=reason)
+
+
+def test_uncertain_gives_reason_and_filming_guide():
+    r = templates.uncertain(unsure(), seconds=10)
+    assert not r.can_assess
+    assert "Chưa chấm được bài “Đi lên cầu thang”" in r.video_issue
+    assert "Nhảy lò cò" in r.video_issue  # bài model nhầm sang
+    assert "chân cầu thang" in r.next_steps[0]  # vị trí đặt máy riêng cho bài
+    assert any("cố định" in s for s in r.next_steps)
+
+
+def test_diagnose_camera_following_child():
+    reasons = templates.diagnose(unsure(), seconds=13, visible_ratio=0.99, hip_shift=0.3)
+    assert len(reasons) == 1 and "máy quay đi theo bé" in reasons[0]
+
+
+def test_diagnose_stairs_direction_flipped():
+    reasons = templates.diagnose(unsure(predicted="A02"), seconds=10, visible_ratio=0.9, hip_shift=1.6)
+    assert "đi xuống cầu thang" in reasons[0]
+
+
+def test_diagnose_short_and_partly_hidden():
+    reasons = templates.diagnose(unsure(reason=scorer.LOW_CONFIDENCE, predicted="A01"),
+                                 seconds=3.3, visible_ratio=0.74, hip_shift=3.1)
+    assert "3 giây" in reasons[0] and "không thấy bé" in reasons[1]
+
+
+def test_diagnose_no_body_only_says_not_visible():
+    reasons = templates.diagnose(scorer.KdstAssessment(model_version="kdst_test", item="A01",
+                                                       reason=scorer.NO_BODY),
+                                 seconds=10, visible_ratio=0.2, hip_shift=None)
+    assert len(reasons) == 1 and "toàn thân" in reasons[0]
+
+
+def test_diagnose_falls_back_to_generic_reason():
+    reasons = templates.diagnose(unsure(item="B01", reason=scorer.LOW_CONFIDENCE, predicted="B01"),
+                                 seconds=10, visible_ratio=1.0, hip_shift=0.1)
+    assert len(reasons) == 1 and "chưa đủ rõ" in reasons[0]  # B01 đứng tại chỗ: không trách máy quay
+
+
+@pytest.mark.parametrize("item", [i.code for i in ITEMS])
+def test_every_item_has_filming_guide(item):
+    assert len(templates.filming_guide(item)) == 4
 
 
 # ---------------------------------------------------------------------

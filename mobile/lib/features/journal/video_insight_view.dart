@@ -48,21 +48,29 @@ class VideoInsightView extends StatelessWidget {
     }
     final result = insight.result;
     if (insight.status != 'done' || result == null) {
-      return _Notice(
+      final notice = _Notice(
         icon: Icons.videocam_off_outlined,
         title: insight.status == 'rejected'
             ? 'Video chưa phù hợp để phân tích'
             : 'Chưa phân tích được video',
         text: insight.message ?? 'Ba mẹ thử gửi lại sau ít phút nhé.',
       );
+      // "failed" là lỗi máy chủ, không phải do cách quay: chỉ hướng dẫn khi video bị từ chối.
+      return insight.status == 'rejected'
+          ? _RecordAgain(notice: notice, guide: _defaultGuide)
+          : notice;
     }
     if (!result.canAssess) {
-      return _Notice(
-        icon: Icons.videocam_off_outlined,
-        title: 'AI chưa nhận xét được video này',
-        text: result.videoIssue.isEmpty
-            ? 'Ba mẹ thử quay lại, thấy rõ toàn thân bé và đủ sáng nhé.'
-            : result.videoIssue,
+      return _RecordAgain(
+        notice: _Notice(
+          icon: Icons.videocam_off_outlined,
+          title: 'AI chưa nhận xét được video này',
+          text: result.videoIssue.isEmpty
+              ? 'Ba mẹ thử quay lại, thấy rõ toàn thân bé và đủ sáng nhé.'
+              : result.videoIssue,
+        ),
+        // Bài K-DST: máy chủ gửi hướng dẫn riêng của bài trong nextSteps.
+        guide: result.nextSteps.isEmpty ? _defaultGuide : result.nextSteps,
       );
     }
     return Column(
@@ -117,6 +125,34 @@ class VideoInsightView extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Cách quay chung khi máy chủ không gửi hướng dẫn riêng của bài.
+const _defaultGuide = [
+  'Kê hoặc dựng điện thoại cố định ngang tầm bé, không cầm máy đi theo bé.',
+  'Thấy trọn người bé từ đầu tới bàn chân trong suốt video, đủ sáng, không có người hay vật che.',
+  'Mỗi video chỉ có một bé và một lần thực hiện hoạt động, dài khoảng 8–15 giây.',
+];
+
+/// Lý do chưa nhận xét được + hướng dẫn quay lại ngay bên dưới.
+class _RecordAgain extends StatelessWidget {
+  const _RecordAgain({required this.notice, required this.guide});
+  final Widget notice;
+  final List<String> guide;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      notice,
+      const SizedBox(height: 16),
+      _Section(
+        icon: Icons.videocam_outlined,
+        title: 'Hướng dẫn quay lại',
+        items: guide,
+      ),
+    ],
+  );
 }
 
 class _Section extends StatelessWidget {

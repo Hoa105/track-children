@@ -203,6 +203,23 @@ def hip_travel(p: PoseSeries) -> float | None:
     return round(float(abs(np.median(x[-edge:]) - np.median(x[:edge]))) / scale, 1)
 
 
+def hip_shift(p: PoseSeries) -> float | None:
+    """Độ dời vị trí hông trong khung hình (cả ngang lẫn dọc) giữa đầu và cuối video,
+    tính bằng số lần chiều dài thân.
+
+    Bé đi lên / xuống cầu thang trước máy đứng yên → số này lớn; gần 0 dù bé đã đi
+    nhiều bậc nghĩa là máy quay đi theo bé (bé luôn ở giữa hình).
+    """
+    scale = _scale(p)
+    mask = _core_mask(p)
+    if scale is None or mask.sum() < 6:
+        return None
+    hip = _mid(p.kp, L_HIP, R_HIP)[mask]
+    edge = max(1, len(hip) * 15 // 100)
+    shift = np.median(hip[-edge:], axis=0) - np.median(hip[:edge], axis=0)
+    return round(float(np.linalg.norm(shift)) / scale, 1)
+
+
 def step_count(p: PoseSeries) -> float | None:
     """Số bước: hai cổ chân luân phiên vượt nhau (quay ngang) hoặc luân phiên nhấc lên (quay chính diện)."""
     scale = _scale(p)

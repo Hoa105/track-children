@@ -126,7 +126,8 @@ def process(job: dict, store: InsightStore, analyzer: VideoAnalyzer, options: Pr
         if assessment is not None and (assessment.confident or not options.kdst_llm_fallback):
             result = (
                 kdst_templates.render(assessment, context.child_age_months)
-                if assessment.confident else kdst_templates.uncertain(assessment)
+                if assessment.confident
+                else kdst_templates.uncertain(assessment, seconds=info.seconds, pose=pose)
             )
             store.complete(
                 insight_id,
