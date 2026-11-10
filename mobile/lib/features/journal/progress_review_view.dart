@@ -142,13 +142,21 @@ class _TrendCard extends StatelessWidget {
                         children: [
                           Text(_number(p.value), style: _caption),
                           const SizedBox(height: 4),
-                          Container(
-                            height: top == 0 ? 2 : 2 + 70 * p.value / top,
-                            decoration: BoxDecoration(
-                              color: p == trend.points.last
-                                  ? AppColors.primary
-                                  : AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(6),
+                          // Cột chiếm phần chiều cao còn lại, nên chữ lớn không làm tràn khung
+                          Expanded(
+                            child: FractionallySizedBox(
+                              alignment: Alignment.bottomCenter,
+                              heightFactor: top == 0
+                                  ? 0.02
+                                  : (0.02 + 0.98 * p.value / top).clamp(0.02, 1.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: p == trend.points.last
+                                      ? AppColors.primary
+                                      : AppColors.primarySoft,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),

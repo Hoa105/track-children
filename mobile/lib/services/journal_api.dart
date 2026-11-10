@@ -49,7 +49,7 @@ const journalDomainCodes = {
 class JournalApi implements JournalRemote {
   JournalApi({http.Client? client, String? baseUrl})
     : _client = client ?? AuthorizedClient(),
-      _baseUrl = baseUrl ?? apiBaseUrl;
+      _baseUrl = baseUrl ?? rootApiBaseUrl;
 
   final http.Client _client;
   final String _baseUrl;

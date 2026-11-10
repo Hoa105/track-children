@@ -36,7 +36,7 @@ abstract class VideoInsightRemote {
 class VideoInsightApi implements VideoInsightRemote {
   VideoInsightApi({http.Client? client, String? baseUrl})
     : _client = client ?? AuthorizedClient(),
-      _baseUrl = baseUrl ?? apiBaseUrl;
+      _baseUrl = baseUrl ?? rootApiBaseUrl;
 
   final http.Client _client;
   final String _baseUrl;

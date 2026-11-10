@@ -26,7 +26,7 @@ abstract class ActivityRemote {
 class ActivityApi implements ActivityRemote {
   ActivityApi({http.Client? client, String? baseUrl})
     : _client = client ?? AuthorizedClient(),
-      _baseUrl = baseUrl ?? apiBaseUrl;
+      _baseUrl = baseUrl ?? rootApiBaseUrl;
 
   static ActivityApi instance = ActivityApi();
 

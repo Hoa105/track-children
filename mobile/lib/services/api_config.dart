@@ -8,6 +8,16 @@ String get apiBaseUrl {
   return localMobileApiBaseUrl;
 }
 
+/// Host-only URL (no `/api/v1`) for the routes still mounted at the backend root:
+/// /children/{id}/diary, vaccinations, activities, /me, /dev/profiles.
+/// Auth, growth and teeth use [apiBaseUrl] (`/api/v1`).
+String get rootApiBaseUrl {
+  final url = apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+  return url.endsWith('/api/v1')
+      ? url.substring(0, url.length - '/api/v1'.length)
+      : url;
+}
+
 /// Local DemoStore ids → uuid seeded by `python -m app.seed.demo` (backend/app/seed/demo.py).
 /// Accounts / children created on the device get a uuid generated once and are
 /// registered through PUT /dev/profiles before syncing (DemoStore._serverIds).
