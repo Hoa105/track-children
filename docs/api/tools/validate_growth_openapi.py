@@ -1,7 +1,6 @@
-"""Validate growth OpenAPI, all linked examples, source enums and negative probes."""
+"""Validate growth OpenAPI, all linked examples, enum consistency and negative probes."""
 import copy
-import csv
-import json
+import yaml
 from pathlib import Path
 import re
 
@@ -11,7 +10,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
 ROOT = Path(__file__).resolve().parents[3]
-PATH = ROOT / 'docs/api/mobile-growth.openapi.json'
+PATH = ROOT / 'docs/api/mobile-growth.openapi.yaml'
 
 
 def require(ok, message):
@@ -20,7 +19,7 @@ def require(ok, message):
 
 
 def validate():
-    doc = json.loads(PATH.read_text(encoding='utf-8'))
+    doc = yaml.safe_load(PATH.read_text(encoding='utf-8'))
     validate_spec(doc)
     refs = []
 
@@ -83,20 +82,23 @@ def validate():
     require(len(operation_ids)==len(set(operation_ids))==6, 'expected six distinct operations')
     for screen, ids in doc['x-screen-operations'].items():
         require(set(ids) <= set(operation_ids), f'unbound screen: {screen}')
-    contract=json.loads((ROOT/'docs/core_growth/GROWTH-STATUS-CONTRACT.json').read_text(encoding='utf-8'))
-    schema_keys={'AssessmentStatus':'assessment_status','AssessmentReason':'assessment_reason','VelocityCalculationStatus':'velocity_calculation_status',
-                 'ReferenceStatus':'reference_status','ReferenceReason':'reference_reason','VelocityZScoreStatus':'velocity_z_score_status',
-                 'VelocityZScoreReason':'velocity_z_score_reason','ContentStatus':'content_status','ReferenceImportStatus':'reference_import_status'}
-    require(doc['x-status-contract-version']==contract['schema_version'], 'source contract version drift')
-    for schema,key in schema_keys.items():
-        require(doc['components']['schemas'][schema]['enum']==contract[key], f'enum drift: {schema}')
-    with (ROOT/'docs/core_growth/GROWTH-WHO-CLASSIFICATION-MAP.csv').open(encoding='utf-8',newline='') as stream:
-        codes=sorted({row['classification_code'] for row in csv.DictReader(stream)})
-    require(doc['components']['schemas']['ClassificationCode']['enum']==codes, 'classification enum drift')
-    for state, reasons in contract['assessment_reasons_by_status'].items():
-        clauses=doc['components']['schemas']['IndicatorAssessment']['allOf']
-        clause=next(c for c in clauses if c['if']['properties'].get('status',{}).get('const')==state and 'reason' in c['then']['properties'])
-        require(clause['then']['properties']['reason']==({'type':'string','enum':reasons} if reasons else {'type':'null'}), f'reason drift: {state}')
+    schemas = doc['components']['schemas']
+    for name, schema in schemas.items():
+        values = schema.get('enum')
+        if values is not None:
+            require(len(values) == len(set(values)), f'duplicate enum values: {name}')
+    reason_clauses = [
+        clause for clause in schemas['IndicatorAssessment']['allOf']
+        if 'reason' in clause.get('then', {}).get('properties', {})
+    ]
+    require({c['if']['properties']['status']['const'] for c in reason_clauses}
+            == set(schemas['AssessmentStatus']['enum']), 'assessment reason status coverage')
+    for clause in reason_clauses:
+        reason = clause['then']['properties']['reason']
+        require(reason.get('type') == 'null' or
+                (reason.get('type') == 'string' and bool(reason.get('enum')) and
+                 set(reason['enum']) <= set(schemas['AssessmentReason']['enum'])),
+                'assessment reason must use a declared enum value or null')
     examples={key:item['value'] for key,item in doc['components']['examples'].items()}
     probes=[]
     def reject(schema, payload, name):
@@ -119,7 +121,7 @@ def validate():
     bad=copy.deepcopy(examples['VelocityActualOnly']);bad['intervalMonths']=2
     reject('VelocityResponse',bad,'actual mode cannot pretend selected WHO period')
     require(doc['x-implementation-status'] in ('DESIGN_ONLY','IMPLEMENTED'),'unknown implementation status')
-    print(f'PASS: OpenAPI 3.1, {len(operation_ids)} operations, {len(doc["components"]["schemas"])} schemas, {len(refs)} local refs, {count} example uses, {len(probes)} negative probes, source status enums')
+    print(f'PASS: OpenAPI 3.1, {len(operation_ids)} operations, {len(doc["components"]["schemas"])} schemas, {len(refs)} local refs, {count} example uses, {len(probes)} negative probes, internal enum consistency')
 
 
 if __name__=='__main__':

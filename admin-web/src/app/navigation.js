@@ -20,10 +20,10 @@ export const navGroups = [
     label: "NỘI DUNG CHUYÊN MÔN",
     items: [
       {
-        path: "/criteria", label: "Bộ tiêu chí & câu hỏi", icon: "clipboard", permission: "criteria.write",
-        description: "Bộ tiêu chí đánh giá phát triển theo phiên bản: draft → published → archived (F12).",
-        tables: ["criteria.criteria_versions", "criteria.developmental_domains", "criteria.age_milestones", "criteria.criteria", "criteria.criteria_questions", "criteria.criterion_references"],
-        actions: ["Tạo phiên bản nháp bằng cách sao chép bản đang dùng", "Sửa tiêu chí, câu hỏi, gợi ý quan sát theo lĩnh vực × mốc tuổi", "Đánh dấu dấu hiệu cần lưu ý (red flag)", "Gắn nguồn tham chiếu cho từng tiêu chí", "Xuất bản (chỉ 1 phiên bản published), lưu trữ bản cũ"],
+        path: "/assessment", label: "Bộ câu hỏi & Lời khuyên", icon: "clipboard", permission: "assessment.read",
+        description: "Bộ câu hỏi đánh giá theo tuổi và sáu mẫu lời khuyên phát triển.",
+        tables: ["assessment.question_sets", "assessment.content_items", "assessment.content_revisions"],
+        actions: ["Tạo bộ câu hỏi nháp", "Xem nội dung theo bộ và revision", "Quản lý trạng thái hiển thị và lời khuyên"],
       },
       {
         path: "/activities", label: "Hoạt động & nhóm", icon: "spark", permission: "activity.write",

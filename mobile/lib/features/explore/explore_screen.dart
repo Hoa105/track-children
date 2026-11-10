@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
 import '../activities/activities_screen.dart';
+import '../assessment/assessment_screen.dart';
 import '../growth/growth_screen.dart';
 import '../journal/journal_screen.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
@@ -138,12 +139,14 @@ class ExploreScreen extends StatelessWidget {
                     onTap: () => _open(context, JournalScreen(childId: id!)),
                   ),
                   _ExploreTile(
-                    title: 'Lịch sử đánh giá toàn diện',
+                    title: 'Lịch sử đánh giá phát triển',
                     subtitle: 'Nhìn lại các mốc phát triển của bé',
                     icon: Icons.fact_check_outlined,
                     tint: AppColors.purpleSurfaceLight,
-                    onTap: () =>
-                        _open(context, const AssessmentHistoryScreen()),
+                    onTap: () => _open(
+                      context,
+                      AssessmentScreen(childId: id!, initialHistory: true),
+                    ),
                   ),
                   _ExploreTile(
                     title: 'Lịch sử tăng trưởng',
@@ -184,51 +187,6 @@ class ExploreScreen extends StatelessWidget {
               ),
       );
     },
-  );
-}
-
-class AssessmentHistoryScreen extends StatelessWidget {
-  const AssessmentHistoryScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      title: const Text('Lịch sử đánh giá toàn diện'),
-    ),
-    body: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 44,
-              backgroundColor: AppColors.purpleSurfaceLight,
-              child: Icon(
-                Icons.fact_check_outlined,
-                size: 40,
-                color: AppColors.purpleText,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const _SectionTitle('Chưa có lịch sử đánh giá'),
-            const SizedBox(height: 12),
-            const Text(
-              'Kết quả đánh giá toàn diện chưa được kết nối trong phiên bản hiện tại. Khi có dữ liệu, bạn có thể xem lại hành trình phát triển của bé tại đây.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, height: 1.6),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tiếp tục khám phá'),
-            ),
-          ],
-        ),
-      ),
-    ),
   );
 }
 

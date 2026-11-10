@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'platform/web_keyboard_insets.dart';
 import 'models/activity.dart';
 import 'services/activity_api.dart';
 import 'services/demo_store.dart';
@@ -52,7 +53,7 @@ Future<void> main() async {
     DemoStore.instance.syncJournal(child['id'] as String);
     DemoStore.instance.syncTeeth(child['id'] as String);
   }
-  runApp(const TrackChildrenApp());
+  runApp(const WebKeyboardInsets(child: TrackChildrenApp()));
 }
 
 class TrackChildrenApp extends StatefulWidget {
