@@ -91,6 +91,16 @@ def test_younger_child_is_reassured():
     assert "từ 36 tháng" in r.comment and not r.see_specialist
 
 
+def test_watch_signs_follow_item_age():
+    # B01: 36–53 tháng
+    assert "60 tháng" in templates.render(assessment("not_yet"), 60).watch_signs[0]
+    assert "2–4 tuần" in templates.render(assessment("not_yet"), 45).watch_signs[0]
+    assert templates.render(assessment("not_yet"), 30).watch_signs == []  # chưa tới tuổi
+    assert templates.render(assessment("unsteady"), 60).watch_signs
+    assert templates.render(assessment("unsteady"), 45).watch_signs == []
+    assert templates.render(assessment("steady"), 60).watch_signs == []
+
+
 def unsure(item="A01", reason=scorer.OTHER_ITEM, predicted="B02"):
     return scorer.KdstAssessment(model_version="kdst_test", item=item, level="unsteady", confidence=0.7,
                                  predicted_item=predicted, item_confidence=0.4, reason=reason)

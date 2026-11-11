@@ -72,6 +72,8 @@ class InsightResult(CamelModel):
     comment: str = ""
     positives: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
+    # Điều ba mẹ nên để ý theo dõi thêm; rỗng khi video không có gì đáng lưu ý.
+    watch_signs: list[str] = Field(default_factory=list)
     see_specialist: bool = False
     specialist_note: str = ""
 

@@ -64,13 +64,14 @@ class InsightResult {
     this.comment = '',
     this.positives = const [],
     this.nextSteps = const [],
+    this.watchSigns = const [],
     this.seeSpecialist = false,
     this.specialistNote = '',
   });
 
   final bool canAssess;
   final String videoIssue, comment, specialistNote;
-  final List<String> observations, positives, nextSteps;
+  final List<String> observations, positives, nextSteps, watchSigns;
   final bool seeSpecialist;
 
   static List<String> _strings(Object? value) => [
@@ -84,6 +85,7 @@ class InsightResult {
     comment: json['comment'] as String? ?? '',
     positives: _strings(json['positives']),
     nextSteps: _strings(json['nextSteps']),
+    watchSigns: _strings(json['watchSigns']),
     seeSpecialist: json['seeSpecialist'] as bool? ?? false,
     specialistNote: json['specialistNote'] as String? ?? '',
   );
@@ -95,6 +97,7 @@ class InsightResult {
     'comment': comment,
     'positives': positives,
     'nextSteps': nextSteps,
+    'watchSigns': watchSigns,
     'seeSpecialist': seeSpecialist,
     'specialistNote': specialistNote,
   };

@@ -12,7 +12,7 @@ from app.pose import metrics as pose_metrics
 from app.pose.metrics import PoseSeries
 from app.schemas.insight import InsightResult
 
-VERSION = "kdst-template-3"
+VERSION = "kdst-template-4"
 
 DISCLAIMER = (
     "Nhận xét được tạo tự động từ chuyển động cơ thể bé trong video, chỉ để ba mẹ tham khảo "
@@ -262,6 +262,30 @@ def diagnose(
     return reasons[:MAX_REASONS]
 
 
+def watch_signs(level: str, item, child_age_months: int) -> list[str]:
+    """Dấu hiệu cần chú ý: chỉ dựa vào mức chấm so với độ tuổi của bài.
+
+    Model chỉ thấy khung xương nên không nêu dấu hiệu về nét mặt, đau hay cảm xúc.
+    """
+    name, age_from, age_to = item.name_vi, item.age_from_months, item.age_to_months
+    if level == "not_yet" and child_age_months > age_to:
+        return [
+            f"Bé {child_age_months} tháng nhưng chưa làm được bài “{name}”, "
+            f"trong khi đa số bé làm được trong khoảng {age_from}–{age_to} tháng."
+        ]
+    if level == "not_yet" and child_age_months >= age_from:
+        return [
+            f"Bé đang ở độ tuổi thường tập bài “{name}” ({age_from}–{age_to} tháng) "
+            "nhưng chưa làm được. Ba mẹ quay lại sau 2–4 tuần tập để theo dõi tiến bộ."
+        ]
+    if level == "unsteady" and child_age_months > age_to:
+        return [
+            f"Bé đã qua độ tuổi thường làm vững bài “{name}” ({age_to} tháng) nhưng động tác "
+            "còn chưa vững. Ba mẹ để ý xem bé có tiến bộ sau vài tuần tập không."
+        ]
+    return []
+
+
 def render(assessment: scorer.KdstAssessment, child_age_months: int) -> InsightResult:
     """Nhận xét khi model đủ tin cậy (assessment.confident)."""
     item = ITEMS[ITEM_INDEX[assessment.item]]
@@ -281,6 +305,7 @@ def render(assessment: scorer.KdstAssessment, child_age_months: int) -> InsightR
         comment=comment,
         positives=[_POSITIVE[level].format(name=name)],
         next_steps=[text.challenge] if level == "steady" else list(text.practice),
+        watch_signs=watch_signs(level, item, child_age_months),
         see_specialist=late,
         specialist_note=(
             f"Đa số bé làm được bài “{name}” trong khoảng {item.age_from_months}–{item.age_to_months} tháng. "

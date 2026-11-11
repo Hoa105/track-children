@@ -40,6 +40,11 @@ Map<String, dynamic> _reviewJson(
     'progress': ['Lần sau bé tự nhảy, không cần vịn tay.'],
     'keepPracticing': ['Tiếp đất nhẹ bằng hai chân.'],
     'nextSteps': ['Đặt sợi dây trên sàn để bé nhảy qua.'],
+    'activities': ['Nhảy tại chỗ hai chân'],
+    'skillsDone': ['Bật nhảy hai chân'],
+    'stage': 'Bé đang chuyển từ nhảy vịn tay sang tự nhảy.',
+    'strengths': ['Vận động thô: bé hào hứng, tự tin.'],
+    'nextRecording': 'Khoảng 2 tuần nữa, quay cùng góc máy.',
     'seeSpecialist': false,
     'specialistNote': '',
   },
@@ -173,31 +178,53 @@ void main() {
     ),
   );
 
-  testWidgets('shows the time range, latest review and history on entry', (
-    tester,
-  ) async {
-    await addVideos();
-    await open(tester);
+  testWidgets(
+    'shows the time range and latest review; history on its own screen',
+    (tester) async {
+      await addVideos();
+      await open(tester);
 
-    expect(reviews.created, isEmpty); // mở màn không gọi AI
-    expect(find.text('01/09/2026 – 05/10/2026'), findsOneWidget);
-    expect(
-      find.text('3 video AI đã nhận xét · 2 hoạt động trong khoảng này'),
-      findsOneWidget,
-    );
-    expect(find.text('Kết quả gần nhất'), findsOneWidget);
-    // Tóm tắt r2 ở kết quả gần nhất + dòng lịch sử
-    expect(find.text('Bé nhảy tự tin hơn.'), findsNWidgets(2));
-    expect(find.text('Lịch sử đánh giá (2)'), findsOneWidget);
-    expect(find.text('Video trong khoảng này (4)'), findsOneWidget);
-    expect(find.text('Kể chuyện cùng bé'), findsOneWidget);
-    expect(find.text('Video hơi tối'), findsOneWidget);
+      expect(reviews.created, isEmpty); // mở màn không gọi AI
+      expect(find.text('01/09/2026 – 05/10/2026'), findsOneWidget);
+      expect(
+        find.text('3 video AI đã nhận xét · 2 hoạt động trong khoảng này'),
+        findsOneWidget,
+      );
+      expect(find.text('Kết quả gần nhất'), findsOneWidget);
+      // Chỉ kết quả gần nhất, lịch sử nằm ở màn khác
+      expect(find.text('Bé nhảy tự tin hơn.'), findsOneWidget);
+      expect(find.text('Lần đánh giá tháng trước.'), findsNothing);
+      expect(find.text('1. Tổng quan quá trình phát triển'), findsOneWidget);
+      expect(find.text('2. Sự tiến bộ theo thời gian'), findsOneWidget);
+      expect(find.text('3. Điểm mạnh và kỹ năng cần hỗ trợ'), findsOneWidget);
+      expect(find.text('4. Những dấu hiệu cần chú ý'), findsOneWidget);
+      expect(find.textContaining('Chưa thấy dấu hiệu nào'), findsOneWidget);
+      expect(find.text('5. Kế hoạch chăm sóc và luyện tập'), findsOneWidget);
+      expect(
+        find.text('Bé đang chuyển từ nhảy vịn tay sang tự nhảy.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Khoảng 2 tuần nữa, quay cùng góc máy.'),
+        findsOneWidget,
+      );
+      expect(find.text('Lịch sử (2)'), findsOneWidget);
+      expect(find.text('Video trong khoảng này (4)'), findsOneWidget);
+      expect(find.text('Kể chuyện cùng bé'), findsOneWidget);
+      expect(find.text('Video hơi tối'), findsOneWidget);
 
-    await tester.tap(find.text('Lần đánh giá tháng trước.'));
-    await tester.pumpAndSettle();
-    expect(find.text('Kết quả đánh giá ngày 02/09/2026'), findsOneWidget);
-    expect(find.text('Lần đánh giá tháng trước.'), findsNWidgets(2));
-  });
+      await tester.tap(find.text('Lịch sử (2)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lịch sử đánh giá (2)'), findsOneWidget);
+      expect(find.text('Bé nhảy tự tin hơn.'), findsOneWidget); // dòng lịch sử
+
+      await tester.tap(find.text('Lần đánh giá tháng trước.'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đánh giá ngày 02/09/2026'), findsOneWidget);
+      expect(find.text('Lần đánh giá tháng trước.'), findsOneWidget);
+      expect(find.text('1. Tổng quan quá trình phát triển'), findsOneWidget);
+    },
+  );
 
   testWidgets('one review over every usable video of all activities', (
     tester,
@@ -208,9 +235,12 @@ void main() {
     await tester.tap(find.text('Đánh giá tổng hợp').last);
     await tester.pumpAndSettle();
     expect(reviews.created.single, ['i4', 'i2', 'i1']); // mới nhất trước
-    expect(find.text('Lịch sử đánh giá (3)'), findsOneWidget);
+    expect(find.text('Lịch sử (3)'), findsOneWidget);
     expect(find.text('Kết quả gần nhất'), findsOneWidget);
-    expect(find.text('Đánh giá mới nhất.'), findsNWidgets(2));
+    expect(find.text('Đánh giá mới nhất.'), findsOneWidget);
+
+    await tester.tap(find.text('Lịch sử (3)'));
+    await tester.pumpAndSettle();
     expect(
       find.text('3 video quay 01/09/2026 – 05/10/2026'),
       findsOneWidget, // dòng lịch sử của lần mới
@@ -273,7 +303,7 @@ void main() {
     reviews.error = null;
     await tester.tap(find.text('Đánh giá tổng hợp').last);
     await tester.pumpAndSettle();
-    expect(find.text('Lịch sử đánh giá (1)'), findsOneWidget);
+    expect(find.text('Lịch sử (1)'), findsOneWidget);
     expect(
       find.text('AI đang bận, ba mẹ thử lại sau ít phút nhé'),
       findsNothing,

@@ -89,6 +89,9 @@ def create_review(new: NewReview, insights: InsightStore, reviews: ReviewStore,
     except LLMError:
         raise ReviewError(502, "Chưa tổng hợp được lúc này, ba mẹ thử lại sau nhé") from None
 
+    # Danh sách hoạt động lấy từ dữ liệu, không để AI tự đếm
+    activities = list(dict.fromkeys(r["context"]["activity"]["title"] for r in rows))
+    result = analysis.result.model_copy(update={"activities": activities})
     return reviews.create({
         "child_id": new.child_id,
         "requested_by": new.requested_by,
@@ -98,7 +101,7 @@ def create_review(new: NewReview, insights: InsightStore, reviews: ReviewStore,
         "insight_ids": ids,
         "period_from": rows[0]["created_at"],
         "period_to": rows[-1]["created_at"],
-        "result": analysis.result.model_dump(mode="json", by_alias=True),
+        "result": result.model_dump(mode="json", by_alias=True),
         "metrics": [t.model_dump(mode="json", by_alias=True) for t in metric_trends(rows)],
         "llm_model": analysis.model,
         "prompt_version": analysis.prompt_version,
