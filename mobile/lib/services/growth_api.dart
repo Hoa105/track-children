@@ -117,6 +117,10 @@ class GrowthApi {
     'gender': c['gender'],
     'growthAccess': c['growthAccess'],
     'teethingAccess': c['teethingAccess'] ?? 'none',
+    // owner | member; access: quyền theo từng mục (growth, diary, ...)
+    'role': c['role'] ?? 'owner',
+    'relationship': c['relationship'],
+    'access': Map<String, dynamic>.from(c['access'] as Map? ?? const {}),
     'records': <Map<String, dynamic>>[],
     'server': true,
     'members': [],

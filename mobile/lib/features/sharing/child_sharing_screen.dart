@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
 import '../../services/sharing_api.dart';
+import 'shared_with_me_screen.dart';
 
 enum AccessLevel { none, view, edit }
 
@@ -51,7 +52,8 @@ class SharingMember {
 }
 
 const _modules = <String>[
-  'Lượng sữa',
+  'Tăng trưởng',
+  'Đánh giá',
   'Tiêm chủng',
   'Mọc răng',
   'Nhật ký',
@@ -59,7 +61,8 @@ const _modules = <String>[
 ];
 
 const _scopeForModule = <String, String>{
-  'Lượng sữa': 'growth',
+  'Tăng trưởng': 'growth',
+  'Đánh giá': 'assessment',
   'Tiêm chủng': 'vaccination',
   'Mọc răng': 'teething',
   'Nhật ký': 'diary',
@@ -103,7 +106,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           avatar: 'A',
           permissions: {
             for (final module in _modules)
-              module: module == 'Lượng sữa' || module == 'Nhật ký'
+              module: module == 'Tăng trưởng' || module == 'Nhật ký'
                   ? AccessLevel.edit
                   : AccessLevel.view,
           },
@@ -115,6 +118,9 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           DemoStore.instance.childById(_childId)?['pending'] as List? ?? [],
         )
       : widget.pending ?? <String>[];
+
+  /// Nhãn lời mời đang chờ → id lời mời trên máy chủ (để huỷ).
+  final _pendingIds = <String, String>{};
 
   bool get _usesServer =>
       _childId != null &&
@@ -139,12 +145,14 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         _members
           ..clear()
           ..addAll(loaded);
-        _pending
-          ..clear()
-          ..addAll([
-            for (final raw in result['invitations'] as List)
-              'Lời mời · ${raw['invitee_email'] ?? raw['invitee_phone'] ?? ''}',
-          ]);
+        _pending.clear();
+        _pendingIds.clear();
+        for (final raw in result['invitations'] as List) {
+          final label =
+              'Lời mời · ${raw['invitee_email'] ?? raw['invitee_phone'] ?? ''}';
+          _pending.add(label);
+          _pendingIds[label] = raw['id'].toString();
+        }
       });
     } catch (error) {
       if (mounted) _toast('Chưa tải được quyền chia sẻ: $error');
@@ -225,15 +233,44 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   Future<void> _sendInvitation(String contact) async {
     try {
       if (_usesServer) {
+        // Mặc định chỉ xem mọi mục; chủ hồ sơ chỉnh quyền sau khi người nhận tham gia.
         await _sharingApi.invite(_childId!, contact, {
           for (final scope in _scopeForModule.values) scope: 'view',
         });
+        await _loadSharing();
+        if (mounted) _toast('Đã gửi lời mời tới $contact.');
+        return;
       }
       if (!mounted) return;
       setState(() => _pending.add('Lời mời · $contact'));
+      await _persist();
+    } catch (error) {
+      if (mounted) {
+        _toast(sharingErrorMessage(
+          error,
+          'Chưa thể gửi lời mời. Vui lòng kiểm tra thông tin và thử lại.',
+        ));
+      }
+    }
+  }
+
+  Future<void> _cancelInvitation(String entry) async {
+    try {
+      final id = _pendingIds[entry];
+      if (_usesServer && id != null) {
+        await _sharingApi.cancelInvitation(_childId!, id);
+      }
+      if (!mounted) return;
+      setState(() {
+        _pending.remove(entry);
+        _pendingIds.remove(entry);
+      });
       if (!_usesServer) await _persist();
-    } catch (_) {
-      if (mounted) _toast('Chưa thể gửi lời mời. Vui lòng kiểm tra thông tin và thử lại.');
+      _toast('Đã hủy lời mời.');
+    } catch (error) {
+      if (mounted) {
+        _toast(sharingErrorMessage(error, 'Chưa hủy được lời mời. Vui lòng thử lại.'));
+      }
     }
   }
 
@@ -292,7 +329,12 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) =>
+      _childId != null && !DemoStore.instance.isChildOwner(_childId)
+      ? SharedChildAccessScreen(childId: _childId)
+      : _ownerView(context);
+
+  Widget _ownerView(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: _sharingAppBar(
       context,
@@ -383,11 +425,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
             const SizedBox(height: 10),
             _PendingCard(
               entries: _pending,
-              onCancel: (entry) {
-                setState(() => _pending.remove(entry));
-                _persist();
-                _toast('Đã hủy lời mời.');
-              },
+              onCancel: (entry) => unawaited(_cancelInvitation(entry)),
             ),
           ],
         ],
@@ -1486,7 +1524,8 @@ class _PersonSummaryCard extends StatelessWidget {
 }
 
 IconData _moduleIcon(String module) => switch (module) {
-  'Lượng sữa' => Icons.local_drink_outlined,
+  'Tăng trưởng' => Icons.show_chart_rounded,
+  'Đánh giá' => Icons.fact_check_outlined,
   'Tiêm chủng' => Icons.vaccines_outlined,
   'Mọc răng' => Icons.sentiment_satisfied_alt_rounded,
   'Nhật ký' => Icons.menu_book_outlined,

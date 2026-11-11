@@ -276,6 +276,47 @@ class DemoStore extends ChangeNotifier {
       (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
     }
   });
+  /// Chủ hồ sơ (hoặc bé tạo trên máy) có toàn quyền; người được chia sẻ chỉ có
+  /// quyền theo từng mục do chủ hồ sơ cấp (F23).
+  bool isChildOwner(String? childId) {
+    final child = childId == null ? null : childById(childId);
+    return child == null || child['server'] != true || child['role'] != 'member';
+  }
+
+  /// 'none' | 'view' | 'edit' của tài khoản hiện tại với một mục của bé.
+  String childAccess(String? childId, String scope) {
+    if (isChildOwner(childId)) return 'edit';
+    final child = childById(childId!)!;
+    final access = child['access'];
+    final level = access is Map ? access[scope] : null;
+    if (level is String) return level;
+    // Bản cache cũ chỉ có growthAccess / teethingAccess
+    return (child['${scope}Access'] as String?) ?? 'none';
+  }
+
+  bool canViewChild(String? childId, String scope) =>
+      childAccess(childId, scope) != 'none';
+
+  bool canEditChild(String? childId, String scope) =>
+      childAccess(childId, scope) == 'edit';
+
+  /// Tải lại danh sách bé (của mình + được chia sẻ) sau khi nhận lời mời / rời hồ sơ.
+  Future<void> reloadAuthenticatedChildren() async {
+    final user = AuthService.instance.user;
+    if (user == null || AuthService.instance.demoMode) return;
+    final owner = user['id'] as String;
+    final response = await AuthService.instance.authorizedRequest('GET', '/children');
+    if (AuthService.instance.user?['id'] != owner) return;
+    final profiles = (response['children'] as List)
+        .map((c) => Map<String, dynamic>.from(c as Map))
+        .toList();
+    await cacheAuthenticatedChildren(owner, profiles);
+    final selected = _data['childId'] as String?;
+    if (selected != null && childById(selected) == null) {
+      await _write((d) => d['childId'] = null);
+    }
+  }
+
   Future<void> selectChild(String id) async {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
@@ -1480,6 +1521,10 @@ final class _TeethingStore {
       final child = matches.first as Map;
       child['teethingAccess'] = profile?['teethingAccess'] ?? 'none';
       child['growthAccess'] = profile?['growthAccess'] ?? 'none';
+      child['role'] = profile?['role'] ?? child['role'];
+      child['access'] = Map<String, dynamic>.from(
+        profile?['access'] as Map? ?? const {},
+      );
       if (profile == null || profile['teethingAccess'] == 'none') {
         child['teeth'] = <dynamic>[];
       }

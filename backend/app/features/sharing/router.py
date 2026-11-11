@@ -58,6 +58,39 @@ def create_invitation(
     return service.create_invitation(conn, child_id, user_id, body)
 
 
+@router.delete(
+    "/children/{child_id}/sharing/invitations/{invitation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def cancel_invitation(
+    child_id: UUID,
+    invitation_id: UUID,
+    user_id: UUID = Depends(current_user_id),
+    conn: Connection = Depends(get_db),
+):
+    service.cancel_invitation(conn, child_id, invitation_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/children/{child_id}/sharing/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_child(
+    child_id: UUID,
+    user_id: UUID = Depends(current_user_id),
+    conn: Connection = Depends(get_db),
+):
+    service.leave_child(conn, child_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/sharing/invitations")
+def list_incoming_invitations(
+    user_id: UUID = Depends(current_user_id),
+    conn: Connection = Depends(get_db),
+):
+    """Lời mời đang chờ gửi tới tài khoản hiện tại (theo tài khoản, email hoặc SĐT)."""
+    return service.list_incoming_invitations(conn, user_id)
+
+
 @router.post("/sharing/invitations/{invitation_id}/accept")
 def accept_invitation(
     invitation_id: UUID,

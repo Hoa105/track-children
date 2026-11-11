@@ -8,6 +8,7 @@ import '../../app_colors.dart';
 import '../../app_layout.dart';
 import '../../models/video_insight.dart';
 import '../../services/demo_store.dart';
+import '../sharing/access_gate.dart';
 import '../../services/journal_media.dart';
 import 'ai_videos_screen.dart';
 import 'journal_media_view.dart';
@@ -92,6 +93,8 @@ class _JournalScreenState extends State<JournalScreen> {
     listenable: DemoStore.instance,
     builder: (context, _) {
       final child = DemoStore.instance.childById(widget.childId);
+      final canView = DemoStore.instance.canViewChild(widget.childId, 'diary');
+      final canEdit = DemoStore.instance.canEditChild(widget.childId, 'diary');
       final entries = DemoStore.instance.journalEntries(widget.childId).where((
         entry,
       ) {
@@ -105,7 +108,7 @@ class _JournalScreenState extends State<JournalScreen> {
           backgroundColor: AppColors.background,
           title: const Text('Nhật ký', style: _heading),
           actions: [
-            if (child != null)
+            if (child != null && canView)
               IconButton(
                 tooltip: 'Video đã phân tích AI',
                 onPressed: () => Navigator.of(context).push<void>(
@@ -122,7 +125,7 @@ class _JournalScreenState extends State<JournalScreen> {
             ),
           ],
         ),
-        floatingActionButton: child == null
+        floatingActionButton: child == null || !canEdit
             ? null
             : FloatingActionButton.extended(
                 onPressed: () => _open(),
@@ -133,6 +136,8 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
         body: child == null
             ? const Center(child: Text('Chọn hồ sơ bé để xem nhật ký.'))
+            : !canView
+            ? const NoAccessView(section: 'nhật ký')
             : ListView(
                 padding: const EdgeInsets.fromLTRB(
                   AppLayout.pagePadding,
@@ -141,6 +146,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   100,
                 ),
                 children: [
+                  if (!canEdit) const ReadOnlyNotice(),
                   if (_range != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -473,7 +479,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         style: _heading,
       ),
       actions: [
-        if (widget.entry != null && !_editing) ...[
+        if (widget.entry != null &&
+            !_editing &&
+            DemoStore.instance.canEditChild(widget.childId, 'diary')) ...[
           IconButton(
             tooltip: 'Sửa nhật ký',
             onPressed: _busy ? null : () => setState(() => _editing = true),
