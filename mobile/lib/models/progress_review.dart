@@ -12,11 +12,25 @@ class ProgressReview {
     required this.createdAt,
     required this.summary,
     this.activityRef,
+    this.activities = const [],
+    this.skillsDone = const [],
+    this.skillsImproving = const [],
+    this.stage = '',
     this.progress = const [],
+    this.independence = '',
+    this.pace = '',
+    this.strengths = const [],
+    this.challenges = const [],
     this.keepPracticing = const [],
-    this.nextSteps = const [],
+    this.repeatedPatterns = const [],
+    this.notYetSeen = const [],
+    this.behaviorChanges = const [],
     this.seeSpecialist = false,
     this.specialistNote = '',
+    this.nextSteps = const [],
+    this.prioritySkills = const [],
+    this.parentTips = const [],
+    this.nextRecording = '',
     this.metrics = const [],
   });
 
@@ -28,8 +42,21 @@ class ProgressReview {
   final List<String> insightIds;
   final DateTime periodFrom, periodTo, createdAt;
   final String summary, specialistNote;
-  final List<String> progress, keepPracticing, nextSteps;
   final bool seeSpecialist;
+
+  // 1. Tổng quan
+  final List<String> activities, skillsDone, skillsImproving;
+  final String stage;
+  // 2. Tiến bộ theo thời gian
+  final List<String> progress;
+  final String independence, pace;
+  // 3. Điểm mạnh và kỹ năng cần hỗ trợ
+  final List<String> strengths, challenges, keepPracticing;
+  // 4. Dấu hiệu cần chú ý (+ seeSpecialist / specialistNote)
+  final List<String> repeatedPatterns, notYetSeen, behaviorChanges;
+  // 5. Kế hoạch chăm sóc và luyện tập
+  final List<String> nextSteps, prioritySkills, parentTips;
+  final String nextRecording;
 
   /// MediaPipe measurements per video, oldest first (motor activities only).
   final List<MetricTrend> metrics;
@@ -49,11 +76,25 @@ class ProgressReview {
       periodTo: DateTime.parse(json['periodTo'] as String).toLocal(),
       createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
       summary: result['summary'] as String? ?? '',
+      activities: _strings(result['activities']),
+      skillsDone: _strings(result['skillsDone']),
+      skillsImproving: _strings(result['skillsImproving']),
+      stage: result['stage'] as String? ?? '',
       progress: _strings(result['progress']),
+      independence: result['independence'] as String? ?? '',
+      pace: result['pace'] as String? ?? '',
+      strengths: _strings(result['strengths']),
+      challenges: _strings(result['challenges']),
       keepPracticing: _strings(result['keepPracticing']),
-      nextSteps: _strings(result['nextSteps']),
+      repeatedPatterns: _strings(result['repeatedPatterns']),
+      notYetSeen: _strings(result['notYetSeen']),
+      behaviorChanges: _strings(result['behaviorChanges']),
       seeSpecialist: result['seeSpecialist'] as bool? ?? false,
       specialistNote: result['specialistNote'] as String? ?? '',
+      nextSteps: _strings(result['nextSteps']),
+      prioritySkills: _strings(result['prioritySkills']),
+      parentTips: _strings(result['parentTips']),
+      nextRecording: result['nextRecording'] as String? ?? '',
       metrics: [
         for (final m in json['metrics'] as List? ?? const [])
           MetricTrend.fromJson(m as Map<String, dynamic>),

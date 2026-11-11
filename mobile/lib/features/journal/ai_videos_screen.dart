@@ -7,6 +7,7 @@ import '../../services/demo_store.dart';
 import 'journal_screen.dart';
 import '../../models/progress_review.dart';
 import 'progress_review_view.dart';
+import 'review_history_screen.dart';
 
 const _heading = TextStyle(
   fontSize: 20,
@@ -40,7 +41,8 @@ bool usableInsight(VideoInsight insight) =>
 ///
 /// The time range picker sits on top: "Đánh giá tổng hợp" summarises every
 /// analysed video (all activities) filmed in that range into one review.
-/// Below: the latest review, review history, and the videos in the range.
+/// Below: the latest review, a link to the review history screen, and the
+/// videos in the range.
 class AiVideosScreen extends StatefulWidget {
   const AiVideosScreen({super.key, required this.childId});
   final String childId;
@@ -55,7 +57,6 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
   /// Null = từ video đầu tiên đến video mới nhất (tự mở rộng khi có video mới).
   DateTimeRange? _picked;
   List<ProgressReview> _history = [];
-  ProgressReview? _shown;
   String? _error;
   bool _loadingHistory = true;
   bool _reviewing = false;
@@ -98,10 +99,7 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
     try {
       final history = await DemoStore.instance.progressReviews(widget.childId);
       if (!mounted) return;
-      setState(() {
-        _history = history;
-        _shown = history.firstOrNull;
-      });
+      setState(() => _history = history);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -148,11 +146,10 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
         insightIds,
       );
       if (!mounted) return;
-      setState(() {
-        // Cùng tập video: server trả lại lần đánh giá cũ → không thêm trùng
-        _history = [review, ..._history.where((r) => r.id != review.id)];
-        _shown = review;
-      });
+      // Cùng tập video: server trả lại lần đánh giá cũ → không thêm trùng
+      setState(
+        () => _history = [review, ..._history.where((r) => r.id != review.id)],
+      );
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -198,7 +195,7 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
             : (days.first, days.last);
       }
 
-      final shown = _shown;
+      final latest = _history.firstOrNull;
       return Scaffold(
         appBar: AppBar(
           backgroundColor: AppColors.background,
@@ -326,11 +323,25 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                shown != null && shown.id != _history.firstOrNull?.id
-                    ? 'Kết quả đánh giá ngày ${_dateLabel(shown.createdAt)}'
-                    : 'Kết quả gần nhất',
-                style: _title,
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Kết quả gần nhất', style: _title),
+                  ),
+                  if (_history.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => ReviewHistoryScreen(
+                            reviews: _history,
+                            period: period,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.history_rounded, size: 18),
+                      label: Text('Lịch sử (${_history.length})'),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
               if (_loadingHistory)
@@ -340,7 +351,7 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
                     child: CircularProgressIndicator(),
                   ),
                 )
-              else if (shown == null)
+              else if (latest == null)
                 const _Panel(
                   child: Text(
                     'Chưa có lần đánh giá nào. Chọn khoảng thời gian rồi bấm '
@@ -349,22 +360,7 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
                   ),
                 )
               else
-                ProgressReviewView(review: shown, period: period(shown)),
-              if (_history.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Text('Lịch sử đánh giá (${_history.length})', style: _title),
-                const SizedBox(height: 8),
-                for (final r in _history)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ProgressReviewTile(
-                      review: r,
-                      period: period(r),
-                      selected: r.id == shown?.id,
-                      onTap: () => setState(() => _shown = r),
-                    ),
-                  ),
-              ],
+                ProgressReviewView(review: latest, period: period(latest)),
               const SizedBox(height: 24),
               Text('Video trong khoảng này (${inRange.length})', style: _title),
               const SizedBox(height: 8),

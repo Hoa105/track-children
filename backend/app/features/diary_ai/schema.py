@@ -36,6 +36,7 @@ class InsightResult(CamelModel):
     comment: str = ""
     positives: list[str] = []
     next_steps: list[str] = []
+    watch_signs: list[str] = []
     see_specialist: bool = False
     specialist_note: str = ""
 
@@ -76,12 +77,33 @@ class NewProgressReview(CamelModel):
 
 
 class ProgressReviewResult(CamelModel):
+    """Năm mục cho ba mẹ (ai-service app/schemas/review.py ReviewResult)."""
+
+    # 1. Tổng quan
     summary: str
+    activities: list[str] = []
+    skills_done: list[str] = []
+    skills_improving: list[str] = []
+    stage: str = ""
+    # 2. Tiến bộ theo thời gian
     progress: list[str] = []
+    independence: str = ""
+    pace: str = ""
+    # 3. Điểm mạnh và kỹ năng cần hỗ trợ
+    strengths: list[str] = []
+    challenges: list[str] = []
     keep_practicing: list[str] = []
-    next_steps: list[str] = []
+    # 5. Dấu hiệu cần chú ý
+    repeated_patterns: list[str] = []
+    not_yet_seen: list[str] = []
+    behavior_changes: list[str] = []
     see_specialist: bool = False
     specialist_note: str = ""
+    # 6. Kế hoạch chăm sóc và luyện tập
+    next_steps: list[str] = []
+    priority_skills: list[str] = []
+    parent_tips: list[str] = []
+    next_recording: str = ""
 
 
 class MetricPoint(CamelModel):

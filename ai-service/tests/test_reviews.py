@@ -20,6 +20,8 @@ RESULT = ReviewResult(
     progress=["Lần đầu bé cần vịn tay, những lần sau bé tự nhảy."],
     keep_practicing=["Tiếp đất nhẹ bằng hai chân."],
     next_steps=["Đặt sợi dây trên sàn để bé nhảy qua.", "Khen bé sau mỗi lần nhảy."],
+    stage="Bé đang chuyển từ nhảy vịn tay sang tự nhảy.",
+    next_recording="Khoảng 2 tuần nữa.",
 )
 
 
@@ -87,6 +89,9 @@ def test_review_summarizes_in_time_order_with_metric_trend(client, store, writer
     body = response.json()
     assert body["activityRef"] == "g0-9" and body["activityTitle"] == "Nhảy tại chỗ hai chân"
     assert body["result"]["keepPracticing"] == RESULT.keep_practicing
+    assert body["result"]["stage"] == RESULT.stage
+    assert body["result"]["nextRecording"] == RESULT.next_recording
+    assert body["result"]["activities"] == ["Nhảy tại chỗ hai chân"]  # từ dữ liệu, không từ AI
     assert body["periodFrom"] < body["periodTo"]
 
     [trend] = body["metrics"]
@@ -184,3 +189,9 @@ def test_prompt_marks_specialist_and_parent_note(store):
     text = prompts.review_text([row], "Nhảy")
     assert '"luu_y_chuyen_gia": "Nên hỏi bác sĩ"' in text
     assert '"ghi_chu_ba_me": "Bé hay ngã"' in text
+
+
+def test_output_schema_requires_every_result_field():
+    fields = set(ReviewResult.model_fields) - {"activities"}
+    assert set(prompts.OUTPUT_SCHEMA["required"]) == fields
+    assert set(prompts.OUTPUT_SCHEMA["properties"]) == fields

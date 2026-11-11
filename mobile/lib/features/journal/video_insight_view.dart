@@ -101,6 +101,14 @@ class VideoInsightView extends StatelessWidget {
           items: result.positives,
         ),
         _Section(
+          icon: Icons.flag_outlined,
+          title: 'Dấu hiệu cần chú ý',
+          items: result.watchSigns,
+          text: result.watchSigns.isEmpty && !result.seeSpecialist
+              ? 'Chưa thấy dấu hiệu nào cần lưu ý trong video này.'
+              : null,
+        ),
+        _Section(
           icon: Icons.lightbulb_outline_rounded,
           title: 'Gợi ý tiếp theo',
           items: result.nextSteps,

@@ -18,14 +18,38 @@ class NewReview(CamelModel):
 
 
 class ReviewResult(CamelModel):
-    """Đầu ra của AI — thay đổi qua các lần quay, không chấm điểm."""
+    """Đầu ra của AI — thay đổi qua các lần quay, không chấm điểm.
 
+    Năm mục hiển thị cho ba mẹ: tổng quan, tiến bộ theo thời gian, điểm mạnh /
+    cần hỗ trợ, dấu hiệu cần chú ý, kế hoạch luyện tập. Trường mới đều có mặc
+    định để đọc được các đánh giá cũ (progress-review-v2).
+    """
+
+    # 1. Tổng quan
     summary: str
-    progress: list[str] = Field(default_factory=list)  # thay đổi tích cực thấy được
-    keep_practicing: list[str] = Field(default_factory=list)  # điều nên tiếp tục cùng bé luyện
-    next_steps: list[str] = Field(default_factory=list)
+    activities: list[str] = Field(default_factory=list)  # service điền, không do AI viết
+    skills_done: list[str] = Field(default_factory=list)  # kỹ năng bé đã làm được
+    skills_improving: list[str] = Field(default_factory=list)
+    stage: str = ""  # giai đoạn phát triển, mô tả nhẹ nhàng, không gán nhãn
+    # 2. Tiến bộ theo thời gian
+    progress: list[str] = Field(default_factory=list)  # thay đổi qua các lần quay / theo tháng
+    independence: str = ""  # từ cần hỗ trợ → tự thực hiện
+    pace: str = ""  # tốc độ tiến bộ có thay đổi không
+    # 3. Điểm mạnh và kỹ năng cần hỗ trợ
+    strengths: list[str] = Field(default_factory=list)
+    challenges: list[str] = Field(default_factory=list)
+    keep_practicing: list[str] = Field(default_factory=list)  # kỹ năng cần luyện thêm
+    # 5. Dấu hiệu cần chú ý
+    repeated_patterns: list[str] = Field(default_factory=list)
+    not_yet_seen: list[str] = Field(default_factory=list)  # kỹ năng chưa thấy trong video
+    behavior_changes: list[str] = Field(default_factory=list)
     see_specialist: bool = False
     specialist_note: str = ""
+    # 6. Kế hoạch chăm sóc và luyện tập
+    next_steps: list[str] = Field(default_factory=list)  # hoạt động nên làm tuần tới
+    priority_skills: list[str] = Field(default_factory=list)
+    parent_tips: list[str] = Field(default_factory=list)  # cách ba mẹ tương tác với bé
+    next_recording: str = ""  # khi nào nên quay video tiếp theo
 
 
 class MetricPoint(CamelModel):
