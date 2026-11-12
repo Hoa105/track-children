@@ -26,10 +26,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
-    final scale = tester.widget<Transform>(
-      find.byKey(const ValueKey('home-background-scale')),
-    );
-    expect(scale.transform.entry(0, 0), 1);
+    expect(find.byKey(const ValueKey('home-background-scale')), findsNothing);
     await DemoStore.instance.selectChild('child_linh');
     await tester.pumpAndSettle();
     expect(find.text('Gia Linh'), findsOneWidget);
@@ -80,20 +77,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('home plus opens measurement form directly', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: HomeScreen(childName: 'Bảo An')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Tạo ghi chép'));
-    await tester.pumpAndSettle();
-    expect(find.text('Ghi chép nhanh'), findsNothing);
-    expect(find.byType(GrowthScreen), findsNothing);
-    expect(find.byType(TextFormField), findsWidgets);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'home plus preserves metric choice and opens measurement editor',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 852);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        const MaterialApp(home: HomeScreen(childName: 'Bảo An')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Tạo ghi chép'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ghi chép nhanh'), findsNothing);
+      expect(find.byType(GrowthScreen), findsNothing);
+      expect(find.text('Thêm số đo mới'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Cân nặng'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('height card opens height tracking', (tester) async {
     await tester.pumpWidget(

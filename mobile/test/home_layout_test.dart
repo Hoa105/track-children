@@ -10,10 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:track_children/main.dart';
 import 'package:track_children/features/home/home_screen.dart';
+import 'package:track_children/features/home/background/background_frame_spec.dart';
+import 'package:track_children/services/demo_store.dart';
 
 void main() {
   setUpAll(() async {
-    // Use Flutter's fallback font instead of the test-only Ahem boxes.
+    // Use the app's real Nunito font instead of the test-only Ahem boxes.
     final configFile = File('.dart_tool/package_config.json').absolute;
     final config =
         jsonDecode(await configFile.readAsString()) as Map<String, dynamic>;
@@ -21,13 +23,14 @@ void main() {
         .cast<Map<String, dynamic>>()
         .singleWhere((package) => package['name'] == 'flutter');
     final flutterUri = configFile.uri.resolve("${flutterPackage['rootUri']}/");
-    final font = File.fromUri(
-      flutterUri.resolve(
-        '../../bin/cache/artifacts/material_fonts/roboto-regular.ttf',
-      ),
-    );
-    final loader = FontLoader('Be Vietnam Pro')
-      ..addFont(Future.value(ByteData.sublistView(await font.readAsBytes())));
+    final loader = FontLoader('Nunito')
+      ..addFont(
+        Future.value(
+          ByteData.sublistView(
+            await File('assets/fonts/nunito/Nunito-Variable.ttf').readAsBytes(),
+          ),
+        ),
+      );
     await loader.load();
     final iconFont = File.fromUri(
       flutterUri.resolve(
@@ -41,13 +44,13 @@ void main() {
   });
 
   for (final size in const [
-    Size(320, 640),
+    Size(320, 568),
     Size(360, 800),
-    Size(390, 844),
+    Size(393, 852),
     Size(402, 874),
     Size(430, 932),
   ]) {
-    for (final scale in [1.0, 2.0]) {
+    for (final scale in [1.0, 1.3, 2.0]) {
       testWidgets('Home ${size.width} at text scale $scale', (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = size;
@@ -84,6 +87,13 @@ void main() {
         final hero = find.byKey(const ValueKey('home-hero'));
         expect(find.byType(HomeScreen), findsOneWidget);
         expect(care, findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('home-background-frame')),
+            matching: find.byType(Text),
+          ),
+          findsNothing,
+        );
         expect(
           tester.getRect(hero).bottom - tester.getRect(care).top,
           closeTo(10, 0.01),
@@ -206,96 +216,73 @@ void main() {
       });
     }
   }
-  const stages = [
-    ('0_3_months', 'baby_boy', 'Chào bé đến\nvới thế giới'),
-    ('4_6_months', 'baby_boy', 'Bé khám phá\nxung quanh'),
-    ('7_9_months', 'baby_boy', 'Bé ngày càng\ncứng cáp'),
-    ('10_12_months', 'baby_boy', 'Cùng bé bước\nđến tuổi lên một'),
-    ('1_3_years', 'boy', 'Cùng bé học\nđiều mới'),
-    ('4_5_years', 'boy', 'Bé lớn khôn\nvà tự tin'),
-  ];
-  for (var age = 0; age < stages.length; age++) {
-    for (final size in const [Size(320, 640), Size(390, 844), Size(430, 932)]) {
-      for (final scale in [1.0, 2.0]) {
-        testWidgets('Age $age: ${size.width}px, text $scale', (tester) async {
-          tester.view.devicePixelRatio = 1;
-          tester.view.physicalSize = size;
-          tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
-          tester.platformDispatcher.textScaleFactorTestValue = scale;
-          addTearDown(tester.view.reset);
-          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-          final captureKey = GlobalKey();
-          await tester.pumpWidget(
-            RepaintBoundary(
-              key: captureKey,
-              child: MaterialApp(
-                theme: ThemeData(fontFamily: 'Be Vietnam Pro'),
-                home: HomeScreen(
-                  childName: 'Bé Nguyễn Hoàng Minh An',
-                  heroAgeIndex: age,
-                ),
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    for (final size in const [
+      Size(320, 568),
+      Size(360, 800),
+      Size(393, 852),
+      Size(430, 932),
+    ]) {
+      testWidgets('${platform.name} SafeArea ${size.width} text 1.3', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        DemoStore.resetInstanceForTesting();
+        await DemoStore.instance.login(DemoStore.demoEmail, DemoStore.password);
+        await DemoStore.instance.selectChild('child_an');
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        tester.view.padding = const FakeViewPadding(top: 44, bottom: 34);
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        addTearDown(DemoStore.resetInstanceForTesting);
+        final captureKey = GlobalKey();
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: captureKey,
+            child: MaterialApp(
+              theme: ThemeData(fontFamily: 'Nunito', platform: platform),
+              home: const HomeScreen(childName: 'Bảo An'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final frame = tester.getRect(
+          find.byKey(const ValueKey('home-background-frame')),
+        );
+        expect(frame.width, size.width);
+        expect(frame.width / frame.height, closeTo(homeBgAspectRatio, .001));
+        final header = find.byKey(const ValueKey('home-profile-header'));
+        expect(tester.getSize(header).height, lessThanOrEqualTo(80));
+        final headerText = tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byKey(const ValueKey('home-profile-summary')),
+                matching: find.byType(Text),
               ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.text('Dữ liệu xem trước'), findsNothing);
-          expect(find.byType(DropdownButton<int>), findsNothing);
-          expect(find.text(stages[age].$3.replaceAll('\n', ' ')), findsOneWidget);
-          final character = tester.widget<Image>(
-            find.byKey(const ValueKey('home-hero-character')),
-          );
-          expect(
-            (character.image as AssetImage).assetName,
-            'assets/images/scenery/characters/${stages[age].$2}_${stages[age].$1}.png',
-          );
-          expect(character.fit, BoxFit.contain);
-          expect(
-            tester
-                .widgetList<Image>(find.byType(Image))
-                .any(
-                  (image) =>
-                      image.image is AssetImage &&
-                      (image.image as AssetImage).assetName ==
-                          'assets/images/scenery/backgrounds/hero_${stages[age].$1}.png',
-                ),
-            isTrue,
-          );
-          final heroRect = tester.getRect(
-            find.byKey(const ValueKey('home-hero')),
-          );
-          final characterRect = tester.getRect(
-            find.byKey(const ValueKey('home-hero-character')),
-          );
-          expect(
-            characterRect.left,
-            greaterThanOrEqualTo(
-              heroRect.left - ((age == 0 || age == 2) ? 42 : 0),
-            ),
-          );
-          expect(characterRect.right, lessThanOrEqualTo(heroRect.right));
-          expect(characterRect.top, greaterThanOrEqualTo(heroRect.top + 24));
-          expect(characterRect.bottom, lessThanOrEqualTo(heroRect.bottom));
-          await capture(
-            tester,
-            captureKey,
-            '${size.width.toInt()}_age_${age}_scale_$scale',
-          );
-          expect(tester.takeException(), isNull);
-          await tester.scrollUntilVisible(
-            find.text('Nhật ký gần đây'),
-            200,
-            scrollable: find
-                .descendant(
-                  of: find.byType(CustomScrollView),
-                  matching: find.byType(Scrollable),
-                )
-                .first,
-          );
-          await tester.pumpAndSettle();
-          expect(find.text('Nhật ký gần đây').hitTestable(), findsOneWidget);
-          expect(tester.takeException(), isNull);
-        });
-      }
+            )
+            .map((text) => text.data)
+            .toList();
+        expect(headerText, [
+          'Bảo An',
+          DemoStore.instance.ageLabel(DemoStore.instance.child!),
+        ]);
+        expect(
+          tester.getRect(find.text('Bảo An')).top,
+          greaterThanOrEqualTo(44),
+        );
+        final button = tester.getRect(find.byTooltip('Đổi ảnh nền trang chủ'));
+        expect(button.top, greaterThanOrEqualTo(44));
+        expect(button.right, lessThanOrEqualTo(size.width - 16));
+        expect(button.shortestSide, greaterThanOrEqualTo(48));
+        await capture(
+          tester,
+          captureKey,
+          '${platform.name}_${size.width.toInt()}_profile_scale_1.3',
+        );
+        expect(tester.takeException(), isNull);
+      });
     }
   }
 }

@@ -1,0 +1,1337 @@
+{
+  "version": 1,
+  "frames": [
+    {
+      "key": "birthday-600",
+      "theme": "birthday",
+      "title": "Birthday",
+      "categoryTitle": "Birthday",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "birthday-1200",
+      "theme": "birthday",
+      "title": "Birthday",
+      "categoryTitle": "Birthday",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "christmas-600",
+      "theme": "christmas",
+      "title": "Christmas",
+      "categoryTitle": "Christmas",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "christmas-1200",
+      "theme": "christmas",
+      "title": "Christmas",
+      "categoryTitle": "Christmas",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "classic-600",
+      "theme": "classic",
+      "title": "Classic",
+      "categoryTitle": "Classic",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/classic/photo-strip-template-classic-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "classic-1200",
+      "theme": "classic",
+      "title": "Classic",
+      "categoryTitle": "Classic",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/classic/photo-strip-template-classic-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "film-600",
+      "theme": "film",
+      "title": "Film",
+      "categoryTitle": "Film",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/film/photo-strip-template-film-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "film-1200",
+      "theme": "film",
+      "title": "Film",
+      "categoryTitle": "Film",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/film/photo-strip-template-film-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "halloween-600",
+      "theme": "halloween",
+      "title": "Halloween",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/photo-strip-template-halloween-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    },
+    {
+      "key": "halloween-1200",
+      "theme": "halloween",
+      "title": "Halloween",
+      "categoryTitle": "Halloween",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/halloween/photo-strip-template-halloween-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ]
+    }
+  ],
+  "stickers": [
+    {
+      "key": "animals/blue-bunny",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/blue-bunny.png",
+      "width": 320,
+      "height": 347,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/blue-elephant",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/blue-elephant.png",
+      "width": 559,
+      "height": 570,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/bug-with-yellow-eyes",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/bug-with-yellow-eyes.png",
+      "width": 210,
+      "height": 292,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/bunny",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/bunny.png",
+      "width": 230,
+      "height": 250,
+      "enabled": false,
+      "note": "PNG has no alpha channel",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cartoon-cat",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cartoon-cat.png",
+      "width": 281,
+      "height": 230,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cartoon-dinosaur",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cartoon-dinosaur.png",
+      "width": 261,
+      "height": 283,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cartoon-t-rex",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cartoon-t-rex.png",
+      "width": 308,
+      "height": 364,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cuddly-green-critter",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cuddly-green-critter.png",
+      "width": 508,
+      "height": 585,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cute-bunny",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cute-bunny.png",
+      "width": 286,
+      "height": 356,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cute-elephant",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cute-elephant.png",
+      "width": 450,
+      "height": 370,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/dinosaur",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/dinosaur.png",
+      "width": 1202,
+      "height": 966,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/dinosaur_1",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/dinosaur_1.png",
+      "width": 387,
+      "height": 231,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/elephant-head",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/elephant-head.png",
+      "width": 413,
+      "height": 288,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/gray-elephant",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/gray-elephant.png",
+      "width": 363,
+      "height": 338,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/happy-bunnies",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/happy-bunnies.png",
+      "width": 671,
+      "height": 430,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/light-blue-whale",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/light-blue-whale.png",
+      "width": 650,
+      "height": 280,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/muccca",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/muccca.png",
+      "width": 512,
+      "height": 512,
+      "enabled": false,
+      "note": "PNG has no alpha channel",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/penguin",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/penguin.png",
+      "width": 8000,
+      "height": 8000,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/pink-bunny",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/pink-bunny.png",
+      "width": 323,
+      "height": 332,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/small-yellow-chick",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/small-yellow-chick.png",
+      "width": 744,
+      "height": 1052,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/teal-and-orange-bird",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/teal-and-orange-bird.png",
+      "width": 64,
+      "height": 64,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "animals/teal-stegosaurus",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/teal-stegosaurus.png",
+      "width": 842,
+      "height": 595,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/yellow-chick_1",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/yellow-chick_1.png",
+      "width": 744,
+      "height": 1052,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/yellow-chick_2",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/yellow-chick_2.png",
+      "width": 294,
+      "height": 452,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-01-bunting-banner",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-01-bunting-banner.png",
+      "width": 2239,
+      "height": 655,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-02-tag-make-a-wish",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-02-tag-make-a-wish.png",
+      "width": 764,
+      "height": 1479,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-03-label-happy-birthday",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-03-label-happy-birthday.png",
+      "width": 1232,
+      "height": 367,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-04-die-cut-sticker-balloon",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-04-die-cut-sticker-balloon.png",
+      "width": 378,
+      "height": 560,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-05-die-cut-sticker-balloon",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-05-die-cut-sticker-balloon.png",
+      "width": 378,
+      "height": 560,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-06-sticker-star",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-06-sticker-star.png",
+      "width": 695,
+      "height": 666,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-07-button",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-07-button.png",
+      "width": 361,
+      "height": 361,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-08-ticket-party-pass",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-08-ticket-party-pass.png",
+      "width": 1134,
+      "height": 484,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-09-washi-tape",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-09-washi-tape.png",
+      "width": 1517,
+      "height": 254,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-10-word-art-party",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-10-word-art-party.png",
+      "width": 1342,
+      "height": 478,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/party-time-birthday-kit-12-sequin",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-12-sequin.png",
+      "width": 170,
+      "height": 170,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/a-princess",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/a-princess.png",
+      "width": 478,
+      "height": 695,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/girl-in-striped-dress",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/girl-in-striped-dress.png",
+      "width": 744,
+      "height": 1052,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/girl-with-a-smile",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/girl-with-a-smile.png",
+      "width": 744,
+      "height": 1052,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/girl-with-hands-behind-back",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/girl-with-hands-behind-back.png",
+      "width": 113,
+      "height": 234,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/pink-peach-head",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/pink-peach-head.png",
+      "width": 510,
+      "height": 560,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/witch-cartoon",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/witch-cartoon.png",
+      "width": 786,
+      "height": 773,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/yellow-anime-girl",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/yellow-anime-girl.png",
+      "width": 241,
+      "height": 340,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-candy-cane",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-candy-cane.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-gift",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-gift.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-heart",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-heart.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-holly",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-holly.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-mitten",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-mitten.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-mug",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-mug.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-red-bauble",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-red-bauble.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-red-gift",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-red-gift.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-snowflake",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-snowflake.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-snowman",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-snowman.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-star",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-star.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-stocking",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-stocking.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-tree",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-tree.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/christmas-yellow-bauble",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/christmas-yellow-bauble.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/autumn-leaf",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/autumn-leaf.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/bat",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/bat.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/black-cat",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/black-cat.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/boo",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/boo.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/candle",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/candle.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/candy-corn",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/candy-corn.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/crescent-moon",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/crescent-moon.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/ghost",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/ghost.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/happy-halloween",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/happy-halloween.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/happy-pumpkin",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/happy-pumpkin.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/lollipop",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/lollipop.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/potion",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/potion.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/pumpkin-bucket",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/pumpkin-bucket.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/sleepy-pumpkin",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/sleepy-pumpkin.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/sparkle",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/sparkle.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/star",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/star.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/striped-sweet",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/striped-sweet.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/treat-bag",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/treat-bag.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/witch-hat",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/witch-hat.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/wrapped-candy",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/png/wrapped-candy.png",
+      "width": 512,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "rainbow/happy-rain-cloud",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/happy-rain-cloud.png",
+      "width": 742,
+      "height": 848,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "rainbow/rainbow-clouds",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/rainbow-clouds.png",
+      "width": 450,
+      "height": 237,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "rainbow/rainbow-with-rain-cloud",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/rainbow-with-rain-cloud.png",
+      "width": 922,
+      "height": 1111,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    }
+  ]
+}

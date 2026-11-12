@@ -16,6 +16,11 @@ import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/home/background/background_picker_service.dart';
+import 'features/home/background/home_background_repository.dart';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'features/growth/growth_overview.dart';
 import 'features/growth/api_growth_repository.dart';
 import 'features/growth/growth_tracking_flow.dart';
@@ -29,6 +34,17 @@ Future<void> main() async {
   await AuthService.instance.restore();
   if (!AuthService.instance.signedIn) {
     await DemoStore.instance.logout();
+  }
+  if (!kIsWeb) {
+    try {
+      final picker = BackgroundPickerService();
+      await picker.recoverInterrupted();
+      await const HomeBackgroundRepository().cleanupOrphans(
+        keepPending: await picker.recoveryPaths(),
+      );
+    } catch (_) {
+      /* A local media error must not prevent app startup. */
+    }
   }
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;

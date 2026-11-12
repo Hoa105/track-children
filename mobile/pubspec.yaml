@@ -47,6 +47,9 @@ dependencies:
   url_launcher: ^6.3.3
   youtube_player_iframe: ^6.0.2
   webview_flutter: ^4.14.1
+  image: 4.12.0
+  camera: 0.12.2
+  permission_handler: 12.0.3
 
 dev_dependencies:
   flutter_test:
@@ -98,10 +101,101 @@ flutter:
   assets:
     - assets/assessment/
     - assets/images/scenery/backgrounds/
+    - assets/images/scenery/backgrounds/default/
     - assets/images/scenery/characters/
     - assets/images/scenery/icons/care/
     - assets/images/scenery/icons/age_milestones/
     - assets/images/scenery/icons/ui/
+    # BEGIN PHOTOBOOTH ASSETS
+    - assets/photobooth/catalog.json
+    - assets/photobooth/frames/birthday/photo-strip-template-birthday-2x6.png
+    - assets/photobooth/frames/birthday/photo-strip-template-birthday-4x6.png
+    - assets/photobooth/frames/christmas/photo-strip-template-christmas-2x6.png
+    - assets/photobooth/frames/christmas/photo-strip-template-christmas-4x6.png
+    - assets/photobooth/frames/classic/photo-strip-template-classic-2x6.png
+    - assets/photobooth/frames/classic/photo-strip-template-classic-4x6.png
+    - assets/photobooth/frames/film/photo-strip-template-film-2x6.png
+    - assets/photobooth/frames/film/photo-strip-template-film-4x6.png
+    - assets/photobooth/frames/halloween/photo-strip-template-halloween-2x6.png
+    - assets/photobooth/frames/halloween/photo-strip-template-halloween-4x6.png
+    - assets/photobooth/stickers/animals/blue-bunny.png
+    - assets/photobooth/stickers/animals/blue-elephant.png
+    - assets/photobooth/stickers/animals/bug-with-yellow-eyes.png
+    - assets/photobooth/stickers/animals/cartoon-cat.png
+    - assets/photobooth/stickers/animals/cartoon-dinosaur.png
+    - assets/photobooth/stickers/animals/cartoon-t-rex.png
+    - assets/photobooth/stickers/animals/cuddly-green-critter.png
+    - assets/photobooth/stickers/animals/cute-bunny.png
+    - assets/photobooth/stickers/animals/cute-elephant.png
+    - assets/photobooth/stickers/animals/dinosaur.png
+    - assets/photobooth/stickers/animals/dinosaur_1.png
+    - assets/photobooth/stickers/animals/elephant-head.png
+    - assets/photobooth/stickers/animals/gray-elephant.png
+    - assets/photobooth/stickers/animals/happy-bunnies.png
+    - assets/photobooth/stickers/animals/light-blue-whale.png
+    - assets/photobooth/stickers/animals/penguin.png
+    - assets/photobooth/stickers/animals/pink-bunny.png
+    - assets/photobooth/stickers/animals/small-yellow-chick.png
+    - assets/photobooth/stickers/animals/teal-and-orange-bird.png
+    - assets/photobooth/stickers/animals/teal-stegosaurus.png
+    - assets/photobooth/stickers/animals/yellow-chick_1.png
+    - assets/photobooth/stickers/animals/yellow-chick_2.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-01-bunting-banner.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-02-tag-make-a-wish.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-03-label-happy-birthday.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-04-die-cut-sticker-balloon.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-05-die-cut-sticker-balloon.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-06-sticker-star.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-07-button.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-08-ticket-party-pass.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-09-washi-tape.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-10-word-art-party.png
+    - assets/photobooth/stickers/birthday/party-time-birthday-kit-12-sequin.png
+    - assets/photobooth/stickers/cartoon/a-princess.png
+    - assets/photobooth/stickers/cartoon/girl-in-striped-dress.png
+    - assets/photobooth/stickers/cartoon/girl-with-a-smile.png
+    - assets/photobooth/stickers/cartoon/girl-with-hands-behind-back.png
+    - assets/photobooth/stickers/cartoon/pink-peach-head.png
+    - assets/photobooth/stickers/cartoon/witch-cartoon.png
+    - assets/photobooth/stickers/cartoon/yellow-anime-girl.png
+    - assets/photobooth/stickers/christmas/christmas-candy-cane.png
+    - assets/photobooth/stickers/christmas/christmas-gift.png
+    - assets/photobooth/stickers/christmas/christmas-heart.png
+    - assets/photobooth/stickers/christmas/christmas-holly.png
+    - assets/photobooth/stickers/christmas/christmas-mitten.png
+    - assets/photobooth/stickers/christmas/christmas-mug.png
+    - assets/photobooth/stickers/christmas/christmas-red-bauble.png
+    - assets/photobooth/stickers/christmas/christmas-red-gift.png
+    - assets/photobooth/stickers/christmas/christmas-snowflake.png
+    - assets/photobooth/stickers/christmas/christmas-snowman.png
+    - assets/photobooth/stickers/christmas/christmas-star.png
+    - assets/photobooth/stickers/christmas/christmas-stocking.png
+    - assets/photobooth/stickers/christmas/christmas-tree.png
+    - assets/photobooth/stickers/christmas/christmas-yellow-bauble.png
+    - assets/photobooth/stickers/halloween/png/autumn-leaf.png
+    - assets/photobooth/stickers/halloween/png/bat.png
+    - assets/photobooth/stickers/halloween/png/black-cat.png
+    - assets/photobooth/stickers/halloween/png/boo.png
+    - assets/photobooth/stickers/halloween/png/candle.png
+    - assets/photobooth/stickers/halloween/png/candy-corn.png
+    - assets/photobooth/stickers/halloween/png/crescent-moon.png
+    - assets/photobooth/stickers/halloween/png/ghost.png
+    - assets/photobooth/stickers/halloween/png/happy-halloween.png
+    - assets/photobooth/stickers/halloween/png/happy-pumpkin.png
+    - assets/photobooth/stickers/halloween/png/lollipop.png
+    - assets/photobooth/stickers/halloween/png/potion.png
+    - assets/photobooth/stickers/halloween/png/pumpkin-bucket.png
+    - assets/photobooth/stickers/halloween/png/sleepy-pumpkin.png
+    - assets/photobooth/stickers/halloween/png/sparkle.png
+    - assets/photobooth/stickers/halloween/png/star.png
+    - assets/photobooth/stickers/halloween/png/striped-sweet.png
+    - assets/photobooth/stickers/halloween/png/treat-bag.png
+    - assets/photobooth/stickers/halloween/png/witch-hat.png
+    - assets/photobooth/stickers/halloween/png/wrapped-candy.png
+    - assets/photobooth/stickers/rainbow/happy-rain-cloud.png
+    - assets/photobooth/stickers/rainbow/rainbow-clouds.png
+    - assets/photobooth/stickers/rainbow/rainbow-with-rain-cloud.png
+    # END PHOTOBOOTH ASSETS
 
   # To add assets to your application, add an assets section, like this:
   # assets:

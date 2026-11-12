@@ -1,19 +1,18 @@
 import '../journal/journal_screen.dart';
 import '../notifications/notifications_screen.dart';
-import '../../services/app_notifications.dart';
 import '../activities/activities_screen.dart';
 import '../explore/explore_screen.dart';
 import '../../services/demo_store.dart';
 
-import 'dart:ui' as ui;
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../app_colors.dart';
 import '../../app_layout.dart';
+import 'background/home_background_repository.dart';
+import 'home_profile_header.dart';
+import 'background/photobooth_entry_screen.dart';
+import 'background/home_background_section.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 import '../settings/settings_screen.dart';
 import '../child/child_profile_screen.dart';
@@ -23,106 +22,21 @@ import '../teething/teething_screen.dart';
 import '../vaccination/vaccination_screen.dart';
 import '../feeding/milk_calculator_screen.dart';
 
-class _HomeHeroPreview {
-  const _HomeHeroPreview({
-    required this.ageLabel,
-    required this.backgroundAsset,
-    required this.characterAsset,
-    required this.headline,
-    required this.message,
-    required this.characterOnLeft,
-    required this.characterWidthFraction,
-    this.characterScale = 1,
-    this.characterOffsetX = 0,
-  });
-
-  final String ageLabel;
-  final String backgroundAsset;
-  final String characterAsset;
-  final String headline;
-  final String message;
-  final bool characterOnLeft;
-  final double characterWidthFraction;
-  final double characterScale;
-  final double characterOffsetX;
-}
-
-const _homeHeroPreviews = <_HomeHeroPreview>[
-  _HomeHeroPreview(
-    ageLabel: '0–3 tháng',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_0_3_months.png',
-    characterAsset: 'assets/images/scenery/characters/baby_boy_0_3_months.png',
-    headline: 'Chào bé đến\nvới thế giới',
-    message: 'Cùng chăm sóc và theo dõi những tháng đầu đời của bé.',
-    characterOnLeft: true,
-    characterWidthFraction: .62,
-    characterScale: AppLayout.homeHeroSmallCharacterScale,
-    characterOffsetX: -AppLayout.homeHeroCharacterLeftShift,
-  ),
-  _HomeHeroPreview(
-    ageLabel: '4–6 tháng',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_4_6_months.png',
-    characterAsset: 'assets/images/scenery/characters/baby_boy_4_6_months.png',
-    headline: 'Bé khám phá\nxung quanh',
-    message: 'Mỗi ngày là một trải nghiệm mới cùng bé.',
-    characterOnLeft: false,
-    characterWidthFraction: .66,
-    characterScale: AppLayout.homeHeroSmallCharacterScale,
-  ),
-  _HomeHeroPreview(
-    ageLabel: '7–9 tháng',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_7_9_months.png',
-    characterAsset: 'assets/images/scenery/characters/baby_boy_7_9_months.png',
-    headline: 'Bé ngày càng\ncứng cáp',
-    message: 'Ghi lại những bước tiến nhỏ của bé mỗi ngày.',
-    characterOnLeft: true,
-    characterWidthFraction: .64,
-    characterOffsetX: -AppLayout.homeHeroCharacterLeftShift,
-  ),
-  _HomeHeroPreview(
-    ageLabel: '10–12 tháng',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_10_12_months.png',
-    characterAsset:
-        'assets/images/scenery/characters/baby_boy_10_12_months.png',
-    headline: 'Cùng bé bước\nđến tuổi lên một',
-    message: 'Đồng hành cùng bé trong cột mốc đầu đời.',
-    characterOnLeft: false,
-    characterWidthFraction: .60,
-  ),
-  _HomeHeroPreview(
-    ageLabel: '1–3 tuổi',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_1_3_years.png',
-    characterAsset: 'assets/images/scenery/characters/boy_1_3_years.png',
-    headline: 'Cùng bé học\nđiều mới',
-    message: 'Khuyến khích bé khám phá và tự tin mỗi ngày.',
-    characterOnLeft: true,
-    characterWidthFraction: .60,
-  ),
-  _HomeHeroPreview(
-    ageLabel: '4–5 tuổi',
-    backgroundAsset: 'assets/images/scenery/backgrounds/hero_4_5_years.png',
-    characterAsset: 'assets/images/scenery/characters/boy_4_5_years.png',
-    headline: 'Bé lớn khôn\nvà tự tin',
-    message: 'Cùng lưu giữ hành trình trưởng thành của bé.',
-    characterOnLeft: false,
-    characterWidthFraction: .64,
-    characterScale: AppLayout.homeHeroSmallCharacterScale,
-  ),
-];
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.childName,
-    this.heroAgeIndex = 0,
     this.onLogout,
+    this.backgroundRepository = const HomeBackgroundRepository(),
+    this.onChangeBackground,
+    this.photobooth,
     super.key,
-  }) : assert(heroAgeIndex >= 0 && heroAgeIndex < 6);
-
-  /// Selects the existing age artwork without exposing preview controls.
-  final int heroAgeIndex;
+  });
 
   final String childName;
   final VoidCallback? onLogout;
+  final HomeBackgroundRepository backgroundRepository;
+  final HomeBackgroundChooser? onChangeBackground;
+  final PhotoboothHomeLauncher? photobooth;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -130,25 +44,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
   final _scrollController = ScrollController();
-  final _backgroundScale = ValueNotifier<double>(1.08);
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_updateBackgroundScale);
-  }
-
-  void _updateBackgroundScale() {
-    final progress = (_scrollController.offset / 180).clamp(0.0, 1.0);
-    _backgroundScale.value = 1.08 - (0.08 * progress);
-  }
-
   @override
   void dispose() {
-    _scrollController
-      ..removeListener(_updateBackgroundScale)
-      ..dispose();
-    _backgroundScale.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -329,6 +227,15 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     final active = DemoStore.instance.child;
     final currentName = active?['full_name'] as String? ?? widget.childName;
     final name = currentName.trim().isEmpty ? 'Bé An' : currentName.trim();
+    final store = DemoStore.instance;
+    final accountId = store.signedIn ? store.parent['id'] as String? : null;
+    final childId = active?['id'] as String?;
+    final role = accountId == null
+        ? null
+        : (store.parent['defaultRelationship'] ??
+                  store.parent['relationship'] ??
+                  store.parent['role'])
+              as String?;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -341,113 +248,58 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final topInset = MediaQuery.paddingOf(context).top;
-                      final widthBasedHeight = (constraints.maxWidth * .66)
-                          .clamp(208.0, 272.0)
-                          .toDouble();
-                      final heroHeight =
-                          widthBasedHeight * AppLayout.homeHeroHeightFactor;
-                      final months = active == null
-                          ? null
-                          : int.parse(
-                              DemoStore.instance
-                                  .ageLabel(active)
-                                  .split(' ')
-                                  .first,
-                            );
-                      final ageIndex = months == null
-                          ? widget.heroAgeIndex
-                          : months < 4
-                          ? 0
-                          : months < 7
-                          ? 1
-                          : months < 10
-                          ? 2
-                          : months < 13
-                          ? 3
-                          : months < 48
-                          ? 4
-                          : 5;
-                      final preview = _homeHeroPreviews[ageIndex];
-                      return Stack(
-                        key: const ValueKey('home-hero'),
-                        children: [
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: _HomeTopBackdrop(
-                                scale: _backgroundScale,
-                                preview: preview,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top:
-                                topInset +
-                                AppLayout.minimumTouchTarget +
-                                AppLayout.smallGap,
-                            bottom: AppLayout.mediumGap,
-                            left: preview.characterOnLeft
-                                ? AppLayout.smallGap + preview.characterOffsetX
-                                : null,
-                            right: preview.characterOnLeft
-                                ? null
-                                : AppLayout.smallGap - preview.characterOffsetX,
-                            width:
-                                constraints.maxWidth *
-                                AppLayout.homeHeroCharacterWidthFraction *
-                                preview.characterScale,
-                            child: IgnorePointer(
-                              child: _HomeReveal(
-                                identity: (
-                                  active?['id'],
-                                  preview.characterAsset,
-                                ),
-                                child: Image.asset(
-                                  preview.characterAsset,
-                                  key: const ValueKey('home-hero-character'),
-                                  fit: BoxFit.contain,
-                                  alignment: preview.characterOnLeft
-                                      ? Alignment.bottomLeft
-                                      : Alignment.bottomRight,
-                                  excludeFromSemantics: true,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.only(top: topInset + 8),
-                            child: _HomeTopSection(
+                  Column(
+                    key: const ValueKey('home-hero'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      HomeBackgroundSection(
+                        header: SafeArea(
+                          bottom: false,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                            child: HomeProfileHeader(
                               name: name,
-                              heroHeight: heroHeight,
-                              preview: preview,
-                              onProfileTap: () =>
-                                  Navigator.of(context).push<void>(
-                                    MaterialPageRoute(
-                                      builder: (_) => ChildProfileScreen(
-                                        initialFields:
-                                            active ?? {'full_name': name},
-                                        onSave: active == null
-                                            ? null
-                                            : (fields, avatar) => DemoStore
-                                                  .instance
-                                                  .saveChild(
-                                                    active['id'] as String,
-                                                    fields,
-                                                  )
-                                                  .then((_) {}),
-                                      ),
-                                    ),
+                              onTap: () => Navigator.of(context).push<void>(
+                                MaterialPageRoute(
+                                  builder: (_) => ChildProfileScreen(
+                                    initialFields:
+                                        active ?? {'full_name': name},
+                                    onSave: active == null
+                                        ? null
+                                        : (fields, avatar) => store
+                                              .saveChild(
+                                                active['id'] as String,
+                                                fields,
+                                              )
+                                              .then((_) {}),
                                   ),
+                                ),
+                              ),
                               onSettingsTap: _openSettings,
                               onNotificationsTap: () =>
                                   _showOverview('Thông báo'),
                             ),
                           ),
-                        ],
-                      );
-                    },
+                        ),
+                        key: ValueKey((
+                          accountId,
+                          childId,
+                          widget.backgroundRepository,
+                        )),
+                        accountId: accountId,
+                        childId: childId,
+                        role: role,
+                        childGender: active?['gender'] as String?,
+                        repository: widget.backgroundRepository,
+                        profileChanges: store,
+                        photobooth: widget.photobooth,
+                        onChangeBackground: widget.onChangeBackground,
+                        isCurrentProfile: () =>
+                            store.signedIn &&
+                            store.parent['id'] == accountId &&
+                            store.child?['id'] == childId,
+                      ),
+                    ],
                   ),
                   Transform.translate(
                     offset: const Offset(0, -AppLayout.homeHeroOverlap),
@@ -510,443 +362,6 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
       ),
     );
   }
-}
-
-/// Fade in only the new artwork; never retain another child's content.
-class _HomeReveal extends StatelessWidget {
-  const _HomeReveal({required this.identity, required this.child});
-  final Object identity;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) return child;
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(identity),
-      tween: Tween(begin: .35, end: 1),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      child: child,
-      builder: (context, opacity, child) =>
-          Opacity(opacity: opacity, child: child),
-    );
-  }
-}
-
-class _HomeTopSection extends StatelessWidget {
-  const _HomeTopSection({
-    required this.name,
-    required this.heroHeight,
-    required this.preview,
-    required this.onProfileTap,
-    required this.onSettingsTap,
-    required this.onNotificationsTap,
-  });
-
-  final String name;
-  final double heroHeight;
-  final _HomeHeroPreview preview;
-  final VoidCallback onProfileTap;
-  final VoidCallback onSettingsTap;
-  final VoidCallback onNotificationsTap;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _ProfileHeader(
-          name: name,
-          onTap: onProfileTap,
-          onSettingsTap: onSettingsTap,
-          onNotificationsTap: onNotificationsTap,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppLayout.pagePadding,
-          0,
-          AppLayout.pagePadding,
-          AppLayout.mediumGap,
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final message = FractionallySizedBox(
-              widthFactor: .765,
-              alignment: preview.characterOnLeft
-                  ? Alignment.topRight
-                  : Alignment.topLeft,
-              child: _HomeReveal(
-                identity: (DemoStore.instance.child?['id'], preview.ageLabel),
-                child: _HeroBanner(preview: preview),
-              ),
-            );
-            // Keep content sizing independent of the artwork painted below it.
-            final characterSpace = (constraints.maxWidth * .45)
-                .clamp(0.0, heroHeight)
-                .toDouble();
-            final textInset = characterSpace + AppLayout.smallGap;
-            // Stack only when a side-by-side message would be too narrow.
-            final stacked =
-                constraints.maxWidth < 288 ||
-                constraints.maxWidth - textInset <
-                    AppLayout.homeHeroMessageMinWidth ||
-                MediaQuery.textScalerOf(context)
-                        .scale(AppLayout.homeHeroTitleSize) >
-                    32;
-            if (stacked) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  message,
-                  const SizedBox(height: AppLayout.mediumGap),
-                  SizedBox(height: heroHeight),
-                ],
-              );
-            }
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight:
-                    heroHeight +
-                    AppLayout.minimumTouchTarget +
-                    AppLayout.sectionGap +
-                    AppLayout.mediumGap,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (preview.characterOnLeft) ...[
-                    SizedBox(width: characterSpace),
-                    const SizedBox(width: AppLayout.smallGap),
-                  ],
-                  Expanded(child: message),
-                  if (!preview.characterOnLeft) ...[
-                    const SizedBox(width: AppLayout.smallGap),
-                    SizedBox(width: characterSpace),
-                  ],
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    ],
-  );
-}
-
-class _HomeTopBackdrop extends StatelessWidget {
-  const _HomeTopBackdrop({required this.scale, required this.preview});
-
-  final ValueListenable<double> scale;
-  final _HomeHeroPreview preview;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      ClipRect(
-        child: AnimatedBuilder(
-          animation: scale,
-          builder: (context, child) => Transform.scale(
-            key: const ValueKey('home-background-scale'),
-            scale: MediaQuery.disableAnimationsOf(context) ? 1 : scale.value,
-            alignment: Alignment.topCenter,
-            child: child,
-          ),
-          child: _HomeReveal(
-            identity: preview.backgroundAsset,
-            child: Image.asset(
-              preview.backgroundAsset,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-          ),
-        ),
-      ),
-      Positioned(
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: AppLayout.homeHeroFadeExtent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.background.withValues(alpha: 0),
-                AppColors.background.withValues(alpha: .25),
-                AppColors.background.withValues(alpha: .85),
-                AppColors.background,
-              ],
-              stops: const [0, .3, .72, 1],
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
-    required this.name,
-    required this.onTap,
-    required this.onSettingsTap,
-    required this.onNotificationsTap,
-  });
-  final String name;
-  final VoidCallback onTap;
-  final VoidCallback onSettingsTap;
-  final VoidCallback onNotificationsTap;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => Row(
-      children: [
-        Container(
-          width: AppLayout.minimumTouchTarget,
-          height: AppLayout.minimumTouchTarget,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: const [
-              BoxShadow(color: Color(0x1A194C3C), blurRadius: 8),
-            ],
-          ),
-          child: DemoStore.instance.child?['avatar_base64'] != null
-              ? ClipOval(
-                  child: Image.memory(
-                    base64Decode(
-                      DemoStore.instance.child!['avatar_base64'] as String,
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : const Icon(
-                  Icons.child_care_rounded,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: InkWell(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DemoStore.instance.parent['role'] == 'father'
-                      ? 'Chào bố,'
-                      : DemoStore.instance.parent['role'] == 'guardian'
-                      ? 'Chào bạn,'
-                      : 'Chào mẹ,',
-                  style: const TextStyle(
-                    color: AppColors.primaryDark,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          color: AppColors.primaryDark,
-                          fontSize: AppLayout.homeProfileNameSize,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (DemoStore.instance.signedIn)
-                      PopupMenuButton<String>(
-                        tooltip: 'Đổi hồ sơ bé',
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.primary,
-                        ),
-                        itemBuilder: (_) => [
-                          for (final child in DemoStore.instance.children)
-                            PopupMenuItem(
-                              value: child['id'] as String,
-                              child: Text(child['full_name'] as String),
-                            ),
-                        ],
-                        onSelected: (id) => DemoStore.instance.selectChild(id),
-                      )
-                    else
-                      const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.primary,
-                      ),
-                  ],
-                ),
-                Text(
-                  DemoStore.instance.child == null
-                      ? 'Chưa chọn hồ sơ bé'
-                      : '${DemoStore.instance.ageLabel(DemoStore.instance.child!)} · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 0) ?? '—'} kg · ${DemoStore.instance.latest(DemoStore.instance.child!['id'] as String, 1) ?? '—'} cm',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: AppLayout.homeHeroBodySize,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: AppLayout.smallGap),
-        if (constraints.maxWidth < 328 ||
-            MediaQuery.textScalerOf(context)
-                    .scale(AppLayout.homeProfileNameSize) >
-                32)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _RoundAction(
-                asset: 'assets/images/scenery/icons/ui/notification_bell.svg',
-                onTap: onNotificationsTap,
-              ),
-              const SizedBox(height: AppLayout.smallGap),
-              _RoundAction(
-                asset: 'assets/images/scenery/icons/ui/settings_sliders.svg',
-                onTap: onSettingsTap,
-              ),
-            ],
-          )
-        else
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _RoundAction(
-                asset: 'assets/images/scenery/icons/ui/notification_bell.svg',
-                onTap: onNotificationsTap,
-              ),
-              const SizedBox(width: AppLayout.smallGap),
-              _RoundAction(
-                asset: 'assets/images/scenery/icons/ui/settings_sliders.svg',
-                onTap: onSettingsTap,
-              ),
-            ],
-          ),
-      ],
-    ),
-  );
-}
-
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({required this.asset, required this.onTap});
-  final String asset;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    shape: const CircleBorder(),
-    child: InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: Badge.count(
-            count: unreadNotificationCount(DemoStore.instance),
-            isLabelVisible:
-                asset.contains('notification') &&
-                unreadNotificationCount(DemoStore.instance) > 0,
-            child: SvgPicture.asset(
-              asset,
-              width: 24,
-              height: 24,
-              semanticsLabel: asset.contains('notification')
-                  ? 'Thông báo'
-                  : 'Cài đặt',
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({required this.preview});
-  final _HomeHeroPreview preview;
-
-  @override
-  Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 340;
-    return _FrostedHeroPanel(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            preview.headline.replaceAll('\n', ' '),
-            style: TextStyle(
-              color: AppColors.primaryDark,
-              fontSize: compact
-                  ? AppLayout.homeHeroCompactTitleSize
-                  : AppLayout.homeHeroTitleSize,
-              height: 1.15,
-              fontWeight: FontWeight.w800,
-              shadows: const [Shadow(color: Color(0x80FFF9EE), blurRadius: 8)],
-            ),
-          ),
-          const SizedBox(height: AppLayout.smallGap),
-          Text(
-            preview.message,
-            style: TextStyle(
-              color: const Color(0xFF304442),
-              fontSize: AppLayout.homeHeroBodySize,
-              height: 1.35,
-              shadows: const [Shadow(color: Color(0xA6FFF9EE), blurRadius: 8)],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FrostedHeroPanel extends StatelessWidget {
-  const _FrostedHeroPanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.topLeft,
-    child: ClipRRect(
-      key: const ValueKey('home-hero-message'),
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(
-          sigmaX: AppLayout.homeHeroPanelBlur,
-          sigmaY: AppLayout.homeHeroPanelBlur,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.heroPanel.withValues(alpha: .58),
-                AppColors.heroPanel.withValues(alpha: .42),
-              ],
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppLayout.mediumGap),
-            child: child,
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _Shortcut {

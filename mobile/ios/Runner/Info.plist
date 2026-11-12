@@ -9,11 +9,13 @@
       <array><string>$(GOOGLE_REVERSED_CLIENT_ID)</string></array>
     </dict></array>
 	<key>NSCameraUsageDescription</key>
-	<string>Chụp ảnh cho hồ sơ bé và quay video bé thực hiện hoạt động cho nhật ký.</string>
+	<string>Chụp ảnh Photobooth, ảnh hồ sơ bé và quay video bé thực hiện hoạt động cho nhật ký.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ghi âm khi quay video bé thực hiện hoạt động cho nhật ký.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Chọn ảnh đại diện cho hồ sơ bé từ thư viện.</string>
+	<string>Chọn ảnh đại diện cho hồ sơ bé, ảnh nền trang chủ và ảnh nhật ký từ thư viện.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Lưu ảnh Photobooth đã hoàn tất vào thư viện khi bạn chọn Lưu về máy.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
