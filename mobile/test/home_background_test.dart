@@ -68,34 +68,26 @@ void main() {
     await DemoStore.instance.selectChild('child_an');
   }
 
-  testWidgets('first open, child switch and role update use the right assets', (
-    tester,
-  ) async {
-    await login();
-    await home(tester);
-    expect(
-      frame(tester).assetPath,
-      endsWith('mother-playing-with-lovely-son-bedroom.jpg'),
-    );
-    await DemoStore.instance.selectChild('child_linh');
-    await tester.pumpAndSettle();
-    expect(
-      frame(tester).assetPath,
-      endsWith('mother-daughter-studying-alphabet.jpg'),
-    );
-    await DemoStore.instance.saveParent({'role': 'grandmother'});
-    await tester.pumpAndSettle();
-    expect(
-      frame(tester).assetPath,
-      endsWith('granddaughter-grandmother-with-homework.jpg'),
-    );
-    await DemoStore.instance.saveParent({'role': 'guardian'});
-    await tester.pumpAndSettle();
-    expect(
-      frame(tester).assetPath,
-      endsWith('boy-girl-are-happily-playing-colorful-wood-block-toy.jpg'),
-    );
-  });
+  testWidgets(
+    'default follows caregiver role across child and gender changes',
+    (tester) async {
+      await login();
+      await home(tester);
+      expect(frame(tester).assetPath, endsWith('mother-with-baby.jpg'));
+      await DemoStore.instance.selectChild('child_linh');
+      await tester.pumpAndSettle();
+      expect(frame(tester).assetPath, endsWith('mother-with-baby.jpg'));
+      await DemoStore.instance.saveChild('child_linh', {'gender': 'male'});
+      await tester.pumpAndSettle();
+      expect(frame(tester).assetPath, endsWith('mother-with-baby.jpg'));
+      await DemoStore.instance.saveParent({'role': 'grandmother'});
+      await tester.pumpAndSettle();
+      expect(frame(tester).assetPath, endsWith('grandma-with-baby.jpg'));
+      await DemoStore.instance.saveParent({'role': 'guardian'});
+      await tester.pumpAndSettle();
+      expect(frame(tester).assetPath, endsWith('boy-girl-are-playing.jpg'));
+    },
+  );
 
   testWidgets(
     'custom config survives gender/role edits and switching away and back',
@@ -210,7 +202,6 @@ void main() {
                   accountId: account,
                   childId: child,
                   role: 'mother',
-                  childGender: 'male',
                   repository: repository,
                   isCurrentProfile: () =>
                       activeAccount == account && activeChild == child,
@@ -360,4 +351,29 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'persisted default variants cannot override the current caregiver role',
+    (tester) async {
+      await login();
+      final accountId = DemoStore.instance.parent['id'] as String;
+      for (final key in ['father-boy', 'father', 'neutral']) {
+        await repository.save(
+          accountId: accountId,
+          config: BackgroundConfig(
+            childId: 'child_an',
+            selectedDefaultKey: key,
+          ),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await home(tester);
+        expect(frame(tester).source, BackgroundSource.defaultImage);
+        expect(frame(tester).assetPath, endsWith('mother-with-baby.jpg'));
+      }
+      await DemoStore.instance.saveParent({'role': 'grandfather'});
+      await tester.pumpAndSettle();
+      expect(frame(tester).assetPath, endsWith('grandfather-with-baby.jpg'));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

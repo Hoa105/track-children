@@ -139,7 +139,9 @@ class HomeBackgroundFlow {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Ảnh nền sẽ được chọn theo hồ sơ bé.'),
+                  const Text(
+                    'Ảnh nền sẽ được chọn theo vai trò người chăm sóc.',
+                  ),
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),

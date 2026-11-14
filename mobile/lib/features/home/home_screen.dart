@@ -289,7 +289,6 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                         accountId: accountId,
                         childId: childId,
                         role: role,
-                        childGender: active?['gender'] as String?,
                         repository: widget.backgroundRepository,
                         profileChanges: store,
                         photobooth: widget.photobooth,

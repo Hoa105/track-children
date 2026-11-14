@@ -21,7 +21,6 @@ class HomeBackgroundSection extends StatefulWidget {
     required this.accountId,
     required this.childId,
     required this.role,
-    required this.childGender,
     required this.isCurrentProfile,
     this.repository = const HomeBackgroundRepository(),
     this.onChangeBackground,
@@ -34,7 +33,6 @@ class HomeBackgroundSection extends StatefulWidget {
   final String? accountId;
   final String? childId;
   final String? role;
-  final String? childGender;
   final HomeBackgroundRepository repository;
   final HomeBackgroundChooser? onChangeBackground;
   final Widget? header;
@@ -68,8 +66,7 @@ class _HomeBackgroundSectionState extends State<HomeBackgroundSection> {
         oldWidget.repository != widget.repository) {
       _flow?.cancel();
       _load();
-    } else if (oldWidget.role != widget.role ||
-        oldWidget.childGender != widget.childGender) {
+    } else if (oldWidget.role != widget.role) {
       _flow?.cancel();
     }
   }
@@ -191,14 +188,8 @@ class _HomeBackgroundSectionState extends State<HomeBackgroundSection> {
   Widget build(BuildContext context) {
     final resolved = const DefaultBackgroundResolver().resolve(
       role: widget.role,
-      childGender: widget.childGender,
     );
     final config = _config;
-    final selected = config?.source == BackgroundSource.defaultImage
-        ? defaultBackgroundManifest
-              .where((a) => a.key == config?.selectedDefaultKey)
-              .firstOrNull
-        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -225,7 +216,7 @@ class _HomeBackgroundSectionState extends State<HomeBackgroundSection> {
                   ],
                 ),
           source: config?.source ?? BackgroundSource.defaultImage,
-          assetPath: (selected ?? resolved)?.assetPath,
+          assetPath: resolved?.assetPath,
           finalLocalPath: config?.finalLocalPath,
           loading: _loading,
           overlay: Stack(
