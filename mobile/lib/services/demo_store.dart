@@ -1060,7 +1060,7 @@ class DemoStore extends ChangeNotifier {
   Future<void> saveVaccinations(String id, List<Map<String, dynamic>> records) {
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
-    if (!canEditTeething(id)) {
+    if (!canEditChild(id, 'vaccination')) {
       throw StateError('Bạn chỉ có quyền xem mục này');
     }
     final dob = DateTime.parse(child['date_of_birth'] as String);
@@ -1092,6 +1092,9 @@ class DemoStore extends ChangeNotifier {
 
   Future<void> removeVaccination(String id, String doseId) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.remove(account, doseId),
@@ -1112,6 +1115,9 @@ class DemoStore extends ChangeNotifier {
   /// `null` resets a vaccine to its default.
   Future<void> saveVaccinePlans(String id, Map<String, bool?> plans) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.savePlans(account, plans),
@@ -1257,7 +1263,7 @@ class DemoStore extends ChangeNotifier {
     if (remote == null) return;
     final account = await _account(childId);
     if (account == null) return;
-    await remote.link(account);
+    if (isChildOwner(childId)) await remote.link(account);
     await push(remote, account);
   }
 
@@ -1278,12 +1284,12 @@ class DemoStore extends ChangeNotifier {
     List<Map<String, dynamic>> records;
     Map<String, bool> plans;
     try {
-      await remote.link(account);
+      if (isChildOwner(childId)) await remote.link(account);
       (records, plans) = await (
         remote.fetch(account),
         remote.fetchPlans(account),
       ).wait;
-      if (firstSync) {
+      if (firstSync && canEditChild(childId, 'vaccination')) {
         final onServer = {for (final r in records) r['id']};
         final localOnly = vaccinations(childId)
             .where((r) => !onServer.contains(r['id']))

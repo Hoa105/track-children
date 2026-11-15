@@ -316,15 +316,52 @@ void main() {
     expect(account.userId, ownerB);
     expect(linker.linked, isEmpty);
   });
+
+  test('member saves vaccinations with vaccination edit, not teething', () async {
+    final store = DemoStore.instance;
+    final linker = _Linker();
+    DemoStore.vaccinationRemote = linker;
+    addTearDown(() => DemoStore.vaccinationRemote = null);
+    final record = {
+      'id': 'bcg-1',
+      'date': '2025-03-01',
+      'given': true,
+      'name': 'BCG',
+    };
+
+    final editor = await _sharedChild({'vaccination': 'edit'});
+    await store.saveVaccination(editor, record);
+    expect(store.vaccinations(editor).map((r) => r['id']), contains('bcg-1'));
+    expect(linker.saved.values.single.single['id'], 'bcg-1');
+    expect(linker.linked, isEmpty); // không đăng ký lại bé của người khác
+
+    final viewer = await _sharedChild({'vaccination': 'view', 'teething': 'edit'});
+    expect(
+      () => store.saveVaccination(viewer, record),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => store.removeVaccination(viewer, 'bcg-1'),
+      throwsA(isA<StateError>()),
+    );
+  });
 }
 
 /// Chỉ đăng ký hồ sơ (PUT /dev/profiles); các lệnh tiêm chủng không dùng ở đây.
 class _Linker implements VaccinationRemote {
   final linked = <String>[];
 
+  final saved = <String, List<Map<String, dynamic>>>{};
+
   @override
   Future<void> link(VaccinationAccount account) async =>
       linked.add(account.childId);
+
+  @override
+  Future<void> save(
+    VaccinationAccount account,
+    List<Map<String, dynamic>> records,
+  ) async => saved.putIfAbsent(account.childId, () => []).addAll(records);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
