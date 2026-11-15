@@ -271,10 +271,14 @@ class DemoStore extends ChangeNotifier {
     (d['children'] as List).removeWhere(
       (c) => c['parentId'] == owner && c['server'] == true,
     );
-    // Bé tạo trên máy đã đăng ký lên máy chủ (serverIds) đã có sẵn: không thêm bản trùng.
+    // Bé do chính tài khoản này tạo trên máy và đã đăng ký lên máy chủ (serverIds)
+    // đã có sẵn: không thêm bản trùng. Bé của tài khoản khác dùng chung máy (vd.
+    // bé được chia sẻ cho mình) vẫn phải thêm.
     final linked = <String>{
       for (final entry in (d['serverIds'] as Map? ?? const {}).entries)
-        if ((d['children'] as List).any((c) => c['id'] == entry.key))
+        if ((d['children'] as List).any(
+          (c) => c['id'] == entry.key && c['parentId'] == owner,
+        ))
           entry.value as String,
     };
     for (final profile in profiles) {

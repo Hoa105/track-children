@@ -271,4 +271,49 @@ void main() {
     expect(relationshipLabel('grandmother'), 'Bà');
     expect(relationshipLabel(null), 'Người chăm sóc');
   });
+
+  test('child shared from another account on the same phone is listed', () async {
+    final store = DemoStore.instance;
+    DemoStore.vaccinationRemote = _Linker();
+    addTearDown(() => DemoStore.vaccinationRemote = null);
+    const ownerA = '11111111-1111-4111-8111-111111111111';
+    const ownerB = '22222222-2222-4222-8222-222222222222';
+
+    // Tài khoản A tạo bé trên máy và đăng ký lên máy chủ
+    await store.bindAuthenticatedUser({'id': ownerA, 'email': 'a@example.test'});
+    final local = await store.saveChild(null, {
+      'full_name': 'Bé của A',
+      'date_of_birth': '2025-02-24',
+      'gender': 'male',
+    });
+    final serverId = (await store.linkedAccount(local))!.childId;
+
+    // A tải lại: bé đã có trên máy, không thêm bản trùng
+    await store.cacheAuthenticatedChildren(ownerA, [
+      {'id': serverId, 'fullName': 'Bé của A', 'dateOfBirth': '2025-02-24',
+       'gender': 'male', 'role': 'owner', 'access': {}},
+    ]);
+    expect(store.children.map((c) => c['full_name']), ['Bé của A']);
+
+    // Tài khoản B (cùng máy) được chia sẻ bé đó: phải thấy bé
+    await store.bindAuthenticatedUser({'id': ownerB, 'email': 'b@example.test'});
+    await store.cacheAuthenticatedChildren(ownerB, [
+      {'id': serverId, 'fullName': 'Bé của A', 'dateOfBirth': '2025-02-24',
+       'gender': 'male', 'role': 'member', 'relationship': 'father',
+       'access': {'diary': 'view', 'vaccination': 'edit'}},
+    ]);
+    expect(store.children.map((c) => c['id']), [serverId]);
+    expect(store.isChildOwner(serverId), isFalse);
+    expect(store.childAccess(serverId, 'vaccination'), 'edit');
+    expect(store.childAccess(serverId, 'diary'), 'view');
+  });
+}
+
+/// Chỉ đăng ký hồ sơ (PUT /dev/profiles); các lệnh tiêm chủng không dùng ở đây.
+class _Linker implements VaccinationRemote {
+  @override
+  Future<void> link(VaccinationAccount account) async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
