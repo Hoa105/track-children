@@ -306,13 +306,25 @@ void main() {
     expect(store.isChildOwner(serverId), isFalse);
     expect(store.childAccess(serverId, 'vaccination'), 'edit');
     expect(store.childAccess(serverId, 'diary'), 'view');
+
+    // Đồng bộ nhật ký / tiêm chủng của bé được chia sẻ: dùng id máy chủ, không
+    // đăng ký lại bé dưới tài khoản B (máy chủ sẽ từ chối 403)
+    final linker = DemoStore.vaccinationRemote! as _Linker;
+    linker.linked.clear();
+    final account = await store.linkedAccount(serverId);
+    expect(account!.childId, serverId);
+    expect(account.userId, ownerB);
+    expect(linker.linked, isEmpty);
   });
 }
 
 /// Chỉ đăng ký hồ sơ (PUT /dev/profiles); các lệnh tiêm chủng không dùng ở đây.
 class _Linker implements VaccinationRemote {
+  final linked = <String>[];
+
   @override
-  Future<void> link(VaccinationAccount account) async {}
+  Future<void> link(VaccinationAccount account) async =>
+      linked.add(account.childId);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();

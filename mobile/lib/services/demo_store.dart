@@ -1185,6 +1185,9 @@ class DemoStore extends ChangeNotifier {
     if (remote == null) return null;
     final account = await _account(childId);
     if (account == null) return null;
+    // Bé người khác chia sẻ đã có trên máy chủ và thuộc chủ hồ sơ: không đăng ký
+    // lại dưới tài khoản này (máy chủ từ chối 403), quyền do chia sẻ quyết định.
+    if (!isChildOwner(childId)) return account;
     await remote.link(account);
     return account;
   }
