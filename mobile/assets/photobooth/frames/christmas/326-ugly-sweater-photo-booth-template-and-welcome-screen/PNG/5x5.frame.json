@@ -1,0 +1,19 @@
+{
+  "key": "christmas-sweater-5x5-01",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Áo len 01",
+  "format": "5×5",
+  "shape": "square",
+  "order": 1701,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 76,
+      "y": 74,
+      "width": 1348,
+      "height": 1207,
+      "photo": 0
+    }
+  ]
+}

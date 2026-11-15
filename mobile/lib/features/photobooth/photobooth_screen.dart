@@ -44,6 +44,10 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
   int _selectedSlot = 0;
   ModalRoute<dynamic>? _dialogRoute;
   final _editorKey = GlobalKey<PhotoBoothEditorEntryState>();
+  final _completionStatus = ValueNotifier<PhotoBoothCompletionStatus>((
+    completed: false,
+    busy: false,
+  ));
   PhotoBoothEditorController? _editor;
 
   @override
@@ -103,7 +107,7 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Giữ lại'),
+                child: const Text('Ở lại'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
@@ -123,9 +127,9 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
       if (!mounted) return;
       if (_controller.hasShots &&
           !await _confirm(
-            'Bỏ bộ ảnh này?',
-            'Ảnh trong phiên chụp sẽ bị xóa. Ảnh nền hiện tại vẫn được giữ.',
-            'Bỏ ảnh và thoát',
+            'Thoát chụp ảnh?',
+            'Ảnh chưa lưu sẽ bị bỏ. Ảnh nền hiện tại không đổi.',
+            'Thoát',
           )) {
         return;
       }
@@ -157,6 +161,7 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
 
   @override
   void dispose() {
+    _completionStatus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     final dialog = _dialogRoute;
     if (dialog != null) {
@@ -196,11 +201,21 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             leading: IconButton(
-              tooltip: 'Đóng Photobooth',
+              tooltip: edit || (_controller.hasShots && !review)
+                  ? 'Quay lại chọn ảnh'
+                  : 'Thoát chụp ảnh',
               onPressed: _leaving ? null : _back,
               icon: const Icon(Icons.close_rounded),
             ),
             actions: [
+              if (edit && widget.editorBuilder == null)
+                ValueListenableBuilder<PhotoBoothCompletionStatus>(
+                  valueListenable: _completionStatus,
+                  builder: (_, status, _) => PhotoBoothContinueEditingAction(
+                    status: status,
+                    onPressed: () => _editorKey.currentState?.continueEditing(),
+                  ),
+                ),
               if (!idle && !review && !edit)
                 IconButton(
                   tooltip: 'Đổi camera',
@@ -242,6 +257,7 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
       key: _editorKey,
       session: _controller.session,
       controller: _editor,
+      onCompletionChanged: (status) => _completionStatus.value = status,
       onBack: _controller.backFromEditor,
       onChooseFour: () {
         _controller.backFromEditor();
@@ -323,7 +339,7 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
                     ? _controller.returnToReview
                     : _close,
                 child: Text(
-                  _controller.hasShots ? 'Quay lại bộ ảnh' : 'Quay lại',
+                  _controller.hasShots ? 'Quay lại chọn ảnh' : 'Quay lại',
                 ),
               ),
             ],

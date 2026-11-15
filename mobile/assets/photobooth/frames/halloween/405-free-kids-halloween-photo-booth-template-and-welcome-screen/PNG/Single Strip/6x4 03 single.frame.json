@@ -1,0 +1,33 @@
+{
+  "key": "halloween-kids-6x4-03-single",
+  "theme": "halloween",
+  "categoryTitle": "Halloween",
+  "title": "Halloween vui 03",
+  "format": "6×2",
+  "shape": "strip",
+  "order": 3,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 29,
+      "y": 27,
+      "width": 363,
+      "height": 546,
+      "photo": 0
+    },
+    {
+      "x": 420,
+      "y": 27,
+      "width": 363,
+      "height": 546,
+      "photo": 1
+    },
+    {
+      "x": 812,
+      "y": 27,
+      "width": 363,
+      "height": 546,
+      "photo": 2
+    }
+  ]
+}

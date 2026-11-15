@@ -18,6 +18,7 @@ class PhotoBoothFrame {
     this.title,
     this.categoryTitle,
     this.format,
+    this.shape,
   });
   final String key;
   final String theme;
@@ -27,20 +28,35 @@ class PhotoBoothFrame {
   final String? title;
   final String? categoryTitle;
   final String? format;
+  final String? shape;
+  String get shapeKey =>
+      shape ??
+      (size.width == size.height
+          ? 'square'
+          : size.width < size.height
+          ? 'portrait'
+          : 'landscape');
   int get photoCount => slots.map((slot) => slot.photo).toSet().length;
   String get categoryLabel =>
       categoryTitle ?? PhotoBoothCatalog.themes[theme] ?? theme;
   String get label => title ?? categoryLabel;
   String get formatLabel =>
-      format ??
-      (size == const Size(600, 1800)
-          ? '2×6'
-          : size == const Size(1200, 1800)
-          ? '4×6'
-          : '${size.width.toInt()} × ${size.height.toInt()}');
+      (format ??
+              (size == const Size(600, 1800)
+                  ? '2×6'
+                  : size == const Size(1200, 1800)
+                  ? '4×6'
+                  : '${size.width.toInt()} × ${size.height.toInt()}'))
+          .replaceAll(RegExp(r'\s*[x×]\s*'), ':');
 
   static PhotoBoothFrame home(int count, {List<int>? photoIndices}) {
+    final columns = count == 1
+        ? 1
+        : count == 3
+        ? 3
+        : 2;
     final rows = count == 4 ? 2 : 1;
+    final width = (1440.0 - 48 - (columns - 1) * 16) / columns;
     final height = (960.0 - 48 - (rows - 1) * 16) / rows;
     return PhotoBoothFrame(
       key: 'home-$count',
@@ -48,14 +64,15 @@ class PhotoBoothFrame {
       title: 'Đơn giản',
       categoryTitle: 'Cơ bản',
       format: '3:2',
+      shape: 'landscape',
       size: const Size(1440, 960),
       slots: List.generate(
         count,
         (index) => PhotoBoothSlot(
           Rect.fromLTWH(
-            24 + (index % 2) * 704.0,
-            24 + (index ~/ 2) * (height + 16),
-            688,
+            24 + (index % columns) * (width + 16),
+            24 + (index ~/ columns) * (height + 16),
+            width,
             height,
           ),
           photoIndices?[index] ?? index,
@@ -85,11 +102,13 @@ class PhotoBoothCatalog {
   static const themes = {
     'classic': 'Classic',
     'film': 'Film',
-    'birthday': 'Birthday',
-    'christmas': 'Christmas',
+    'belonkhon': 'Bé Lớn Khôn',
+    'birthday': 'Sinh nhật',
+    'christmas': 'Giáng sinh',
     'halloween': 'Halloween',
   };
   static const groups = {
+    'belonkhon': 'Bé Lớn Khôn',
     'animals': 'Thú nhỏ',
     'cartoon': 'Hoạt hình',
     'rainbow': 'Cầu vồng',
@@ -107,34 +126,38 @@ class PhotoBoothCatalog {
 
   factory PhotoBoothCatalog.fromJson(Map<String, dynamic> json) =>
       PhotoBoothCatalog(
-        (json['frames'] as List).map((entry) {
-          final f = entry as Map<String, dynamic>;
-          return PhotoBoothFrame(
-            key: f['key'],
-            theme: f['theme'],
-            asset: f['asset'],
-            title: f['title'],
-            categoryTitle: f['categoryTitle'],
-            format: f['format'],
-            size: Size(
-              (f['width'] as num).toDouble(),
-              (f['height'] as num).toDouble(),
-            ),
-            slots: (f['slots'] as List)
-                .map(
-                  (slot) => PhotoBoothSlot(
-                    Rect.fromLTWH(
-                      (slot['x'] as num).toDouble(),
-                      (slot['y'] as num).toDouble(),
-                      (slot['width'] as num).toDouble(),
-                      (slot['height'] as num).toDouble(),
-                    ),
-                    slot['photo'] as int,
-                  ),
-                )
-                .toList(),
-          );
-        }).toList(),
+        (json['frames'] as List)
+            .where((entry) => entry['enabled'] != false)
+            .map((entry) {
+              final f = entry as Map<String, dynamic>;
+              return PhotoBoothFrame(
+                key: f['key'],
+                theme: f['theme'],
+                asset: f['asset'],
+                title: f['title'],
+                categoryTitle: f['categoryTitle'],
+                format: f['format'],
+                shape: f['shape'],
+                size: Size(
+                  (f['width'] as num).toDouble(),
+                  (f['height'] as num).toDouble(),
+                ),
+                slots: (f['slots'] as List)
+                    .map(
+                      (slot) => PhotoBoothSlot(
+                        Rect.fromLTWH(
+                          (slot['x'] as num).toDouble(),
+                          (slot['y'] as num).toDouble(),
+                          (slot['width'] as num).toDouble(),
+                          (slot['height'] as num).toDouble(),
+                        ),
+                        slot['photo'] as int,
+                      ),
+                    )
+                    .toList(),
+              );
+            })
+            .toList(),
         (json['stickers'] as List)
             .where((entry) => entry['enabled'] == true)
             .map(

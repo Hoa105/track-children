@@ -4,8 +4,8 @@ import '../../photobooth/photobooth_screen.dart';
 
 import 'background_config.dart';
 
-/// Prompt 03/04 supply a separately composed landscape Home image here.
-/// Raw vertical photostrips must not be sent directly to the Home crop flow.
+/// A finished Photobooth image. Home fits the entire artwork to its canvas
+/// before cropping, preserving portrait/square frames and decorations.
 class PhotoboothHomeInput {
   const PhotoboothHomeInput({required this.childId, required this.localPath});
   final String childId;

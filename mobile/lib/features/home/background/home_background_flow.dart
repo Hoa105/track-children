@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -43,6 +45,7 @@ class HomeBackgroundFlow {
   static bool _active = false;
   bool _closeScheduled = false;
   bool _cancelled = false;
+  DialogRoute<void>? _openingRoute;
   String? _selectionError;
   bool _selectionSettings = false;
 
@@ -100,6 +103,47 @@ class HomeBackgroundFlow {
   void _message(String message, {bool canOpenSettings = false}) {
     _selectionError = message;
     _selectionSettings = canOpenSettings;
+  }
+
+  void _showOpening() {
+    _check();
+    if (_openingRoute != null) return;
+    final route = DialogRoute<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Semantics(
+                  liveRegion: true,
+                  child: const Text('Đang mở ảnh…'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    _openingRoute = route;
+    _routes.add(route);
+    unawaited(Navigator.of(context).push<void>(route));
+  }
+
+  void _hideOpening() {
+    final route = _openingRoute;
+    if (route == null) return;
+    _openingRoute = null;
+    if (route.isActive) route.navigator?.removeRoute(route);
+    _routes.remove(route);
   }
 
   Future<void> _showFailure(String message) async {
@@ -217,18 +261,19 @@ class HomeBackgroundFlow {
     DecodedBackgroundImage? decoded;
     BackgroundCropState? crop;
     String? croppedPath;
+    var prepared = input;
     try {
       _check();
-      decoded = await images.decode(input);
-      _check();
-      if (source == BackgroundSource.photobooth &&
-          decoded.naturalSize.width < decoded.naturalSize.height) {
-        throw const BackgroundImageException(
-          'Hãy tạo bố cục ngang cho trang chủ trước khi căn chỉnh ảnh Photobooth.',
-        );
+      _showOpening();
+      if (source == BackgroundSource.photobooth) {
+        prepared = await images.preparePhotobooth(input);
       }
+      _check();
+      decoded = await images.decode(prepared);
+      _check();
       images.validateSize(decoded);
       crop = BackgroundCropState(sourceSize: decoded.naturalSize);
+      _hideOpening();
       final result = await _push<BackgroundConfig>(
         '/home/background/crop',
         CropBackgroundScreen(
@@ -237,7 +282,10 @@ class HomeBackgroundFlow {
           onApply: () async {
             _check();
             await repository.files.removePending(croppedPath);
-            final exported = await images.export(input, crop!.normalizedRect);
+            final exported = await images.export(
+              prepared,
+              crop!.normalizedRect,
+            );
             if (!_valid) {
               await repository.files.removePending(exported);
               throw const BackgroundFlowCancelled();
@@ -258,9 +306,11 @@ class HomeBackgroundFlow {
       _check();
       return result;
     } finally {
+      _hideOpening();
       crop?.dispose();
       decoded?.dispose();
       await repository.files.removePending(input);
+      if (prepared != input) await repository.files.removePending(prepared);
       await repository.files.removePending(croppedPath);
     }
   }
@@ -349,13 +399,18 @@ class HomeBackgroundFlow {
         }
         try {
           if (source == BackgroundSource.gallery) {
-            final input = await picker.pick(
-              accountId: accountId,
-              childId: childId,
-            );
-            if (input == null) return null;
-            // _custom owns cleanup even when the account changed in the picker.
-            return await _custom(input, source);
+            _showOpening();
+            try {
+              final input = await picker.pick(
+                accountId: accountId,
+                childId: childId,
+              );
+              if (input == null) return null;
+              // _custom owns cleanup even when the account changed in the picker.
+              return await _custom(input, source);
+            } finally {
+              _hideOpening();
+            }
           }
           final launch = photobooth;
           if (launch == null) {
@@ -392,6 +447,7 @@ class HomeBackgroundFlow {
     } catch (_) {
       await _showFailure('Bạn hãy thử chọn ảnh nền lại.');
     } finally {
+      _hideOpening();
       profileChanges?.removeListener(_profileChanged);
       _active = false;
       _routes.clear();

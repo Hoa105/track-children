@@ -1,0 +1,19 @@
+{
+  "key": "christmas-sweater-6x4-04",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Áo len 04",
+  "format": "6×4",
+  "shape": "landscape",
+  "order": 1504,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 109,
+      "y": 114,
+      "width": 1581,
+      "height": 826,
+      "photo": 0
+    }
+  ]
+}

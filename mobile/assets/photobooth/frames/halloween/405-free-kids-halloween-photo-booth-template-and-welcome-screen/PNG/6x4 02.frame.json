@@ -1,0 +1,33 @@
+{
+  "key": "halloween-kids-6x4-02",
+  "theme": "halloween",
+  "categoryTitle": "Halloween",
+  "title": "Halloween vui 02",
+  "format": "6×4",
+  "shape": "landscape",
+  "order": 502,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 53,
+      "y": 65,
+      "width": 525,
+      "height": 788,
+      "photo": 0
+    },
+    {
+      "x": 638,
+      "y": 64,
+      "width": 524,
+      "height": 788,
+      "photo": 1
+    },
+    {
+      "x": 1223,
+      "y": 65,
+      "width": 525,
+      "height": 788,
+      "photo": 2
+    }
+  ]
+}

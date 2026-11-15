@@ -2,222 +2,6 @@
   "version": 1,
   "frames": [
     {
-      "key": "birthday-600",
-      "theme": "birthday",
-      "title": "Birthday",
-      "categoryTitle": "Birthday",
-      "format": "2×6",
-      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-2x6.png",
-      "width": 600,
-      "height": 1800,
-      "slots": [
-        {
-          "x": 48,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 48,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 48,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 48,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        }
-      ]
-    },
-    {
-      "key": "birthday-1200",
-      "theme": "birthday",
-      "title": "Birthday",
-      "categoryTitle": "Birthday",
-      "format": "4×6",
-      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-4x6.png",
-      "width": 1200,
-      "height": 1800,
-      "slots": [
-        {
-          "x": 48,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 48,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 48,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 48,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        },
-        {
-          "x": 648,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 648,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 648,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 648,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        }
-      ]
-    },
-    {
-      "key": "christmas-600",
-      "theme": "christmas",
-      "title": "Christmas",
-      "categoryTitle": "Christmas",
-      "format": "2×6",
-      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-2x6.png",
-      "width": 600,
-      "height": 1800,
-      "slots": [
-        {
-          "x": 48,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 48,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 48,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 48,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        }
-      ]
-    },
-    {
-      "key": "christmas-1200",
-      "theme": "christmas",
-      "title": "Christmas",
-      "categoryTitle": "Christmas",
-      "format": "4×6",
-      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-4x6.png",
-      "width": 1200,
-      "height": 1800,
-      "slots": [
-        {
-          "x": 48,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 48,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 48,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 48,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        },
-        {
-          "x": 648,
-          "y": 48,
-          "width": 504,
-          "height": 382,
-          "photo": 0
-        },
-        {
-          "x": 648,
-          "y": 450,
-          "width": 504,
-          "height": 382,
-          "photo": 1
-        },
-        {
-          "x": 648,
-          "y": 852,
-          "width": 504,
-          "height": 382,
-          "photo": 2
-        },
-        {
-          "x": 648,
-          "y": 1254,
-          "width": 504,
-          "height": 382,
-          "photo": 3
-        }
-      ]
-    },
-    {
       "key": "classic-600",
       "theme": "classic",
       "title": "Classic",
@@ -255,7 +39,10 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 100600,
+      "enabled": true
     },
     {
       "key": "classic-1200",
@@ -323,7 +110,10 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 101200,
+      "enabled": true
     },
     {
       "key": "film-600",
@@ -363,7 +153,10 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 100600,
+      "enabled": true
     },
     {
       "key": "film-1200",
@@ -431,7 +224,3617 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 101200,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-organic-1photo",
+      "theme": "belonkhon",
+      "title": "Lượn sóng mầm non",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/organic_1photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 78,
+          "y": 68,
+          "width": 1644,
+          "height": 1027,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 0,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-scallop-1photo",
+      "theme": "belonkhon",
+      "title": "Giấy cắt vỏ kem",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/scallop_1photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 76,
+          "y": 94,
+          "width": 1648,
+          "height": 982,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 1,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-scrapbook-1photo",
+      "theme": "belonkhon",
+      "title": "Ảnh giấy xanh trời",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/scrapbook_1photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 81,
+          "y": 80,
+          "width": 1638,
+          "height": 1040,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 2,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-organic-2photo",
+      "theme": "belonkhon",
+      "title": "Lượn sóng mầm non",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/organic_2photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 56,
+          "y": 68,
+          "width": 822,
+          "height": 1027,
+          "photo": 0
+        },
+        {
+          "x": 922,
+          "y": 80,
+          "width": 822,
+          "height": 1002,
+          "photo": 1
+        }
+      ],
+      "shape": "landscape",
+      "order": 3,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-scallop-2photo",
+      "theme": "belonkhon",
+      "title": "Giấy cắt vỏ kem",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/scallop_2photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 52,
+          "y": 94,
+          "width": 824,
+          "height": 982,
+          "photo": 0
+        },
+        {
+          "x": 924,
+          "y": 94,
+          "width": 824,
+          "height": 982,
+          "photo": 1
+        }
+      ],
+      "shape": "landscape",
+      "order": 4,
+      "enabled": true
+    },
+    {
+      "key": "belonkhon-scrapbook-2photo",
+      "theme": "belonkhon",
+      "title": "Ảnh giấy xanh trời",
+      "categoryTitle": "Bé Lớn Khôn",
+      "format": "6:4",
+      "asset": "assets/photobooth/frames/belonkhon/scrapbook_2photo.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 58,
+          "y": 109,
+          "width": 821,
+          "height": 966,
+          "photo": 0
+        },
+        {
+          "x": 921,
+          "y": 98,
+          "width": 820,
+          "height": 964,
+          "photo": 1
+        }
+      ],
+      "shape": "landscape",
+      "order": 5,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-2x6-01",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 01",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/2x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 59,
+          "y": 645,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 63,
+          "y": 1195,
+          "width": 475,
+          "height": 476,
+          "photo": 1
+        },
+        {
+          "x": 660,
+          "y": 645,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 664,
+          "y": 1195,
+          "width": 475,
+          "height": 476,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 101,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-2x6-02",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 02",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/2x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 59,
+          "y": 304,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 62,
+          "y": 798,
+          "width": 476,
+          "height": 475,
+          "photo": 1
+        },
+        {
+          "x": 59,
+          "y": 1292,
+          "width": 482,
+          "height": 474,
+          "photo": 2
+        },
+        {
+          "x": 659,
+          "y": 304,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 662,
+          "y": 798,
+          "width": 476,
+          "height": 475,
+          "photo": 1
+        },
+        {
+          "x": 659,
+          "y": 1292,
+          "width": 482,
+          "height": 474,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 102,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-2x6-03",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 03",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/2x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 49,
+          "y": 519,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 49,
+          "y": 927,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 1338,
+          "width": 493,
+          "height": 341,
+          "photo": 2
+        },
+        {
+          "x": 649,
+          "y": 519,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 649,
+          "y": 927,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 654,
+          "y": 1338,
+          "width": 493,
+          "height": 341,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 103,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-2x6-04",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 04",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/2x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 49,
+          "y": 305,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 49,
+          "y": 650,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 55,
+          "y": 999,
+          "width": 491,
+          "height": 341,
+          "photo": 2
+        },
+        {
+          "x": 49,
+          "y": 1353,
+          "width": 503,
+          "height": 335,
+          "photo": 3
+        },
+        {
+          "x": 649,
+          "y": 305,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 649,
+          "y": 650,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 999,
+          "width": 493,
+          "height": 341,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1353,
+          "width": 503,
+          "height": 335,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 104,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-2x6-05",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 05",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/2x6 05.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 71,
+          "y": 314,
+          "width": 458,
+          "height": 679,
+          "photo": 0
+        },
+        {
+          "x": 69,
+          "y": 1021,
+          "width": 461,
+          "height": 675,
+          "photo": 1
+        },
+        {
+          "x": 671,
+          "y": 314,
+          "width": 458,
+          "height": 679,
+          "photo": 0
+        },
+        {
+          "x": 669,
+          "y": 1021,
+          "width": 461,
+          "height": 675,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 105,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-4x6-01",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 01",
+      "categoryTitle": "Sinh nhật",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/4x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 108,
+          "y": 380,
+          "width": 985,
+          "height": 649,
+          "photo": 0
+        },
+        {
+          "x": 109,
+          "y": 1063,
+          "width": 987,
+          "height": 649,
+          "photo": 1
+        }
+      ],
+      "shape": "portrait",
+      "order": 301,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-4x6-02",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 02",
+      "categoryTitle": "Sinh nhật",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/4x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 59,
+          "y": 645,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 63,
+          "y": 1195,
+          "width": 475,
+          "height": 476,
+          "photo": 1
+        },
+        {
+          "x": 659,
+          "y": 304,
+          "width": 482,
+          "height": 475,
+          "photo": 0
+        },
+        {
+          "x": 662,
+          "y": 798,
+          "width": 476,
+          "height": 475,
+          "photo": 1
+        },
+        {
+          "x": 659,
+          "y": 1292,
+          "width": 482,
+          "height": 474,
+          "photo": 2
+        }
+      ],
+      "shape": "portrait",
+      "order": 302,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-4x6-03",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 03",
+      "categoryTitle": "Sinh nhật",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/4x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 49,
+          "y": 519,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 49,
+          "y": 927,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 1338,
+          "width": 493,
+          "height": 341,
+          "photo": 2
+        },
+        {
+          "x": 649,
+          "y": 305,
+          "width": 503,
+          "height": 333,
+          "photo": 0
+        },
+        {
+          "x": 649,
+          "y": 650,
+          "width": 503,
+          "height": 336,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 999,
+          "width": 493,
+          "height": 341,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1353,
+          "width": 503,
+          "height": 335,
+          "photo": 3
+        }
+      ],
+      "shape": "portrait",
+      "order": 303,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-4x6-04",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 04",
+      "categoryTitle": "Sinh nhật",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/4x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 143,
+          "y": 323,
+          "width": 914,
+          "height": 1353,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 304,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-6x4-01",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 01",
+      "categoryTitle": "Sinh nhật",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/6x4 01.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 85,
+          "y": 59,
+          "width": 801,
+          "height": 527,
+          "photo": 0
+        },
+        {
+          "x": 83,
+          "y": 610,
+          "width": 802,
+          "height": 528,
+          "photo": 1
+        },
+        {
+          "x": 911,
+          "y": 610,
+          "width": 804,
+          "height": 528,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 501,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-6x4-02",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 02",
+      "categoryTitle": "Sinh nhật",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/6x4 02.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 69,
+          "y": 298,
+          "width": 550,
+          "height": 814,
+          "photo": 0
+        },
+        {
+          "x": 625,
+          "y": 298,
+          "width": 549,
+          "height": 814,
+          "photo": 1
+        },
+        {
+          "x": 1181,
+          "y": 298,
+          "width": 549,
+          "height": 813,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 502,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-6x4-03",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 03",
+      "categoryTitle": "Sinh nhật",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/6x4 03.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 51,
+          "y": 48,
+          "width": 340,
+          "height": 505,
+          "photo": 0
+        },
+        {
+          "x": 436,
+          "y": 48,
+          "width": 339,
+          "height": 505,
+          "photo": 1
+        },
+        {
+          "x": 820,
+          "y": 48,
+          "width": 340,
+          "height": 504,
+          "photo": 2
+        },
+        {
+          "x": 51,
+          "y": 648,
+          "width": 340,
+          "height": 505,
+          "photo": 0
+        },
+        {
+          "x": 436,
+          "y": 648,
+          "width": 339,
+          "height": 505,
+          "photo": 1
+        },
+        {
+          "x": 820,
+          "y": 648,
+          "width": 340,
+          "height": 504,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 503,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-6x4-04",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 04",
+      "categoryTitle": "Sinh nhật",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/6x4 04.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 238,
+          "y": 225,
+          "width": 1325,
+          "height": 877,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 504,
+      "enabled": true
+    },
+    {
+      "key": "birthday-kids-5x5-01",
+      "theme": "birthday",
+      "title": "Sinh nhật bé 01",
+      "categoryTitle": "Sinh nhật",
+      "format": "5×5",
+      "asset": "assets/photobooth/frames/birthday/008-kids-birthday-photo-booth-template-and-welcome-screen/PNG/5x5 01.png",
+      "width": 1500,
+      "height": 1500,
+      "slots": [
+        {
+          "x": 143,
+          "y": 189,
+          "width": 1215,
+          "height": 1196,
+          "photo": 0
+        }
+      ],
+      "shape": "square",
+      "order": 701,
+      "enabled": true
+    },
+    {
+      "key": "birthday-600",
+      "theme": "birthday",
+      "title": "Sinh nhật",
+      "categoryTitle": "Sinh nhật",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 100600,
+      "enabled": true
+    },
+    {
+      "key": "birthday-1200",
+      "theme": "birthday",
+      "title": "Sinh nhật",
+      "categoryTitle": "Sinh nhật",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/birthday/photo-strip-template-birthday-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 101200,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-2x6-01",
+      "theme": "christmas",
+      "title": "Ánh sao 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 519,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 519,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 519,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 519,
+          "height": 519,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 101,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-2x6-02",
+      "theme": "christmas",
+      "title": "Ánh sao 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 102,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-2x6-03",
+      "theme": "christmas",
+      "title": "Ánh sao 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 103,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-2x6-04",
+      "theme": "christmas",
+      "title": "Ánh sao 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 41,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 104,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-2x6-05",
+      "theme": "christmas",
+      "title": "Ánh sao 05",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 05.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 57,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 57,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        },
+        {
+          "x": 657,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 657,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 105,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-4x6-01",
+      "theme": "christmas",
+      "title": "Ánh sao 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 64,
+          "y": 52,
+          "width": 1072,
+          "height": 1072,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 301,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-4x6-02",
+      "theme": "christmas",
+      "title": "Ánh sao 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 519,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 519,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 519,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 519,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 519,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "portrait",
+      "order": 302,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-4x6-03",
+      "theme": "christmas",
+      "title": "Ánh sao 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 519,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 42,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 42,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 519,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 642,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 642,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 642,
+          "y": 1253,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "portrait",
+      "order": 303,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-4x6-04",
+      "theme": "christmas",
+      "title": "Ánh sao 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 166,
+          "y": 136,
+          "width": 868,
+          "height": 1318,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 304,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-6x4-01",
+      "theme": "christmas",
+      "title": "Ánh sao 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/6x4.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 47,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 0
+        },
+        {
+          "x": 944,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 1
+        },
+        {
+          "x": 47,
+          "y": 627,
+          "width": 809,
+          "height": 527,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 501,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-6x4-02",
+      "theme": "christmas",
+      "title": "Ánh sao 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 02.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 59,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 0
+        },
+        {
+          "x": 629,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 1
+        },
+        {
+          "x": 1200,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 502,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-6x4-03",
+      "theme": "christmas",
+      "title": "Ánh sao 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 03.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 40,
+          "y": 44,
+          "width": 337,
+          "height": 512,
+          "photo": 0
+        },
+        {
+          "x": 432,
+          "y": 44,
+          "width": 337,
+          "height": 512,
+          "photo": 1
+        },
+        {
+          "x": 824,
+          "y": 44,
+          "width": 337,
+          "height": 512,
+          "photo": 2
+        },
+        {
+          "x": 40,
+          "y": 645,
+          "width": 337,
+          "height": 512,
+          "photo": 0
+        },
+        {
+          "x": 431,
+          "y": 645,
+          "width": 337,
+          "height": 512,
+          "photo": 1
+        },
+        {
+          "x": 823,
+          "y": 645,
+          "width": 337,
+          "height": 512,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 503,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-6x4-04",
+      "theme": "christmas",
+      "title": "Ánh sao 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 04.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 230,
+          "y": 71,
+          "width": 1342,
+          "height": 891,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 504,
+      "enabled": true
+    },
+    {
+      "key": "christmas-starlight-5x5-01",
+      "theme": "christmas",
+      "title": "Ánh sao 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "5×5",
+      "asset": "assets/photobooth/frames/christmas/023-free-christmas-photo-booth-template-and-welcome-screen/PNG/5x5.png",
+      "width": 1500,
+      "height": 1500,
+      "slots": [
+        {
+          "x": 76,
+          "y": 74,
+          "width": 1349,
+          "height": 1207,
+          "photo": 0
+        }
+      ],
+      "shape": "square",
+      "order": 701,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-2x6-01",
+      "theme": "christmas",
+      "title": "Áo len 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/2x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 42,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 42,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 1101,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-2x6-02",
+      "theme": "christmas",
+      "title": "Áo len 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/2x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 1102,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-2x6-03",
+      "theme": "christmas",
+      "title": "Áo len 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/2x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 1103,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-2x6-04",
+      "theme": "christmas",
+      "title": "Áo len 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/2x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 41,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 1104,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-2x6-05",
+      "theme": "christmas",
+      "title": "Áo len 05",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/2x6 05.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 57,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 57,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        },
+        {
+          "x": 657,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 657,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 1105,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-4x6-01",
+      "theme": "christmas",
+      "title": "Áo len 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 64,
+          "y": 52,
+          "width": 1072,
+          "height": 1072,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 1301,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-4x6-02",
+      "theme": "christmas",
+      "title": "Áo len 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/4x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "portrait",
+      "order": 1302,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-4x6-03",
+      "theme": "christmas",
+      "title": "Áo len 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/4x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "portrait",
+      "order": 1303,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-4x6-04",
+      "theme": "christmas",
+      "title": "Áo len 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/4x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 166,
+          "y": 136,
+          "width": 868,
+          "height": 1318,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 1304,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-6x4-01",
+      "theme": "christmas",
+      "title": "Áo len 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/6x4.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 47,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 0
+        },
+        {
+          "x": 944,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 1
+        },
+        {
+          "x": 47,
+          "y": 627,
+          "width": 809,
+          "height": 527,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 1501,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-6x4-02",
+      "theme": "christmas",
+      "title": "Áo len 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/6x4 02.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 59,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 0
+        },
+        {
+          "x": 629,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 1
+        },
+        {
+          "x": 1200,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 1502,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-6x4-03",
+      "theme": "christmas",
+      "title": "Áo len 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/6x4 03.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 44,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 0
+        },
+        {
+          "x": 434,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 1
+        },
+        {
+          "x": 827,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 2
+        },
+        {
+          "x": 44,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 0
+        },
+        {
+          "x": 434,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 1
+        },
+        {
+          "x": 827,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 1503,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-6x4-04",
+      "theme": "christmas",
+      "title": "Áo len 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/6x4 04.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 109,
+          "y": 114,
+          "width": 1581,
+          "height": 826,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 1504,
+      "enabled": true
+    },
+    {
+      "key": "christmas-sweater-5x5-01",
+      "theme": "christmas",
+      "title": "Áo len 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "5×5",
+      "asset": "assets/photobooth/frames/christmas/326-ugly-sweater-photo-booth-template-and-welcome-screen/PNG/5x5.png",
+      "width": 1500,
+      "height": 1500,
+      "slots": [
+        {
+          "x": 76,
+          "y": 74,
+          "width": 1348,
+          "height": 1207,
+          "photo": 0
+        }
+      ],
+      "shape": "square",
+      "order": 1701,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-2x6-01",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 40,
+          "y": 43,
+          "width": 522,
+          "height": 523,
+          "photo": 0
+        },
+        {
+          "x": 40,
+          "y": 608,
+          "width": 522,
+          "height": 523,
+          "photo": 1
+        },
+        {
+          "x": 639,
+          "y": 43,
+          "width": 522,
+          "height": 523,
+          "photo": 0
+        },
+        {
+          "x": 639,
+          "y": 608,
+          "width": 522,
+          "height": 523,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 2101,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-2x6-02",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 2102,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-2x6-03",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 2103,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-2x6-04",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 41,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 2104,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-2x6-05",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 05",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/2x6 05.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 57,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 57,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        },
+        {
+          "x": 657,
+          "y": 57,
+          "width": 489,
+          "height": 739,
+          "photo": 0
+        },
+        {
+          "x": 657,
+          "y": 846,
+          "width": 489,
+          "height": 739,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 2105,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-4x6-01",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 64,
+          "y": 52,
+          "width": 1072,
+          "height": 1072,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 2301,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-4x6-02",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 519,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 610,
+          "width": 518,
+          "height": 519,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 1175,
+          "width": 518,
+          "height": 519,
+          "photo": 2
+        }
+      ],
+      "shape": "portrait",
+      "order": 2302,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-4x6-03",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 41,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 41,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 41,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 45,
+          "width": 518,
+          "height": 349,
+          "photo": 0
+        },
+        {
+          "x": 641,
+          "y": 448,
+          "width": 518,
+          "height": 348,
+          "photo": 1
+        },
+        {
+          "x": 641,
+          "y": 851,
+          "width": 518,
+          "height": 348,
+          "photo": 2
+        },
+        {
+          "x": 641,
+          "y": 1254,
+          "width": 518,
+          "height": 348,
+          "photo": 3
+        }
+      ],
+      "shape": "portrait",
+      "order": 2303,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-4x6-04",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/4x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 166,
+          "y": 136,
+          "width": 868,
+          "height": 1318,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 2304,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-6x4-01",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/6x4.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 47,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 0
+        },
+        {
+          "x": 944,
+          "y": 46,
+          "width": 809,
+          "height": 527,
+          "photo": 1
+        },
+        {
+          "x": 47,
+          "y": 627,
+          "width": 809,
+          "height": 527,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 2501,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-6x4-02",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 02",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 02.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 59,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 0
+        },
+        {
+          "x": 629,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 1
+        },
+        {
+          "x": 1200,
+          "y": 61,
+          "width": 541,
+          "height": 817,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 2502,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-6x4-03",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 03",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 03.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 44,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 0
+        },
+        {
+          "x": 434,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 1
+        },
+        {
+          "x": 827,
+          "y": 46,
+          "width": 335,
+          "height": 517,
+          "photo": 2
+        },
+        {
+          "x": 44,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 0
+        },
+        {
+          "x": 434,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 1
+        },
+        {
+          "x": 827,
+          "y": 642,
+          "width": 335,
+          "height": 514,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 2503,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-6x4-04",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 04",
+      "categoryTitle": "Giáng sinh",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/6x4 04.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 109,
+          "y": 114,
+          "width": 1581,
+          "height": 826,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 2504,
+      "enabled": true
+    },
+    {
+      "key": "christmas-merry-5x5-01",
+      "theme": "christmas",
+      "title": "Giáng sinh vui 01",
+      "categoryTitle": "Giáng sinh",
+      "format": "5×5",
+      "asset": "assets/photobooth/frames/christmas/330-merry-christmas-photo-booth-template-and-welcome-screen/PNG/5x5.png",
+      "width": 1500,
+      "height": 1500,
+      "slots": [
+        {
+          "x": 76,
+          "y": 74,
+          "width": 1348,
+          "height": 1207,
+          "photo": 0
+        }
+      ],
+      "shape": "square",
+      "order": 2701,
+      "enabled": true
+    },
+    {
+      "key": "christmas-600",
+      "theme": "christmas",
+      "title": "Giáng sinh",
+      "categoryTitle": "Giáng sinh",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-2x6.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 100600,
+      "enabled": true
+    },
+    {
+      "key": "christmas-1200",
+      "theme": "christmas",
+      "title": "Giáng sinh",
+      "categoryTitle": "Giáng sinh",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/christmas/photo-strip-template-christmas-4x6.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 48,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 48,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 48,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 48,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        },
+        {
+          "x": 648,
+          "y": 48,
+          "width": 504,
+          "height": 382,
+          "photo": 0
+        },
+        {
+          "x": 648,
+          "y": 450,
+          "width": 504,
+          "height": 382,
+          "photo": 1
+        },
+        {
+          "x": 648,
+          "y": 852,
+          "width": 504,
+          "height": 382,
+          "photo": 2
+        },
+        {
+          "x": 648,
+          "y": 1254,
+          "width": 504,
+          "height": 382,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 101200,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-01-single",
+      "theme": "halloween",
+      "title": "Halloween vui 01",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/2x6 01 single.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 1,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-02-single",
+      "theme": "halloween",
+      "title": "Halloween vui 02",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/2x6 02 single.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 1122,
+          "width": 495,
+          "height": 495,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 2,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-03-single",
+      "theme": "halloween",
+      "title": "Halloween vui 03",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/2x6 03 single.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 3,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-6x4-03-single",
+      "theme": "halloween",
+      "title": "Halloween vui 03",
+      "categoryTitle": "Halloween",
+      "format": "6×2",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/6x4 03 single.png",
+      "width": 1800,
+      "height": 600,
+      "slots": [
+        {
+          "x": 29,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 0
+        },
+        {
+          "x": 420,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 1
+        },
+        {
+          "x": 812,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 3,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-04-single",
+      "theme": "halloween",
+      "title": "Halloween vui 04",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/2x6 04 single.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 53,
+          "y": 1158,
+          "width": 495,
+          "height": 329,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 4,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-05-single",
+      "theme": "halloween",
+      "title": "Halloween vui 05",
+      "categoryTitle": "Halloween",
+      "format": "2×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/Single Strip/2x6 05 single.png",
+      "width": 600,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 50,
+          "width": 498,
+          "height": 756,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 839,
+          "width": 498,
+          "height": 756,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 5,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-01",
+      "theme": "halloween",
+      "title": "Halloween vui 01",
+      "categoryTitle": "Halloween",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/2x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 101,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-02",
+      "theme": "halloween",
+      "title": "Halloween vui 02",
+      "categoryTitle": "Halloween",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/2x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 1122,
+          "width": 495,
+          "height": 495,
+          "photo": 2
+        },
+        {
+          "x": 653,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 1122,
+          "width": 495,
+          "height": 495,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 102,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-03",
+      "theme": "halloween",
+      "title": "Halloween vui 03",
+      "categoryTitle": "Halloween",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/2x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 653,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        }
+      ],
+      "shape": "strip",
+      "order": 103,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-04",
+      "theme": "halloween",
+      "title": "Halloween vui 04",
+      "categoryTitle": "Halloween",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/2x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 53,
+          "y": 1158,
+          "width": 495,
+          "height": 329,
+          "photo": 3
+        },
+        {
+          "x": 653,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 653,
+          "y": 1158,
+          "width": 495,
+          "height": 329,
+          "photo": 3
+        }
+      ],
+      "shape": "strip",
+      "order": 104,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-2x6-05",
+      "theme": "halloween",
+      "title": "Halloween vui 05",
+      "categoryTitle": "Halloween",
+      "format": "2×6 đôi",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/2x6 05.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 50,
+          "width": 498,
+          "height": 756,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 839,
+          "width": 498,
+          "height": 756,
+          "photo": 1
+        },
+        {
+          "x": 654,
+          "y": 50,
+          "width": 498,
+          "height": 756,
+          "photo": 0
+        },
+        {
+          "x": 654,
+          "y": 839,
+          "width": 498,
+          "height": 756,
+          "photo": 1
+        }
+      ],
+      "shape": "strip",
+      "order": 105,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-4x6-01",
+      "theme": "halloween",
+      "title": "Halloween vui 01",
+      "categoryTitle": "Halloween",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/4x6 01.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 69,
+          "y": 58,
+          "width": 1062,
+          "height": 1062,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 301,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-4x6-02",
+      "theme": "halloween",
+      "title": "Halloween vui 02",
+      "categoryTitle": "Halloween",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/4x6 02.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 57,
+          "width": 495,
+          "height": 496,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 590,
+          "width": 495,
+          "height": 496,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 1122,
+          "width": 495,
+          "height": 495,
+          "photo": 2
+        }
+      ],
+      "shape": "portrait",
+      "order": 302,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-4x6-03",
+      "theme": "halloween",
+      "title": "Halloween vui 03",
+      "categoryTitle": "Halloween",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/4x6 03.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 53,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 53,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 53,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 653,
+          "y": 58,
+          "width": 495,
+          "height": 330,
+          "photo": 0
+        },
+        {
+          "x": 653,
+          "y": 425,
+          "width": 495,
+          "height": 330,
+          "photo": 1
+        },
+        {
+          "x": 653,
+          "y": 792,
+          "width": 495,
+          "height": 329,
+          "photo": 2
+        },
+        {
+          "x": 653,
+          "y": 1158,
+          "width": 495,
+          "height": 329,
+          "photo": 3
+        }
+      ],
+      "shape": "portrait",
+      "order": 303,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-4x6-04",
+      "theme": "halloween",
+      "title": "Halloween vui 04",
+      "categoryTitle": "Halloween",
+      "format": "4×6",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/4x6 04.png",
+      "width": 1200,
+      "height": 1800,
+      "slots": [
+        {
+          "x": 150,
+          "y": 68,
+          "width": 899,
+          "height": 1349,
+          "photo": 0
+        }
+      ],
+      "shape": "portrait",
+      "order": 304,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-6x4-01",
+      "theme": "halloween",
+      "title": "Halloween vui 01",
+      "categoryTitle": "Halloween",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/6x4 01.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 63,
+          "y": 58,
+          "width": 779,
+          "height": 520,
+          "photo": 0
+        },
+        {
+          "x": 958,
+          "y": 58,
+          "width": 779,
+          "height": 520,
+          "photo": 1
+        },
+        {
+          "x": 63,
+          "y": 623,
+          "width": 779,
+          "height": 520,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 501,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-6x4-02",
+      "theme": "halloween",
+      "title": "Halloween vui 02",
+      "categoryTitle": "Halloween",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/6x4 02.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 53,
+          "y": 65,
+          "width": 525,
+          "height": 788,
+          "photo": 0
+        },
+        {
+          "x": 638,
+          "y": 64,
+          "width": 524,
+          "height": 788,
+          "photo": 1
+        },
+        {
+          "x": 1223,
+          "y": 65,
+          "width": 525,
+          "height": 788,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 502,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-6x4-03",
+      "theme": "halloween",
+      "title": "Halloween vui 03",
+      "categoryTitle": "Halloween",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/6x4 03.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 29,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 0
+        },
+        {
+          "x": 420,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 1
+        },
+        {
+          "x": 812,
+          "y": 27,
+          "width": 363,
+          "height": 546,
+          "photo": 2
+        },
+        {
+          "x": 29,
+          "y": 627,
+          "width": 363,
+          "height": 546,
+          "photo": 0
+        },
+        {
+          "x": 420,
+          "y": 627,
+          "width": 363,
+          "height": 546,
+          "photo": 1
+        },
+        {
+          "x": 812,
+          "y": 627,
+          "width": 363,
+          "height": 546,
+          "photo": 2
+        }
+      ],
+      "shape": "landscape",
+      "order": 503,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-6x4-04",
+      "theme": "halloween",
+      "title": "Halloween vui 04",
+      "categoryTitle": "Halloween",
+      "format": "6×4",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/6x4 04.png",
+      "width": 1800,
+      "height": 1200,
+      "slots": [
+        {
+          "x": 263,
+          "y": 50,
+          "width": 1274,
+          "height": 849,
+          "photo": 0
+        }
+      ],
+      "shape": "landscape",
+      "order": 504,
+      "enabled": true
+    },
+    {
+      "key": "halloween-kids-5x5-01",
+      "theme": "halloween",
+      "title": "Halloween vui 01",
+      "categoryTitle": "Halloween",
+      "format": "5×5",
+      "asset": "assets/photobooth/frames/halloween/405-free-kids-halloween-photo-booth-template-and-welcome-screen/PNG/5x5 01.png",
+      "width": 1500,
+      "height": 1500,
+      "slots": [
+        {
+          "x": 240,
+          "y": 53,
+          "width": 1021,
+          "height": 1021,
+          "photo": 0
+        }
+      ],
+      "shape": "square",
+      "order": 701,
+      "enabled": true
     },
     {
       "key": "halloween-600",
@@ -471,7 +3874,10 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 100600,
+      "enabled": true
     },
     {
       "key": "halloween-1200",
@@ -539,7 +3945,10 @@
           "height": 382,
           "photo": 3
         }
-      ]
+      ],
+      "shape": "strip",
+      "order": 101200,
+      "enabled": true
     }
   ],
   "stickers": [
@@ -639,6 +4048,16 @@
       "asset": "assets/photobooth/stickers/animals/cute-elephant.png",
       "width": 450,
       "height": 370,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "animals/cutestickers-cute-penguin-1024",
+      "group": "animals",
+      "asset": "assets/photobooth/stickers/animals/cutestickers-cute-penguin-1024.png",
+      "width": 1024,
+      "height": 1024,
       "enabled": true,
       "note": "",
       "lowResolution": false
@@ -784,6 +4203,466 @@
       "lowResolution": false
     },
     {
+      "key": "belonkhon/mascot/swaddled_sleep",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/swaddled_sleep.png",
+      "width": 220,
+      "height": 224,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/mobile_toy",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/mobile_toy.png",
+      "width": 258,
+      "height": 225,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/milk_bottle",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/milk_bottle.png",
+      "width": 202,
+      "height": 215,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/first_tooth",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/first_tooth.png",
+      "width": 201,
+      "height": 215,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/eating_porridge",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/eating_porridge.png",
+      "width": 202,
+      "height": 215,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/crawling",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/crawling.png",
+      "width": 214,
+      "height": 195,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/learning_to_crawl",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/learning_to_crawl.png",
+      "width": 225,
+      "height": 179,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/stacking_rings",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/stacking_rings.png",
+      "width": 194,
+      "height": 198,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/waving",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/waving.png",
+      "width": 180,
+      "height": 197,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/standing_with_stool",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/standing_with_stool.png",
+      "width": 187,
+      "height": 199,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/first_steps",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/first_steps.png",
+      "width": 200,
+      "height": 201,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/jumping",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/jumping.png",
+      "width": 225,
+      "height": 204,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/play_ball",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/play_ball.png",
+      "width": 201,
+      "height": 201,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/drawing",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/drawing.png",
+      "width": 230,
+      "height": 198,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/read_book",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/read_book.png",
+      "width": 201,
+      "height": 203,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/building_blocks",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/building_blocks.png",
+      "width": 205,
+      "height": 195,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/brush_teeth",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/brush_teeth.png",
+      "width": 205,
+      "height": 198,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/sleep_blanket",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/sleep_blanket.png",
+      "width": 250,
+      "height": 203,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/ride_bike",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/ride_bike.png",
+      "width": 226,
+      "height": 201,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/superhero",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/superhero.png",
+      "width": 222,
+      "height": 195,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/graduation",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/graduation.png",
+      "width": 224,
+      "height": 196,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/measure_height",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/measure_height.png",
+      "width": 203,
+      "height": 199,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/hug_heart",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/hug_heart.png",
+      "width": 202,
+      "height": 195,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/school_backpack",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/school_backpack.png",
+      "width": 217,
+      "height": 192,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/hug_star",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/hug_star.png",
+      "width": 188,
+      "height": 186,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/two_front_teeth",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/two_front_teeth.png",
+      "width": 195,
+      "height": 183,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/happy_wave",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/happy_wave.png",
+      "width": 197,
+      "height": 190,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/hug_bunny",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/hug_bunny.png",
+      "width": 196,
+      "height": 183,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/celebrate",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/celebrate.png",
+      "width": 211,
+      "height": 200,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/sitting_cheer",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/sitting_cheer.png",
+      "width": 183,
+      "height": 186,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/mascot/sleep_cloud",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/mascot/sleep_cloud.png",
+      "width": 232,
+      "height": 189,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/decor/rainbow",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/rainbow.png",
+      "width": 162,
+      "height": 125,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/decor/sun",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/sun.png",
+      "width": 138,
+      "height": 137,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/decor/cloud",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/cloud.png",
+      "width": 138,
+      "height": 114,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/decor/star",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/star.png",
+      "width": 124,
+      "height": 124,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/decor/sprout",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/sprout.png",
+      "width": 109,
+      "height": 99,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/decor/hearts",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/decor/hearts.png",
+      "width": 112,
+      "height": 113,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/care/milk_bottle",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/milk_bottle.png",
+      "width": 106,
+      "height": 139,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/care/porridge_bowl",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/porridge_bowl.png",
+      "width": 126,
+      "height": 127,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/care/tooth",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/tooth.png",
+      "width": 122,
+      "height": 118,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/care/syringe",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/syringe.png",
+      "width": 124,
+      "height": 131,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/care/health_shield",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/health_shield.png",
+      "width": 118,
+      "height": 129,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/care/bandage",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/care/bandage.png",
+      "width": 109,
+      "height": 124,
+      "enabled": true,
+      "note": "",
+      "lowResolution": true
+    },
+    {
+      "key": "belonkhon/play/toy_blocks",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/play/toy_blocks.png",
+      "width": 143,
+      "height": 129,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "belonkhon/play/rocking_horse",
+      "group": "belonkhon",
+      "asset": "assets/photobooth/stickers/belonkhon/play/rocking_horse.png",
+      "width": 160,
+      "height": 139,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "birthday/birthday-cake",
+      "group": "birthday",
+      "asset": "assets/photobooth/stickers/birthday/birthday-cake.png",
+      "width": 694,
+      "height": 570,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "birthday/party-time-birthday-kit-01-bunting-banner",
       "group": "birthday",
       "asset": "assets/photobooth/stickers/birthday/party-time-birthday-kit-01-bunting-banner.png",
@@ -904,6 +4783,46 @@
       "lowResolution": false
     },
     {
+      "key": "cartoon/baby-smiling",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/baby-smiling.png",
+      "width": 528,
+      "height": 893,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/bunny-ears",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/bunny-ears.png",
+      "width": 352,
+      "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/cutestickers-cute-doll-1024",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/cutestickers-cute-doll-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/cutestickers-cute-mermaid-1024",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/cutestickers-cute-mermaid-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "cartoon/girl-in-striped-dress",
       "group": "cartoon",
       "asset": "assets/photobooth/stickers/cartoon/girl-in-striped-dress.png",
@@ -934,6 +4853,36 @@
       "lowResolution": false
     },
     {
+      "key": "cartoon/happy-cheerleader",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/happy-cheerleader.png",
+      "width": 685,
+      "height": 682,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/happy-girl-jumping",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/happy-girl-jumping.png",
+      "width": 200,
+      "height": 200,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/jumping-girl",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/jumping-girl.png",
+      "width": 278,
+      "height": 504,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "cartoon/pink-peach-head",
       "group": "cartoon",
       "asset": "assets/photobooth/stickers/cartoon/pink-peach-head.png",
@@ -944,11 +4893,21 @@
       "lowResolution": false
     },
     {
-      "key": "cartoon/witch-cartoon",
+      "key": "cartoon/purple-girl",
       "group": "cartoon",
-      "asset": "assets/photobooth/stickers/cartoon/witch-cartoon.png",
-      "width": 786,
-      "height": 773,
+      "asset": "assets/photobooth/stickers/cartoon/purple-girl.png",
+      "width": 558,
+      "height": 472,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "cartoon/soccer-player",
+      "group": "cartoon",
+      "asset": "assets/photobooth/stickers/cartoon/soccer-player.png",
+      "width": 427,
+      "height": 995,
       "enabled": true,
       "note": "",
       "lowResolution": false
@@ -1104,9 +5063,139 @@
       "lowResolution": false
     },
     {
+      "key": "christmas/cutestickers-candy-cane-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-candy-cane-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-christmas-ornament-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-christmas-ornament-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-christmas-present-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-christmas-present-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-christmas-stocking-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-christmas-stocking-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-christmas-tree-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-christmas-tree-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-cute-reindeer-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-cute-reindeer-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-cute-snowman-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-cute-snowman-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-cute-truck-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-cute-truck-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-gingerbread-man-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-gingerbread-man-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-hot-cocoa-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-hot-cocoa-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-santa-claus-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-santa-claus-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-santa-hat-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-santa-hat-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "christmas/cutestickers-snowflake-1024",
+      "group": "christmas",
+      "asset": "assets/photobooth/stickers/christmas/cutestickers-snowflake-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "halloween/autumn-leaf",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/autumn-leaf.png",
+      "asset": "assets/photobooth/stickers/halloween/autumn-leaf.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1116,7 +5205,7 @@
     {
       "key": "halloween/bat",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/bat.png",
+      "asset": "assets/photobooth/stickers/halloween/bat.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1126,7 +5215,7 @@
     {
       "key": "halloween/black-cat",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/black-cat.png",
+      "asset": "assets/photobooth/stickers/halloween/black-cat.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1136,7 +5225,7 @@
     {
       "key": "halloween/boo",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/boo.png",
+      "asset": "assets/photobooth/stickers/halloween/boo.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1146,7 +5235,7 @@
     {
       "key": "halloween/candle",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/candle.png",
+      "asset": "assets/photobooth/stickers/halloween/candle.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1156,7 +5245,7 @@
     {
       "key": "halloween/candy-corn",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/candy-corn.png",
+      "asset": "assets/photobooth/stickers/halloween/candy-corn.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1166,7 +5255,7 @@
     {
       "key": "halloween/crescent-moon",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/crescent-moon.png",
+      "asset": "assets/photobooth/stickers/halloween/crescent-moon.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1174,9 +5263,109 @@
       "lowResolution": false
     },
     {
+      "key": "halloween/cutestickers-black-cat-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-black-cat-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-candy-corn-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-candy-corn-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-carved-pumpkin-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-carved-pumpkin-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-cute-bat-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-cute-bat-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-cute-ghost-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-cute-ghost-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-cute-spider-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-cute-spider-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-cute-wizard-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-cute-wizard-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-pastel-skull-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-pastel-skull-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-sugar-skull-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-sugar-skull-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "halloween/cutestickers-witch-hat-1024",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/cutestickers-witch-hat-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "halloween/ghost",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/ghost.png",
+      "asset": "assets/photobooth/stickers/halloween/ghost.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1186,7 +5375,7 @@
     {
       "key": "halloween/happy-halloween",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/happy-halloween.png",
+      "asset": "assets/photobooth/stickers/halloween/happy-halloween.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1196,7 +5385,7 @@
     {
       "key": "halloween/happy-pumpkin",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/happy-pumpkin.png",
+      "asset": "assets/photobooth/stickers/halloween/happy-pumpkin.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1206,7 +5395,7 @@
     {
       "key": "halloween/lollipop",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/lollipop.png",
+      "asset": "assets/photobooth/stickers/halloween/lollipop.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1216,7 +5405,7 @@
     {
       "key": "halloween/potion",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/potion.png",
+      "asset": "assets/photobooth/stickers/halloween/potion.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1226,7 +5415,7 @@
     {
       "key": "halloween/pumpkin-bucket",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/pumpkin-bucket.png",
+      "asset": "assets/photobooth/stickers/halloween/pumpkin-bucket.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1236,7 +5425,7 @@
     {
       "key": "halloween/sleepy-pumpkin",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/sleepy-pumpkin.png",
+      "asset": "assets/photobooth/stickers/halloween/sleepy-pumpkin.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1246,7 +5435,7 @@
     {
       "key": "halloween/sparkle",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/sparkle.png",
+      "asset": "assets/photobooth/stickers/halloween/sparkle.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1256,7 +5445,7 @@
     {
       "key": "halloween/star",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/star.png",
+      "asset": "assets/photobooth/stickers/halloween/star.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1266,7 +5455,7 @@
     {
       "key": "halloween/striped-sweet",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/striped-sweet.png",
+      "asset": "assets/photobooth/stickers/halloween/striped-sweet.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1276,7 +5465,7 @@
     {
       "key": "halloween/treat-bag",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/treat-bag.png",
+      "asset": "assets/photobooth/stickers/halloween/treat-bag.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1284,9 +5473,19 @@
       "lowResolution": false
     },
     {
+      "key": "halloween/witch-cartoon",
+      "group": "halloween",
+      "asset": "assets/photobooth/stickers/halloween/witch-cartoon.png",
+      "width": 786,
+      "height": 773,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "halloween/witch-hat",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/witch-hat.png",
+      "asset": "assets/photobooth/stickers/halloween/witch-hat.png",
       "width": 512,
       "height": 512,
       "enabled": true,
@@ -1296,9 +5495,19 @@
     {
       "key": "halloween/wrapped-candy",
       "group": "halloween",
-      "asset": "assets/photobooth/stickers/halloween/png/wrapped-candy.png",
+      "asset": "assets/photobooth/stickers/halloween/wrapped-candy.png",
       "width": 512,
       "height": 512,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "rainbow/cutestickers-rainbow-1024",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/cutestickers-rainbow-1024.png",
+      "width": 1024,
+      "height": 1024,
       "enabled": true,
       "note": "",
       "lowResolution": false
@@ -1324,11 +5533,31 @@
       "lowResolution": false
     },
     {
+      "key": "rainbow/rainbow-music-notes",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/rainbow-music-notes.png",
+      "width": 671,
+      "height": 233,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
       "key": "rainbow/rainbow-with-rain-cloud",
       "group": "rainbow",
       "asset": "assets/photobooth/stickers/rainbow/rainbow-with-rain-cloud.png",
       "width": 922,
       "height": 1111,
+      "enabled": true,
+      "note": "",
+      "lowResolution": false
+    },
+    {
+      "key": "rainbow/whale-with-rainbow-spout",
+      "group": "rainbow",
+      "asset": "assets/photobooth/stickers/rainbow/whale-with-rainbow-spout.png",
+      "width": 1177,
+      "height": 1124,
       "enabled": true,
       "note": "",
       "lowResolution": false

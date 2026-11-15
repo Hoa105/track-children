@@ -122,6 +122,113 @@ void main() {
     },
   );
 
+  for (final specimen in const [
+    (600, 1800, ui.Rect.fromLTWH(560, 0, 320, 960)),
+    (1200, 1800, ui.Rect.fromLTWH(400, 0, 640, 960)),
+    (1500, 1500, ui.Rect.fromLTWH(240, 0, 960, 960)),
+    (1800, 1200, ui.Rect.fromLTWH(0, 0, 1440, 960)),
+    (1800, 600, ui.Rect.fromLTWH(0, 240, 1440, 480)),
+  ]) {
+    test(
+      'Photobooth ${specimen.$1}x${specimen.$2} keeps all four artwork edges through JPEG',
+      () async {
+        final (width, height, fitted) = specimen;
+        final image = img.Image(width: width, height: height);
+        img.fill(image, color: img.ColorRgb8(240, 220, 200));
+        img.fillRect(
+          image,
+          x1: 0,
+          y1: 0,
+          x2: width - 1,
+          y2: height ~/ 10,
+          color: img.ColorRgb8(240, 20, 20),
+        );
+        img.fillRect(
+          image,
+          x1: 0,
+          y1: height * 9 ~/ 10,
+          x2: width - 1,
+          y2: height - 1,
+          color: img.ColorRgb8(20, 20, 240),
+        );
+        img.fillRect(
+          image,
+          x1: 0,
+          y1: 0,
+          x2: width ~/ 10,
+          y2: height - 1,
+          color: img.ColorRgb8(20, 200, 20),
+        );
+        img.fillRect(
+          image,
+          x1: width * 9 ~/ 10,
+          y1: 0,
+          x2: width - 1,
+          y2: height - 1,
+          color: img.ColorRgb8(240, 220, 20),
+        );
+        final path = '${root.path}/finished.png';
+        final original = img.encodePng(image);
+        await File(path).writeAsBytes(original);
+        final prepared = await service.preparePhotobooth(path);
+        final decoded = await service.decode(prepared);
+        expect(decoded.naturalSize, const ui.Size(1440, 960));
+        service.validateSize(decoded);
+        final crop = BackgroundCropState(sourceSize: decoded.naturalSize);
+        expect(crop.normalizedRect, const ui.Rect.fromLTWH(0, 0, 1, 1));
+        final jpegPath = await service.export(prepared, crop.normalizedRect);
+        final jpeg = img.decodeJpg(await File(jpegPath).readAsBytes())!;
+        final top = jpeg.getPixel(
+          fitted.center.dx.toInt(),
+          (fitted.top + fitted.height * .05).toInt(),
+        );
+        final bottom = jpeg.getPixel(
+          fitted.center.dx.toInt(),
+          (fitted.bottom - fitted.height * .05).toInt(),
+        );
+        final left = jpeg.getPixel(
+          (fitted.left + fitted.width * .05).toInt(),
+          fitted.center.dy.toInt(),
+        );
+        final right = jpeg.getPixel(
+          (fitted.right - fitted.width * .05).toInt(),
+          fitted.center.dy.toInt(),
+        );
+        expect(top.r, greaterThan(220));
+        expect(top.g, lessThan(40));
+        expect(bottom.b, greaterThan(220));
+        expect(bottom.r, lessThan(40));
+        expect(left.g, greaterThan(180));
+        expect(left.r, lessThan(40));
+        expect(right.r, greaterThan(220));
+        expect(right.g, greaterThan(200));
+        expect(right.b, lessThan(40));
+        if (fitted.left > 0 || fitted.top > 0) {
+          final padding = jpeg.getPixel(10, 10);
+          expect([
+            padding.r,
+            padding.g,
+            padding.b,
+          ], everyElement(greaterThan(250)));
+        }
+        expect(await File(path).readAsBytes(), original);
+        crop.dispose();
+        decoded.dispose();
+      },
+    );
+  }
+
+  test(
+    'Home-sized Photobooth artwork can be reused without rewriting its pixels',
+    () async {
+      final path = '${root.path}/ready.png';
+      await File(path)
+          .writeAsBytes(img.encodePng(img.Image(width: 1440, height: 960)));
+      expect(await service.preparePhotobooth(path), path);
+      expect(await File(path).exists(), isTrue);
+    },
+  );
+
   test('transparent PNG is flattened to white, never black', () async {
     final image = img.Image(width: 1440, height: 960, numChannels: 4);
     final path = '${root.path}/alpha.png';

@@ -23,6 +23,11 @@ import 'package:track_children/features/home/background/home_background_reposito
 import 'package:track_children/features/home/background/photobooth_entry_screen.dart';
 import 'package:track_children/features/home/home_screen.dart';
 import 'package:track_children/services/demo_store.dart';
+import 'package:track_children/features/photobooth/photobooth_catalog.dart';
+import 'package:track_children/features/photobooth/photobooth_edit.dart';
+import 'package:track_children/features/photobooth/photobooth_editor_entry.dart';
+import 'package:track_children/features/photobooth/photobooth_export.dart';
+import 'package:track_children/features/photobooth/photobooth_session.dart';
 
 class _Gallery extends BackgroundPickerService {
   _Gallery({required super.files, required this.source});
@@ -32,6 +37,7 @@ class _Gallery extends BackgroundPickerService {
   bool denied = false;
   bool settingsFail = false;
   int settingsOpened = 0;
+  Completer<void>? pickGate;
   @override
   Future<void> openSettings() async {
     settingsOpened++;
@@ -43,11 +49,28 @@ class _Gallery extends BackgroundPickerService {
     required String accountId,
     required String childId,
   }) async {
+    if (pickGate != null) await pickGate!.future;
     if (error != null) {
       throw BackgroundImageException(error!, canOpenSettings: denied);
     }
     if (cancelled) return null;
     return files.keepInput(source);
+  }
+}
+
+class _Images extends BackgroundImageService {
+  _Images({required super.files});
+  final gate = Completer<void>();
+  int decodes = 0;
+
+  @override
+  Future<DecodedBackgroundImage> decode(
+    String path, {
+    bool exporting = false,
+  }) async {
+    decodes++;
+    await gate.future;
+    return super.decode(path, exporting: exporting);
   }
 }
 
@@ -197,6 +220,7 @@ void main() {
   Future<void> launch(
     WidgetTester tester, {
     PhotoboothHomeLauncher? photobooth,
+    BackgroundImageService? images,
   }) async {
     finished = false;
     applied = null;
@@ -222,6 +246,7 @@ void main() {
                       current: const BackgroundConfig(childId: 'child_an'),
                       repository: repository,
                       picker: gallery,
+                      images: images,
                       profileChanges: active,
                       isCurrentProfile: () => active.value == 'child_an',
                       photobooth: photobooth,
@@ -274,6 +299,67 @@ void main() {
       await pumpUntil(tester, () => finished);
       expect(applied?.source, BackgroundSource.defaultImage);
       expect(repository.writes, 1);
+    },
+  );
+
+  testWidgets(
+    'opening indicator stays visible during selection and decoding without applying a background',
+    (tester) async {
+      gallery.pickGate = Completer<void>();
+      final images = _Images(files: files);
+      await launch(tester, images: images);
+      await tester.tap(find.text('Ảnh từ thư viện'));
+      await pumpUntil(
+        tester,
+        () => find.text('Đang mở ảnh…').evaluate().isNotEmpty,
+        settle: false,
+      );
+      expect(find.byType(CropBackgroundScreen), findsNothing);
+      expect(repository.writes, 0);
+      gallery.pickGate!.complete();
+      await pumpUntil(tester, () => images.decodes == 1, settle: false);
+      expect(find.text('Đang mở ảnh…'), findsOneWidget);
+      expect(find.byType(CropBackgroundScreen), findsNothing);
+      images.gate.complete();
+      await pumpUntil(
+        tester,
+        () => find.byType(CropBackgroundScreen).evaluate().isNotEmpty,
+      );
+      expect(find.text('Đang mở ảnh…'), findsNothing);
+      expect(repository.writes, 0);
+      await tester.tap(find.text('Hủy'));
+      await pumpUntil(tester, () => finished);
+      expect(applied, isNull);
+      expect(
+        await tester.runAsync(
+          () => Directory('${root.path}/pending').list().toList(),
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
+    'profile change during decoding closes progress and removes the pending image',
+    (tester) async {
+      final images = _Images(files: files);
+      await launch(tester, images: images);
+      await tester.tap(find.text('Ảnh từ thư viện'));
+      await pumpUntil(tester, () => images.decodes == 1, settle: false);
+      active.value = 'another-child';
+      await tester.pump();
+      expect(find.text('Đang mở ảnh…'), findsNothing);
+      images.gate.complete();
+      await pumpUntil(tester, () => finished);
+      expect(find.byType(CropBackgroundScreen), findsNothing);
+      expect(repository.writes, 0);
+      expect(applied, isNull);
+      expect(
+        await tester.runAsync(
+          () => Directory('${root.path}/pending').list().toList(),
+        ),
+        isEmpty,
+      );
     },
   );
 
@@ -557,6 +643,142 @@ void main() {
     },
   );
 
+  testWidgets(
+    'framed Photobooth opens crop in one click and applies without rebuilding its artwork',
+    (tester) async {
+      await launch(tester);
+      await tester.tap(find.text('Chụp Photobooth'));
+      await tester.pumpAndSettle();
+      final entry = tester.widget<PhotoboothEntryScreen>(
+        find.byType(PhotoboothEntryScreen),
+      );
+      final navigator = Navigator.of(
+        tester.element(find.byType(PhotoboothEntryScreen)),
+      );
+      final session =
+          PhotoBoothSession.create(
+                accountId: 'parent',
+                childId: 'child_an',
+                mode: PhotoBoothMode.four,
+              )
+              .withShots(
+                List.generate(
+                  4,
+                  (_) => LocalPhoto(
+                    path: source,
+                    width: 2400,
+                    height: 1800,
+                    capturedAt: DateTime(2026),
+                    frontCamera: true,
+                  ),
+                ),
+              )
+              .withSelection([0, 1, 2, 3]);
+      final editor = PhotoBoothEditorController(session);
+      editor.addText(
+        'Kỷ niệm gia đình',
+        PhotoBoothFrame.home(4),
+        backgroundColor: 0xFF23332E,
+      );
+      final strip = editor.draft.fingerprint;
+      var editorClosed = false;
+      BackgroundConfig? editorResult;
+      String? artwork;
+      navigator
+          .push<BackgroundConfig>(
+            MaterialPageRoute(
+              builder: (page) => Scaffold(
+                body: SafeArea(
+                  child: PhotoBoothEditorEntry(
+                    session: session,
+                    controller: editor,
+                    onBack: () => Navigator.pop(page),
+                    exporter: PhotoBoothExporter(
+                      files: PhotoBoothOutputStore(
+                        rootPath: '${root.path}/outputs',
+                      ),
+                    ),
+                    onUseHome: (path) async {
+                      artwork = path;
+                      final config = await entry.onUseHome!(path);
+                      if (config == null || !page.mounted) return false;
+                      Navigator.pop(page, config);
+                      return true;
+                    },
+                  ),
+                ),
+              ),
+            ),
+          )
+          .then((config) {
+            editorResult = config;
+            editorClosed = true;
+          });
+      await pumpUntil(
+        tester,
+        () => find.text('Hoàn tất').evaluate().isNotEmpty,
+      );
+      await tester.tap(find.text('Hoàn tất'));
+      await pumpUntil(
+        tester,
+        () => find.text('Dùng làm nền Home').evaluate().isNotEmpty,
+      );
+      await tester.tap(find.text('Dùng làm nền Home'));
+      await pumpUntil(
+        tester,
+        () => find.byType(CropBackgroundScreen).evaluate().isNotEmpty,
+      );
+      expect(
+        tester
+            .widget<CropBackgroundScreen>(find.byType(CropBackgroundScreen))
+            .image
+            .naturalSize,
+        const Size(1440, 960),
+      );
+      expect(editor.draft.fingerprint, strip);
+      expect(editor.draft.frameKey, 'classic-600');
+      expect(repository.writes, 0);
+      await screenshot(tester, 'photobooth_frame_preserved_320');
+      await tester.tap(find.text('Hủy'));
+      await pumpUntil(tester, () {
+        final button = find.widgetWithText(OutlinedButton, 'Dùng làm nền Home');
+        return button.evaluate().isNotEmpty &&
+            tester.widget<OutlinedButton>(button).onPressed != null;
+      });
+      expect(editorClosed, isFalse);
+      expect(repository.writes, 0);
+      await tester.tap(find.text('Dùng làm nền Home'));
+      await pumpUntil(
+        tester,
+        () => find.byType(CropBackgroundScreen).evaluate().isNotEmpty,
+      );
+      await tester.tap(find.text('Áp dụng'));
+      await pumpUntil(tester, () => editorClosed);
+      expect(repository.writes, 1);
+      expect(editorResult?.source, BackgroundSource.photobooth);
+      expect(editorResult?.childId, 'child_an');
+      expect(await tester.runAsync(() => File(artwork!).exists()), isTrue);
+      navigator.pop(editorResult);
+      await pumpUntil(tester, () => finished);
+      expect(applied?.source, BackgroundSource.photobooth);
+      final stored = await tester.runAsync(
+        () => repository.load(accountId: 'parent', childId: 'child_an'),
+      );
+      expect(stored?.finalLocalPath, applied?.finalLocalPath);
+      expect(
+        await tester.runAsync(() => File(applied!.finalLocalPath!).exists()),
+        isTrue,
+      );
+      expect(
+        await tester.runAsync(
+          () => Directory('${root.path}/pending').list().toList(),
+        ),
+        isEmpty,
+      );
+      editor.dispose();
+    },
+  );
+
   testWidgets('no child shows a request instead of assigning a background', (
     tester,
   ) async {
@@ -609,27 +831,29 @@ void main() {
     },
   );
 
-  testWidgets('raw portrait Photobooth output reports a visible source error', (
-    tester,
-  ) async {
-    await launch(
-      tester,
-      photobooth: (_, child) async =>
-          PhotoboothHomeInput(childId: child, localPath: portraitSource),
-    );
-    await tester.tap(find.text('Chụp Photobooth'));
-    await pumpUntil(
-      tester,
-      () => find.textContaining('Hãy tạo bố cục ngang').evaluate().isNotEmpty,
-    );
-    expect(find.byType(CropBackgroundScreen), findsNothing);
-    expect(
-      find.byKey(const ValueKey('background-source-error')).hitTestable(),
-      findsOneWidget,
-    );
-    await tester.binding.handlePopRoute();
-    await pumpUntil(tester, () => finished);
-  });
+  testWidgets(
+    'portrait Photobooth artwork fits Home without losing its edges',
+    (tester) async {
+      await launch(
+        tester,
+        photobooth: (_, child) async =>
+            PhotoboothHomeInput(childId: child, localPath: portraitSource),
+      );
+      await tester.tap(find.text('Chụp Photobooth'));
+      await pumpUntil(
+        tester,
+        () => find.byType(CropBackgroundScreen).evaluate().isNotEmpty,
+      );
+      final screen = tester.widget<CropBackgroundScreen>(
+        find.byType(CropBackgroundScreen),
+      );
+      expect(screen.image.naturalSize, const Size(1440, 960));
+      expect(screen.crop.normalizedRect, const Rect.fromLTWH(0, 0, 1, 1));
+      await tester.tap(find.text('Hủy'));
+      await pumpUntil(tester, () => finished);
+      expect(repository.writes, 0);
+    },
+  );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final size in const [

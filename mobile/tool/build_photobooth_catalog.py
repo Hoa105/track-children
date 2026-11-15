@@ -1,6 +1,5 @@
 """Build a deterministic manifest from the checked-in PNG sources (no renames)."""
 import json
-import shutil
 import struct
 import math
 import argparse
@@ -22,8 +21,8 @@ def png_info(path):
 
 
 frames = []
-theme_labels = dict(classic='Classic', film='Film', birthday='Birthday',
-                    christmas='Christmas', halloween='Halloween')
+theme_labels = dict(classic='Classic', film='Film', belonkhon='Bé Lớn Khôn', birthday='Sinh nhật',
+                    christmas='Giáng sinh', halloween='Halloween')
 frame_keys = set()
 for path in sorted((root / 'frames').rglob('*.png')):
     width, height, alpha = png_info(path)
@@ -63,21 +62,56 @@ for path in sorted((root / 'frames').rglob('*.png')):
     for field in ('theme', 'title', 'categoryTitle', 'format'):
         if field in info and (not isinstance(info[field], str) or not info[field].strip()):
             raise ValueError(f'{field} must be a non-empty string: {path}')
+    shape = info.get('shape', 'strip' if path.stem.startswith('photo-strip-template-') else
+                     'square' if width == height else 'portrait' if width < height else 'landscape')
+    if shape not in ('strip', 'portrait', 'landscape', 'square'):
+        raise ValueError(f'Invalid frame shape: {path}')
+    order = info.get('order', 100000 + width)
+    if type(order) is not int or order < 0:
+        raise ValueError(f'Invalid frame order: {path}')
+    enabled = info.get('enabled', True)
+    if type(enabled) is not bool:
+        raise ValueError(f'Invalid frame enabled flag: {path}')
     category_title = info.get('categoryTitle', theme_labels.get(category, category.replace('-', ' ').title()))
     frames.append(dict(
         key=key, theme=category,
         title=info.get('title', category_title), categoryTitle=category_title,
         format=info.get('format', '2×6' if (width, height) == (600, 1800) else '4×6' if (width, height) == (1200, 1800) else f'{width} × {height}'),
         asset=path.relative_to(mobile).as_posix(), width=width, height=height,
-        slots=slots,
+        slots=slots, shape=shape, order=order, enabled=enabled,
     ))
 
+theme_order = {theme: index for index, theme in enumerate(theme_labels)}
+frames.sort(key=lambda frame: (theme_order.get(frame['theme'], 100), frame['theme'],
+                               frame['order'], frame['key']))
+
 stickers = []
-for path in sorted((root / 'stickers').rglob('*.png')):
+sticker_root = root / 'stickers'
+sticker_order = {}
+for manifest_path in sorted(sticker_root.glob('*/manifest.json')):
+    source = json.loads(manifest_path.read_text(encoding='utf-8'))
+    for index, item in enumerate(source['items']):
+        path = (manifest_path.parent / item['file']).resolve()
+        if not path.is_relative_to(manifest_path.parent.resolve()):
+            raise ValueError(f'Sticker outside its pack: {path}')
+        if not path.is_file():
+            print(f'Skipping missing sticker: {path.relative_to(sticker_root).as_posix()}')
+            continue
+        sticker_order[path] = index
+sticker_paths = sorted(sticker_root.rglob('*.png'), key=lambda path: (
+    path.relative_to(sticker_root).parts[0], sticker_order.get(path.resolve(), 100000),
+    path.relative_to(sticker_root).as_posix()))
+sticker_keys = set()
+for path in sticker_paths:
     width, height, alpha = png_info(path)
-    group = path.relative_to(root / 'stickers').parts[0]
+    relative = path.relative_to(sticker_root)
+    group = relative.parts[0]
+    key = relative.with_suffix('').as_posix()
+    if key in sticker_keys:
+        raise ValueError(f'Duplicate sticker key: {key}')
+    sticker_keys.add(key)
     stickers.append(dict(
-        key=f'{group}/{path.stem}', group=group,
+        key=key, group=group,
         asset=path.relative_to(mobile).as_posix(), width=width, height=height,
         enabled=alpha, note='' if alpha else 'PNG has no alpha channel',
         lowResolution=max(width, height) < 128,
@@ -86,13 +120,6 @@ for path in sorted((root / 'stickers').rglob('*.png')):
 manifest = dict(version=1, frames=frames, stickers=stickers)
 (root / 'catalog.json').write_text(
     json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-licenses = mobile.parent / 'docs' / 'assets-licenses' / 'photobooth'
-for path in sorted(root.rglob('*')):
-    if path.is_file() and path.name.lower().startswith(('license', 'readme')):
-        dest = licenses / path.relative_to(root)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, dest)
 
 pubspec = mobile / 'pubspec.yaml'
 text = pubspec.read_text(encoding='utf-8')
@@ -103,7 +130,7 @@ if begin in text:
     _, tail = tail.split(end, 1)
     text = start + tail
 assets = ['assets/photobooth/catalog.json']
-assets += [f['asset'] for f in frames]
+assets += [f['asset'] for f in frames if f['enabled']]
 assets += [s['asset'] for s in stickers if s['enabled']]
 section = begin + ''.join(f'    - {asset}\n' for asset in assets) + end
 anchor = '    - assets/images/scenery/icons/ui/\n'

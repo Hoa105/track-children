@@ -1,0 +1,33 @@
+{
+  "key": "christmas-starlight-6x4-01",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Ánh sao 01",
+  "format": "6×4",
+  "shape": "landscape",
+  "order": 501,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 47,
+      "y": 46,
+      "width": 809,
+      "height": 527,
+      "photo": 0
+    },
+    {
+      "x": 944,
+      "y": 46,
+      "width": 809,
+      "height": 527,
+      "photo": 1
+    },
+    {
+      "x": 47,
+      "y": 627,
+      "width": 809,
+      "height": 527,
+      "photo": 2
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import '../home/background/background_image_service.dart';
 import 'photobooth_catalog.dart';
 import 'photobooth_edit.dart';
 import 'photobooth_session.dart';
+import 'photobooth_text.dart';
 
 /// Bounded decoded images shared by painter and export. No file handles retained.
 class PhotoBoothImages {
@@ -15,6 +16,7 @@ class PhotoBoothImages {
   final int spareCacheBytes;
   final photos = <ui.Image>[];
   final assets = <String, ui.Image>{};
+  final textLayouts = PhotoBoothTextLayoutCache();
   bool _disposed = false;
   bool get disposed => _disposed;
   Future<void> loadPhotos(PhotoBoothSession session) async {
@@ -88,6 +90,7 @@ class PhotoBoothImages {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    textLayouts.dispose();
     for (final image in [...photos, ...assets.values]) {
       image.dispose();
     }
@@ -96,7 +99,7 @@ class PhotoBoothImages {
   }
 }
 
-enum PhotoBoothPaintLayer { all, photos, frame, stickers }
+enum PhotoBoothPaintLayer { all, photos, frame, stickers, texts }
 
 class PhotoBoothPainter extends CustomPainter {
   const PhotoBoothPainter({
@@ -191,6 +194,20 @@ class PhotoBoothPainter extends CustomPainter {
         canvas.restore();
       }
     }
+    if (layer == PhotoBoothPaintLayer.all ||
+        layer == PhotoBoothPaintLayer.texts) {
+      for (final text in current.texts) {
+        final layout = images.textLayouts.obtain(text, frame.size);
+        canvas.save();
+        canvas.translate(text.x * frame.size.width, text.y * frame.size.height);
+        canvas.rotate(text.rotation);
+        try {
+          layout.paint(canvas);
+        } finally {
+          canvas.restore();
+        }
+      }
+    }
     canvas.restore();
   }
 
@@ -225,6 +242,10 @@ class PhotoBoothPainter extends CustomPainter {
       PhotoBoothPaintLayer.stickers => !identical(
         oldDelegate.draft.stickers,
         draft.stickers,
+      ),
+      PhotoBoothPaintLayer.texts => !identical(
+        oldDelegate.draft.texts,
+        draft.texts,
       ),
       PhotoBoothPaintLayer.all => oldDelegate.draft != draft,
     };

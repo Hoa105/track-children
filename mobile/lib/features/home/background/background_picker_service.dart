@@ -37,8 +37,9 @@ class BackgroundPickerService {
       final file = await picker.pickImage(
         source: ImageSource.gallery,
         requestFullMetadata: false,
-        maxWidth: 8192,
-        maxHeight: 8192,
+        // Passing either size limit makes Android decode and re-encode even
+        // images below the limit. Keep the original; BackgroundImageService
+        // validates it and decodes a bounded preview for the crop screen.
       );
       if (file == null) return null;
       return await files.keepInput(file.path);

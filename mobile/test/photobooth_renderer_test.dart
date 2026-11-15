@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:track_children/features/photobooth/photobooth_catalog.dart';
@@ -9,6 +10,7 @@ import 'package:track_children/features/photobooth/photobooth_edit.dart';
 import 'package:track_children/features/photobooth/photobooth_export.dart';
 import 'package:track_children/features/photobooth/photobooth_files.dart';
 import 'package:track_children/features/photobooth/photobooth_renderer.dart';
+import 'package:track_children/features/photobooth/photobooth_text.dart';
 
 import 'photobooth_editor_model_test.dart' show editorSession;
 
@@ -29,9 +31,18 @@ void main() {
   const colors = [Colors.red, Colors.green, Colors.blue, Colors.yellow];
   setUpAll(() async {
     catalog = await PhotoBoothCatalog.load();
+    await (FontLoader('Nunito')
+          ..addFont(rootBundle.load('assets/fonts/nunito/Nunito-Variable.ttf')))
+        .load();
   });
 
-  for (final theme in PhotoBoothCatalog.themes.keys) {
+  for (final theme in [
+    'classic',
+    'film',
+    'birthday',
+    'christmas',
+    'halloween',
+  ]) {
     for (final width in [600, 1200]) {
       test(
         '$theme $width: actual alpha geometry, correctly repeated photos and no bleed',
@@ -122,6 +133,15 @@ void main() {
       images.assets[sticker.asset] = await solid(Colors.purple);
       final draft = PhotoBoothEdit(
         frameKey: frame.key,
+        texts: const [
+          PhotoBoothText(
+            id: 0,
+            text: 'Bé yêu\n2026',
+            color: 0xFFE96392,
+            backgroundColor: 0xFF317EC1,
+            rotation: .2,
+          ),
+        ],
         photos: {1: const PhotoBoothPhotoTransform(x: .4, y: .6, zoom: 2)},
         stickers: [
           PhotoBoothSticker(
@@ -145,6 +165,7 @@ void main() {
         PhotoBoothPaintLayer.photos,
         PhotoBoothPaintLayer.frame,
         PhotoBoothPaintLayer.stickers,
+        PhotoBoothPaintLayer.texts,
       ]) {
         PhotoBoothPainter(
           frame: frame,
@@ -279,4 +300,112 @@ void main() {
       images.dispose();
     },
   );
+
+  for (final collection in const {
+    'birthday': 14,
+    'christmas': 42,
+    'halloween': 20,
+    'belonkhon': 6,
+  }.entries) {
+    test(
+      '${collection.key} templates paint the correct originals in every repeated aperture',
+      () async {
+        final frames = catalog.frames.where(
+          (frame) =>
+              frame.theme == collection.key &&
+              (frame.asset!.contains('/PNG/') || frame.theme == 'belonkhon'),
+        );
+        expect(frames, hasLength(collection.value));
+        for (final frame in frames) {
+          final source = img.decodePng(await File(frame.asset!).readAsBytes())!;
+          final images = PhotoBoothImages();
+          for (final color in colors) {
+            images.photos.add(await solid(color));
+          }
+          await images.loadAsset(frame.asset!);
+          final scale = 450 / frame.size.longestSide;
+          final width = (frame.size.width * scale).round();
+          final height = (frame.size.height * scale).round();
+          final recorder = ui.PictureRecorder();
+          PhotoBoothPainter(
+            frame: frame,
+            draft: PhotoBoothEdit(frameKey: frame.key),
+            catalog: catalog,
+            images: images,
+          ).paint(Canvas(recorder), Size(width.toDouble(), height.toDouble()));
+          final picture = recorder.endRecording();
+          final rendered = await picture.toImage(width, height);
+          picture.dispose();
+          try {
+            final pixels = (await rendered.toByteData())!.buffer.asUint8List();
+            for (final slot in frame.slots) {
+              Offset? sample;
+              for (final fraction in const [
+                Offset(.5, .5),
+                Offset(.25, .25),
+                Offset(.75, .25),
+                Offset(.25, .75),
+                Offset(.75, .75),
+              ]) {
+                final x =
+                    ((slot.rect.left + fraction.dx * slot.rect.width) *
+                            width /
+                            frame.size.width)
+                        .floor();
+                final y =
+                    ((slot.rect.top + fraction.dy * slot.rect.height) *
+                            height /
+                            frame.size.height)
+                        .floor();
+                final sx = ((x + .5) * frame.size.width / width).floor();
+                final sy = ((y + .5) * frame.size.height / height).floor();
+                if ([
+                  const Offset(0, 0),
+                  const Offset(-6, 0),
+                  const Offset(6, 0),
+                  const Offset(0, -6),
+                  const Offset(0, 6),
+                ].every(
+                  (p) =>
+                      source.getPixel(sx + p.dx.toInt(), sy + p.dy.toInt()).a ==
+                      0,
+                )) {
+                  sample = Offset(x.toDouble(), y.toDouble());
+                  break;
+                }
+              }
+              expect(
+                sample,
+                isNotNull,
+                reason:
+                    '${frame.key} slot ${slot.photo} needs a clear aperture',
+              );
+              final offset =
+                  (sample!.dy.toInt() * width + sample.dx.toInt()) * 4;
+              final expected = colors[slot.photo];
+              expect(
+                pixels[offset],
+                closeTo(expected.r * 255, 3),
+                reason: frame.key,
+              );
+              expect(
+                pixels[offset + 1],
+                closeTo(expected.g * 255, 3),
+                reason: frame.key,
+              );
+              expect(
+                pixels[offset + 2],
+                closeTo(expected.b * 255, 3),
+                reason: frame.key,
+              );
+              expect(pixels[offset + 3], 255);
+            }
+          } finally {
+            rendered.dispose();
+            images.dispose();
+          }
+        }
+      },
+    );
+  }
 }

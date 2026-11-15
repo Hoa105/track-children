@@ -52,57 +52,60 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                       ),
                     ),
                   ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(3),
-                      child: SegmentedButton<PhotoBoothMode>(
-                        segments: [
-                          for (final mode in PhotoBoothMode.values)
-                            ButtonSegment(
-                              value: mode,
-                              label: Text(
-                                '${mode.count} ảnh',
-                                key: ValueKey(
-                                  'photobooth-layout-${mode.count}',
+                  SizedBox(
+                    width: 208,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(3),
+                        child: SegmentedButton<PhotoBoothMode>(
+                          segments: [
+                            for (final mode in PhotoBoothMode.values)
+                              ButtonSegment(
+                                value: mode,
+                                label: Text(
+                                  '${mode.count}',
+                                  key: ValueKey(
+                                    'photobooth-layout-${mode.count}',
+                                  ),
                                 ),
                               ),
+                          ],
+                          selected: {session.mode},
+                          showSelectedIcon: false,
+                          onSelectionChanged: busy
+                              ? null
+                              : (values) => onMode(values.single),
+                          style: ButtonStyle(
+                            side: const WidgetStatePropertyAll(BorderSide.none),
+                            shape: WidgetStatePropertyAll(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
                             ),
-                        ],
-                        selected: {session.mode},
-                        showSelectedIcon: false,
-                        onSelectionChanged: busy
-                            ? null
-                            : (values) => onMode(values.single),
-                        style: ButtonStyle(
-                          side: const WidgetStatePropertyAll(BorderSide.none),
-                          shape: WidgetStatePropertyAll(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(9),
+                            backgroundColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? AppColors.primarySoft
+                                  : Colors.transparent,
                             ),
-                          ),
-                          backgroundColor: WidgetStateProperty.resolveWith(
-                            (states) => states.contains(WidgetState.selected)
-                                ? AppColors.primarySoft
-                                : Colors.transparent,
-                          ),
-                          foregroundColor: const WidgetStatePropertyAll(
-                            AppColors.primaryDark,
-                          ),
-                          minimumSize: const WidgetStatePropertyAll(
-                            Size(72, 40),
-                          ),
-                          padding: const WidgetStatePropertyAll(
-                            EdgeInsets.symmetric(horizontal: 14),
-                          ),
-                          textStyle: WidgetStatePropertyAll(
-                            Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                            foregroundColor: const WidgetStatePropertyAll(
+                              AppColors.primaryDark,
+                            ),
+                            minimumSize: const WidgetStatePropertyAll(
+                              Size(44, 40),
+                            ),
+                            padding: const WidgetStatePropertyAll(
+                              EdgeInsets.symmetric(horizontal: 10),
+                            ),
+                            textStyle: WidgetStatePropertyAll(
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -115,7 +118,7 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
               Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: session.mode == PhotoBoothMode.two ? 168 : 336,
+                    maxWidth: session.mode.count * 84.0,
                   ),
                   child: Row(
                     children: [

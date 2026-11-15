@@ -103,6 +103,66 @@ class BackgroundImageService {
     }
   }
 
+  /// Fit the finished Photobooth artwork, including every frame edge, onto
+  /// Home's canvas. Padding is white, matching transparent-image flattening.
+  /// Gallery uploads keep the existing crop and resolution validation flow.
+  Future<String> preparePhotobooth(String sourcePath) async {
+    final decoded = await decode(sourcePath, exporting: true);
+    ui.Image? output;
+    ui.Picture? picture;
+    String? path;
+    try {
+      const target = ui.Size(
+        BackgroundFrameSpec.targetWidthPx * 1.0,
+        BackgroundFrameSpec.targetHeightPx * 1.0,
+      );
+      if (decoded.naturalSize == target) return sourcePath;
+      final image = decoded.image;
+      final scale = math.min(
+        target.width / image.width,
+        target.height / image.height,
+      );
+      final destination = ui.Rect.fromCenter(
+        center: target.center(ui.Offset.zero),
+        width: image.width * scale,
+        height: image.height * scale,
+      );
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder)
+        ..drawColor(const ui.Color(0xffffffff), ui.BlendMode.src);
+      canvas.drawImageRect(
+        image,
+        ui.Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        destination,
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
+      );
+      picture = recorder.endRecording();
+      output = await picture.toImage(
+        target.width.toInt(),
+        target.height.toInt(),
+      );
+      final bytes = await output.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) {
+        throw const BackgroundImageException(
+          'Chưa tạo được ảnh nền Photobooth. Bạn hãy thử lại.',
+        );
+      }
+      path = await files.stagePath(extension: 'png');
+      await File(path).writeAsBytes(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+        flush: true,
+      );
+      return path;
+    } catch (_) {
+      await files.removePending(path);
+      rethrow;
+    } finally {
+      output?.dispose();
+      picture?.dispose();
+      decoded.dispose();
+    }
+  }
+
   /// Draw only source pixels into an exact output rectangle. UI is never captured.
   Future<String> export(String sourcePath, ui.Rect normalizedRect) async {
     final decoded = await decode(sourcePath, exporting: true);

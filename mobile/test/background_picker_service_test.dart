@@ -14,6 +14,9 @@ class _Picker extends ImagePicker {
   XFile? result;
   PlatformException? error;
   bool? fullMetadata;
+  double? requestedWidth;
+  double? requestedHeight;
+  int? requestedQuality;
   int recoveries = 0;
   @override
   Future<XFile?> pickImage({
@@ -26,6 +29,9 @@ class _Picker extends ImagePicker {
   }) async {
     expect(source, ImageSource.gallery);
     fullMetadata = requestFullMetadata;
+    requestedWidth = maxWidth;
+    requestedHeight = maxHeight;
+    requestedQuality = imageQuality;
     if (error != null) throw error!;
     return result;
   }
@@ -57,24 +63,25 @@ void main() {
   });
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test(
-    'picker requests no full metadata and cancel leaves no pending marker',
-    () async {
-      expect(await service.pick(accountId: 'a', childId: 'one'), isNull);
-      expect(native.fullMetadata, isFalse);
-      expect(
-        (await SharedPreferences.getInstance()).getString(
-          BackgroundPickerService.pendingKey,
-        ),
-        isNull,
-      );
-      native.result = XFile(source);
-      final picked = await service.pick(accountId: 'a', childId: 'one');
-      expect(await files.isPending(picked!), isTrue);
-      await files.removePending(picked);
-      expect(await File(source).exists(), isTrue);
-    },
-  );
+  test('picker avoids native resizing and preserves the original without leaving a marker', () async {
+    expect(await service.pick(accountId: 'a', childId: 'one'), isNull);
+    expect(native.fullMetadata, isFalse);
+    expect(
+      (await SharedPreferences.getInstance()).getString(
+        BackgroundPickerService.pendingKey,
+      ),
+      isNull,
+    );
+    native.result = XFile(source);
+    final picked = await service.pick(accountId: 'a', childId: 'one');
+    expect(native.requestedWidth, isNull);
+    expect(native.requestedHeight, isNull);
+    expect(native.requestedQuality, isNull);
+    expect(await files.isPending(picked!), isTrue);
+    expect(await File(picked).readAsBytes(), await File(source).readAsBytes());
+    await files.removePending(picked);
+    expect(await File(source).exists(), isTrue);
+  });
 
   test(
     'permission denial is recoverable and does not retain a picker marker',

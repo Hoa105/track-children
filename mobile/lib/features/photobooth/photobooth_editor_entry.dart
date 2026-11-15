@@ -2,19 +2,48 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:permission_handler/permission_handler.dart' as permissions;
 
+import '../home/background/background_draft.dart';
 import 'photobooth_catalog.dart';
 import 'photobooth_edit.dart';
 import 'photobooth_export.dart';
 import 'photobooth_renderer.dart';
 import 'photobooth_session.dart';
+import 'photobooth_text.dart';
+import 'photobooth_text_composer.dart';
 
 typedef PhotoBoothEditorBuilder = Widget Function(
   BuildContext context,
   PhotoBoothSession session,
   VoidCallback onBack,
 );
+
+enum _CompletionAction { save, home }
+
+typedef PhotoBoothCompletionStatus = ({bool completed, bool busy});
+
+class PhotoBoothContinueEditingAction extends StatelessWidget {
+  const PhotoBoothContinueEditingAction({
+    required this.status,
+    required this.onPressed,
+    super.key,
+  });
+  final PhotoBoothCompletionStatus status;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => !status.completed
+      ? const SizedBox.shrink()
+      : IconButton(
+          key: const ValueKey('photobooth-continue-editing'),
+          tooltip: 'Tiếp tục chỉnh sửa',
+          onPressed: status.busy ? null : onPressed,
+          icon: const Icon(Icons.edit_rounded),
+        );
+}
 
 class PhotoBoothEditorEntry extends StatefulWidget {
   const PhotoBoothEditorEntry({
@@ -24,6 +53,7 @@ class PhotoBoothEditorEntry extends StatefulWidget {
     this.catalog,
     this.onUseHome,
     this.onChooseFour,
+    this.onCompletionChanged,
     this.exporter = const PhotoBoothExporter(),
     this.gallery = const PhotoBoothGallery(),
     super.key,
@@ -31,6 +61,7 @@ class PhotoBoothEditorEntry extends StatefulWidget {
   final PhotoBoothSession session;
   final VoidCallback onBack;
   final VoidCallback? onChooseFour;
+  final ValueChanged<PhotoBoothCompletionStatus>? onCompletionChanged;
   final PhotoBoothEditorController? controller;
   final PhotoBoothCatalog? catalog;
   final Future<bool> Function(String path)? onUseHome;
@@ -47,23 +78,39 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   PhotoBoothCatalog? _catalog;
   bool _loading = true, _busy = false, _completed = false, _settings = false;
   String? _error, _notice, _output, _outputFingerprint;
+  _CompletionAction? _completionAction;
   int _tab = 0, _generation = 0;
   String _group = 'animals';
   String? _frameCategory;
+  String? _frameShape;
   final _previewFraction = ValueNotifier(.60);
   final _photoPaints = ValueNotifier(0);
   final _stickerPaints = ValueNotifier(0);
+  final _textPaints = ValueNotifier(0);
   final _selectionPaints = ValueNotifier(0);
+  final _textTools = ValueNotifier(0);
+  final _quickTools = ValueNotifier(0);
   late PhotoBoothEdit _observedDraft;
+  late bool _observedCanUndo;
+  bool _gestureUndoActive = false;
   PhotoBoothFrame? _resolvedFrame;
   String? _resolvedFrameKey;
   List<int>? _resolvedHomePhotos;
   int _homeSlot = 0;
-  int? _sticker, _photo;
+  int? _sticker, _photo, _text;
+  PhotoBoothText? _gestureText;
   PhotoBoothSticker? _gestureSticker;
   PhotoBoothPhotoTransform? _gesturePhoto;
   PhotoBoothSlot? _gestureSlot;
   Offset _gestureOrigin = Offset.zero;
+  final _pointerStarts = <int, Offset>{};
+  int? _tapPointer;
+  Offset _tapStart = Offset.zero;
+  (ScaleUpdateDetails, Size)? _pendingGesture;
+  int? _gestureFrame;
+  PhotoBoothText? _captionToEdit;
+  int? _textBeforeAdding;
+  Offset? _doubleTapPoint;
   ModalRoute<dynamic>? _dialog;
 
   PhotoBoothFrame get _frame {
@@ -89,18 +136,30 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     super.initState();
     editor = widget.controller ?? PhotoBoothEditorController(widget.session);
     _observedDraft = editor.draft;
+    _observedCanUndo = editor.canUndo;
     editor.addListener(_changed);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onCompletionChanged?.call((completed: _completed, busy: _busy));
+      }
+    });
     unawaited(_load());
   }
 
   void _changed() {
+    if (_observedCanUndo != editor.canUndo) {
+      _observedCanUndo = editor.canUndo;
+      _quickTools.value++;
+    }
     final previous = _observedDraft;
     final current = _observedDraft = editor.draft;
     final frameChanged =
         previous.frameKey != current.frameKey ||
         !identical(previous.homePhotos, current.homePhotos);
     final structureChanged =
-        frameChanged || previous.stickers.length != current.stickers.length;
+        frameChanged ||
+        previous.stickers.length != current.stickers.length ||
+        previous.texts.length != current.texts.length;
     if (structureChanged && _catalog != null && !_images.disposed) {
       _images.retainAssets({
         if (_frame.asset != null) _frame.asset!,
@@ -113,6 +172,25 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     }
     if (frameChanged || !identical(previous.stickers, current.stickers)) {
       _stickerPaints.value++;
+    }
+    if (frameChanged || !identical(previous.texts, current.texts)) {
+      _textPaints.value++;
+    }
+    final beforeText = previous.texts
+        .where((text) => text.id == _text)
+        .firstOrNull;
+    final afterText = current.texts
+        .where((text) => text.id == _text)
+        .firstOrNull;
+    if (beforeText?.fontSize != afterText?.fontSize ||
+        beforeText?.color != afterText?.color ||
+        beforeText?.backgroundColor != afterText?.backgroundColor) {
+      _textTools.value++;
+    }
+    if (_photo != null &&
+        (previous.photos[_photo]?.zoom ?? 1) !=
+            (current.photos[_photo]?.zoom ?? 1)) {
+      _quickTools.value++;
     }
     _selectionPaints.value++;
     // Pointer movement only invalidates paint layers and the small tool strip.
@@ -144,7 +222,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       }
       if (!mounted || generation != _generation) return;
       // Fit retained stickers to the new canvas when the photo count changed.
-      editor.setFrame(frame, catalog);
+      editor.setFrame(frame, catalog, recordHistory: false);
       setState(() {
         _catalog = catalog;
         _resolvedFrame = null;
@@ -162,6 +240,8 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
 
   Future<void> _assetAction(Future<void> Function() action) async {
     if (_busy) return;
+    _endGesture();
+    editor.endUndoGroup();
     setState(() {
       _busy = true;
       _error = null;
@@ -180,14 +260,48 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     }
   }
 
+  Future<void> _undo() => _assetAction(() async {
+    final previous = editor.undoDraft;
+    if (previous == null) return;
+    final frame = previous.frameKey.startsWith('home-')
+        ? PhotoBoothFrame.home(
+            previous.homePhotos?.length ?? widget.session.mode.count,
+            photoIndices: previous.homePhotos,
+          )
+        : _catalog!.frame(previous.frameKey, widget.session.mode.count);
+    if (frame.asset != null) await _images.loadAsset(frame.asset!);
+    for (final sticker in previous.stickers) {
+      await _images.loadAsset(_catalog!.sticker(sticker.assetKey).asset);
+    }
+    if (!mounted) return;
+    final changedFrame = editor.draft.frameKey != previous.frameKey;
+    editor.undo();
+    setState(() {
+      if (!editor.draft.texts.any((text) => text.id == _text)) _text = null;
+      if (!editor.draft.stickers.any((sticker) => sticker.id == _sticker)) {
+        _sticker = null;
+      }
+      if (!_frame.slots.any((slot) => slot.photo == _photo)) _photo = null;
+      if (changedFrame) {
+        _frameCategory = frame.theme;
+        _frameShape = null;
+      }
+    });
+  });
+
   Future<void> _frameSelected(PhotoBoothFrame frame) {
     if (editor.draft.frameKey == frame.key) return Future.value();
     return _assetAction(() async {
       if (frame.asset != null) await _images.loadAsset(frame.asset!);
       if (!mounted) return;
-      editor.setFrame(frame, _catalog!);
+      if (frame.theme == 'home' && widget.session.mode == PhotoBoothMode.four) {
+        editor.prepareHome(_catalog!);
+      } else {
+        editor.setFrame(frame, _catalog!);
+      }
       _sticker = null;
       _photo = null;
+      _text = null;
     });
   }
 
@@ -213,10 +327,169 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         if (editor.addSticker(asset, _frame)) {
           _sticker = editor.draft.stickers.last.id;
           _photo = null;
+          _text = null;
         }
       });
 
+  PhotoBoothText? get _selectedText =>
+      editor.draft.texts.where((text) => text.id == _text).firstOrNull;
+
+  void _changeTextInput(PhotoBoothTextInput input) {
+    final selected = _selectedText;
+    if (_busy || selected == null) return;
+    editor.changeText(
+      selected
+          .copy(
+            color: input.color,
+            backgroundColor: input.backgroundColor,
+            fontSize: input.fontSize,
+          )
+          .move(_frame.size, layouts: _images.textLayouts),
+    );
+  }
+
+  void _beginTextEdit([PhotoBoothText? text, Offset? point]) {
+    if (_busy || _captionToEdit != null) return;
+    _endGesture();
+    if (text == null && editor.draft.texts.length >= 8) {
+      setState(() => _notice = 'Bạn có thể thêm tối đa 8 đoạn chữ.');
+      return;
+    }
+    final previousSelection = _text;
+    setState(() {
+      _textBeforeAdding = text == null ? previousSelection : null;
+      _tab = 2;
+      _text = text?.id;
+      _sticker = _photo = null;
+      _notice = null;
+      _captionToEdit =
+          text ??
+          PhotoBoothText(
+            id: -1,
+            text: '',
+            x: point == null ? .5 : point.dx / _frame.size.width,
+            y: point == null ? .5 : point.dy / _frame.size.height,
+          );
+    });
+  }
+
+  void _cancelTextEdit() => setState(() {
+    _captionToEdit = null;
+    _text = _textBeforeAdding ?? _text;
+    _textBeforeAdding = null;
+  });
+
+  void _confirmTextEdit(PhotoBoothText text) {
+    if (_captionToEdit == null || _busy) return;
+    editor.beginUndoGroup();
+    try {
+      var id = text.id;
+      if (id < 0) {
+        final added = editor.addText(
+          text.text,
+          _frame,
+          color: text.color,
+          backgroundColor: text.backgroundColor,
+          fontSize: text.fontSize,
+        );
+        if (added == null) return;
+        id = added.id;
+        editor.changeText(
+          added.move(
+            _frame.size,
+            x: text.x,
+            y: text.y,
+            layouts: _images.textLayouts,
+          ),
+        );
+      } else {
+        editor.changeText(text);
+      }
+      setState(() {
+        _captionToEdit = null;
+        _textBeforeAdding = null;
+        _text = id;
+        _sticker = _photo = null;
+      });
+    } finally {
+      editor.endUndoGroup();
+    }
+  }
+
+  void _selectTab(int tab) {
+    _endGesture();
+    setState(() => _tab = tab);
+    if (tab == 2 && editor.draft.texts.isEmpty) _beginTextEdit();
+  }
+
+  void _tapCanvas(Offset point, {bool editContent = false}) {
+    _endGesture();
+    final text = editor.draft.texts.reversed
+        .where(
+          (text) => text.hit(point, _frame.size, layouts: _images.textLayouts),
+        )
+        .firstOrNull;
+    if (text != null) {
+      if (editContent) {
+        _beginTextEdit(text);
+      } else {
+        _setSelection(null, null, text: text.id);
+      }
+    } else if (_tab == 2) {
+      _clearSelection();
+      if (editContent) _beginTextEdit(null, point);
+    } else {
+      _select(point);
+    }
+  }
+
+  Widget _captionEditor() => PhotoBoothCaptionEditor(
+    initial: _captionToEdit!,
+    layouts: _images.textLayouts,
+    canvasSize: _frame.size,
+    onConfirm: _confirmTextEdit,
+    onCancel: _cancelTextEdit,
+    previewBuilder: (pending) {
+      final draft = editor.draft.copy(
+        texts: [
+          for (final text in editor.draft.texts)
+            if (text.id == pending.id) pending else text,
+          if (pending.id < 0) pending,
+        ],
+      );
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          for (final layer in [
+            PhotoBoothPaintLayer.photos,
+            PhotoBoothPaintLayer.frame,
+            PhotoBoothPaintLayer.stickers,
+            PhotoBoothPaintLayer.texts,
+          ])
+            RepaintBoundary(
+              child: CustomPaint(
+                key: ValueKey('photobooth-text-edit-${layer.name}'),
+                painter: PhotoBoothPainter(
+                  frame: _frame,
+                  draft: draft,
+                  catalog: _catalog!,
+                  images: _images,
+                  layer: layer,
+                  filterQuality: FilterQuality.medium,
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+
   Future<bool> requestLeave() async {
+    _endGesture();
+    if (_captionToEdit != null) {
+      _cancelTextEdit();
+      return false;
+    }
     if (_busy) return false;
     if (!editor.dirty) return true;
     return await showDialog<bool>(
@@ -224,14 +497,12 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
           builder: (context) {
             _dialog = ModalRoute.of(context);
             return AlertDialog(
-              title: const Text('Chỉnh sửa chưa xuất'),
-              content: const Text(
-                'Bạn muốn quay lại bộ ảnh? Bản nháp trang trí vẫn được giữ trong phiên này.',
-              ),
+              title: const Text('Quay lại chọn ảnh?'),
+              content: const Text('Ảnh đang sửa vẫn được giữ.'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Ở lại'),
+                  child: const Text('Sửa tiếp'),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
@@ -255,6 +526,12 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   }
 
   void _select(Offset point) {
+    for (final text in editor.draft.texts.reversed) {
+      if (text.hit(point, _frame.size, layouts: _images.textLayouts)) {
+        _setSelection(null, null, text: text.id);
+        return;
+      }
+    }
     for (final sticker in editor.draft.stickers.reversed) {
       if (sticker.hit(
         point,
@@ -275,17 +552,30 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   }
 
   void _startGesture(ScaleStartDetails details, Size preview) {
+    _endGesture();
+    editor.beginUndoGroup();
+    _gestureUndoActive = true;
+    _tapPointer = null;
     final point = Offset(
       details.localFocalPoint.dx * _frame.size.width / preview.width,
       details.localFocalPoint.dy * _frame.size.height / preview.height,
     );
-    _select(point);
-    _gestureOrigin = point;
+    // Scale recognition waits for touch slop. Hit-test where the user first
+    // touched, so a small caption is not lost by the time dragging starts.
+    final initial = _pointerStarts.isEmpty
+        ? point
+        : _pointerStarts.values.fold(Offset.zero, (sum, point) => sum + point) /
+              _pointerStarts.length.toDouble();
+    _select(initial);
+    _gestureOrigin = _pointerStarts.length == 1 ? initial : point;
+    _gestureText = editor.draft.texts
+        .where((text) => text.id == _text)
+        .firstOrNull;
     _gestureSticker = editor.draft.stickers
         .where((s) => s.id == _sticker)
         .firstOrNull;
     _gestureSlot = _frame.slots
-        .where((slot) => slot.photo == _photo && slot.rect.contains(point))
+        .where((slot) => slot.photo == _photo && slot.rect.contains(initial))
         .firstOrNull;
     _gesturePhoto = _photo == null
         ? null
@@ -293,12 +583,58 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   }
 
   void _updateGesture(ScaleUpdateDetails details, Size preview) {
+    if (!_gestureUndoActive) return;
+    _pendingGesture = (details, preview);
+    _gestureFrame ??= SchedulerBinding.instance.scheduleFrameCallback((_) {
+      _gestureFrame = null;
+      _flushGesture();
+    });
+  }
+
+  void _endGesture() {
+    _flushGesture();
+    if (_gestureUndoActive) {
+      _gestureUndoActive = false;
+      editor.endUndoGroup();
+    }
+    _gestureText = null;
+    _gestureSticker = null;
+    _gesturePhoto = null;
+    _gestureSlot = null;
+  }
+
+  void _flushGesture() {
+    final callback = _gestureFrame;
+    if (callback != null) {
+      SchedulerBinding.instance.cancelFrameCallbackWithId(callback);
+    }
+    _gestureFrame = null;
+    final pending = _pendingGesture;
+    _pendingGesture = null;
+    if (pending != null && mounted && !_busy) {
+      _applyGesture(pending.$1, pending.$2);
+    }
+  }
+
+  void _applyGesture(ScaleUpdateDetails details, Size preview) {
     final point = Offset(
       details.localFocalPoint.dx * _frame.size.width / preview.width,
       details.localFocalPoint.dy * _frame.size.height / preview.height,
     );
     final delta = point - _gestureOrigin;
-    if (_gestureSticker != null) {
+    if (_gestureText != null) {
+      final text = _gestureText!;
+      editor.changeText(
+        text.move(
+          _frame.size,
+          x: text.x + delta.dx / _frame.size.width,
+          y: text.y + delta.dy / _frame.size.height,
+          fontSize: text.fontSize * details.scale,
+          rotation: text.rotation + details.rotation,
+          layouts: _images.textLayouts,
+        ),
+      );
+    } else if (_gestureSticker != null) {
       final sticker = _gestureSticker!;
       editor.changeSticker(
         sticker.move(
@@ -325,9 +661,24 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     }
   }
 
+  void _setCompletionState(VoidCallback update) {
+    setState(update);
+    widget.onCompletionChanged?.call((completed: _completed, busy: _busy));
+  }
+
+  void continueEditing() {
+    if (!_completed || _busy) return;
+    _setCompletionState(() {
+      _completed = false;
+      _error = _notice = null;
+      _settings = false;
+    });
+  }
+
   Future<void> _finish() async {
+    _endGesture();
     if (_busy || _catalog == null) return;
-    setState(() {
+    _setCompletionState(() {
       _busy = true;
       _error = null;
       _notice = null;
@@ -341,10 +692,11 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       _output = output;
       _outputFingerprint = fingerprint;
       editor.markSaved();
-      setState(() {
+      _setCompletionState(() {
         _completed = true;
         _sticker = null;
         _photo = null;
+        _text = null;
       });
     } catch (_) {
       if (mounted) {
@@ -353,22 +705,23 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) _setCompletionState(() => _busy = false);
     }
   }
 
   Future<void> _saveGallery() async {
     if (_output == null || _busy) return;
-    setState(() {
+    _setCompletionState(() {
       _busy = true;
       _error = null;
       _notice = null;
       _settings = false;
+      _completionAction = _CompletionAction.save;
     });
     try {
       await widget.gallery.save(_output!);
       if (mounted) {
-        setState(() => _notice = 'Đã lưu ảnh vào thư viện của thiết bị.');
+        setState(() => _notice = 'Đã lưu ảnh vào thư viện!');
       }
     } on PhotoBoothException catch (failure) {
       if (mounted) {
@@ -382,40 +735,56 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         setState(() => _error = 'Chưa lưu được ảnh. Bạn hãy thử lại.');
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        _setCompletionState(() {
+          _busy = false;
+          _completionAction = null;
+        });
+      }
     }
   }
 
   Future<void> _useHome() async {
-    if (_busy || _catalog == null) return;
-    if (!editor.home) {
-      editor.prepareHome(_catalog!);
-      setState(() {
-        _completed = false;
-        _notice = 'Căn ảnh và sticker trên bố cục ngang, rồi bấm Hoàn tất.';
-      });
+    _endGesture();
+    final apply = widget.onUseHome;
+    if (_busy || _catalog == null || apply == null) return;
+    // Hand off the completed artwork, including the selected frame. Home fits
+    // this bitmap to its canvas without rebuilding the photo/sticker layout.
+    if (_output == null || _outputFingerprint != editor.draft.fingerprint) {
+      await _finish();
+    }
+    if (!mounted ||
+        _output == null ||
+        _outputFingerprint != editor.draft.fingerprint) {
       return;
     }
-    if (_output == null || widget.onUseHome == null) return;
-    setState(() {
+    _setCompletionState(() {
       _busy = true;
       _error = null;
       _notice = null;
+      _settings = false;
+      _completionAction = _CompletionAction.home;
     });
     try {
-      await widget.onUseHome!(_output!);
-    } catch (_) {
+      await apply(_output!);
+    } catch (error) {
       if (mounted) {
         setState(
-          () => _error = 'Chưa áp dụng được ảnh nền. Ảnh cũ và bộ ảnh vẫn được giữ, bạn hãy thử lại.',
+          () => _error = error is BackgroundImageException ? error.message : 'Chưa áp dụng được ảnh nền. Ảnh cũ và bộ ảnh vẫn được giữ, bạn hãy thử lại.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        _setCompletionState(() {
+          _busy = false;
+          _completionAction = null;
+        });
+      }
     }
   }
 
   void _largePreview() {
+    _endGesture();
     showDialog<void>(
       context: context,
       builder: (context) {
@@ -455,6 +824,11 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   @override
   void dispose() {
     ++_generation;
+    final callback = _gestureFrame;
+    if (callback != null) {
+      SchedulerBinding.instance.cancelFrameCallbackWithId(callback);
+    }
+    _pendingGesture = null;
     final dialog = _dialog;
     if (dialog != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -462,10 +836,14 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       });
     }
     editor.removeListener(_changed);
+    if (_gestureUndoActive) editor.endUndoGroup();
     _previewFraction.dispose();
     _photoPaints.dispose();
     _stickerPaints.dispose();
+    _textPaints.dispose();
     _selectionPaints.dispose();
+    _textTools.dispose();
+    _quickTools.dispose();
     if (widget.controller == null) editor.dispose();
     _images.dispose();
     super.dispose();
@@ -489,7 +867,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
               FilledButton(onPressed: _load, child: const Text('Thử lại')),
               TextButton(
                 onPressed: () => _leave(),
-                child: const Text('Quay lại bộ ảnh'),
+                child: const Text('Quay lại chọn ảnh'),
               ),
             ],
           ),
@@ -500,145 +878,256 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       children: [
         if (_error != null || _notice != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: Semantics(
-              liveRegion: true,
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            child: _statusMessage(),
+          ),
+        if (_settings) _settingsButton(),
+        Expanded(child: _completed ? _completion() : _workspace()),
+      ],
+    );
+  }
+
+  Widget _statusMessage() {
+    final colors = Theme.of(context).colorScheme;
+    final failed = _error != null;
+    final ink = failed ? colors.onErrorContainer : colors.onPrimaryContainer;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const ValueKey('photobooth-status-message'),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: failed ? colors.errorContainer : colors.primaryContainer,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: (failed ? colors.error : colors.primary).withValues(
+              alpha: .3,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              failed ? Icons.error_rounded : Icons.check_circle_rounded,
+              size: 28,
+              color: ink,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Text(
                 _error ?? _notice!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: _error == null
-                      ? null
-                      : Theme.of(context).colorScheme.error,
+                  color: ink,
+                  fontSize: 14,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _settingsButton() => TextButton(
+    onPressed: _busy
+        ? null
+        : () async {
+            try {
+              await permissions.openAppSettings();
+            } catch (_) {
+              /* Keep message visible. */
+            }
+          },
+    child: const Text('Mở Cài đặt'),
+  );
+
+  Widget _completionButtonContent(
+    String label,
+    IconData icon,
+    _CompletionAction action,
+  ) => Row(
+    mainAxisSize: MainAxisSize.min,
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      if (_completionAction == action)
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.primary,
+            semanticsLabel: action == _CompletionAction.save
+                ? 'Đang lưu ảnh'
+                : 'Đang mở ảnh nền',
           ),
-        if (_settings)
-          TextButton(
-            onPressed: () async {
-              try {
-                await permissions.openAppSettings();
-              } catch (_) {
-                /* Keep message visible. */
-              }
-            },
-            child: const Text('Mở Cài đặt'),
-          ),
-        Expanded(
-          child: _completed
-              ? Column(
+        )
+      else
+        Icon(icon, size: 20),
+      const SizedBox(width: 6),
+      Flexible(child: Text(label, textAlign: TextAlign.center)),
+    ],
+  );
+
+  Widget _completion() => LayoutBuilder(
+    builder: (context, constraints) {
+      final textStyle = Theme.of(context).textTheme.labelLarge!
+          .copyWith(fontSize: 14, height: 1.2, fontWeight: FontWeight.w700);
+      final shape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      );
+      return Column(
+        children: [
+          Expanded(child: _preview()),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: constraints.maxHeight * .65),
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              child: SingleChildScrollView(
+                key: const ValueKey('photobooth-completion-actions'),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(child: _preview()),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                      child: Column(
+                    IntrinsicHeight(
+                      child: Row(
+                        key: const ValueKey('photobooth-primary-actions'),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          FilledButton(
-                            onPressed: _busy ? null : _saveGallery,
-                            child: const Text('Lưu về máy'),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _busy ? null : _saveGallery,
+                              style: FilledButton.styleFrom(
+                                shape: shape,
+                                textStyle: textStyle,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: _completionButtonContent(
+                                'Lưu về máy',
+                                Icons.save_alt_rounded,
+                                _CompletionAction.save,
+                              ),
+                            ),
                           ),
-                          OutlinedButton(
-                            onPressed: _busy || widget.onUseHome == null
-                                ? null
-                                : _useHome,
-                            child: const Text('Dùng làm nền Home'),
-                          ),
-                          TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => setState(() => _completed = false),
-                            child: const Text('Tiếp tục chỉnh sửa'),
-                          ),
-                          TextButton(
-                            onPressed: _busy ? null : () => _leave(),
-                            child: const Text('Quay lại bộ ảnh'),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _busy || widget.onUseHome == null
+                                  ? null
+                                  : _useHome,
+                              style: OutlinedButton.styleFrom(
+                                shape: shape,
+                                textStyle: textStyle,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: _completionButtonContent(
+                                'Dùng làm nền Home',
+                                Icons.wallpaper_rounded,
+                                _CompletionAction.home,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
-                )
-              : _workspace(),
-        ),
-      ],
-    );
-  }
-
-  Widget _workspace() => LayoutBuilder(
-    builder: (context, constraints) {
-      final usable = math.max(0.0, constraints.maxHeight - 68);
-      final minimum = math.min(144.0, usable * .4);
-      void resize(double delta) {
-        if (usable > 0) {
-          _previewFraction.value = (_previewFraction.value + delta / usable)
-              .clamp(0.0, 1.0);
-        }
-      }
-
-      final preview = _preview();
-      final toolbar = _editorToolbar();
-      final library = RepaintBoundary(
-        child: Material(
-          key: const ValueKey('photobooth-library-panel'),
-          color: Theme.of(context).colorScheme.surface,
-          child: _tab == 0 ? _framesPanel() : _stickersPanel(),
-        ),
-      );
-      return ValueListenableBuilder<double>(
-        valueListenable: _previewFraction,
-        builder: (context, fraction, _) {
-          final previewHeight = (usable * fraction).clamp(
-            minimum,
-            usable - minimum,
-          );
-          return Column(
-            children: [
-              SizedBox(
-                key: const ValueKey('photobooth-preview-area'),
-                height: previewHeight,
-                child: preview,
+                ),
               ),
-              Semantics(
-                label: 'Điều chỉnh kích thước vùng ảnh',
-                onIncrease: () => resize(usable * .05),
-                onDecrease: () => resize(-usable * .05),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.resizeUpDown,
-                  child: GestureDetector(
-                    key: const ValueKey('photobooth-preview-resize'),
-                    behavior: HitTestBehavior.opaque,
-                    onVerticalDragUpdate: _busy
-                        ? null
-                        : (details) => resize(details.delta.dy),
-                    child: SizedBox(
-                      height: 20,
-                      child: Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  Widget _workspace() => _captionToEdit != null
+      ? _captionEditor()
+      : LayoutBuilder(
+          builder: (context, constraints) {
+            final usable = math.max(0.0, constraints.maxHeight - 68);
+            final minimum = math.min(144.0, usable * .4);
+            void resize(double delta) {
+              if (usable > 0) {
+                _previewFraction.value =
+                    (_previewFraction.value + delta / usable).clamp(0.0, 1.0);
+              }
+            }
+
+            final preview = _preview();
+            final toolbar = _editorToolbar();
+            final library = RepaintBoundary(
+              child: Material(
+                key: const ValueKey('photobooth-library-panel'),
+                color: Theme.of(context).colorScheme.surface,
+                child: switch (_tab) {
+                  0 => _framesPanel(),
+                  1 => _stickersPanel(),
+                  _ => _textsPanel(),
+                },
+              ),
+            );
+            return ValueListenableBuilder<double>(
+              valueListenable: _previewFraction,
+              builder: (context, fraction, _) {
+                final previewHeight = (usable * fraction).clamp(
+                  minimum,
+                  usable - minimum,
+                );
+                return Column(
+                  children: [
+                    SizedBox(
+                      key: const ValueKey('photobooth-preview-area'),
+                      height: previewHeight,
+                      child: preview,
+                    ),
+                    Semantics(
+                      label: 'Điều chỉnh kích thước vùng ảnh',
+                      onIncrease: () => resize(usable * .05),
+                      onDecrease: () => resize(-usable * .05),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.resizeUpDown,
+                        child: GestureDetector(
+                          key: const ValueKey('photobooth-preview-resize'),
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: _busy
+                              ? null
+                              : (details) => resize(details.delta.dy),
+                          child: SizedBox(
+                            height: 20,
+                            child: Center(
+                              child: Container(
+                                width: 36,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-              toolbar,
-              Expanded(child: library),
-            ],
-          );
-        },
-      );
-    },
-  );
+                    toolbar,
+                    Expanded(child: library),
+                  ],
+                );
+              },
+            );
+          },
+        );
 
   Widget _editorToolbar() => SizedBox(
     key: const ValueKey('photobooth-editor-toolbar'),
@@ -648,32 +1137,37 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Quay lại bộ ảnh',
+            tooltip: 'Quay lại chọn ảnh',
             onPressed: _busy ? null : () => _leave(),
             icon: const Icon(Icons.arrow_back_rounded),
             constraints: const BoxConstraints(minWidth: 44, minHeight: 48),
             padding: const EdgeInsets.all(10),
           ),
-          for (var tab = 0; tab < 2; tab++)
+          for (var tab = 0; tab < 3; tab++)
             Expanded(
+              flex: tab == 1
+                  ? 13
+                  : tab == 0
+                  ? 11
+                  : 8,
               child: Semantics(
                 selected: _tab == tab,
                 child: TextButton(
-                  onPressed: _busy ? null : () => setState(() => _tab = tab),
+                  onPressed: _busy ? null : () => _selectTab(tab),
                   style: TextButton.styleFrom(
                     minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     foregroundColor: _tab == tab
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.onSurfaceVariant,
                     textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: _tab == tab
                           ? FontWeight.w800
                           : FontWeight.w500,
                     ),
                   ),
-                  child: Text(tab == 0 ? 'Khung' : 'Sticker'),
+                  child: Text(const ['Khung', 'Sticker', 'Chữ'][tab]),
                 ),
               ),
             ),
@@ -705,11 +1199,19 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     ),
   );
 
-  void _setSelection(int? sticker, int? photo) {
-    if (_sticker == sticker && _photo == photo) return;
+  void _setSelection(int? sticker, int? photo, {int? text}) {
+    if (_sticker == sticker &&
+        _photo == photo &&
+        _text == text &&
+        (text == null || _tab == 2)) {
+      return;
+    }
+    _flushGesture();
     setState(() {
       _sticker = sticker;
       _photo = photo;
+      _text = text;
+      if (text != null) _tab = 2;
     });
   }
 
@@ -726,28 +1228,101 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
             child: LayoutBuilder(
               builder: (context, preview) {
                 final size = preview.biggest;
-                return GestureDetector(
-                  key: const ValueKey('photobooth-editor-canvas'),
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: _busy || _completed
-                      ? null
-                      : (details) => _select(
-                          Offset(
-                            details.localPosition.dx *
-                                _frame.size.width /
-                                size.width,
-                            details.localPosition.dy *
-                                _frame.size.height /
-                                size.height,
-                          ),
+                final canDoubleTap =
+                    !_busy &&
+                    !_completed &&
+                    (_tab == 2 || editor.draft.texts.isNotEmpty);
+                return Listener(
+                  onPointerDown: (event) {
+                    if (_pointerStarts.isEmpty) {
+                      _tapPointer = event.pointer;
+                      _tapStart = event.localPosition;
+                    } else {
+                      _tapPointer = null;
+                    }
+                    _pointerStarts[event.pointer] = Offset(
+                      event.localPosition.dx * _frame.size.width / size.width,
+                      event.localPosition.dy * _frame.size.height / size.height,
+                    );
+                  },
+                  onPointerMove: (event) {
+                    if (_tapPointer == event.pointer &&
+                        (event.localPosition - _tapStart).distance >
+                            kTouchSlop) {
+                      _tapPointer = null;
+                    }
+                  },
+                  onPointerUp: (event) {
+                    final tap =
+                        _tapPointer == event.pointer &&
+                        _pointerStarts.length == 1;
+                    _pointerStarts.remove(event.pointer);
+                    _tapPointer = null;
+                    if (tap &&
+                        !_busy &&
+                        !_completed &&
+                        _captionToEdit == null) {
+                      _tapCanvas(
+                        Offset(
+                          event.localPosition.dx *
+                              _frame.size.width /
+                              size.width,
+                          event.localPosition.dy *
+                              _frame.size.height /
+                              size.height,
                         ),
-                  onScaleStart: _busy || _completed
-                      ? null
-                      : (details) => _startGesture(details, size),
-                  onScaleUpdate: _busy || _completed
-                      ? null
-                      : (details) => _updateGesture(details, size),
-                  child: _canvasLayers(),
+                      );
+                    }
+                  },
+                  onPointerCancel: (event) {
+                    _tapPointer = null;
+                    _pointerStarts.remove(event.pointer);
+                  },
+                  child: GestureDetector(
+                    key: const ValueKey('photobooth-editor-canvas'),
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    onDoubleTapDown: !canDoubleTap
+                        ? null
+                        : (details) {
+                            _doubleTapPoint = Offset(
+                              details.localPosition.dx *
+                                  _frame.size.width /
+                                  size.width,
+                              details.localPosition.dy *
+                                  _frame.size.height /
+                                  size.height,
+                            );
+                          },
+                    onDoubleTap: !canDoubleTap
+                        ? null
+                        : () {
+                            final point = _doubleTapPoint;
+                            if (point != null) {
+                              _tapCanvas(point, editContent: true);
+                            }
+                            _doubleTapPoint = null;
+                          },
+                    onDoubleTapCancel: !canDoubleTap
+                        ? null
+                        : () => _doubleTapPoint = null,
+                    onScaleStart: _busy || _completed
+                        ? null
+                        : (details) => _startGesture(details, size),
+                    onScaleUpdate: _busy || _completed
+                        ? null
+                        : (details) => _updateGesture(details, size),
+                    onScaleEnd: _busy || _completed
+                        ? null
+                        : (_) => _endGesture(),
+                    child: Semantics(
+                      label: 'Ảnh đang trang trí',
+                      onTap: _busy || _completed
+                          ? null
+                          : () => _tapCanvas(_frame.size.center(Offset.zero)),
+                      child: _canvasLayers(),
+                    ),
+                  ),
                 );
               },
             ),
@@ -762,19 +1337,30 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
             icon: const Icon(Icons.fullscreen_rounded),
           ),
         ),
-        if (!_completed && (_sticker != null || _photo != null))
+        if (!_completed)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Material(
+              key: const ValueKey('photobooth-selection-toolbar'),
               color: Theme.of(context).colorScheme.surface
                   .withValues(alpha: .94),
               elevation: 1,
               borderRadius: BorderRadius.circular(12),
-              child: ListenableBuilder(
-                listenable: editor,
-                builder: (_, _) => _selectionControls(),
+              child: IconButtonTheme(
+                data: IconButtonThemeData(
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(40, 48),
+                    maximumSize: const Size(44, 48),
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                child: ListenableBuilder(
+                  listenable: _quickTools,
+                  builder: (_, _) => _selectionControls(),
+                ),
               ),
             ),
           ),
@@ -789,6 +1375,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         PhotoBoothPaintLayer.photos,
         PhotoBoothPaintLayer.frame,
         PhotoBoothPaintLayer.stickers,
+        PhotoBoothPaintLayer.texts,
       ])
         RepaintBoundary(
           key: ValueKey('photobooth-preview-${layer.name}'),
@@ -806,6 +1393,8 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                   ? _photoPaints
                   : layer == PhotoBoothPaintLayer.stickers
                   ? _stickerPaints
+                  : layer == PhotoBoothPaintLayer.texts
+                  ? _textPaints
                   : null,
             ),
           ),
@@ -819,6 +1408,8 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
               _catalog!,
               _sticker,
               _photo,
+              textId: _text,
+              layouts: _images.textLayouts,
               liveEditor: editor,
               repaint: _selectionPaints,
             ),
@@ -828,23 +1419,108 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   );
 
   Widget _selectionControls() {
+    final undo = IconButton(
+      key: const ValueKey('photobooth-quick-undo'),
+      tooltip: 'Hoàn tác',
+      onPressed: _busy || !editor.canUndo ? null : _undo,
+      icon: const Icon(Icons.undo_rounded),
+    );
+    final text = _selectedText;
+    if (text != null) {
+      return SizedBox(
+        key: const ValueKey('photobooth-text-quick-toolbar'),
+        height: 48,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            undo,
+            IconButton(
+              key: const ValueKey('photobooth-quick-add-text'),
+              tooltip: 'Thêm chữ',
+              onPressed: _busy || editor.draft.texts.length >= 8
+                  ? null
+                  : () => _beginTextEdit(),
+              icon: const Icon(Icons.add_rounded),
+            ),
+            IconButton(
+              tooltip: 'Sửa chữ',
+              onPressed: _busy
+                  ? null
+                  : () {
+                      _endGesture();
+                      final current = _selectedText;
+                      if (current != null) _beginTextEdit(current);
+                    },
+              icon: const Icon(Icons.edit_outlined),
+            ),
+            IconButton(
+              tooltip: 'Xoay chữ',
+              onPressed: _busy
+                  ? null
+                  : () {
+                      _endGesture();
+                      final current = _selectedText;
+                      if (current == null) return;
+                      editor.changeText(
+                        current.move(
+                          _frame.size,
+                          rotation: current.rotation + math.pi / 12,
+                          layouts: _images.textLayouts,
+                        ),
+                      );
+                    },
+              icon: const Icon(Icons.rotate_right_rounded),
+            ),
+            IconButton(
+              tooltip: 'Đưa chữ lên trên',
+              onPressed: _busy ? null : () => editor.raiseText(text.id),
+              icon: const Icon(Icons.flip_to_front_rounded),
+            ),
+            IconButton(
+              tooltip: 'Xóa chữ',
+              onPressed: _busy
+                  ? null
+                  : () {
+                      editor.removeText(text.id);
+                      _clearSelection();
+                    },
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+            IconButton(
+              tooltip: 'Ẩn công cụ',
+              onPressed: _busy ? null : _clearSelection,
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+      );
+    }
     final sticker = editor.draft.stickers
         .where((s) => s.id == _sticker)
         .firstOrNull;
     if (sticker != null) {
-      void adjust({double scale = 1, double angle = 0}) => editor.changeSticker(
-        sticker.move(
-          _frame.size,
-          _catalog!.sticker(sticker.assetKey).size,
-          width: sticker.width * scale,
-          rotation: sticker.rotation + angle,
-        ),
-      );
+      void adjust({double scale = 1, double angle = 0}) {
+        _endGesture();
+        final current = editor.draft.stickers
+            .where((value) => value.id == sticker.id)
+            .firstOrNull;
+        if (current == null) return;
+        editor.changeSticker(
+          current.move(
+            _frame.size,
+            _catalog!.sticker(sticker.assetKey).size,
+            width: current.width * scale,
+            rotation: current.rotation + angle,
+          ),
+        );
+      }
+
       return SizedBox(
         height: 48,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            undo,
             IconButton(
               tooltip: 'Thu nhỏ sticker',
               onPressed: _busy ? null : () => adjust(scale: .9),
@@ -891,6 +1567,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         height: 48,
         child: Row(
           children: [
+            undo,
             Padding(
               padding: const EdgeInsets.only(left: 12),
               child: Text('Ảnh ${_photo! + 1}'),
@@ -901,16 +1578,25 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                 min: 1,
                 max: 5,
                 label: '${photo.zoom.toStringAsFixed(1)}×',
+                onChangeStart: _busy ? null : (_) => editor.beginUndoGroup(),
+                onChangeEnd: _busy ? null : (_) => editor.endUndoGroup(),
                 onChanged: _busy
                     ? null
-                    : (zoom) => editor.setPhoto(
-                        _photo!,
-                        PhotoBoothPhotoTransform(
-                          x: photo.x,
-                          y: photo.y,
-                          zoom: zoom,
-                        ),
-                      ),
+                    : (zoom) {
+                        final index = _photo;
+                        if (index == null) return;
+                        final current =
+                            editor.draft.photos[index] ??
+                            const PhotoBoothPhotoTransform();
+                        editor.setPhoto(
+                          index,
+                          PhotoBoothPhotoTransform(
+                            x: current.x,
+                            y: current.y,
+                            zoom: zoom,
+                          ),
+                        );
+                      },
               ),
             ),
             IconButton(
@@ -932,7 +1618,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         ),
       );
     }
-    return const SizedBox.shrink();
+    return SizedBox(height: 48, child: Row(children: [undo]));
   }
 
   Widget _framesPanel() {
@@ -1028,7 +1714,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       );
     }
     final frames = [
-      if (widget.session.mode == PhotoBoothMode.two) PhotoBoothFrame.home(2),
+      PhotoBoothFrame.home(widget.session.mode.count),
       ..._catalog!.frames.where(
         (frame) => frame.photoCount == widget.session.mode.count,
       ),
@@ -1039,40 +1725,86 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
     final activeCategory = categories.containsKey(_frameCategory)
         ? _frameCategory
         : null;
-    final visible = frames
+    final categoryFrames = frames
         .where(
           (frame) => activeCategory == null || frame.theme == activeCategory,
         )
         .toList();
+    final shapes = categoryFrames.map((frame) => frame.shapeKey).toSet();
+    final activeShape = shapes.contains(_frameShape) ? _frameShape : null;
+    final visible = categoryFrames
+        .where((frame) => activeShape == null || frame.shapeKey == activeShape)
+        .toList();
     return Column(
       children: [
-        if (categories.length > 1)
+        if (categories.length > 1 || shapes.length > 1)
           SizedBox(
             height: 44,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                for (final category in <MapEntry<String?, String>>[
-                  const MapEntry(null, 'Tất cả'),
-                  ...categories.entries,
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      key: ValueKey(
-                        'photobooth-frame-category-${category.key ?? 'all'}',
-                      ),
-                      label: Text(
-                        category.value,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                      selected: activeCategory == category.key,
-                      onSelected: _busy
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final category in <MapEntry<String?, String>>[
+                        const MapEntry(null, 'Tất cả'),
+                        ...categories.entries,
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            key: ValueKey(
+                              'photobooth-frame-category-${category.key ?? 'all'}',
+                            ),
+                            label: Text(
+                              category.value,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            selected: activeCategory == category.key,
+                            onSelected: _busy
+                                ? null
+                                : (_) => setState(() {
+                                    _frameCategory = category.key;
+                                    _frameShape = null;
+                                  }),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (shapes.length > 1)
+                  PopupMenuButton<String>(
+                    key: const ValueKey('photobooth-frame-shape-filter'),
+                    tooltip: 'Lọc bố cục khung',
+                    enabled: !_busy,
+                    initialValue: activeShape ?? 'all',
+                    icon: Icon(
+                      Icons.filter_list_rounded,
+                      color: activeShape == null
                           ? null
-                          : (_) =>
-                                setState(() => _frameCategory = category.key),
+                          : Theme.of(context).colorScheme.primary,
                     ),
+                    onSelected: (value) => setState(
+                      () => _frameShape = value == 'all' ? null : value,
+                    ),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'all',
+                        child: Text('Tất cả bố cục'),
+                      ),
+                      for (final shape in const {
+                        'strip': 'Dải ảnh',
+                        'portrait': 'Khung dọc',
+                        'landscape': 'Khung ngang',
+                        'square': 'Khung vuông',
+                      }.entries)
+                        if (shapes.contains(shape.key))
+                          PopupMenuItem(
+                            value: shape.key,
+                            child: Text(shape.value),
+                          ),
+                    ],
                   ),
               ],
             ),
@@ -1091,12 +1823,11 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
             itemBuilder: (context, index) => _frameCard(visible[index]),
           ),
         ),
-        if (widget.session.mode == PhotoBoothMode.two &&
-            widget.onChooseFour != null)
+        if (editor.home && editor.stripDraft != null)
           TextButton(
-            onPressed: _busy ? null : () => _leave(four: true),
+            onPressed: _busy ? null : _restoreStrip,
             child: const Text(
-              'Chọn 4 ảnh cho photostrip',
+              'Quay lại khung kỷ niệm',
               style: TextStyle(fontSize: 13),
             ),
           ),
@@ -1172,7 +1903,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                   const SizedBox(height: 4),
                   Text(
                     frame.label,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
@@ -1196,6 +1927,17 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
       ),
     );
   }
+
+  Widget _textsPanel() => ListenableBuilder(
+    listenable: _textTools,
+    builder: (_, _) => PhotoBoothTextComposer(
+      value: _selectedText,
+      enabled: !_busy,
+      onChanged: _changeTextInput,
+      onChangeStart: editor.beginUndoGroup,
+      onChangeEnd: editor.endUndoGroup,
+    ),
+  );
 
   Widget _stickersPanel() => Column(
     children: [
@@ -1285,6 +2027,8 @@ class _SelectionPainter extends CustomPainter {
     this.catalog,
     this.stickerId,
     this.photo, {
+    this.textId,
+    this.layouts,
     this.liveEditor,
     super.repaint,
   });
@@ -1292,6 +2036,8 @@ class _SelectionPainter extends CustomPainter {
   final PhotoBoothEdit draft;
   final PhotoBoothCatalog catalog;
   final int? stickerId, photo;
+  final int? textId;
+  final PhotoBoothTextLayoutCache? layouts;
   final PhotoBoothEditorController? liveEditor;
   @override
   void paint(Canvas canvas, Size size) {
@@ -1312,6 +2058,7 @@ class _SelectionPainter extends CustomPainter {
         .where((s) => s.id == stickerId)
         .firstOrNull;
     if (sticker != null) {
+      canvas.save();
       final extent = sticker.extent(
         frame.size,
         catalog.sticker(sticker.assetKey).size,
@@ -1329,6 +2076,30 @@ class _SelectionPainter extends CustomPainter {
         ),
         pen,
       );
+      canvas.restore();
+    }
+    final text = (liveEditor?.draft ?? draft).texts
+        .where((text) => text.id == textId)
+        .firstOrNull;
+    if (text != null) {
+      final layout =
+          layouts?.obtain(text, frame.size) ?? text.layout(frame.size);
+      canvas.save();
+      canvas.translate(text.x * frame.size.width, text.y * frame.size.height);
+      canvas.rotate(text.rotation);
+      try {
+        canvas.drawRect(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: layout.size.width,
+            height: layout.size.height,
+          ),
+          pen,
+        );
+      } finally {
+        canvas.restore();
+        if (layouts == null) layout.dispose();
+      }
     }
     canvas.restore();
   }
@@ -1338,5 +2109,7 @@ class _SelectionPainter extends CustomPainter {
       oldDelegate.frame != frame ||
       oldDelegate.stickerId != stickerId ||
       oldDelegate.photo != photo ||
+      oldDelegate.textId != textId ||
+      oldDelegate.layouts != layouts ||
       oldDelegate.draft != draft;
 }

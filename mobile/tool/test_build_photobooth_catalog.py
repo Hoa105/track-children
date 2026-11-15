@@ -71,6 +71,57 @@ class FrameCatalogTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Duplicate frame key', result.stderr)
 
+    def test_shape_order_and_disabled_sources_are_preserved_without_bundling(self):
+        self.meta.update(shape='portrait', order=5, enabled=False)
+        self.write_metadata()
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads((self.mobile / 'assets/photobooth/catalog.json').read_text(encoding='utf-8'))
+        frame = data['frames'][0]
+        self.assertEqual((frame['shape'], frame['order'], frame['enabled']), ('portrait', 5, False))
+        self.assertNotIn('frames/space/orbit.png', self.pubspec.read_text())
+
+    def test_invalid_shape_is_rejected(self):
+        self.meta['shape'] = 'unknown'
+        self.write_metadata()
+        result = self.run_script()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Invalid frame shape', result.stderr)
+
+    def test_nested_stickers_keep_unique_keys_and_manifest_order(self):
+        self.write_metadata()
+        stickers = self.mobile / 'assets/photobooth/stickers'
+        for name in ('animals/bunny.png', 'belonkhon/care/milk_bottle.png',
+                     'belonkhon/mascot/milk_bottle.png'):
+            path = stickers / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(SOURCE, path)
+        (stickers / 'belonkhon/manifest.json').write_text(json.dumps(dict(items=[
+            dict(file='mascot/milk_bottle.png'), dict(file='mascot/tummy_time.png'),
+            dict(file='care/milk_bottle.png')
+        ])), encoding='utf-8')
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Skipping missing sticker: belonkhon/mascot/tummy_time.png', result.stdout)
+        catalog = json.loads((self.mobile / 'assets/photobooth/catalog.json').read_text(encoding='utf-8'))
+        self.assertEqual([s['key'] for s in catalog['stickers']], [
+            'animals/bunny', 'belonkhon/mascot/milk_bottle', 'belonkhon/care/milk_bottle'])
+        bundled = self.pubspec.read_text()
+        self.assertIn('belonkhon/mascot/milk_bottle.png', bundled)
+        self.assertIn('belonkhon/care/milk_bottle.png', bundled)
+        self.assertNotIn('tummy_time.png', bundled)
+
+    def test_sticker_manifest_cannot_reference_another_pack(self):
+        self.write_metadata()
+        pack = self.mobile / 'assets/photobooth/stickers/belonkhon'
+        pack.mkdir()
+        (pack / 'manifest.json').write_text(json.dumps(dict(items=[
+            dict(file='../animals/bunny.png')
+        ])), encoding='utf-8')
+        result = self.run_script()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Sticker outside its pack', result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()

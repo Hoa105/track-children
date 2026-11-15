@@ -13,7 +13,9 @@ enum PhotoBoothDuration {
 
 /// The output layout is chosen after capture, independently of the photo pool.
 enum PhotoBoothMode {
+  one(1),
   two(2),
+  three(3),
   four(4);
 
   const PhotoBoothMode(this.count);

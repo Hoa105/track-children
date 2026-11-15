@@ -95,7 +95,9 @@ void main() {
   Future<void> cachePhotos(WidgetTester tester) async {
     // Let file IO and codecs finish outside the fake clock, then paint them.
     // Awaiting precache while no frames are pumped can deadlock ResizeImage.
-    for (var i = 0; i < 100; i++) {
+    // Give real file IO enough time when the renderer suite or APK packaging
+    // is running concurrently; the widget test's fake clock cannot finish IO.
+    for (var i = 0; i < 500; i++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 20)),
       );
@@ -191,7 +193,7 @@ void main() {
                         const Text('Bộ ảnh đã sẵn sàng'),
                         TextButton(
                           onPressed: onBack,
-                          child: const Text('Quay lại bộ ảnh'),
+                          child: const Text('Quay lại chọn ảnh'),
                         ),
                       ],
                     ),
@@ -246,6 +248,12 @@ void main() {
             final selectionBounds = tester.getRect(
               find.byKey(const ValueKey('photobooth-selected-photos')),
             );
+            if (mode == PhotoBoothMode.four) {
+              await screenshot(
+                tester,
+                '${platform.name}_${size.width.toInt()}_review',
+              );
+            }
             expect(
               tester
                   .getSize(
@@ -254,12 +262,6 @@ void main() {
                   .height,
               greaterThan(120),
             );
-            if (mode == PhotoBoothMode.four) {
-              await screenshot(
-                tester,
-                '${platform.name}_${size.width.toInt()}_review',
-              );
-            }
             expect(
               tester
                   .widget<FilledButton>(
@@ -332,7 +334,7 @@ void main() {
             expect(files.handoffs.single.shots, hasLength(initialCount + 1));
             expect(files.handoffs.single.selectedPhotos, hasLength(mode.count));
             expect(find.text('Bộ ảnh đã sẵn sàng'), findsOneWidget);
-            await tester.tap(find.text('Quay lại bộ ảnh'));
+            await tester.tap(find.text('Quay lại chọn ảnh'));
             await tester.pumpAndSettle();
             expect(controller.phase, CapturePhase.reviewing);
             expect(tester.takeException(), isNull);
@@ -398,8 +400,8 @@ void main() {
     await pumpUntil(tester, () => controller.phase == CapturePhase.reviewing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('Bỏ bộ ảnh này?'), findsOneWidget);
-    await tester.tap(find.text('Giữ lại'));
+    expect(find.text('Thoát chụp ảnh?'), findsOneWidget);
+    await tester.tap(find.text('Ở lại'));
     await tester.pumpAndSettle();
     expect(files.cleared, 0);
     expect(controller.session.shots, hasLength(5));
@@ -470,10 +472,10 @@ void main() {
     await pumpUntil(tester, () => controller.phase == CapturePhase.reviewing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('Bỏ bộ ảnh này?'), findsOneWidget);
+    expect(find.text('Thoát chụp ảnh?'), findsOneWidget);
     show.value = false;
     await tester.pumpAndSettle();
-    expect(find.text('Bỏ bộ ảnh này?'), findsNothing);
+    expect(find.text('Thoát chụp ảnh?'), findsNothing);
     expect(files.cleared, 1);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -550,7 +552,7 @@ void main() {
       );
       await tester.tap(find.text('Chụp thêm'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Quay lại bộ ảnh'));
+      await tester.tap(find.text('Quay lại chọn ảnh'));
       await tester.pumpAndSettle();
       expect(controller.session.shots, hasLength(1));
       await tester.pumpWidget(const SizedBox.shrink());
