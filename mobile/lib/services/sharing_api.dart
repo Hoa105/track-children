@@ -10,6 +10,46 @@ const sharingScopes = <String>[
   'activities',
 ];
 
+/// Mối quan hệ với bé khi mời: mã lưu ở backend (≤ 30 ký tự) → nhãn hiển thị.
+const sharingRelationships = <String, String>{
+  'father': 'Bố',
+  'mother': 'Mẹ',
+  'paternal_grandfather': 'Ông nội',
+  'paternal_grandmother': 'Bà nội',
+  'maternal_grandfather': 'Ông ngoại',
+  'maternal_grandmother': 'Bà ngoại',
+  'sibling': 'Anh / chị',
+  'relative': 'Cô / dì / chú / bác',
+  'caregiver': 'Người chăm sóc',
+  'nanny': 'Bảo mẫu',
+  'other_guardian': 'Khác',
+};
+
+/// Nhãn của mã mối quan hệ; mã cũ (grandmother, ...) vẫn hiển thị được.
+String relationshipLabel(String? code) => switch (code) {
+  null || '' => 'Người chăm sóc',
+  'grandmother' => 'Bà',
+  'grandfather' => 'Ông',
+  _ => sharingRelationships[code] ?? code,
+};
+
+/// Thông tin chủ hồ sơ nhập ở màn "Mời người thân".
+class SharingInvite {
+  const SharingInvite({
+    required this.contact,
+    required this.relationship,
+    required this.permissions,
+  });
+
+  final String contact;
+
+  /// Mã trong [sharingRelationships].
+  final String relationship;
+
+  /// scope → 'none' | 'view' | 'edit', đủ các mục trong [sharingScopes].
+  final Map<String, String> permissions;
+}
+
 /// Lời mời chia sẻ hồ sơ bé gửi tới tài khoản hiện tại.
 class IncomingInvitation {
   IncomingInvitation({

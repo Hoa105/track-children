@@ -167,7 +167,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
     return SharingMember(
       id: raw['id'].toString(),
       name: name,
-      role: raw['relationship'] as String? ?? 'Người chăm sóc',
+      role: relationshipLabel(raw['relationship'] as String?),
       contact: (raw['email'] ?? raw['phone'] ?? '') as String,
       avatar: name.isEmpty ? '?' : name.characters.first.toUpperCase(),
       permissions: {
@@ -230,20 +230,29 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
     }
   }
 
-  Future<void> _sendInvitation(String contact) async {
+  /// Tạo lời mời với mối quan hệ và quyền chủ hồ sơ đã chọn; true khi thành công.
+  Future<bool> _sendInvitation(SharingInvite invite) async {
     try {
       if (_usesServer) {
-        // Mặc định chỉ xem mọi mục; chủ hồ sơ chỉnh quyền sau khi người nhận tham gia.
-        await _sharingApi.invite(_childId!, contact, {
-          for (final scope in _scopeForModule.values) scope: 'view',
-        });
+        await _sharingApi.invite(
+          _childId!,
+          invite.contact,
+          invite.permissions,
+          relationship: invite.relationship,
+        );
         await _loadSharing();
-        if (mounted) _toast('Đã gửi lời mời tới $contact.');
-        return;
+      } else {
+        if (!mounted) return false;
+        setState(() => _pending.add('Lời mời · ${invite.contact}'));
+        await _persist();
       }
-      if (!mounted) return;
-      setState(() => _pending.add('Lời mời · $contact'));
-      await _persist();
+      if (mounted) {
+        _toast(
+          'Đã gửi lời mời tới ${invite.contact} '
+          '(${relationshipLabel(invite.relationship)}), hiệu lực trong 7 ngày.',
+        );
+      }
+      return true;
     } catch (error) {
       if (mounted) {
         _toast(sharingErrorMessage(
@@ -251,6 +260,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           'Chưa thể gửi lời mời. Vui lòng kiểm tra thông tin và thử lại.',
         ));
       }
+      return false;
     }
   }
 
@@ -304,9 +314,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
       MaterialPageRoute(
         builder: (_) => InviteMemberScreen(
           childId: _childId,
-          onSendInvite: (contact) {
-            unawaited(_sendInvitation(contact));
-          },
+          onSendInvite: _sendInvitation,
         ),
       ),
     );
@@ -382,7 +390,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
                     builder: (_) => InviteMemberScreen(
                       childId: _childId,
                       startWithCode: true,
-                      onSendInvite: (_) {},
+                      onSendInvite: (_) async => false,
                     ),
                   ),
                 ),
@@ -604,7 +612,8 @@ class InviteMemberScreen extends StatefulWidget {
     super.key,
   });
 
-  final ValueChanged<String> onSendInvite;
+  /// Gửi lời mời; trả về true khi máy chủ (hoặc bản cục bộ) đã tạo lời mời.
+  final Future<bool> Function(SharingInvite invite) onSendInvite;
   final String? childId;
   final bool startWithCode;
 
@@ -617,6 +626,12 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
   bool _usePhone = false;
   late bool _codeMode = widget.startWithCode;
   bool _inviteCreated = false;
+  bool _sending = false;
+  String? _relationship;
+  // Mặc định chỉ xem mọi mục; chủ hồ sơ chỉnh lại trước khi gửi.
+  final _permissions = <String, String>{
+    for (final scope in sharingScopes) scope: 'view',
+  };
 
   @override
   void dispose() {
@@ -624,22 +639,47 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
     super.dispose();
   }
 
-  void _send() {
+  void _toast(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _send() async {
     final contact = _contactController.text.trim();
     if (contact.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nhập email hoặc số điện thoại trước nhé.'),
-        ),
-      );
+      _toast('Nhập email hoặc số điện thoại trước nhé.');
       return;
     }
-    widget.onSendInvite(contact);
-    setState(() => _inviteCreated = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã tạo lời mời, hiệu lực trong 7 ngày.')),
+    if (_relationship == null) {
+      _toast('Chọn mối quan hệ của người này với bé nhé.');
+      return;
+    }
+    if (_permissions.values.every((level) => level == 'none')) {
+      _toast('Cho phép người này xem ít nhất một mục nhé.');
+      return;
+    }
+    setState(() => _sending = true);
+    final created = await widget.onSendInvite(
+      SharingInvite(
+        contact: contact,
+        relationship: _relationship!,
+        permissions: Map.of(_permissions),
+      ),
     );
+    if (!mounted) return;
+    setState(() {
+      _sending = false;
+      if (created) {
+        _inviteCreated = true;
+        _contactController.clear();
+      }
+    });
   }
+
+  void _setAll(String level) => setState(() {
+    for (final scope in sharingScopes) {
+      _permissions[scope] = level;
+    }
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -706,14 +746,15 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _ContactChip(
                         label: 'Email',
                         selected: !_usePhone,
                         onTap: () => setState(() => _usePhone = false),
                       ),
-                      const SizedBox(width: 8),
                       _ContactChip(
                         label: 'Số điện thoại',
                         selected: _usePhone,
@@ -745,15 +786,85 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('invite-relationship'),
+                    initialValue: _relationship,
+                    isExpanded: true,
+                    decoration: _inputDecoration(
+                      label: 'Chọn mối quan hệ',
+                      hint: 'Vd. Bà ngoại',
+                      icon: Icons.family_restroom_rounded,
+                    ),
+                    items: [
+                      for (final entry in sharingRelationships.entries)
+                        DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _relationship = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Quyền xem các mục',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Chọn những mục người này được xem hoặc ghi. Bạn có thể đổi lại sau.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
                     children: [
-                      _StaticPill('Ông bà', selected: true),
-                      _StaticPill('Người chăm sóc'),
-                      _StaticPill('Bảo mẫu'),
+                      TextButton(
+                        onPressed: () => _setAll('view'),
+                        child: const Text('Chỉ xem tất cả'),
+                      ),
+                      TextButton(
+                        onPressed: () => _setAll('edit'),
+                        child: const Text('Xem & sửa tất cả'),
+                      ),
                     ],
                   ),
+                  for (final scope in sharingScopes) ...[
+                    const Divider(height: 16, color: AppColors.border),
+                    Text(
+                      sharingScopeLabels[scope]!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final level in const ['none', 'view', 'edit'])
+                          _ContactChip(
+                            key: ValueKey('invite-$scope-$level'),
+                            label: sharingLevelLabel(level),
+                            selected: _permissions[scope] == level,
+                            onTap: () =>
+                                setState(() => _permissions[scope] = level),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -764,10 +875,17 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: _send,
+              key: const ValueKey('invite-send'),
+              onPressed: _sending ? null : _send,
               style: _primaryButtonStyle(),
               icon: const Icon(Icons.send_rounded),
-              label: Text(_inviteCreated ? 'Gửi lời mời khác' : 'Gửi lời mời'),
+              label: Text(
+                _sending
+                    ? 'Đang gửi…'
+                    : _inviteCreated
+                    ? 'Gửi lời mời khác'
+                    : 'Gửi lời mời',
+              ),
             ),
           ],
           const SizedBox(height: 14),
@@ -1609,6 +1727,7 @@ class _ModeButton extends StatelessWidget {
 
 class _ContactChip extends StatelessWidget {
   const _ContactChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -1637,31 +1756,6 @@ class _ContactChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: selected ? AppColors.primaryDark : AppColors.textSecondary,
         ),
-      ),
-    ),
-  );
-}
-
-class _StaticPill extends StatelessWidget {
-  const _StaticPill(this.label, {this.selected = false});
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-    decoration: BoxDecoration(
-      color: selected ? AppColors.primarySoft : const Color(0xFFF8F7F2),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(
-        color: selected ? AppColors.primary : AppColors.border,
-      ),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        fontSize: 12,
-        color: selected ? AppColors.primaryDark : AppColors.textSecondary,
       ),
     ),
   );

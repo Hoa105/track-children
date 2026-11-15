@@ -310,6 +310,11 @@ class _InvitationCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
+                'Vai trò của bạn: ${relationshipLabel(invitation.relationship)}',
+                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 2),
+              Text(
                 sharingPermissionSummary(invitation.permissions),
                 style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),

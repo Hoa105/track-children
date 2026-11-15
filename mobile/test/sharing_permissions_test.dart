@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:track_children/features/journal/journal_screen.dart';
+import 'package:track_children/features/sharing/child_sharing_screen.dart';
 import 'package:track_children/features/sharing/access_gate.dart';
 import 'package:track_children/features/sharing/shared_with_me_screen.dart';
 import 'package:track_children/services/demo_store.dart';
@@ -150,5 +151,124 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.left, [id]);
     expect(find.text('Mở'), findsOneWidget);
+  });
+
+  Future<List<SharingInvite>> pumpInvite(
+    WidgetTester tester, {
+    double width = 400,
+    double scale = 1,
+  }) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = Size(width, 900);
+    addTearDown(tester.view.reset);
+    final sent = <SharingInvite>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
+        home: InviteMemberScreen(
+          onSendInvite: (invite) async {
+            sent.add(invite);
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return sent;
+  }
+
+  Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+    // ListView chỉ dựng phần đang hiện: cuộn xuống tìm widget chưa được dựng
+    if (finder.evaluate().isEmpty) {
+      // Về đầu trang rồi cuộn xuống: widget cần tìm có thể nằm phía trên
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 5000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        finder,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('invite needs a relationship and sends chosen permissions', (
+    tester,
+  ) async {
+    final sent = await pumpInvite(tester);
+    await tester.enterText(find.byType(TextField), 'ba@example.com');
+
+    await tapVisible(tester, find.byKey(const ValueKey('invite-send')));
+    expect(sent, isEmpty);
+    expect(find.text('Chọn mối quan hệ của người này với bé nhé.'), findsOneWidget);
+
+    await tapVisible(tester, find.byKey(const ValueKey('invite-relationship')));
+    for (final label in ['Bố', 'Mẹ', 'Ông nội', 'Bà nội', 'Ông ngoại', 'Bảo mẫu']) {
+      expect(find.text(label), findsWidgets);
+    }
+    await tester.tap(find.text('Bà ngoại').last);
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(const ValueKey('invite-diary-edit')));
+    await tapVisible(tester, find.byKey(const ValueKey('invite-vaccination-none')));
+    await tapVisible(tester, find.byKey(const ValueKey('invite-send')));
+
+    expect(sent, hasLength(1));
+    expect(sent.single.contact, 'ba@example.com');
+    expect(sent.single.relationship, 'maternal_grandmother');
+    expect(sent.single.permissions, {
+      'growth': 'view',
+      'assessment': 'view',
+      'vaccination': 'none',
+      'teething': 'view',
+      'diary': 'edit',
+      'activities': 'view',
+    });
+    expect(find.text('Gửi lời mời khác'), findsOneWidget);
+  });
+
+  testWidgets('invite blocks sending when every section is hidden', (
+    tester,
+  ) async {
+    final sent = await pumpInvite(tester);
+    await tester.enterText(find.byType(TextField), 'ba@example.com');
+    await tapVisible(tester, find.byKey(const ValueKey('invite-relationship')));
+    await tester.tap(find.text('Bố').last);
+    await tester.pumpAndSettle();
+    for (final scope in sharingScopes) {
+      await tapVisible(tester, find.byKey(ValueKey('invite-$scope-none')));
+    }
+    await tapVisible(tester, find.byKey(const ValueKey('invite-send')));
+    expect(sent, isEmpty);
+    expect(find.text('Cho phép người này xem ít nhất một mục nhé.'), findsOneWidget);
+  });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('invite screen fits 320 px at text scale $scale', (
+      tester,
+    ) async {
+      await pumpInvite(tester, width: 320, scale: scale);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('invite-send')),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test('relationship labels cover new and legacy codes', () {
+    expect(relationshipLabel('paternal_grandfather'), 'Ông nội');
+    expect(relationshipLabel('grandmother'), 'Bà');
+    expect(relationshipLabel(null), 'Người chăm sóc');
   });
 }
