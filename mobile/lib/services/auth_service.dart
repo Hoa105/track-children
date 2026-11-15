@@ -187,6 +187,8 @@ class AuthService {
             if (error['details'] is Map)
               ...Map<String, dynamic>.from(error['details'] as Map),
             if (error['fields'] is Map) 'fields': error['fields'],
+            // HTTPException của FastAPI: {"detail": "câu thông báo tiếng Việt"}
+            if (result['detail'] is String) 'message': result['detail'],
           },
         );
       }

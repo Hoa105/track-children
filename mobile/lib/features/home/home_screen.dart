@@ -4,6 +4,7 @@ import '../../services/app_notifications.dart';
 import '../activities/activities_screen.dart';
 import '../explore/explore_screen.dart';
 import '../../services/demo_store.dart';
+import '../../services/sharing_invitations.dart';
 
 import 'dart:ui' as ui;
 import 'dart:convert';
@@ -852,18 +853,21 @@ class _RoundAction extends StatelessWidget {
         width: 48,
         height: 48,
         child: Center(
-          child: Badge.count(
-            count: unreadNotificationCount(DemoStore.instance),
-            isLabelVisible:
-                asset.contains('notification') &&
-                unreadNotificationCount(DemoStore.instance) > 0,
-            child: SvgPicture.asset(
-              asset,
-              width: 24,
-              height: 24,
-              semanticsLabel: asset.contains('notification')
-                  ? 'Thông báo'
-                  : 'Cài đặt',
+          child: ListenableBuilder(
+            listenable: SharingInvitations.instance,
+            builder: (context, _) => Badge.count(
+              count: unreadNotificationCount(DemoStore.instance),
+              isLabelVisible:
+                  asset.contains('notification') &&
+                  unreadNotificationCount(DemoStore.instance) > 0,
+              child: SvgPicture.asset(
+                asset,
+                width: 24,
+                height: 24,
+                semanticsLabel: asset.contains('notification')
+                    ? 'Thông báo'
+                    : 'Cài đặt',
+              ),
             ),
           ),
         ),

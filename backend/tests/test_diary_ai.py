@@ -4,6 +4,9 @@ import datetime as dt
 import io
 import json
 import uuid
+from uuid import uuid4
+
+import httpx
 
 import pytest
 from fastapi.testclient import TestClient
@@ -229,3 +232,28 @@ def test_progress_review_across_all_activities(calls, monkeypatch):
     response = TestClient(app).post(f"/children/{CHILD}/diary/progress-reviews", json={"insightIds": ids})
     assert response.status_code == 201, response.text
     assert response.json()["activityGroup"] is None
+
+
+def _ai_client_answering(monkeypatch, status_code: int, body: dict):
+    from app.shared.clients import ai_service as client
+
+    transport = httpx.MockTransport(lambda request: httpx.Response(status_code, json=body))
+    monkeypatch.setattr(
+        client, "_client", lambda: httpx.Client(base_url="http://ai", transport=transport)
+    )
+    return client
+
+
+def test_ai_404_on_create_is_an_error_not_a_review(monkeypatch):
+    """ai-service 404 (video không thuộc bé) phải thành lỗi 404, không phải kết quả 500."""
+    client = _ai_client_answering(monkeypatch, 404, {"detail": "Không tìm thấy video đã phân tích"})
+    with pytest.raises(client.AiServiceError) as error:
+        client.create_progress_review({"childId": "c", "insightIds": ["a", "b"]})
+    assert error.value.status_code == 404
+    assert error.value.detail == "Không tìm thấy video đã phân tích"
+
+
+def test_ai_404_on_get_by_id_means_missing(monkeypatch):
+    client = _ai_client_answering(monkeypatch, 404, {"detail": "Not found"})
+    assert client.get_video_insight(uuid4()) is None
+    assert client.get_progress_review(uuid4(), uuid4()) is None

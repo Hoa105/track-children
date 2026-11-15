@@ -9,8 +9,15 @@ import '../../services/vaccination_schedule.dart';
 String _date(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
 class VaccineDetailSheet extends StatelessWidget {
-  const VaccineDetailSheet({super.key, required this.vaccine});
+  const VaccineDetailSheet({
+    super.key,
+    required this.vaccine,
+    this.readOnly = false,
+  });
   final ScheduledVaccine vaccine;
+
+  /// Người được chia sẻ chỉ có quyền xem: ẩn nút ghi nhận / sửa (F23).
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +210,7 @@ class VaccineDetailSheet extends StatelessWidget {
                 ),
               ),
             ),
-            Container(
+            if (!readOnly) Container(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               decoration: const BoxDecoration(
                 color: AppColors.surface,

@@ -287,7 +287,14 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
                       ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: usable.length >= 2 && !_reviewing
+                      // Tạo đánh giá tổng hợp cần quyền sửa "Nhật ký" (người chỉ xem chỉ đọc lại)
+                      onPressed:
+                          usable.length >= 2 &&
+                              !_reviewing &&
+                              DemoStore.instance.canEditChild(
+                                widget.childId,
+                                'diary',
+                              )
                           ? () => _review(reviewIds)
                           : null,
                       style: FilledButton.styleFrom(

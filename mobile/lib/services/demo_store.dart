@@ -271,11 +271,80 @@ class DemoStore extends ChangeNotifier {
     (d['children'] as List).removeWhere(
       (c) => c['parentId'] == owner && c['server'] == true,
     );
+    // Bé do chính tài khoản này tạo trên máy và đã đăng ký lên máy chủ (serverIds)
+    // đã có sẵn: không thêm bản trùng. Bé của tài khoản khác dùng chung máy (vd.
+    // bé được chia sẻ cho mình) vẫn phải thêm.
+    final linked = <String>{
+      for (final entry in (d['serverIds'] as Map? ?? const {}).entries)
+        if ((d['children'] as List).any(
+          (c) => c['id'] == entry.key && c['parentId'] == owner,
+        ))
+          entry.value as String,
+    };
     for (final profile in profiles) {
+      if (linked.contains(profile['id'])) continue;
       (d['children'] as List).removeWhere((c) => c['id'] == profile['id']);
       (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
     }
   });
+  /// Chủ hồ sơ (hoặc bé tạo trên máy) có toàn quyền; người được chia sẻ chỉ có
+  /// quyền theo từng mục do chủ hồ sơ cấp (F23).
+  bool isChildOwner(String? childId) {
+    final child = childId == null ? null : childById(childId);
+    return child == null || child['server'] != true || child['role'] != 'member';
+  }
+
+  /// 'none' | 'view' | 'edit' của tài khoản hiện tại với một mục của bé.
+  String childAccess(String? childId, String scope) {
+    if (isChildOwner(childId)) return 'edit';
+    final child = childById(childId!)!;
+    final access = child['access'];
+    final level = access is Map ? access[scope] : null;
+    if (level is String) return level;
+    // Bản cache cũ chỉ có growthAccess / teethingAccess
+    return (child['${scope}Access'] as String?) ?? 'none';
+  }
+
+  bool canViewChild(String? childId, String scope) =>
+      childAccess(childId, scope) != 'none';
+
+  bool canEditChild(String? childId, String scope) =>
+      childAccess(childId, scope) == 'edit';
+
+  /// Đã đăng nhập tài khoản thật (không phải demo): chia sẻ phải đi qua máy chủ.
+  bool get canShareOnServer =>
+      AuthService.instance.user != null && !AuthService.instance.demoMode;
+
+  /// Id trên máy chủ của bé để chia sẻ. Bé tạo trên máy được đăng ký lên máy chủ
+  /// trước (PUT /dev/profiles, như khi đồng bộ nhật ký / tiêm chủng).
+  Future<String> sharingChildId(String childId) async {
+    final child = childById(childId);
+    if (child == null) throw StateError('Không tìm thấy hồ sơ bé');
+    if (child['server'] == true) return childId;
+    final account = await linkedAccount(childId);
+    if (account == null) {
+      throw StateError('Cần kết nối máy chủ để chia sẻ hồ sơ bé');
+    }
+    return account.childId;
+  }
+
+  /// Tải lại danh sách bé (của mình + được chia sẻ) sau khi nhận lời mời / rời hồ sơ.
+  Future<void> reloadAuthenticatedChildren() async {
+    final user = AuthService.instance.user;
+    if (user == null || AuthService.instance.demoMode) return;
+    final owner = user['id'] as String;
+    final response = await AuthService.instance.authorizedRequest('GET', '/children');
+    if (AuthService.instance.user?['id'] != owner) return;
+    final profiles = (response['children'] as List)
+        .map((c) => Map<String, dynamic>.from(c as Map))
+        .toList();
+    await cacheAuthenticatedChildren(owner, profiles);
+    final selected = _data['childId'] as String?;
+    if (selected != null && childById(selected) == null) {
+      await _write((d) => d['childId'] = null);
+    }
+  }
+
   Future<void> selectChild(String id) async {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
@@ -408,6 +477,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> deleteMeasurement(String childId, String measurementId) async {
+    if (!canEditChild(childId, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
     await GrowthApi.instance.request(
       'DELETE',
       '/children/$childId/growth/measurements/$measurementId',
@@ -417,6 +487,7 @@ class DemoStore extends ChangeNotifier {
 
   Future<void> addRecord(String id, Map<String, dynamic> record) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa số đo');
+    if (!canEditChild(id, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
     if (childById(id)?['server'] == true && !GrowthApi.instance.signedIn) {
       throw GrowthApiException('SESSION_EXPIRED');
     }
@@ -505,6 +576,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa nhật ký');
     }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final before = journalEntries(childId)
         .where((e) => e['id'] == entry['id'])
         .firstOrNull;
@@ -526,6 +598,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa nhật ký');
     }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final before = journalEntries(childId)
         .where((e) => e['id'] == entryId)
         .firstOrNull;
@@ -745,7 +818,9 @@ class DemoStore extends ChangeNotifier {
     await _convertLegacyPhotos(childId);
     final List<Map<String, dynamic>> server;
     try {
-      if (!await _pushJournal(childId)) return false;
+      if (canEditChild(childId, 'diary') && !await _pushJournal(childId)) {
+        return false;
+      }
       final account = await linkedAccount(childId);
       if (account == null) return false;
       server = await remote.fetch(account);
@@ -855,6 +930,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
     }
+    if (!canEditChild(childId, 'activities')) throw StateError('Bạn chỉ có quyền xem mục này');
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
     }
@@ -918,7 +994,7 @@ class DemoStore extends ChangeNotifier {
       final keys = (child: 'child:$childId', parent: 'parent:$parentId');
       var serverDone = await fetch();
       var serverFavorites = await remote.fetchFavorites(account);
-      if (!synced.contains(keys.child)) {
+      if (!synced.contains(keys.child) && canEditChild(childId, 'activities')) {
         final localOnly = completedActivities(childId)
             .where((id) => _uuid.hasMatch(id) && !serverDone.contains(id));
         for (final id in localOnly) {
@@ -991,7 +1067,7 @@ class DemoStore extends ChangeNotifier {
   Future<void> saveVaccinations(String id, List<Map<String, dynamic>> records) {
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
-    if (!canEditTeething(id)) {
+    if (!canEditChild(id, 'vaccination')) {
       throw StateError('Bạn chỉ có quyền xem mục này');
     }
     final dob = DateTime.parse(child['date_of_birth'] as String);
@@ -1023,6 +1099,9 @@ class DemoStore extends ChangeNotifier {
 
   Future<void> removeVaccination(String id, String doseId) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.remove(account, doseId),
@@ -1043,6 +1122,9 @@ class DemoStore extends ChangeNotifier {
   /// `null` resets a vaccine to its default.
   Future<void> saveVaccinePlans(String id, Map<String, bool?> plans) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.savePlans(account, plans),
@@ -1116,6 +1198,9 @@ class DemoStore extends ChangeNotifier {
     if (remote == null) return null;
     final account = await _account(childId);
     if (account == null) return null;
+    // Bé người khác chia sẻ đã có trên máy chủ và thuộc chủ hồ sơ: không đăng ký
+    // lại dưới tài khoản này (máy chủ từ chối 403), quyền do chia sẻ quyết định.
+    if (!isChildOwner(childId)) return account;
     await remote.link(account);
     return account;
   }
@@ -1162,6 +1247,7 @@ class DemoStore extends ChangeNotifier {
     String childId,
     List<String> insightIds,
   ) async {
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final (remote, account) = await _reviewAccount(childId);
     return remote.create(account, insightIds);
   }
@@ -1185,7 +1271,7 @@ class DemoStore extends ChangeNotifier {
     if (remote == null) return;
     final account = await _account(childId);
     if (account == null) return;
-    await remote.link(account);
+    if (isChildOwner(childId)) await remote.link(account);
     await push(remote, account);
   }
 
@@ -1206,12 +1292,12 @@ class DemoStore extends ChangeNotifier {
     List<Map<String, dynamic>> records;
     Map<String, bool> plans;
     try {
-      await remote.link(account);
+      if (isChildOwner(childId)) await remote.link(account);
       (records, plans) = await (
         remote.fetch(account),
         remote.fetchPlans(account),
       ).wait;
-      if (firstSync) {
+      if (firstSync && canEditChild(childId, 'vaccination')) {
         final onServer = {for (final r in records) r['id']};
         final localOnly = vaccinations(childId)
             .where((r) => !onServer.contains(r['id']))
@@ -1480,6 +1566,10 @@ final class _TeethingStore {
       final child = matches.first as Map;
       child['teethingAccess'] = profile?['teethingAccess'] ?? 'none';
       child['growthAccess'] = profile?['growthAccess'] ?? 'none';
+      child['role'] = profile?['role'] ?? child['role'];
+      child['access'] = Map<String, dynamic>.from(
+        profile?['access'] as Map? ?? const {},
+      );
       if (profile == null || profile['teethingAccess'] == 'none') {
         child['teeth'] = <dynamic>[];
       }

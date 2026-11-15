@@ -27,7 +27,7 @@ void main() {
     await tester.tap(find.text('Mở quyền'));
     await tester.pumpAndSettle();
     Future<void> moveTo(AccessLevel level) async {
-      final item = find.byKey(const ValueKey('permission-item-Lượng sữa'));
+      final item = find.byKey(const ValueKey('permission-item-Tăng trưởng'));
       final target = find.byKey(ValueKey('permission-zone-${level.name}'));
       await tester.ensureVisible(item);
       await tester.pumpAndSettle();
@@ -42,7 +42,7 @@ void main() {
       expect(
         find.descendant(
           of: target,
-          matching: find.byKey(const ValueKey('permission-item-Lượng sữa')),
+          matching: find.byKey(const ValueKey('permission-item-Tăng trưởng')),
         ),
         findsOneWidget,
       );
@@ -52,10 +52,10 @@ void main() {
     await moveTo(AccessLevel.none);
     await moveTo(AccessLevel.edit);
     await tester.pumpAndSettle();
-    expect(member.permissions['Lượng sữa'], AccessLevel.none);
+    expect(member.permissions['Tăng trưởng'], AccessLevel.none);
     await tester.tap(find.text('Lưu thay đổi'));
     await tester.pumpAndSettle();
-    expect(member.permissions['Lượng sữa'], AccessLevel.edit);
+    expect(member.permissions['Tăng trưởng'], AccessLevel.edit);
     expect(find.text('Mở quyền'), findsOneWidget);
   });
   for (final width in [320.0, 430.0]) {

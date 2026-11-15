@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 import '../../models/vaccination.dart';
 import '../../services/demo_store.dart';
+import '../sharing/access_gate.dart';
 import '../../services/vaccination_schedule.dart';
 import 'vaccination_widgets.dart';
 import 'vaccination_details.dart';
@@ -88,7 +89,10 @@ class _VaccinationScreenState extends State<VaccinationScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       clipBehavior: Clip.antiAlias,
-      builder: (context) => VaccineDetailSheet(vaccine: v),
+      builder: (context) => VaccineDetailSheet(
+        vaccine: v,
+        readOnly: !DemoStore.instance.canEditChild(_childId, 'vaccination'),
+      ),
     );
     if (action == null || !mounted) return;
     if (action == 'appointment') {
@@ -390,6 +394,17 @@ class _VaccinationScreenState extends State<VaccinationScreen>
           body: const Center(child: Text('Không tìm thấy hồ sơ bé.')),
         );
       }
+      if (!DemoStore.instance.canViewChild(_childId, 'vaccination')) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Sổ tiêm chủng'),
+            backgroundColor: AppColors.background,
+          ),
+          body: const NoAccessView(section: 'sổ tiêm chủng'),
+        );
+      }
+      final canEdit = DemoStore.instance.canEditChild(_childId, 'vaccination');
       final schedule = vaccinationSchedule(_childId);
       final records = schedule.where((v) => v.record != null).toList()
         ..sort((a, b) => b.record!.date.compareTo(a.record!.date));
@@ -453,7 +468,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
           backgroundColor: AppColors.background,
           scrolledUnderElevation: 0,
           actions: [
-            Padding(
+            if (canEdit) Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Tooltip(
                 message: 'Thêm vắc-xin bổ sung',

@@ -617,7 +617,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: store.childById(widget.childId) == null
+                    // Ghi nhật ký cần quyền sửa "Nhật ký"
+                    onPressed:
+                        store.childById(widget.childId) == null ||
+                            !store.canEditChild(widget.childId, 'diary')
                         ? null
                         : () => Navigator.push(
                             context,
@@ -639,8 +642,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
+                    // Người được chia sẻ cần quyền sửa "Hoạt động" để đánh dấu (F23)
                     onPressed:
-                        _saving || store.childById(widget.childId) == null
+                        _saving ||
+                            store.childById(widget.childId) == null ||
+                            !store.canEditChild(widget.childId, 'activities')
                         ? null
                         : () => _save(false),
                     child: Padding(
@@ -648,6 +654,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                       child: Text(
                         _saving
                             ? 'Đang lưu…'
+                            : store.childById(widget.childId) != null &&
+                                  !store.canEditChild(widget.childId, 'activities')
+                            ? 'Bạn chỉ có quyền xem hoạt động của bé'
                             : done
                             ? 'Bỏ đánh dấu'
                             : 'Đánh dấu đã thực hiện',

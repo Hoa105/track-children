@@ -1,5 +1,7 @@
 import '../features/assessment/assessment_reminders.dart';
 import 'demo_store.dart';
+import 'sharing_api.dart';
+import 'sharing_invitations.dart';
 import 'vaccination_schedule.dart';
 
 class CareNotification {
@@ -25,7 +27,9 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     final childId = child['id'] as String;
     final dob = DateTime.tryParse(child['date_of_birth'] as String? ?? '');
     if (dob == null) continue;
-    final assessment = AssessmentReminders.instance.state(childId);
+    final assessment = store.canViewChild(childId, 'assessment')
+        ? AssessmentReminders.instance.state(childId)
+        : null;
     if (assessment != null && assessment['set'] != null) {
       final age = assessment['age_months'];
       final done = (assessment['completed_milestones'] as List? ?? []).contains(
@@ -58,6 +62,7 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     }
     // Same schedule as the vaccination book: TCMR + dịch vụ the child follows,
     // due dates counted from earlier doses, and the parent's own appointments.
+    if (!store.canViewChild(childId, 'vaccination')) continue;
     final upcoming = [
       for (final v in buildVaccinationSchedule(
         childId: childId,
@@ -105,7 +110,27 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     }
   }
   result.sort((a, b) => a.date.compareTo(b.date));
-  return result;
+  // Lời mời chia sẻ cần trả lời: luôn ở đầu danh sách, mới nhất trước.
+  final invitations = [...SharingInvitations.instance.invitations]
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return [for (final i in invitations) sharingNotification(i), ...result];
+}
+
+/// Thông báo cho một lời mời chia sẻ hồ sơ bé (kind 'sharing').
+CareNotification sharingNotification(IncomingInvitation invitation) {
+  final days = invitation.expiresAt.difference(DateTime.now()).inDays;
+  return CareNotification(
+    id: 'sharing:${invitation.id}',
+    childId: invitation.childId,
+    title:
+        '${invitation.inviterName} mời bạn cùng chăm sóc ${invitation.childName}',
+    message:
+        'Vai trò: ${relationshipLabel(invitation.relationship)}\n'
+        '${sharingPermissionSummary(invitation.permissions)}\n'
+        '${days <= 0 ? 'Lời mời hết hạn trong hôm nay' : 'Lời mời hết hạn sau $days ngày'}.',
+    date: invitation.createdAt,
+    kind: 'sharing',
+  );
 }
 
 Set<String> readNotificationIds(DemoStore store) =>

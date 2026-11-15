@@ -116,14 +116,89 @@ def create_invitation(cur, child_id: UUID, user_id: UUID, body, invitee: dict | 
     return cur.fetchone()
 
 
+# Lời mời gửi tới user: theo invitee_user_id, hoặc theo email/SĐT khi lúc mời
+# người nhận chưa có tài khoản (invitee_user_id còn NULL).
+_INVITED_USER = """
+    (i.invitee_user_id = %(user)s OR (i.invitee_user_id IS NULL AND (
+        (i.invitee_email IS NOT NULL AND i.invitee_email = u.email)
+        OR (i.invitee_phone IS NOT NULL AND i.invitee_phone = u.phone))))
+"""
+
+
 def lock_pending_invitation(cur, invitation_id: UUID, user_id: UUID) -> dict | None:
     cur.execute(
-        """SELECT * FROM child.child_invitations
-           WHERE id=%s AND invitee_user_id=%s AND status='pending'
-             AND expires_at>now() FOR UPDATE""",
-        (str(invitation_id), str(user_id)),
+        f"""SELECT i.* FROM child.child_invitations i
+            JOIN account.users u ON u.id = %(user)s
+            WHERE i.id = %(id)s AND i.status = 'pending' AND i.expires_at > now()
+              AND {_INVITED_USER}
+            FOR UPDATE OF i""",
+        {"id": str(invitation_id), "user": str(user_id)},
     )
     return cur.fetchone()
+
+
+def list_incoming_invitations(cur, user_id: UUID) -> list[dict]:
+    cur.execute(
+        f"""SELECT i.id, i.child_id, c.full_name AS child_name, c.nickname AS child_nickname,
+                   c.date_of_birth AS child_date_of_birth,
+                   inviter.display_name AS inviter_name, i.relationship,
+                   i.proposed_permissions, i.expires_at, i.created_at
+            FROM child.child_invitations i
+            JOIN account.users u ON u.id = %(user)s
+            JOIN child.children c ON c.id = i.child_id AND c.deleted_at IS NULL
+            JOIN account.users inviter ON inviter.id = i.inviter_id
+            WHERE i.status = 'pending' AND i.expires_at > now() AND {_INVITED_USER}
+            ORDER BY i.created_at DESC""",
+        {"user": str(user_id)},
+    )
+    return cur.fetchall()
+
+
+def cancel_invitation(cur, child_id: UUID, invitation_id: UUID) -> bool:
+    cur.execute(
+        """UPDATE child.child_invitations SET status='cancelled', responded_at=now()
+           WHERE id=%s AND child_id=%s AND status='pending'""",
+        (str(invitation_id), str(child_id)),
+    )
+    return cur.rowcount > 0
+
+
+def leave_child(cur, child_id: UUID, user_id: UUID) -> UUID | None:
+    cur.execute(
+        """UPDATE child.child_members SET status='left', ended_at=now()
+           WHERE child_id=%s AND user_id=%s AND status='active'
+           RETURNING id""",
+        (str(child_id), str(user_id)),
+    )
+    row = cur.fetchone()
+    return row["id"] if row else None
+
+
+def owner_id(cur, child_id: UUID) -> UUID | None:
+    cur.execute(
+        "SELECT owner_user_id FROM child.children WHERE id=%s AND deleted_at IS NULL",
+        (str(child_id),),
+    )
+    row = cur.fetchone()
+    return row["owner_user_id"] if row else None
+
+
+def is_active_member(cur, child_id: UUID, user_id: UUID) -> bool:
+    cur.execute(
+        "SELECT 1 FROM child.child_members WHERE child_id=%s AND user_id=%s AND status='active'",
+        (str(child_id), str(user_id)),
+    )
+    return cur.fetchone() is not None
+
+
+def has_pending_invitation(cur, child_id: UUID, email: str | None, phone: str | None) -> bool:
+    cur.execute(
+        """SELECT 1 FROM child.child_invitations
+           WHERE child_id=%s AND status='pending' AND expires_at>now()
+             AND (invitee_email=%s OR invitee_phone=%s)""",
+        (str(child_id), email, phone),
+    )
+    return cur.fetchone() is not None
 
 
 def upsert_member(cur, invitation: dict, user_id: UUID) -> UUID:
@@ -138,17 +213,28 @@ def upsert_member(cur, invitation: dict, user_id: UUID) -> UUID:
     return cur.fetchone()["id"]
 
 
-def mark_invitation_accepted(cur, invitation_id: UUID) -> None:
+def mark_invitation_accepted(cur, invitation_id: UUID, user_id: UUID) -> None:
     cur.execute(
-        "UPDATE child.child_invitations SET status='accepted',responded_at=now() WHERE id=%s",
-        (str(invitation_id),),
+        """UPDATE child.child_invitations
+           SET status='accepted', responded_at=now(), invitee_user_id=%s WHERE id=%s""",
+        (str(user_id), str(invitation_id)),
+    )
+
+
+def clear_permissions(cur, member_id: UUID) -> None:
+    """Khi tham gia lại: quyền cũ (trước lần bị thu hồi / rời) không được giữ."""
+    cur.execute(
+        "DELETE FROM child.child_member_permissions WHERE member_id=%s", (str(member_id),)
     )
 
 
 def decline_invitation(cur, invitation_id: UUID, user_id: UUID) -> bool:
     cur.execute(
-        """UPDATE child.child_invitations SET status='declined',responded_at=now()
-           WHERE id=%s AND invitee_user_id=%s AND status='pending'""",
-        (str(invitation_id), str(user_id)),
+        f"""UPDATE child.child_invitations i
+            SET status='declined', responded_at=now(), invitee_user_id=%(user)s
+            FROM account.users u
+            WHERE u.id = %(user)s AND i.id = %(id)s AND i.status = 'pending'
+              AND {_INVITED_USER}""",
+        {"id": str(invitation_id), "user": str(user_id)},
     )
     return cur.rowcount > 0

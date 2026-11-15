@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
+import '../../services/demo_store.dart';
+import '../sharing/access_gate.dart';
 import 'assessment_models.dart';
 import 'assessment_repository.dart';
 import 'assessment_widgets.dart';
@@ -212,7 +214,9 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   Widget build(BuildContext context) => AssessmentScaffold(
     backgroundColor: AppColors.background,
     appBar: assessmentAppBar('Đánh giá phát triển'),
-    body: SafeArea(
+    body: !DemoStore.instance.canViewChild(widget.childId, 'assessment')
+        ? const NoAccessView(section: 'kết quả đánh giá')
+        : SafeArea(
       top: false,
       child: Column(
         children: [

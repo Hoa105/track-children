@@ -46,8 +46,15 @@ class ApiAssessmentRepository implements AssessmentRepository {
   final AuthService _auth;
   @override
   bool get isDemo => false;
-  String path(String child, [String suffix = '']) =>
-      '/children/$child/assessment$suffix';
+  /// Đường dẫn theo id bé trên máy chủ: bé tạo trên máy (id cục bộ) được đăng ký
+  /// trước, như nhật ký / tiêm chủng; trước đây gửi id cục bộ nên máy chủ trả 422.
+  Future<String> path(String child, [String suffix = '']) async {
+    final store = DemoStore.instance;
+    final id = store.childById(child) == null || !store.canShareOnServer
+        ? child
+        : await store.sharingChildId(child);
+    return '/children/$id/assessment$suffix';
+  }
   String get tz => 'tz=${DateTime.now().timeZoneOffset.inMinutes}';
   Future<Map<String, dynamic>> request(
     String method,
@@ -74,16 +81,19 @@ class ApiAssessmentRepository implements AssessmentRepository {
 
   @override
   Future<Map<String, dynamic>> overview(String c) async {
-    final value = await request('GET', path(c, '/overview?$tz'));
+    final value = await request('GET', await path(c, '/overview?$tz'));
     AssessmentReminders.instance.put(c, value);
     return value;
   }
 
   @override
-  Future<Map<String, dynamic>> history(String c, {int? age, int offset = 0}) =>
+  Future<Map<String, dynamic>> history(String c, {int? age, int offset = 0}) async =>
       request(
         'GET',
-        path(c, '/assessments?offset=$offset${age == null ? '' : '&age=$age'}'),
+        await path(
+          c,
+          '/assessments?offset=$offset${age == null ? '' : '&age=$age'}',
+        ),
       );
   @override
   Future<AssessmentAttempt> start(
@@ -91,14 +101,16 @@ class ApiAssessmentRepository implements AssessmentRepository {
     String id, {
     bool guidance = false,
   }) async => AssessmentAttempt(
-    await request('POST', path(c, '/assessments?$tz'), {
+    await request('POST', await path(c, '/assessments?$tz'), {
       'id': id,
       'chronological_guidance_confirmed': guidance,
     }),
   );
   @override
   Future<AssessmentAttempt> load(String c, String id) async =>
-      AssessmentAttempt(await request('GET', path(c, '/assessments/$id?$tz')));
+      AssessmentAttempt(
+        await request('GET', await path(c, '/assessments/$id?$tz')),
+      );
   @override
   Future<AssessmentAttempt> save(
     String c,
@@ -107,7 +119,7 @@ class ApiAssessmentRepository implements AssessmentRepository {
     String? regression,
     String? concern,
   ) async => AssessmentAttempt(
-    await request('PATCH', path(c, '/assessments/${a.id}?$tz'), {
+    await request('PATCH', await path(c, '/assessments/${a.id}?$tz'), {
       'expected_version': a.version,
       'answers': answers,
       'regression': regression,
@@ -117,7 +129,7 @@ class ApiAssessmentRepository implements AssessmentRepository {
   @override
   Future<AssessmentAttempt> complete(String c, AssessmentAttempt a) async =>
       AssessmentAttempt(
-        await request('POST', path(c, '/assessments/${a.id}/complete?$tz'), {
+        await request('POST', await path(c, '/assessments/${a.id}/complete?$tz'), {
           'expected_version': a.version,
         }),
       );
