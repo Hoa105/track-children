@@ -5,39 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
 import '../../services/sharing_api.dart';
-
-/// Tên hiển thị của từng mục dữ liệu được phân quyền khi chia sẻ.
-const sharingScopeLabels = <String, String>{
-  'growth': 'Tăng trưởng',
-  'assessment': 'Đánh giá',
-  'vaccination': 'Tiêm chủng',
-  'teething': 'Mọc răng',
-  'diary': 'Nhật ký',
-  'activities': 'Hoạt động',
-};
-
-String sharingLevelLabel(String level) => switch (level) {
-  'edit' => 'Xem & sửa',
-  'view' => 'Chỉ xem',
-  _ => 'Không xem',
-};
-
-/// Tóm tắt quyền, vd. "Xem & sửa: Nhật ký · Chỉ xem: Tăng trưởng, Tiêm chủng".
-String sharingPermissionSummary(Map<String, String> permissions) {
-  List<String> labels(String level) => [
-    for (final scope in sharingScopes)
-      if (permissions[scope] == level) sharingScopeLabels[scope]!,
-  ];
-  final edit = labels('edit'), view = labels('view');
-  return [
-    if (edit.isNotEmpty) 'Xem & sửa: ${edit.join(', ')}',
-    if (view.isNotEmpty) 'Chỉ xem: ${view.join(', ')}',
-  ].join(' · ').ifEmpty('Chưa được cấp quyền xem mục nào');
-}
-
-extension on String {
-  String ifEmpty(String fallback) => isEmpty ? fallback : this;
-}
+import '../../services/sharing_invitations.dart';
 
 /// Lời mời đang chờ + các hồ sơ bé người khác chia sẻ với tài khoản này.
 class SharedWithMeScreen extends StatefulWidget {
@@ -69,6 +37,7 @@ class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
     try {
       final invitations = await _api.incoming();
       await DemoStore.instance.reloadAuthenticatedChildren();
+      SharingInvitations.instance.replace(invitations);
       if (!mounted) return;
       setState(() => _invitations = invitations);
     } catch (error) {

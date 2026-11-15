@@ -5,6 +5,7 @@ import 'platform/web_keyboard_insets.dart';
 import 'models/activity.dart';
 import 'services/activity_api.dart';
 import 'services/demo_store.dart';
+import 'services/sharing_invitations.dart';
 import 'services/journal_api.dart';
 import 'services/teething_api.dart';
 import 'services/progress_review_api.dart';
@@ -72,6 +73,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
 
   Future<void> _logout() async {
     final revocation = AuthService.instance.logout();
+    SharingInvitations.instance.clear();
     await DemoStore.instance.clearAuthenticatedCache();
     if (!mounted) return;
     await _showLoginAfterSplash();
@@ -145,6 +147,8 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
                 .map((c) => Map<String, dynamic>.from(c as Map))
                 .toList(),
           );
+          // Lời mời chia sẻ hiện ngay trong Thông báo; không chờ để vào app nhanh.
+          SharingInvitations.instance.refresh();
         } catch (error) {
           if (mounted) {
             ScaffoldMessenger.maybeOf(_navigatorKey.currentContext ?? context)

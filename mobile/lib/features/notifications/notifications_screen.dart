@@ -4,6 +4,8 @@ import '../../app_colors.dart';
 import '../../app_layout.dart';
 import '../../services/app_notifications.dart';
 import '../../services/demo_store.dart';
+import '../../services/sharing_invitations.dart';
+import '../sharing/shared_with_me_screen.dart';
 import '../vaccination/vaccination_screen.dart';
 import '../assessment/assessment_screen.dart';
 import '../assessment/assessment_repository.dart';
@@ -32,6 +34,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _loadAssessment();
+    SharingInvitations.instance.refresh();
   }
 
   Future<void> _loadAssessment() async {
@@ -71,9 +74,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!await _markRead([notification.id]) || !mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => notification.kind == 'assessment'
-            ? AssessmentScreen(childId: notification.childId)
-            : VaccinationScreen(childId: notification.childId),
+        builder: (_) => switch (notification.kind) {
+          'sharing' => const SharedWithMeScreen(),
+          'assessment' => AssessmentScreen(childId: notification.childId),
+          _ => VaccinationScreen(childId: notification.childId),
+        },
       ),
     );
   }
@@ -83,6 +88,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     listenable: Listenable.merge([
       DemoStore.instance,
       AssessmentReminders.instance,
+      SharingInvitations.instance,
     ]),
     builder: (context, _) {
       final store = DemoStore.instance;
@@ -125,7 +131,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Theo dõi lịch dự kiến của các bé trong gia đình.',
+                    'Lời mời chia sẻ hồ sơ và lịch dự kiến của các bé trong gia đình.',
                     style: _body,
                   ),
                 ],
@@ -214,9 +220,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Icon(
-                                entry.kind == 'assessment'
-                                    ? Icons.fact_check_outlined
-                                    : Icons.vaccines_outlined,
+                                switch (entry.kind) {
+                                  'sharing' => Icons.group_add_outlined,
+                                  'assessment' => Icons.fact_check_outlined,
+                                  _ => Icons.vaccines_outlined,
+                                },
                                 color: AppColors.primary,
                               ),
                               const SizedBox(width: 12),
@@ -245,9 +253,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(entry.message, style: _body),
                           const SizedBox(height: 12),
                           Text(
-                            entry.kind == 'assessment'
-                                ? 'Xem đánh giá →'
-                                : 'Xem sổ tiêm →',
+                            switch (entry.kind) {
+                              'sharing' => 'Xem lời mời →',
+                              'assessment' => 'Xem đánh giá →',
+                              _ => 'Xem sổ tiêm →',
+                            },
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

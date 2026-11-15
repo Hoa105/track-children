@@ -10,6 +10,39 @@ const sharingScopes = <String>[
   'activities',
 ];
 
+/// Tên hiển thị của từng mục dữ liệu được phân quyền khi chia sẻ.
+const sharingScopeLabels = <String, String>{
+  'growth': 'Tăng trưởng',
+  'assessment': 'Đánh giá',
+  'vaccination': 'Tiêm chủng',
+  'teething': 'Mọc răng',
+  'diary': 'Nhật ký',
+  'activities': 'Hoạt động',
+};
+
+String sharingLevelLabel(String level) => switch (level) {
+  'edit' => 'Xem & sửa',
+  'view' => 'Chỉ xem',
+  _ => 'Không xem',
+};
+
+/// Tóm tắt quyền, vd. "Xem & sửa: Nhật ký · Chỉ xem: Tăng trưởng, Tiêm chủng".
+String sharingPermissionSummary(Map<String, String> permissions) {
+  List<String> labels(String level) => [
+    for (final scope in sharingScopes)
+      if (permissions[scope] == level) sharingScopeLabels[scope]!,
+  ];
+  final edit = labels('edit'), view = labels('view');
+  return [
+    if (edit.isNotEmpty) 'Xem & sửa: ${edit.join(', ')}',
+    if (view.isNotEmpty) 'Chỉ xem: ${view.join(', ')}',
+  ].join(' · ').ifEmpty('Chưa được cấp quyền xem mục nào');
+}
+
+extension on String {
+  String ifEmpty(String fallback) => isEmpty ? fallback : this;
+}
+
 /// Mối quan hệ với bé khi mời: mã lưu ở backend (≤ 30 ký tự) → nhãn hiển thị.
 const sharingRelationships = <String, String>{
   'father': 'Bố',
@@ -60,7 +93,8 @@ class IncomingInvitation {
     required this.permissions,
     required this.expiresAt,
     this.relationship,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? expiresAt.subtract(const Duration(days: 7));
 
   factory IncomingInvitation.fromApi(Map<String, dynamic> raw) =>
       IncomingInvitation(
@@ -75,12 +109,13 @@ class IncomingInvitation {
         expiresAt:
             DateTime.tryParse(raw['expires_at']?.toString() ?? '') ??
             DateTime.now(),
+        createdAt: DateTime.tryParse(raw['created_at']?.toString() ?? ''),
       );
 
   final String id, childId, childName, inviterName;
   final String? relationship;
   final Map<String, String> permissions;
-  final DateTime expiresAt;
+  final DateTime expiresAt, createdAt;
 }
 
 /// Câu thông báo backend gửi kèm lỗi (vd. "Hồ sơ đã đủ 3 vị trí chia sẻ").
