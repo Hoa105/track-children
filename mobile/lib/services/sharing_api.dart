@@ -85,6 +85,7 @@ class IncomingInvitation {
 
 /// Câu thông báo backend gửi kèm lỗi (vd. "Hồ sơ đã đủ 3 vị trí chia sẻ").
 String sharingErrorMessage(Object error, String fallback) {
+  if (error is StateError) return error.message;
   if (error is AuthException) {
     final message = error.details['message'];
     if (message is String && message.isNotEmpty) return message;

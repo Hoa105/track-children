@@ -122,9 +122,18 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   /// Nhãn lời mời đang chờ → id lời mời trên máy chủ (để huỷ).
   final _pendingIds = <String, String>{};
 
+  /// Đăng nhập tài khoản thật: mọi thao tác chia sẻ đi qua máy chủ, kể cả bé
+  /// tạo trên máy (được đăng ký lên máy chủ trước). Chế độ demo: chỉ lưu cục bộ.
   bool get _usesServer =>
       _childId != null &&
-      DemoStore.instance.childById(_childId!)?['server'] == true;
+      (DemoStore.instance.childById(_childId)?['server'] == true ||
+          DemoStore.instance.canShareOnServer);
+
+  String? _remoteChildId;
+
+  /// Id của bé trên máy chủ (bé tạo trên máy được đăng ký ở lần gọi đầu).
+  Future<String> _serverChildId() async =>
+      _remoteChildId ??= await DemoStore.instance.sharingChildId(_childId!);
 
   @override
   void initState() {
@@ -135,7 +144,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   Future<void> _loadSharing() async {
     setState(() => _loading = true);
     try {
-      final result = await _sharingApi.fetch(_childId!);
+      final result = await _sharingApi.fetch(await _serverChildId());
       final loaded = <SharingMember>[
         for (final raw in result['members'] as List)
           _memberFromApi(Map<String, dynamic>.from(raw as Map)),
@@ -192,7 +201,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
           for (final member in _members)
             if (member.id != null)
               _sharingApi.updateMember(
-                _childId!,
+                await _serverChildId(),
                 member.id!,
                 _apiPermissions(member),
               ),
@@ -217,7 +226,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
   Future<void> _revokeMember(SharingMember member) async {
     try {
       if (_usesServer && member.id != null) {
-        await _sharingApi.revokeMember(_childId!, member.id!);
+        await _sharingApi.revokeMember(await _serverChildId(), member.id!);
       }
       if (!mounted) return;
       setState(() => _members.remove(member));
@@ -235,7 +244,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
     try {
       if (_usesServer) {
         await _sharingApi.invite(
-          _childId!,
+          await _serverChildId(),
           invite.contact,
           invite.permissions,
           relationship: invite.relationship,
@@ -248,8 +257,10 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
       }
       if (mounted) {
         _toast(
-          'Đã gửi lời mời tới ${invite.contact} '
-          '(${relationshipLabel(invite.relationship)}), hiệu lực trong 7 ngày.',
+          _usesServer
+              ? 'Đã gửi lời mời tới ${invite.contact} '
+                    '(${relationshipLabel(invite.relationship)}), hiệu lực trong 7 ngày.'
+              : 'Đã lưu lời mời trên máy (chế độ demo), chưa gửi tới máy chủ.',
         );
       }
       return true;
@@ -268,7 +279,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
     try {
       final id = _pendingIds[entry];
       if (_usesServer && id != null) {
-        await _sharingApi.cancelInvitation(_childId!, id);
+        await _sharingApi.cancelInvitation(await _serverChildId(), id);
       }
       if (!mounted) return;
       setState(() {

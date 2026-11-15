@@ -271,7 +271,14 @@ class DemoStore extends ChangeNotifier {
     (d['children'] as List).removeWhere(
       (c) => c['parentId'] == owner && c['server'] == true,
     );
+    // Bé tạo trên máy đã đăng ký lên máy chủ (serverIds) đã có sẵn: không thêm bản trùng.
+    final linked = <String>{
+      for (final entry in (d['serverIds'] as Map? ?? const {}).entries)
+        if ((d['children'] as List).any((c) => c['id'] == entry.key))
+          entry.value as String,
+    };
     for (final profile in profiles) {
+      if (linked.contains(profile['id'])) continue;
       (d['children'] as List).removeWhere((c) => c['id'] == profile['id']);
       (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
     }
@@ -299,6 +306,23 @@ class DemoStore extends ChangeNotifier {
 
   bool canEditChild(String? childId, String scope) =>
       childAccess(childId, scope) == 'edit';
+
+  /// Đã đăng nhập tài khoản thật (không phải demo): chia sẻ phải đi qua máy chủ.
+  bool get canShareOnServer =>
+      AuthService.instance.user != null && !AuthService.instance.demoMode;
+
+  /// Id trên máy chủ của bé để chia sẻ. Bé tạo trên máy được đăng ký lên máy chủ
+  /// trước (PUT /dev/profiles, như khi đồng bộ nhật ký / tiêm chủng).
+  Future<String> sharingChildId(String childId) async {
+    final child = childById(childId);
+    if (child == null) throw StateError('Không tìm thấy hồ sơ bé');
+    if (child['server'] == true) return childId;
+    final account = await linkedAccount(childId);
+    if (account == null) {
+      throw StateError('Cần kết nối máy chủ để chia sẻ hồ sơ bé');
+    }
+    return account.childId;
+  }
 
   /// Tải lại danh sách bé (của mình + được chia sẻ) sau khi nhận lời mời / rời hồ sơ.
   Future<void> reloadAuthenticatedChildren() async {
