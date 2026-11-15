@@ -477,6 +477,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> deleteMeasurement(String childId, String measurementId) async {
+    if (!canEditChild(childId, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
     await GrowthApi.instance.request(
       'DELETE',
       '/children/$childId/growth/measurements/$measurementId',
@@ -486,6 +487,7 @@ class DemoStore extends ChangeNotifier {
 
   Future<void> addRecord(String id, Map<String, dynamic> record) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa số đo');
+    if (!canEditChild(id, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
     if (childById(id)?['server'] == true && !GrowthApi.instance.signedIn) {
       throw GrowthApiException('SESSION_EXPIRED');
     }
@@ -574,6 +576,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa nhật ký');
     }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final before = journalEntries(childId)
         .where((e) => e['id'] == entry['id'])
         .firstOrNull;
@@ -595,6 +598,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa nhật ký');
     }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final before = journalEntries(childId)
         .where((e) => e['id'] == entryId)
         .firstOrNull;
@@ -814,7 +818,9 @@ class DemoStore extends ChangeNotifier {
     await _convertLegacyPhotos(childId);
     final List<Map<String, dynamic>> server;
     try {
-      if (!await _pushJournal(childId)) return false;
+      if (canEditChild(childId, 'diary') && !await _pushJournal(childId)) {
+        return false;
+      }
       final account = await linkedAccount(childId);
       if (account == null) return false;
       server = await remote.fetch(account);
@@ -924,6 +930,7 @@ class DemoStore extends ChangeNotifier {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
     }
+    if (!canEditChild(childId, 'activities')) throw StateError('Bạn chỉ có quyền xem mục này');
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
     }
@@ -987,7 +994,7 @@ class DemoStore extends ChangeNotifier {
       final keys = (child: 'child:$childId', parent: 'parent:$parentId');
       var serverDone = await fetch();
       var serverFavorites = await remote.fetchFavorites(account);
-      if (!synced.contains(keys.child)) {
+      if (!synced.contains(keys.child) && canEditChild(childId, 'activities')) {
         final localOnly = completedActivities(childId)
             .where((id) => _uuid.hasMatch(id) && !serverDone.contains(id));
         for (final id in localOnly) {
@@ -1240,6 +1247,7 @@ class DemoStore extends ChangeNotifier {
     String childId,
     List<String> insightIds,
   ) async {
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
     final (remote, account) = await _reviewAccount(childId);
     return remote.create(account, insightIds);
   }

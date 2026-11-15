@@ -5,6 +5,8 @@ import 'package:track_children/features/journal/journal_screen.dart';
 import 'package:track_children/features/sharing/child_sharing_screen.dart';
 import 'package:track_children/features/sharing/access_gate.dart';
 import 'package:track_children/features/sharing/shared_with_me_screen.dart';
+import 'package:track_children/models/activity.dart';
+import 'package:track_children/services/app_notifications.dart';
 import 'package:track_children/services/demo_store.dart';
 import 'package:track_children/services/sharing_api.dart';
 
@@ -44,11 +46,14 @@ IncomingInvitation _invitation(String id) => IncomingInvitation(
 );
 
 /// Bé của người khác được chia sẻ với tài khoản đang đăng nhập.
-Future<String> _sharedChild(Map<String, String> access) async {
+Future<String> _sharedChild(
+  Map<String, String> access, {
+  String dateOfBirth = '2025-01-01',
+}) async {
   final store = DemoStore.instance;
   final id = await store.saveChild(null, {
     'full_name': 'Bé được chia sẻ',
-    'date_of_birth': '2025-01-01',
+    'date_of_birth': dateOfBirth,
     'gender': 'female',
   });
   await store.saveChild(id, {
@@ -344,6 +349,69 @@ void main() {
       () => store.removeVaccination(viewer, 'bcg-1'),
       throwsA(isA<StateError>()),
     );
+  });
+
+  test('view-only sections reject every write in the app', () async {
+    final store = DemoStore.instance;
+    final id = await _sharedChild({
+      for (final scope in sharingScopes) scope: 'view',
+    });
+    final viewOnly = throwsA(
+      isA<StateError>().having(
+        (e) => e.message,
+        'message',
+        'Bạn chỉ có quyền xem mục này',
+      ),
+    );
+    await expectLater(
+      store.saveJournalEntry(id, {
+        'id': 'e1',
+        'date': DateTime(2025, 3, 1).toIso8601String(),
+        'note': 'x',
+      }),
+      viewOnly,
+    );
+    await expectLater(store.deleteJournalEntry(id, 'e1'), viewOnly);
+    await expectLater(store.createProgressReview(id, ['a', 'b']), viewOnly);
+    await expectLater(
+      store.setActivityDone(id, activityCatalog.first.id, true),
+      viewOnly,
+    );
+    await expectLater(
+      store.addRecord(id, {'date': '2025-03-01', 'weight': 6.0}),
+      viewOnly,
+    );
+    await expectLater(store.deleteMeasurement(id, 'm1'), viewOnly);
+    expect(
+      () => store.saveVaccination(id, {
+        'id': 'd',
+        'date': '2025-03-01',
+        'given': true,
+      }),
+      viewOnly,
+    );
+    await expectLater(
+      store.saveTooth(id, 'upper-right-central', DateTime(2025, 9, 1)),
+      throwsA(isA<StateError>()),
+    );
+    expect(store.journalEntries(id), isEmpty);
+    expect(store.completedActivities(id), isEmpty);
+  });
+
+  test('reminders skip sections the member cannot view', () async {
+    final store = DemoStore.instance;
+    // Bé vừa tròn 2 tháng: có mũi tiêm đến hạn để nhắc
+    final now = DateTime.now();
+    final dob = DateTime(now.year, now.month - 2, now.day)
+        .toIso8601String()
+        .substring(0, 10);
+    final hidden = await _sharedChild({'diary': 'view'}, dateOfBirth: dob);
+    final visible = await _sharedChild({
+      'vaccination': 'view',
+    }, dateOfBirth: dob);
+    final ids = careNotifications(store).map((n) => n.childId).toSet();
+    expect(ids.contains(hidden), isFalse);
+    expect(ids.contains(visible), isTrue);
   });
 }
 

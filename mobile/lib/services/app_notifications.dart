@@ -27,7 +27,9 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     final childId = child['id'] as String;
     final dob = DateTime.tryParse(child['date_of_birth'] as String? ?? '');
     if (dob == null) continue;
-    final assessment = AssessmentReminders.instance.state(childId);
+    final assessment = store.canViewChild(childId, 'assessment')
+        ? AssessmentReminders.instance.state(childId)
+        : null;
     if (assessment != null && assessment['set'] != null) {
       final age = assessment['age_months'];
       final done = (assessment['completed_milestones'] as List? ?? []).contains(
@@ -60,6 +62,7 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     }
     // Same schedule as the vaccination book: TCMR + dịch vụ the child follows,
     // due dates counted from earlier doses, and the parent's own appointments.
+    if (!store.canViewChild(childId, 'vaccination')) continue;
     final upcoming = [
       for (final v in buildVaccinationSchedule(
         childId: childId,
