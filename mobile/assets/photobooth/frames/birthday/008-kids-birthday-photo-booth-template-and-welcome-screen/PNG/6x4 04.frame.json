@@ -1,0 +1,19 @@
+{
+  "key": "birthday-kids-6x4-04",
+  "theme": "birthday",
+  "categoryTitle": "Sinh nhật",
+  "title": "Sinh nhật bé 04",
+  "format": "6×4",
+  "shape": "landscape",
+  "order": 504,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 238,
+      "y": 225,
+      "width": 1325,
+      "height": 877,
+      "photo": 0
+    }
+  ]
+}

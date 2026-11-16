@@ -1,0 +1,40 @@
+{
+  "key": "halloween-kids-2x6-01",
+  "theme": "halloween",
+  "categoryTitle": "Halloween",
+  "title": "Halloween vui 01",
+  "format": "2×6 đôi",
+  "shape": "strip",
+  "order": 101,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 53,
+      "y": 57,
+      "width": 495,
+      "height": 496,
+      "photo": 0
+    },
+    {
+      "x": 53,
+      "y": 590,
+      "width": 495,
+      "height": 496,
+      "photo": 1
+    },
+    {
+      "x": 653,
+      "y": 57,
+      "width": 495,
+      "height": 496,
+      "photo": 0
+    },
+    {
+      "x": 653,
+      "y": 590,
+      "width": 495,
+      "height": 496,
+      "photo": 1
+    }
+  ]
+}

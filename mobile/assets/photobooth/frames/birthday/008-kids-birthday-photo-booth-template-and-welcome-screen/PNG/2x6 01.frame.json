@@ -1,0 +1,40 @@
+{
+  "key": "birthday-kids-2x6-01",
+  "theme": "birthday",
+  "categoryTitle": "Sinh nhật",
+  "title": "Sinh nhật bé 01",
+  "format": "2×6 đôi",
+  "shape": "strip",
+  "order": 101,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 59,
+      "y": 645,
+      "width": 482,
+      "height": 475,
+      "photo": 0
+    },
+    {
+      "x": 63,
+      "y": 1195,
+      "width": 475,
+      "height": 476,
+      "photo": 1
+    },
+    {
+      "x": 660,
+      "y": 645,
+      "width": 482,
+      "height": 475,
+      "photo": 0
+    },
+    {
+      "x": 664,
+      "y": 1195,
+      "width": 475,
+      "height": 476,
+      "photo": 1
+    }
+  ]
+}

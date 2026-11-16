@@ -1,0 +1,61 @@
+{
+  "key": "birthday-kids-4x6-03",
+  "theme": "birthday",
+  "categoryTitle": "Sinh nhật",
+  "title": "Sinh nhật bé 03",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 303,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 49,
+      "y": 519,
+      "width": 503,
+      "height": 333,
+      "photo": 0
+    },
+    {
+      "x": 49,
+      "y": 927,
+      "width": 503,
+      "height": 336,
+      "photo": 1
+    },
+    {
+      "x": 53,
+      "y": 1338,
+      "width": 493,
+      "height": 341,
+      "photo": 2
+    },
+    {
+      "x": 649,
+      "y": 305,
+      "width": 503,
+      "height": 333,
+      "photo": 0
+    },
+    {
+      "x": 649,
+      "y": 650,
+      "width": 503,
+      "height": 336,
+      "photo": 1
+    },
+    {
+      "x": 653,
+      "y": 999,
+      "width": 493,
+      "height": 341,
+      "photo": 2
+    },
+    {
+      "x": 648,
+      "y": 1353,
+      "width": 503,
+      "height": 335,
+      "photo": 3
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "key": "christmas-sweater-4x6-02",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Áo len 02",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 1302,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 41,
+      "y": 45,
+      "width": 518,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 41,
+      "y": 610,
+      "width": 518,
+      "height": 519,
+      "photo": 1
+    },
+    {
+      "x": 641,
+      "y": 45,
+      "width": 518,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 641,
+      "y": 610,
+      "width": 518,
+      "height": 519,
+      "photo": 1
+    },
+    {
+      "x": 641,
+      "y": 1175,
+      "width": 518,
+      "height": 519,
+      "photo": 2
+    }
+  ]
+}

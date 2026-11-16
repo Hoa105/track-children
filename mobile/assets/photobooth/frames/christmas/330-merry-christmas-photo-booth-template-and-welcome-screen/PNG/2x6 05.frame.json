@@ -1,0 +1,40 @@
+{
+  "key": "christmas-merry-2x6-05",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Giáng sinh vui 05",
+  "format": "2×6 đôi",
+  "shape": "strip",
+  "order": 2105,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 57,
+      "y": 57,
+      "width": 489,
+      "height": 739,
+      "photo": 0
+    },
+    {
+      "x": 57,
+      "y": 846,
+      "width": 489,
+      "height": 739,
+      "photo": 1
+    },
+    {
+      "x": 657,
+      "y": 57,
+      "width": 489,
+      "height": 739,
+      "photo": 0
+    },
+    {
+      "x": 657,
+      "y": 846,
+      "width": 489,
+      "height": 739,
+      "photo": 1
+    }
+  ]
+}

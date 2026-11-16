@@ -1,0 +1,19 @@
+{
+  "key": "christmas-merry-6x4-04",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Giáng sinh vui 04",
+  "format": "6×4",
+  "shape": "landscape",
+  "order": 2504,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 109,
+      "y": 114,
+      "width": 1581,
+      "height": 826,
+      "photo": 0
+    }
+  ]
+}

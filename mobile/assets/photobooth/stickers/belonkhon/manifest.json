@@ -1,0 +1,328 @@
+{
+  "version": 5,
+  "count": 46,
+  "items": [
+    {
+      "id": "mascot_swaddled_sleep",
+      "file": "mascot/swaddled_sleep.png",
+      "category": "mascot",
+      "width": 220,
+      "height": 224
+    },
+    {
+      "id": "mascot_tummy_time",
+      "file": "mascot/tummy_time.png",
+      "category": "mascot",
+      "width": 247,
+      "height": 214
+    },
+    {
+      "id": "mascot_mobile_toy",
+      "file": "mascot/mobile_toy.png",
+      "category": "mascot",
+      "width": 258,
+      "height": 225
+    },
+    {
+      "id": "mascot_milk_bottle",
+      "file": "mascot/milk_bottle.png",
+      "category": "mascot",
+      "width": 202,
+      "height": 215
+    },
+    {
+      "id": "mascot_first_tooth",
+      "file": "mascot/first_tooth.png",
+      "category": "mascot",
+      "width": 201,
+      "height": 215
+    },
+    {
+      "id": "mascot_eating_porridge",
+      "file": "mascot/eating_porridge.png",
+      "category": "mascot",
+      "width": 202,
+      "height": 215
+    },
+    {
+      "id": "mascot_crawling",
+      "file": "mascot/crawling.png",
+      "category": "mascot",
+      "width": 214,
+      "height": 195
+    },
+    {
+      "id": "mascot_learning_to_crawl",
+      "file": "mascot/learning_to_crawl.png",
+      "category": "mascot",
+      "width": 225,
+      "height": 179
+    },
+    {
+      "id": "mascot_stacking_rings",
+      "file": "mascot/stacking_rings.png",
+      "category": "mascot",
+      "width": 194,
+      "height": 198
+    },
+    {
+      "id": "mascot_waving",
+      "file": "mascot/waving.png",
+      "category": "mascot",
+      "width": 180,
+      "height": 197
+    },
+    {
+      "id": "mascot_standing_with_stool",
+      "file": "mascot/standing_with_stool.png",
+      "category": "mascot",
+      "width": 187,
+      "height": 199
+    },
+    {
+      "id": "mascot_first_steps",
+      "file": "mascot/first_steps.png",
+      "category": "mascot",
+      "width": 200,
+      "height": 201
+    },
+    {
+      "id": "mascot_jumping",
+      "file": "mascot/jumping.png",
+      "category": "mascot",
+      "width": 225,
+      "height": 204
+    },
+    {
+      "id": "mascot_play_ball",
+      "file": "mascot/play_ball.png",
+      "category": "mascot",
+      "width": 201,
+      "height": 201
+    },
+    {
+      "id": "mascot_drawing",
+      "file": "mascot/drawing.png",
+      "category": "mascot",
+      "width": 230,
+      "height": 198
+    },
+    {
+      "id": "mascot_read_book",
+      "file": "mascot/read_book.png",
+      "category": "mascot",
+      "width": 201,
+      "height": 203
+    },
+    {
+      "id": "mascot_building_blocks",
+      "file": "mascot/building_blocks.png",
+      "category": "mascot",
+      "width": 205,
+      "height": 195
+    },
+    {
+      "id": "mascot_brush_teeth",
+      "file": "mascot/brush_teeth.png",
+      "category": "mascot",
+      "width": 205,
+      "height": 198
+    },
+    {
+      "id": "mascot_sleep_blanket",
+      "file": "mascot/sleep_blanket.png",
+      "category": "mascot",
+      "width": 250,
+      "height": 203
+    },
+    {
+      "id": "mascot_ride_bike",
+      "file": "mascot/ride_bike.png",
+      "category": "mascot",
+      "width": 226,
+      "height": 201
+    },
+    {
+      "id": "mascot_superhero",
+      "file": "mascot/superhero.png",
+      "category": "mascot",
+      "width": 222,
+      "height": 195
+    },
+    {
+      "id": "mascot_graduation",
+      "file": "mascot/graduation.png",
+      "category": "mascot",
+      "width": 224,
+      "height": 196
+    },
+    {
+      "id": "mascot_measure_height",
+      "file": "mascot/measure_height.png",
+      "category": "mascot",
+      "width": 203,
+      "height": 199
+    },
+    {
+      "id": "mascot_hug_heart",
+      "file": "mascot/hug_heart.png",
+      "category": "mascot",
+      "width": 202,
+      "height": 195
+    },
+    {
+      "id": "mascot_school_backpack",
+      "file": "mascot/school_backpack.png",
+      "category": "mascot",
+      "width": 217,
+      "height": 192
+    },
+    {
+      "id": "mascot_hug_star",
+      "file": "mascot/hug_star.png",
+      "category": "mascot",
+      "width": 188,
+      "height": 186
+    },
+    {
+      "id": "mascot_two_front_teeth",
+      "file": "mascot/two_front_teeth.png",
+      "category": "mascot",
+      "width": 195,
+      "height": 183
+    },
+    {
+      "id": "mascot_happy_wave",
+      "file": "mascot/happy_wave.png",
+      "category": "mascot",
+      "width": 197,
+      "height": 190
+    },
+    {
+      "id": "mascot_hug_bunny",
+      "file": "mascot/hug_bunny.png",
+      "category": "mascot",
+      "width": 196,
+      "height": 183
+    },
+    {
+      "id": "mascot_celebrate",
+      "file": "mascot/celebrate.png",
+      "category": "mascot",
+      "width": 211,
+      "height": 200
+    },
+    {
+      "id": "mascot_sitting_cheer",
+      "file": "mascot/sitting_cheer.png",
+      "category": "mascot",
+      "width": 183,
+      "height": 186
+    },
+    {
+      "id": "mascot_sleep_cloud",
+      "file": "mascot/sleep_cloud.png",
+      "category": "mascot",
+      "width": 232,
+      "height": 189
+    },
+    {
+      "id": "decor_rainbow",
+      "file": "decor/rainbow.png",
+      "category": "decor",
+      "width": 162,
+      "height": 125
+    },
+    {
+      "id": "decor_sun",
+      "file": "decor/sun.png",
+      "category": "decor",
+      "width": 138,
+      "height": 137
+    },
+    {
+      "id": "decor_cloud",
+      "file": "decor/cloud.png",
+      "category": "decor",
+      "width": 138,
+      "height": 114
+    },
+    {
+      "id": "decor_star",
+      "file": "decor/star.png",
+      "category": "decor",
+      "width": 124,
+      "height": 124
+    },
+    {
+      "id": "decor_sprout",
+      "file": "decor/sprout.png",
+      "category": "decor",
+      "width": 109,
+      "height": 99
+    },
+    {
+      "id": "decor_hearts",
+      "file": "decor/hearts.png",
+      "category": "decor",
+      "width": 112,
+      "height": 113
+    },
+    {
+      "id": "care_milk_bottle",
+      "file": "care/milk_bottle.png",
+      "category": "care",
+      "width": 106,
+      "height": 139
+    },
+    {
+      "id": "care_porridge_bowl",
+      "file": "care/porridge_bowl.png",
+      "category": "care",
+      "width": 126,
+      "height": 127
+    },
+    {
+      "id": "care_tooth",
+      "file": "care/tooth.png",
+      "category": "care",
+      "width": 122,
+      "height": 118
+    },
+    {
+      "id": "care_syringe",
+      "file": "care/syringe.png",
+      "category": "care",
+      "width": 124,
+      "height": 131
+    },
+    {
+      "id": "care_health_shield",
+      "file": "care/health_shield.png",
+      "category": "care",
+      "width": 118,
+      "height": 129
+    },
+    {
+      "id": "care_bandage",
+      "file": "care/bandage.png",
+      "category": "care",
+      "width": 109,
+      "height": 124
+    },
+    {
+      "id": "play_toy_blocks",
+      "file": "play/toy_blocks.png",
+      "category": "play",
+      "width": 143,
+      "height": 129
+    },
+    {
+      "id": "play_rocking_horse",
+      "file": "play/rocking_horse.png",
+      "category": "play",
+      "width": 160,
+      "height": 139
+    }
+  ]
+}

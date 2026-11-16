@@ -1,0 +1,40 @@
+{
+  "key": "christmas-sweater-2x6-01",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Áo len 01",
+  "format": "2×6 đôi",
+  "shape": "strip",
+  "order": 1101,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 42,
+      "y": 45,
+      "width": 518,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 42,
+      "y": 610,
+      "width": 518,
+      "height": 519,
+      "photo": 1
+    },
+    {
+      "x": 641,
+      "y": 45,
+      "width": 518,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 641,
+      "y": 610,
+      "width": 518,
+      "height": 519,
+      "photo": 1
+    }
+  ]
+}

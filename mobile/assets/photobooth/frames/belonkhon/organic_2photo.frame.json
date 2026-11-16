@@ -1,0 +1,26 @@
+{
+  "key": "belonkhon-organic-2photo",
+  "theme": "belonkhon",
+  "categoryTitle": "Bé Lớn Khôn",
+  "title": "Lượn sóng mầm non",
+  "format": "6:4",
+  "shape": "landscape",
+  "order": 3,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 56,
+      "y": 68,
+      "width": 822,
+      "height": 1027,
+      "photo": 0
+    },
+    {
+      "x": 922,
+      "y": 80,
+      "width": 822,
+      "height": 1002,
+      "photo": 1
+    }
+  ]
+}

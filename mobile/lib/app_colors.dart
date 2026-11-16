@@ -36,3 +36,17 @@ abstract final class WeightChartColors {
 abstract final class StatureChartColors {
   static const data = Color(0xFF4B92C6);
 }
+
+/// Green Sprout palette scoped to Home.
+abstract final class HomeColors {
+  static const headerStart = Color(0xFFB8DF8A);
+  static const headerEnd = Color(0xFFD9EFA9);
+  static const background = Color(0xFFF0F5E7);
+  static const surface = Color(0xFFFFFFFF);
+  static const iconBackground = Color(0xFFD9EFA9);
+  static const milestoneAccent = Color(0xFFB6E34E);
+  static const primary = Color(0xFF538B29);
+  static const ink = Color(0xFF29451E);
+  static const reminderBackground = Color(0xFFEAF5C9);
+  static const reminderCta = Color(0xFF477921);
+}

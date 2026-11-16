@@ -1,0 +1,61 @@
+{
+  "key": "christmas-starlight-4x6-03",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Ánh sao 03",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 303,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 41,
+      "y": 45,
+      "width": 519,
+      "height": 349,
+      "photo": 0
+    },
+    {
+      "x": 42,
+      "y": 448,
+      "width": 518,
+      "height": 348,
+      "photo": 1
+    },
+    {
+      "x": 42,
+      "y": 851,
+      "width": 518,
+      "height": 348,
+      "photo": 2
+    },
+    {
+      "x": 641,
+      "y": 45,
+      "width": 519,
+      "height": 349,
+      "photo": 0
+    },
+    {
+      "x": 642,
+      "y": 448,
+      "width": 518,
+      "height": 348,
+      "photo": 1
+    },
+    {
+      "x": 642,
+      "y": 851,
+      "width": 518,
+      "height": 348,
+      "photo": 2
+    },
+    {
+      "x": 642,
+      "y": 1253,
+      "width": 518,
+      "height": 348,
+      "photo": 3
+    }
+  ]
+}

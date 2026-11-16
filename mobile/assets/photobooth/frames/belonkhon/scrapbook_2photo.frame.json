@@ -1,0 +1,26 @@
+{
+  "key": "belonkhon-scrapbook-2photo",
+  "theme": "belonkhon",
+  "categoryTitle": "Bé Lớn Khôn",
+  "title": "Ảnh giấy xanh trời",
+  "format": "6:4",
+  "shape": "landscape",
+  "order": 5,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 58,
+      "y": 109,
+      "width": 821,
+      "height": 966,
+      "photo": 0
+    },
+    {
+      "x": 921,
+      "y": 98,
+      "width": 820,
+      "height": 964,
+      "photo": 1
+    }
+  ]
+}
