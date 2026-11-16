@@ -107,6 +107,7 @@ flutter:
     - assets/images/scenery/icons/age-milestones/inactive/
     - assets/images/scenery/icons/age-milestones/timeline/
     - assets/images/scenery/icons/ui/
+    - assets/images/scenery/icons/auth-mascot/
     # BEGIN PHOTOBOOTH ASSETS
     - assets/photobooth/catalog.json
     - assets/photobooth/frames/classic/photo-strip-template-classic-2x6.png

@@ -118,7 +118,7 @@ void main() {
     await tester.ensureVisible(find.text('Bắt đầu'));
     await tester.tap(find.text('Bắt đầu'));
     await tester.pumpAndSettle();
-    expect(find.text('Chào mừng bạn trở lại'), findsOneWidget);
+    expect(find.text('Chào mừng ba mẹ!'), findsOneWidget);
   });
   testWidgets(
     'completion persists while introduction remains visible on restart',
@@ -197,18 +197,16 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Người giám hộ khác'));
+    await tester.ensureVisible(find.text('Khác'));
     expect(
       tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Mẹ')).selected,
       true,
     );
-    await tester.tap(find.text('Người giám hộ khác'));
+    await tester.tap(find.text('Khác'));
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<ChoiceChip>(
-            find.widgetWithText(ChoiceChip, 'Người giám hộ khác'),
-          )
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Khác'))
           .selected,
       true,
     );
@@ -237,7 +235,9 @@ void main() {
         await tester.enterText(find.byType(TextFormField).at(i), values[i]);
       }
       await tester.ensureVisible(find.byType(Checkbox));
-      final termsLink = find.text('Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư');
+      final termsLink = find.text(
+        'Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư',
+      );
       await tester.ensureVisible(termsLink);
       await tester.tap(termsLink);
       await tester.pumpAndSettle();
@@ -308,12 +308,8 @@ void main() {
     ]) {
       expect(find.text(label), findsWidgets);
     }
-    await tester.scrollUntilVisible(
-      find.text('Cân nặng'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Chưa có số đo'), findsWidgets);
+    expect(find.text('Cân nặng'), findsNothing);
+    expect(find.text('Chiều cao'), findsNothing);
     expect(find.text('12,5 kg'), findsNothing);
     expect(find.text('Bé ăn ngon hơn'), findsNothing);
     expect(tester.takeException(), isNull);
