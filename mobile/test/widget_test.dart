@@ -22,7 +22,9 @@ Future<void> openIntroduction(WidgetTester tester) async {
   await tester.pumpWidget(const TrackChildrenApp());
   await tester.runAsync(
     () => precacheImage(
-      const AssetImage('assets/images/scenery/backgrounds/start_screen.png'),
+      const AssetImage(
+        'assets/images/scenery/backgrounds/start-assets/mascot/idle.png',
+      ),
       tester.element(find.byType(StartScreen)),
     ),
   );

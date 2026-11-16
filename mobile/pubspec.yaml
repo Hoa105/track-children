@@ -101,6 +101,14 @@ flutter:
   assets:
     - assets/assessment/
     - assets/images/scenery/backgrounds/
+    - assets/images/scenery/backgrounds/start-assets/background/start_background.svg
+    - assets/images/scenery/backgrounds/start-assets/background/foreground.svg
+    - assets/images/scenery/backgrounds/start-assets/mascot/
+    - assets/images/scenery/backgrounds/start-assets/decorations/circle.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/ground_shadow.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/underline.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/rays.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/heart.svg
     - assets/images/scenery/backgrounds/default/
     - assets/images/scenery/icons/care/
     - assets/images/scenery/icons/age-milestones/active/

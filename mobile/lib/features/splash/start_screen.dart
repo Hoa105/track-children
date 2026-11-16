@@ -1,27 +1,35 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../app_colors.dart';
-import '../../app_layout.dart';
 import 'splash_screen.dart';
 
-/// Brand artwork shown before the existing introduction flow.
+const _assets = 'assets/images/scenery/backgrounds/start-assets';
+
+/// Presentation is independent of the existing introduction timer and routing.
 class StartScreen extends StatefulWidget {
   const StartScreen({required this.onLoginRequired, super.key});
-
   final VoidCallback onLoginRequired;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
-class _StartScreenState extends State<StartScreen> {
+class _StartScreenState extends State<StartScreen>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
   bool _showIntroduction = false;
+  bool _preloading = false;
+  final _ready = <String>{};
+  late final _animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
 
   void _onArtworkVisible() {
-    // Start the display interval after the image has actually been painted.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _timer != null) return;
       _timer = Timer(const Duration(seconds: 2), () {
@@ -31,8 +39,35 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _animation.value = 1;
+    } else if (_animation.status == AnimationStatus.dismissed) {
+      _animation.forward();
+    }
+    if (!_preloading) {
+      _preloading = true;
+      for (final pose in ['idle', 'jump', 'welcome', 'happy']) {
+        _loadPose(pose);
+      }
+    }
+  }
+
+  Future<void> _loadPose(String pose) async {
+    var failed = false;
+    await precacheImage(
+      AssetImage('$_assets/mascot/$pose.png'),
+      context,
+      onError: (error, stack) => failed = true,
+    );
+    if (mounted && !failed) setState(() => _ready.add(pose));
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
+    _animation.dispose();
     super.dispose();
   }
 
@@ -42,106 +77,201 @@ class _StartScreenState extends State<StartScreen> {
       return SplashScreen(onLoginRequired: widget.onLoginRequired);
     }
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SizedBox.expand(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/scenery/backgrounds/start_screen.png',
+      backgroundColor: StartColors.background,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Both full-screen layers share the same canvas, fit and alignment.
+          SvgPicture.asset(
+            '$_assets/background/start_background.svg',
+            fit: BoxFit.cover,
+            alignment: Alignment.bottomCenter,
+            excludeFromSemantics: true,
+          ),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final scale = math
+                    .min(
+                      constraints.maxWidth / 360,
+                      constraints.maxHeight / 752,
+                    )
+                    .clamp(0.0, 1.35);
+                final mascotWidth = 350 * scale;
+                final mascotHeight = mascotWidth * 600 / 640;
+                final circleSize = 225 * scale;
+                // Text keeps system scaling; illustration yields vertical space.
+                return Column(
+                  children: [
+                    Spacer(flex: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: AnimatedBuilder(
+                        animation: _animation,
+                        builder: (context, _) => Opacity(
+                          opacity: ((_animation.value * 1200 - 550) / 180)
+                              .clamp(0.0, 1.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Bé lớn khôn',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 40 * math.min(1.0, scale),
+                                  height: 1.2,
+                                  color: StartColors.ink,
+                                ),
+                              ),
+                              SvgPicture.asset(
+                                '$_assets/decorations/underline.svg',
+                                width: 150 * scale,
+                                height: 20 * scale,
+                                excludeFromSemantics: true,
+                              ),
+                              Opacity(
+                                opacity: ((_animation.value * 1200 - 700) / 180)
+                                    .clamp(0.0, 1.0),
+                                child: const Text(
+                                  'Cùng con lớn khôn mỗi ngày',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Nunito',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    height: 1.4,
+                                    color: StartColors.slogan,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12 * scale),
+                    Flexible(
+                      flex: 42,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: mascotWidth,
+                          height: mascotHeight,
+                          child: AnimatedBuilder(
+                            animation: _animation,
+                            builder: (context, _) {
+                              final ms = _animation.value * 1200;
+                              final requested = ms < 200
+                                  ? 'idle'
+                                  : ms < 550
+                                  ? 'jump'
+                                  : ms < 900
+                                  ? 'welcome'
+                                  : 'happy';
+                              final pose = _ready.contains(requested)
+                                  ? requested
+                                  : _ready.contains('idle')
+                                  ? 'idle'
+                                  : _ready.isNotEmpty
+                                  ? _ready.first
+                                  : 'idle';
+                              final y = ms < 200
+                                  ? 24 *
+                                        (1 - Curves.easeOut.transform(ms / 200))
+                                  : ms < 550
+                                  ? -16 * math.sin((ms - 200) / 350 * math.pi)
+                                  : 0.0;
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SvgPicture.asset(
+                                    '$_assets/decorations/circle.svg',
+                                    width: circleSize,
+                                    height: circleSize,
+                                    excludeFromSemantics: true,
+                                  ),
+                                  Positioned(
+                                    top: mascotHeight * 0.84,
+                                    child: SvgPicture.asset(
+                                      '$_assets/decorations/ground_shadow.svg',
+                                      width: 110 * scale,
+                                      height: 20 * scale,
+                                      excludeFromSemantics: true,
+                                    ),
+                                  ),
+                                  Transform.translate(
+                                    offset: Offset(0, y * scale),
+                                    child: Opacity(
+                                      opacity: (ms / 200).clamp(0.0, 1.0),
+                                      child: Image.asset(
+                                        '$_assets/mascot/$pose.png',
+                                        key: ValueKey(pose),
+                                        width: mascotWidth,
+                                        height: mascotHeight,
+                                        fit: BoxFit.contain,
+                                        gaplessPlayback: true,
+                                        excludeFromSemantics: true,
+                                        frameBuilder:
+                                            (context, child, frame, sync) {
+                                              if (sync || frame != null) {
+                                                _onArtworkVisible();
+                                              }
+                                              return child;
+                                            },
+                                        errorBuilder: (context, error, stack) {
+                                          _onArtworkVisible();
+                                          return const SizedBox.expand();
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  for (final decoration in ['rays', 'heart'])
+                                    Positioned(
+                                      left: decoration == 'rays'
+                                          ? 24 * scale
+                                          : null,
+                                      right: decoration == 'heart'
+                                          ? 24 * scale
+                                          : null,
+                                      top: 90 * scale,
+                                      child: Opacity(
+                                        opacity: ((ms - 550) / 250).clamp(
+                                          0.0,
+                                          1.0,
+                                        ),
+                                        child: SvgPicture.asset(
+                                          '$_assets/decorations/$decoration.svg',
+                                          width: 32 * scale,
+                                          height: 36 * scale,
+                                          excludeFromSemantics: true,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    Spacer(flex: 25),
+                  ],
+                );
+              },
+            ),
+          ),
+          IgnorePointer(
+            child: SvgPicture.asset(
+              '$_assets/background/foreground.svg',
               fit: BoxFit.cover,
-              semanticLabel: 'Bé lớn khôn. Cùng con lớn khôn mỗi ngày.',
-              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                if (wasSynchronouslyLoaded || frame != null) {
-                  _onArtworkVisible();
-                }
-                return child;
-              },
-              errorBuilder: (context, error, stackTrace) {
-                // Never trap the user on the launch screen if decoding fails.
-                _onArtworkVisible();
-                return const Center(child: Text('Bé lớn khôn'));
-              },
+              alignment: Alignment.bottomCenter,
+              excludeFromSemantics: true,
             ),
-            SafeArea(
-              child: Center(
-                child: Transform.translate(
-                  offset: const Offset(0, -40),
-                  child: const _LoadingDots(),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-}
-
-class _LoadingDots extends StatefulWidget {
-  const _LoadingDots();
-
-  @override
-  State<_LoadingDots> createState() => _LoadingDotsState();
-}
-
-class _LoadingDotsState extends State<_LoadingDots>
-    with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  );
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-    } else {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'Đang tải ứng dụng',
-    child: ExcludeSemantics(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final activeDot = (_controller.value * 3).floor();
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(
-              3,
-              (index) => Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppLayout.smallGap / 2,
-                ),
-                child: AnimatedOpacity(
-                  duration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : const Duration(milliseconds: 200),
-                  opacity: index == activeDot ? 1 : 0.3,
-                  child: const DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: SizedBox.square(dimension: AppLayout.smallGap),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ),
-  );
 }

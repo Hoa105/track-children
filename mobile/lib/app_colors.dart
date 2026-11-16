@@ -50,3 +50,22 @@ abstract final class HomeColors {
   static const reminderBackground = Color(0xFFEAF5C9);
   static const reminderCta = Color(0xFF477921);
 }
+
+/// Green Sprout colors scoped to the Start presentation.
+abstract final class StartColors {
+  static const background = HomeColors.background;
+  static const ink = HomeColors.ink;
+  static const slogan = HomeColors.reminderCta;
+}
+
+/// Green Sprout palette scoped to child profile selection.
+abstract final class ChildProfileSelectionColors {
+  static const background = HomeColors.background;
+  static const surface = HomeColors.surface;
+  static const ink = HomeColors.ink;
+  static const secondary = HomeColors.reminderCta;
+  static const primary = HomeColors.primary;
+  static const avatar = HomeColors.iconBackground;
+  static const border = HomeColors.iconBackground;
+  static const pressed = HomeColors.reminderBackground;
+}
