@@ -5,6 +5,12 @@ import 'package:track_children/features/home/home_screen.dart';
 import 'package:track_children/features/growth/growth_screen.dart';
 import 'package:track_children/services/demo_store.dart';
 
+import 'package:track_children/features/feeding/milk_calculator_screen.dart';
+import 'package:track_children/features/vaccination/vaccination_screen.dart';
+import 'package:track_children/features/teething/teething_screen.dart';
+import 'package:track_children/features/activities/activities_screen.dart';
+import 'package:track_children/features/journal/journal_screen.dart';
+
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -45,7 +51,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Hành trình lớn khôn'),
+      find.byKey(const ValueKey('home-milestones-scroll')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
@@ -104,22 +110,41 @@ void main() {
     },
   );
 
-  testWidgets('height card opens height tracking', (tester) async {
+  testWidgets('tracking remains accessible from bottom navigation', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(home: HomeScreen(childName: 'Bảo An')),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Chiều cao'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Chiều cao'));
+    expect(find.text('Chiều cao'), findsNothing);
+    await tester.tap(find.text('Theo dõi'));
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<GrowthScreen>(find.byType(GrowthScreen)).initialMetric,
-      1,
-    );
+    expect(find.byType(GrowthScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  for (final route in <String, Type>{
+    'Lượng sữa': MilkCalculatorScreen,
+    'Tiêm chủng': VaccinationScreen,
+    'Mọc răng': TeethingScreen,
+    'Hoạt động': ActivitiesScreen,
+    'Nhật ký': JournalScreen,
+  }.entries) {
+    testWidgets('care shortcut opens ${route.value}', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 800);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        const MaterialApp(home: HomeScreen(childName: 'Bảo An')),
+      );
+      await tester.pumpAndSettle();
+      final shortcut = find.bySemanticsLabel(route.key);
+      await tester.ensureVisible(shortcut);
+      await tester.pumpAndSettle();
+      await tester.tap(shortcut);
+      await tester.pumpAndSettle();
+      expect(find.byType(route.value), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

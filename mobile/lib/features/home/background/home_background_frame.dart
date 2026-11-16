@@ -138,7 +138,10 @@ class HomeBackgroundFrame extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFE3F0E7), AppColors.background],
+                  colors: [
+                    HomeColors.headerStart,
+                    HomeColors.headerEnd,
+                  ],
                 ),
               ),
               child: header!,

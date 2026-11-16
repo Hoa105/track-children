@@ -20,6 +20,18 @@ class HomeProfileHeader extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onSettingsTap;
   final VoidCallback onNotificationsTap;
+  String _ageLabel(Map<String, dynamic> child) {
+    final months = int.parse(
+      DemoStore.instance.ageLabel(child).split(' ').first,
+    );
+    if (months < 12) return '$months tháng';
+    final years = months ~/ 12;
+    final remainingMonths = months % 12;
+    return remainingMonths == 0
+        ? '$years tuổi'
+        : '$years tuổi $remainingMonths tháng';
+  }
+
   @override
   Widget build(BuildContext context) => Row(
     key: const ValueKey('home-profile-header'),
@@ -29,9 +41,14 @@ class HomeProfileHeader extends StatelessWidget {
         height: AppLayout.minimumTouchTarget,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white,
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: const [BoxShadow(color: Color(0x1A194C3C), blurRadius: 8)],
+          color: HomeColors.surface,
+          border: Border.all(color: HomeColors.surface, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: HomeColors.ink.withValues(alpha: .08),
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: DemoStore.instance.child?['avatar_base64'] != null
             ? ClipOval(
@@ -44,7 +61,7 @@ class HomeProfileHeader extends StatelessWidget {
               )
             : const Icon(
                 Icons.child_care_rounded,
-                color: AppColors.primary,
+                color: HomeColors.primary,
                 size: 28,
               ),
       ),
@@ -64,7 +81,7 @@ class HomeProfileHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.primaryDark,
+                        color: HomeColors.ink,
                         fontSize: AppLayout.homeProfileNameSize,
                         fontWeight: FontWeight.w700,
                       ),
@@ -73,15 +90,19 @@ class HomeProfileHeader extends StatelessWidget {
                   if (DemoStore.instance.signedIn)
                     PopupMenuButton<String>(
                       tooltip: 'Đổi hồ sơ bé',
+                      color: HomeColors.surface,
                       icon: const Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.primary,
+                        color: HomeColors.primary,
                       ),
                       itemBuilder: (_) => [
                         for (final child in DemoStore.instance.children)
                           PopupMenuItem(
                             value: child['id'] as String,
-                            child: Text(child['full_name'] as String),
+                            child: Text(
+                              child['full_name'] as String,
+                              style: const TextStyle(color: HomeColors.ink),
+                            ),
                           ),
                       ],
                       onSelected: (id) => DemoStore.instance.selectChild(id),
@@ -89,18 +110,18 @@ class HomeProfileHeader extends StatelessWidget {
                   else
                     const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.primary,
+                      color: HomeColors.primary,
                     ),
                 ],
               ),
               Text(
                 DemoStore.instance.child == null
                     ? 'Chưa chọn hồ sơ bé'
-                    : DemoStore.instance.ageLabel(DemoStore.instance.child!),
+                    : _ageLabel(DemoStore.instance.child!),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: HomeColors.primary,
                   fontSize: AppLayout.homeHeroBodySize,
                 ),
               ),
@@ -161,6 +182,10 @@ class _RoundAction extends StatelessWidget {
               width: 24,
               height: 24,
               semanticsLabel: label,
+              colorFilter: const ColorFilter.mode(
+                HomeColors.primary,
+                BlendMode.srcIn,
+              ),
             ),
           ),
         ),

@@ -103,7 +103,9 @@ flutter:
     - assets/images/scenery/backgrounds/
     - assets/images/scenery/backgrounds/default/
     - assets/images/scenery/icons/care/
-    - assets/images/scenery/icons/age_milestones/
+    - assets/images/scenery/icons/age-milestones/active/
+    - assets/images/scenery/icons/age-milestones/inactive/
+    - assets/images/scenery/icons/age-milestones/timeline/
     - assets/images/scenery/icons/ui/
     # BEGIN PHOTOBOOTH ASSETS
     - assets/photobooth/catalog.json
@@ -237,6 +239,7 @@ flutter:
     - assets/photobooth/stickers/belonkhon/mascot/play_ball.png
     - assets/photobooth/stickers/belonkhon/mascot/drawing.png
     - assets/photobooth/stickers/belonkhon/mascot/read_book.png
+    - assets/photobooth/stickers/belonkhon/mascot/take_test.png
     - assets/photobooth/stickers/belonkhon/mascot/building_blocks.png
     - assets/photobooth/stickers/belonkhon/mascot/brush_teeth.png
     - assets/photobooth/stickers/belonkhon/mascot/sleep_blanket.png

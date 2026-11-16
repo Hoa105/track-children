@@ -104,7 +104,7 @@ void main() {
         );
         expect(
           find.descendant(of: care, matching: find.byType(Image)),
-          findsNWidgets(5),
+          findsNWidgets(17),
         );
         expect(
           find.descendant(of: care, matching: find.byType(SvgPicture)),
@@ -112,7 +112,9 @@ void main() {
         );
         if ((size.width == 320 || size.width == 430) && scale == 1) {
           await capture(tester, captureKey, '${size.width.toInt()}_top');
-          await tester.ensureVisible(find.text('Hôm nay bé cần gì?'));
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('home-care-title')),
+          );
           await tester.pumpAndSettle();
           await capture(tester, captureKey, '${size.width.toInt()}_care');
         }
@@ -147,18 +149,7 @@ void main() {
           'Hành trình lớn khôn',
           'Nhật ký gần đây',
         ]) {
-          await tester.scrollUntilVisible(
-            find.text(label),
-            200,
-            scrollable: find
-                .descendant(
-                  of: find.byType(CustomScrollView),
-                  matching: find.byType(Scrollable),
-                )
-                .first,
-          );
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
+          expect(find.text(label), findsNothing);
         }
         if ((size.width == 320 || size.width == 430) && scale == 1) {
           await capture(tester, captureKey, '${size.width.toInt()}_lower');
@@ -176,7 +167,7 @@ void main() {
         verticalPosition.jumpTo(0);
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
-          find.text('Hành trình lớn khôn'),
+          find.byKey(const ValueKey('home-milestones-scroll')),
           200,
           scrollable: find
               .descendant(
@@ -216,6 +207,39 @@ void main() {
       });
     }
   }
+  testWidgets('Home 360 with due assessment banner', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    DemoStore.resetInstanceForTesting();
+    await DemoStore.instance.login('demo@trackchildren.vn', DemoStore.password);
+    await DemoStore.instance.selectChild('child_an');
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.reset);
+    addTearDown(DemoStore.resetInstanceForTesting);
+    final captureKey = GlobalKey();
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: captureKey,
+        child: MaterialApp(
+          theme: ThemeData(fontFamily: 'Nunito'),
+          home: const HomeScreen(childName: 'Bảo An'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('home-assessment-reminder')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('home-care-title')));
+    await tester.pumpAndSettle();
+    await capture(tester, captureKey, '360_due_reminder');
+    expect(tester.takeException(), isNull);
+  });
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final size in const [
       Size(320, 568),
