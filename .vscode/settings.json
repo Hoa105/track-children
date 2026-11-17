@@ -1,0 +1,5 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/mobile/windows",
+    "cmake.buildDirectory": "${workspaceFolder}/mobile/build/windows/x64",
+    "cmake.generator": "Visual Studio 18 2026"
+}
