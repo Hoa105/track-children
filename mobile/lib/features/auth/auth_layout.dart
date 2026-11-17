@@ -102,7 +102,7 @@ class AuthMascotController extends ChangeNotifier {
 class AuthMascot extends StatefulWidget {
   const AuthMascot({required this.controller, super.key});
   final AuthMascotController controller;
-  static const root = 'assets/images/scenery/icons/auth-mascot/';
+  static const root = 'assets/images/scenery/backgrounds/auth-mascot/';
   static String asset(AuthMascotPose pose) =>
       '$root${switch (pose) {
         AuthMascotPose.passwordHidden => 'password_hidden',
@@ -386,25 +386,41 @@ class _AuthLayoutState extends State<AuthLayout>
                         return Stack(
                           clipBehavior: Clip.hardEdge,
                           children: [
-                            Positioned(
-                              top: height * .85 * (1 - progress),
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: SizedBox(
-                                  width: height * 640 / 600,
-                                  height: height,
-                                  child: AuthMascot(controller: widget.mascot),
-                                ),
-                              ),
-                            ),
                             Padding(
-                              padding: EdgeInsets.only(top: height * .85),
+                              // The updated artwork meets the form at y=540/600.
+                              padding: EdgeInsets.only(top: height * .9),
                               child: Opacity(
                                 opacity: formProgress,
                                 child: Transform.translate(
                                   offset: Offset(0, 8 * (1 - formProgress)),
                                   child: child,
+                                ),
+                              ),
+                            ),
+                            // Keep the artwork anchored to the form edge and
+                            // paint fingers over the border without blocking inputs.
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: height,
+                              child: IgnorePointer(
+                                child: ClipRect(
+                                  child: Transform.translate(
+                                    offset: Offset(
+                                      0,
+                                      height * .9 * (1 - progress),
+                                    ),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: height * 640 / 600,
+                                        height: height,
+                                        child: AuthMascot(
+                                          controller: widget.mascot,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

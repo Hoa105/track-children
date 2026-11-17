@@ -15,15 +15,18 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   static const _pages = [
     _SplashPageData(
-      image: 'assets/images/scenery/backgrounds/splash_screen_1.png',
-      title: 'Chăm sóc bé dễ dàng hơn',
-      description:
-          'Theo dõi hành trình lớn khôn của con qua từng cột mốc phát triển.',
+      image: 'assets/images/scenery/backgrounds/splash_1.png',
+      title: 'Cùng con lớn khôn mỗi ngày',
+      description: 'Theo dõi tăng trưởng, đánh giá phát triển và khám phá hoạt động phù hợp với độ tuổi của con.',
+      cropTop: .18,
+      cropBottom: .13,
     ),
     _SplashPageData(
-      image: 'assets/images/scenery/backgrounds/splash_screen_2.png',
-      title: 'Đồng hành cùng bé mỗi ngày',
-      description: 'Theo dõi tăng trưởng, lịch tiêm chủng, dinh dưỡng và những khoảnh khắc đáng nhớ.',
+      image: 'assets/images/scenery/backgrounds/splash_2.png',
+      title: 'Lưu giữ hành trình, cùng nhau chăm bé',
+      description: 'Lưu nhật ký ảnh, video, nhận xét AI và chia sẻ hồ sơ để cả nhà cùng đồng hành với bé.',
+      cropTop: .21,
+      cropBottom: .23,
     ),
   ];
 
@@ -32,12 +35,25 @@ class _SplashScreenState extends State<SplashScreen> {
   int _currentPage = 0;
   bool _isLoading = true;
   bool _isFinishing = false;
+  bool _artworkPreloaded = false;
+  bool _transitioning = false;
   Object? _error;
 
   @override
   void initState() {
     super.initState();
     _initialize();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_artworkPreloaded) return;
+    _artworkPreloaded = true;
+    // Decode both illustrations before the first swipe, without delaying UI.
+    for (final page in _pages) {
+      precacheImage(AssetImage(page.image), context, onError: (_, _) {});
+    }
   }
 
   @override
@@ -70,15 +86,23 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  void _next() {
+  Future<void> _next() async {
+    if (_transitioning || _isFinishing) return;
     if (_currentPage == _pages.length - 1) {
       _finish();
       return;
     }
-    _controller.nextPage(
-      duration: const Duration(milliseconds: 460),
-      curve: Curves.easeInOutCubic,
-    );
+    _transitioning = true;
+    try {
+      await _controller.nextPage(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 460),
+        curve: Curves.easeInOutCubic,
+      );
+    } finally {
+      _transitioning = false;
+    }
   }
 
   Future<void> _retry() async {
@@ -93,10 +117,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     if (_isLoading || _error != null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: HomeColors.background,
         body: Center(
           child: _error == null
-              ? const CircularProgressIndicator(color: AppColors.primary)
+              ? const CircularProgressIndicator(color: HomeColors.primary)
               : Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -120,33 +144,17 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: HomeColors.background,
       body: PageView.builder(
         controller: _controller,
         itemCount: _pages.length,
         onPageChanged: (index) => setState(() => _currentPage = index),
-        itemBuilder: (context, index) => AnimatedBuilder(
-          animation: _controller,
-          child: _SplashPage(
-            data: _pages[index],
-            currentPage: _currentPage,
-            isFinishing: _isFinishing,
-            onContinue: _next,
-          ),
-          builder: (context, child) {
-            final page = _controller.hasClients
-                ? _controller.page ?? _currentPage.toDouble()
-                : _currentPage.toDouble();
-            final distance = (page - index).abs().clamp(0.0, 1.0).toDouble();
-            final progress = 1 - distance;
-            return Opacity(
-              opacity: 0.84 + (0.16 * progress),
-              child: Transform.scale(
-                scale: 0.97 + (0.03 * progress),
-                child: child,
-              ),
-            );
-          },
+        itemBuilder: (context, index) => _SplashPage(
+          data: _pages[index],
+          currentPage: _currentPage,
+          isFinishing: _isFinishing,
+          onContinue: _next,
+          onSkip: _finish,
         ),
       ),
     );
@@ -158,11 +166,14 @@ class _SplashPageData {
     required this.image,
     required this.title,
     required this.description,
+    required this.cropTop,
+    required this.cropBottom,
   });
 
   final String image;
   final String title;
   final String description;
+  final double cropTop, cropBottom;
 }
 
 class _SplashPage extends StatelessWidget {
@@ -171,12 +182,14 @@ class _SplashPage extends StatelessWidget {
     required this.currentPage,
     required this.isFinishing,
     required this.onContinue,
+    required this.onSkip,
   });
 
   final _SplashPageData data;
   final int currentPage;
   final bool isFinishing;
   final VoidCallback onContinue;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -185,13 +198,31 @@ class _SplashPage extends StatelessWidget {
       SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
+            key: PageStorageKey(data.image),
+            primary: false,
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isFinishing ? null : onSkip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: HomeColors.reminderCta,
+                          minimumSize: const Size(48, 48),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        child: const Text('Bỏ qua'),
+                      ),
+                    ),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: Column(
@@ -201,17 +232,18 @@ class _SplashPage extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                                  color: AppColors.primaryDark,
+                                  color: HomeColors.ink,
+                                  fontWeight: FontWeight.w800,
                                   height: 1.2,
                                 ),
                           ),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: 10),
                           Text(
                             data.description,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(
-                                  color: AppColors.textPrimary,
+                                  color: HomeColors.reminderCta,
                                   height: 1.45,
                                 ),
                           ),
@@ -220,17 +252,45 @@ class _SplashPage extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: ClipRect(
-                        // Keep the artwork and embedded labels; trim only the
-                        // empty sky (25%) and bottom background (15%).
-                        child: Align(
-                          alignment: const Alignment(0, 0.25),
-                          heightFactor: 0.60,
-                          child: Image.asset(
-                            data.image,
-                            width: constraints.maxWidth - 48,
-                            fit: BoxFit.contain,
-                            excludeFromSemantics: true,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight * .52,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: ClipRect(
+                            // Trim transparent margins only; keep the first
+                            // illustration's timeline and the second one's book.
+                            child: Align(
+                              alignment: Alignment(
+                                0,
+                                2 *
+                                        data.cropTop /
+                                        (data.cropTop + data.cropBottom) -
+                                    1,
+                              ),
+                              heightFactor: 1 - data.cropTop - data.cropBottom,
+                              widthFactor: .92,
+                              child: RepaintBoundary(
+                                child: Image.asset(
+                                  data.image,
+                                  width: constraints.maxWidth - 32,
+                                  // Reserve the source aspect ratio even before
+                                  // decoding finishes, so Column never reflows.
+                                  height:
+                                      (constraints.maxWidth - 32) * 1672 / 941,
+                                  fit: BoxFit.contain,
+                                  excludeFromSemantics: true,
+                                  errorBuilder: (_, _, _) => SizedBox(
+                                    width: constraints.maxWidth - 32,
+                                    height:
+                                        (constraints.maxWidth - 32) *
+                                        1672 /
+                                        941,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -253,8 +313,8 @@ class _SplashPage extends StatelessWidget {
                                 height: 8,
                                 decoration: BoxDecoration(
                                   color: index == currentPage
-                                      ? AppColors.primary
-                                      : AppColors.border,
+                                      ? HomeColors.primary
+                                      : HomeColors.iconBackground,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
@@ -270,8 +330,13 @@ class _SplashPage extends StatelessWidget {
                               onPressed: isFinishing ? null : onContinue,
                               style: FilledButton.styleFrom(
                                 minimumSize: const Size(0, 56),
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: HomeColors.primary,
                                 foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),

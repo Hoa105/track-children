@@ -28,9 +28,22 @@ import 'features/growth/growth_tracking_flow.dart';
 
 import 'features/splash/splash_screen.dart';
 import 'features/splash/start_screen.dart';
+import 'features/splash/native_startup_screen.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    WebKeyboardInsets(
+      child: TrackChildrenApp(
+        initialize: initializeApplication,
+        nativeStart: arguments.contains('native-start'),
+      ),
+    ),
+  );
+}
+
+/// Start renders while the existing initialization sequence runs.
+Future<void> initializeApplication() async {
   await DemoStore.instance.initialize();
   await AuthService.instance.restore();
   if (!AuthService.instance.signedIn) {
@@ -70,11 +83,16 @@ Future<void> main() async {
     DemoStore.instance.syncJournal(child['id'] as String);
     DemoStore.instance.syncTeeth(child['id'] as String);
   }
-  runApp(const WebKeyboardInsets(child: TrackChildrenApp()));
 }
 
 class TrackChildrenApp extends StatefulWidget {
-  const TrackChildrenApp({super.key});
+  const TrackChildrenApp({
+    this.initialize,
+    this.nativeStart = false,
+    super.key,
+  });
+  final Future<void> Function()? initialize;
+  final bool nativeStart;
 
   @override
   State<TrackChildrenApp> createState() => _TrackChildrenAppState();
@@ -113,6 +131,10 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       await _showChildProfileSelection();
       return;
     }
+    _showAuthScreen();
+  }
+
+  void _showAuthScreen() {
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => AuthScreen(
@@ -181,6 +203,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
         builder: (_) => ChildProfileSelectionScreen(
           onSelectChild: _showDemoHome,
           onAddChild: _showChildProfilePreview,
+          onBack: _showAuthScreen,
         ),
       ),
       (_) => false,
@@ -277,7 +300,15 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
           labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
-      home: StartScreen(onLoginRequired: _showLoginAfterSplash),
+      home: widget.nativeStart
+          ? NativeStartupScreen(
+              onLoginRequired: _showLoginAfterSplash,
+              initialize: widget.initialize,
+            )
+          : StartScreen(
+              onLoginRequired: _showLoginAfterSplash,
+              initialize: widget.initialize,
+            ),
     );
   }
 }

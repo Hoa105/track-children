@@ -9,10 +9,10 @@ import 'package:track_children/features/splash/splash_screen.dart';
 
 void main() {
   testWidgets('diagnose splash and auth first render costs', (tester) async {
-    const assets = [
-      'assets/images/scenery/backgrounds/splash_screen_1.png',
-      'assets/images/scenery/backgrounds/splash_screen_2.png',
-      'assets/images/scenery/backgrounds/green_leaf.png',
+    final assets = [
+      'assets/images/scenery/backgrounds/splash_1.png',
+      'assets/images/scenery/backgrounds/splash_2.png',
+      for (final pose in AuthMascotPose.values) AuthMascot.asset(pose),
     ];
 
     for (final asset in assets) {

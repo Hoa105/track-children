@@ -25,7 +25,7 @@ void main() {
       ),
     );
     await tester.runAsync(() async {
-      for (final pose in ['idle', 'jump', 'welcome', 'happy']) {
+      for (final pose in ['idle', 'happy', 'welcome']) {
         await precacheImage(
           AssetImage(
             'assets/images/scenery/backgrounds/start-assets/mascot/$pose.png',
@@ -37,10 +37,11 @@ void main() {
     await tester.pump();
     var previous = 0;
     for (final entry in {
-      'idle': 100,
-      'jump': 350,
-      'welcome': 800,
-      'happy': 1200,
+      'name': 0,
+      'title': 280,
+      'idle': 400,
+      'happy': 650,
+      'welcome': 1200,
     }.entries) {
       await tester.pump(Duration(milliseconds: entry.value - previous));
       await tester.pump();

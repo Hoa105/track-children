@@ -724,7 +724,7 @@ class _MeasurementChartState extends State<_MeasurementChart> {
               ),
               const SizedBox(height: 3),
               Text(
-                '${formatGrowthValue(selected.value)} ${widget.metric.unit} · ${selected.measuredAt.day}/${selected.measuredAt.month}/${selected.measuredAt.year}',
+                '${formatGrowthValue(selected.value)} ${widget.metric.unit} - ${selected.measuredAt.day.toString().padLeft(2, '0')}/${selected.measuredAt.month.toString().padLeft(2, '0')}/${selected.measuredAt.year}',
                 textAlign: TextAlign.right,
                 style: const TextStyle(
                   color: Color(0xFF233E47),
@@ -822,10 +822,12 @@ class _MeasurementPainter extends CustomPainter {
   final bool zoom;
   final GrowthMeasurementDraft selected;
   static const color = Color(0xFF168B87);
-  double get low => math.max(
-    0,
-    rows.map((r) => r.value).reduce(math.min).floorToDouble() - 1,
-  );
+  double get low => metric == GrowthMetric.weight && !zoom
+      ? 0
+      : math.max(
+          0,
+          rows.map((r) => r.value).reduce(math.min).floorToDouble() - 1,
+        );
   double get high => math.max(
     low + 2,
     rows.map((r) => r.value).reduce(math.max).ceilToDouble() + 1,
@@ -893,7 +895,9 @@ class _MeasurementPainter extends CustomPainter {
     );
   }
 
-  String naturalLabel(double value) => value.round().toString();
+  String naturalLabel(double value) => metric == GrowthMetric.weight
+      ? formatGrowthValue(value)
+      : value.round().toString();
 
   @override
   void paint(Canvas canvas, Size size) {

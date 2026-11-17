@@ -8,11 +8,13 @@ class ChildProfileSelectionScreen extends StatefulWidget {
   const ChildProfileSelectionScreen({
     required this.onSelectChild,
     required this.onAddChild,
+    this.onBack,
     super.key,
   });
 
   final ValueChanged<String> onSelectChild;
   final VoidCallback onAddChild;
+  final VoidCallback? onBack;
 
   @override
   State<ChildProfileSelectionScreen> createState() => _SelectionState();
@@ -21,9 +23,23 @@ class ChildProfileSelectionScreen extends StatefulWidget {
 class _SelectionState extends State<ChildProfileSelectionScreen>
     with DemoStoreBinding {
   bool _selecting = false;
+  bool _leaving = false;
+
+  bool get _busy => _selecting || _leaving;
+
+  void _goBack() {
+    if (_busy) return;
+    final onBack = widget.onBack;
+    if (onBack == null) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    setState(() => _leaving = true);
+    onBack();
+  }
 
   Future<void> _select(Map<String, dynamic> child) async {
-    if (_selecting) return;
+    if (_busy) return;
     setState(() => _selecting = true);
     try {
       await DemoStore.instance.selectChild(child['id'] as String);
@@ -72,82 +88,92 @@ class _SelectionState extends State<ChildProfileSelectionScreen>
         splashColor: ChildProfileSelectionColors.pressed,
         highlightColor: ChildProfileSelectionColors.pressed,
       ),
-      child: Builder(
-        builder: (context) => Scaffold(
-          body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          tooltip: 'Quay lại',
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: const Icon(Icons.arrow_back_rounded),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'Chọn hồ sơ bé',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Chọn hồ sơ để tiếp tục theo dõi hành trình của bé.',
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: ChildProfileSelectionColors.secondary,
-                                height: 1.5,
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        if (_selecting) const LinearProgressIndicator(),
-                        if (!DemoStore.instance.signedIn)
-                          _ChildProfileCard(
-                            onTap: () => widget.onSelectChild('Bé An'),
+      child: PopScope<Object?>(
+        canPop: widget.onBack == null && !_busy,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop && widget.onBack != null) _goBack();
+        },
+        child: Builder(
+          builder: (context) => Scaffold(
+            body: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            tooltip: 'Quay lại',
+                            onPressed: _busy ? null : _goBack,
+                            icon: const Icon(Icons.arrow_back_rounded),
                           ),
-                        for (final child in DemoStore.instance.children)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _ChildProfileCard(
-                              name: child['full_name'] as String,
-                              age: DemoStore.instance.ageLabel(child),
-                              onTap: () => _select(child),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Chọn hồ sơ bé',
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Chọn hồ sơ để tiếp tục theo dõi hành trình của bé.',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: ChildProfileSelectionColors.secondary,
+                                  height: 1.5,
+                                ),
+                          ),
+                          const SizedBox(height: 24),
+                          if (_selecting) const LinearProgressIndicator(),
+                          if (!DemoStore.instance.signedIn)
+                            _ChildProfileCard(
+                              onTap: _busy
+                                  ? null
+                                  : () => widget.onSelectChild('Bé An'),
                             ),
-                          ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: widget.onAddChild,
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Thêm hồ sơ bé'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(52),
-                              backgroundColor:
-                                  ChildProfileSelectionColors.primary,
-                              foregroundColor:
-                                  ChildProfileSelectionColors.surface,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
-                              ),
-                              textStyle: const TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                          for (final child in DemoStore.instance.children)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _ChildProfileCard(
+                                name: child['full_name'] as String,
+                                age: DemoStore.instance.ageLabel(child),
+                                onTap: _busy ? null : () => _select(child),
                               ),
                             ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: _busy ? null : widget.onAddChild,
+                              icon: const Icon(Icons.add_rounded),
+                              label: const Text('Thêm hồ sơ bé'),
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size.fromHeight(52),
+                                backgroundColor:
+                                    ChildProfileSelectionColors.primary,
+                                foregroundColor:
+                                    ChildProfileSelectionColors.surface,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -168,7 +194,7 @@ class _ChildProfileCard extends StatelessWidget {
   });
   final String name, age;
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Material(

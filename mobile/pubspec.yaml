@@ -109,13 +109,16 @@ flutter:
     - assets/images/scenery/backgrounds/start-assets/decorations/underline.svg
     - assets/images/scenery/backgrounds/start-assets/decorations/rays.svg
     - assets/images/scenery/backgrounds/start-assets/decorations/heart.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/dashed_curve.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/jump_marks.svg
+    - assets/images/scenery/backgrounds/start-assets/decorations/sparkles.svg
     - assets/images/scenery/backgrounds/default/
     - assets/images/scenery/icons/care/
     - assets/images/scenery/icons/age-milestones/active/
     - assets/images/scenery/icons/age-milestones/inactive/
     - assets/images/scenery/icons/age-milestones/timeline/
     - assets/images/scenery/icons/ui/
-    - assets/images/scenery/icons/auth-mascot/
+    - assets/images/scenery/backgrounds/auth-mascot/
     # BEGIN PHOTOBOOTH ASSETS
     - assets/photobooth/catalog.json
     - assets/photobooth/frames/classic/photo-strip-template-classic-2x6.png

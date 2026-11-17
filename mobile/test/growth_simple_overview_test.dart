@@ -50,12 +50,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Tình hình cân nặng của bé'), findsOneWidget);
+    expect(find.text('Tình trạng cân nặng'), findsOneWidget);
     expect(find.byType(ChoiceChip), findsNWidgets(3));
     expect(find.text('Dựa trên BMI'), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Ghi số đo'), findsOneWidget);
     expect(find.text('Xu hướng gần đây'), findsNothing);
     expect(find.text('Xem lịch sử'), findsNothing);
+    expect(find.textContaining('Trục cân nặng:'), findsNothing);
     final chart = find.byWidgetPredicate(
       (w) =>
           w is Semantics &&
@@ -78,12 +78,23 @@ void main() {
       });
     }
 
+    await tester.ensureVisible(chart);
+    await tester.pumpAndSettle();
     await capture('growth-overview-preview');
+    await tester.ensureVisible(find.byTooltip('Phóng to'));
+    await tester.tap(find.byTooltip('Phóng to'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Đang phóng to:'), findsNothing);
+    expect(find.textContaining('8,5 kg'), findsWidgets);
+    await capture('growth-weight-zoom-preview');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Vòng đầu'));
     await tester.tap(find.widgetWithText(ChoiceChip, 'Vòng đầu'));
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).first, const Offset(0, -300));
     await tester.pumpAndSettle();
-    expect(find.text('Xem nhận xét vòng đầu'), findsOneWidget);
+    expect(find.text('Tình trạng vòng đầu'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, 500));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cân nặng').first);

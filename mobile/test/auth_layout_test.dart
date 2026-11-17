@@ -58,6 +58,54 @@ void main() {
   });
 
   for (final signup in [false, true]) {
+    testWidgets(
+      '${signup ? 'signup' : 'login'} keeps mascot attached while height changes',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: signup
+                ? SignUpScreen(onLogin: () {}, onChildProfilePreview: () {})
+                : LoginScreen(onSignUp: () {}, onBack: () {}),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final mascot = find.byType(AuthMascot);
+        final form = find.byKey(const ValueKey('auth-form-surface'));
+        final originalTop = tester.getRect(mascot).top;
+
+        void checkAttachment() {
+          final mascotRect = tester.getRect(mascot);
+          final formRect = tester.getRect(form);
+          expect(
+            formRect.top - mascotRect.top,
+            closeTo(mascotRect.height * .9, .1),
+          );
+          expect(mascotRect.center.dx, closeTo(formRect.center.dx, .1));
+          expect(tester.takeException(), isNull);
+        }
+
+        for (final height in [568.0, 640.0, 932.0, 1200.0, 800.0]) {
+          tester.view.physicalSize = Size(360, height);
+          await tester.pumpAndSettle();
+          checkAttachment();
+          expect(tester.getRect(mascot).top, closeTo(originalTop, .1));
+        }
+        await tester.drag(
+          find.byType(SingleChildScrollView).first,
+          const Offset(0, -120),
+        );
+        await tester.pumpAndSettle();
+        checkAttachment();
+        tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+        await tester.pumpAndSettle();
+        checkAttachment();
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
     for (final size in [const Size(320, 568), const Size(360, 800)]) {
       for (final scale in [1.0, 2.0]) {
         testWidgets(
