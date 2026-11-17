@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -10,21 +9,40 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:track_children/features/splash/splash_screen.dart';
 
 void main() {
+  for (final page in [0, 1]) {
+    testWidgets('skip page $page saves completion and calls login once', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      var calls = 0;
+      await tester.pumpWidget(
+        MaterialApp(home: SplashScreen(onLoginRequired: () => calls++)),
+      );
+      await tester.pumpAndSettle();
+      if (page == 1) {
+        await tester.ensureVisible(find.text('Tiếp tục'));
+        await tester.tap(find.text('Tiếp tục'));
+        await tester.pumpAndSettle();
+      }
+      await tester.ensureVisible(find.text('Bỏ qua').first);
+      await tester.tap(find.text('Bỏ qua').first);
+      await tester.tap(find.text('Bỏ qua').first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(calls, 1);
+      expect(
+        (await SharedPreferences.getInstance()).getBool(
+          'track_children_onboarding_completed',
+        ),
+        true,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   setUpAll(() async {
-    // Use Flutter's fallback font instead of the test-only Ahem boxes.
-    final configFile = File('.dart_tool/package_config.json').absolute;
-    final config =
-        jsonDecode(await configFile.readAsString()) as Map<String, dynamic>;
-    final flutterPackage = (config['packages'] as List)
-        .cast<Map<String, dynamic>>()
-        .singleWhere((package) => package['name'] == 'flutter');
-    final flutterUri = configFile.uri.resolve("${flutterPackage['rootUri']}/");
-    final font = File.fromUri(
-      flutterUri.resolve(
-        '../../bin/cache/artifacts/material_fonts/roboto-regular.ttf',
-      ),
-    );
-    final loader = FontLoader('Be Vietnam Pro')
+    final font = File('assets/fonts/nunito/Nunito-Variable.ttf');
+    final loader = FontLoader('Nunito')
       ..addFont(Future.value(ByteData.sublistView(await font.readAsBytes())));
     await loader.load();
   });
@@ -48,12 +66,21 @@ void main() {
         await tester.pumpWidget(
           RepaintBoundary(
             key: captureKey,
-            child: MaterialApp(home: SplashScreen(onLoginRequired: () {})),
+            child: MaterialApp(
+              theme: ThemeData(
+                fontFamily: 'Nunito',
+                textTheme: const TextTheme(
+                  headlineMedium: TextStyle(fontSize: 24),
+                  bodyLarge: TextStyle(fontSize: 16),
+                ),
+              ),
+              home: SplashScreen(onLoginRequired: () {}),
+            ),
           ),
         );
         await tester.runAsync(() async {
           final context = tester.element(find.byType(PageView));
-          for (final asset in ['splash_screen_1.png', 'splash_screen_2.png']) {
+          for (final asset in ['splash_1.png', 'splash_2.png']) {
             await precacheImage(
               AssetImage('assets/images/scenery/backgrounds/$asset'),
               context,
@@ -65,14 +92,14 @@ void main() {
           expect(tester.takeException(), isNull);
           final title = find.text(
             page == 0
-                ? 'Chăm sóc bé dễ dàng hơn'
-                : 'Đồng hành cùng bé mỗi ngày',
+                ? 'Cùng con lớn khôn mỗi ngày'
+                : 'Lưu giữ hành trình, cùng nhau chăm bé',
           );
           expect(title, findsOneWidget);
           final description = find.text(
             page == 0
-                ? 'Theo dõi hành trình lớn khôn của con qua từng cột mốc phát triển.'
-                : 'Theo dõi tăng trưởng, lịch tiêm chủng, dinh dưỡng và những khoảnh khắc đáng nhớ.',
+                ? 'Theo dõi tăng trưởng, đánh giá phát triển và khám phá hoạt động phù hợp với độ tuổi của con.'
+                : 'Lưu nhật ký ảnh, video, nhận xét AI và chia sẻ hồ sơ để cả nhà cùng đồng hành với bé.',
           );
           final art = find.byType(ClipRect).last;
           expect(
@@ -80,6 +107,8 @@ void main() {
             lessThanOrEqualTo(tester.getRect(art).top),
           );
           if (scale == 1 && (size.width == 320 || size.width == 430)) {
+            await tester.ensureVisible(find.text('Bỏ qua').last);
+            await tester.pumpAndSettle();
             final boundary =
                 captureKey.currentContext!.findRenderObject()
                     as RenderRepaintBoundary;

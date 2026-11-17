@@ -1,0 +1,19 @@
+{
+  "key": "halloween-kids-4x6-01",
+  "theme": "halloween",
+  "categoryTitle": "Halloween",
+  "title": "Halloween vui 01",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 301,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 69,
+      "y": 58,
+      "width": 1062,
+      "height": 1062,
+      "photo": 0
+    }
+  ]
+}

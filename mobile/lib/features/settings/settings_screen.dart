@@ -9,7 +9,7 @@ import '../auth/parent_role.dart';
 import '../child/add_child_profile_screen.dart';
 import '../child/child_profile_screen.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
-import '../sharing/child_sharing_screen.dart';
+import '../sharing/shared_with_me_screen.dart';
 import 'delete_account_screen.dart';
 import '../growth/growth_screen.dart';
 import '../explore/explore_screen.dart';
@@ -275,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                             title: 'Hồ sơ được chia sẻ với tôi',
                             onTap: () => Navigator.of(context).push<void>(
                               MaterialPageRoute(
-                                builder: (_) => const ChildSharingScreen(),
+                                builder: (_) => const SharedWithMeScreen(),
                               ),
                             ),
                           ),

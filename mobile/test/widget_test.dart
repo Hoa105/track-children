@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:track_children/features/auth/login_screen.dart';
 import 'package:track_children/features/auth/sign_up_screen.dart';
+import 'package:track_children/features/child/child_profile_selection_screen.dart';
 import 'package:track_children/features/home/home_screen.dart';
 import 'package:track_children/features/splash/start_screen.dart';
 import 'package:track_children/main.dart';
@@ -22,17 +23,26 @@ Future<void> openIntroduction(WidgetTester tester) async {
   await tester.pumpWidget(const TrackChildrenApp());
   await tester.runAsync(
     () => precacheImage(
-      const AssetImage('assets/images/scenery/backgrounds/start_screen.png'),
+      const AssetImage(
+        'assets/images/scenery/backgrounds/start-assets/mascot/idle.png',
+      ),
       tester.element(find.byType(StartScreen)),
     ),
   );
   await tester.pump();
+  // Let the native handoff and first image frame finish before advancing time.
+  await tester.pumpAndSettle();
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 }
 
 void main() {
   setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          startLaunchChannel,
+          (_) async => {'supported': false},
+        );
     SharedPreferences.setMockInitialValues({});
     DemoStore.resetInstanceForTesting();
     FlutterSecureStorage.setMockInitialValues({});
@@ -54,6 +64,8 @@ void main() {
               },
             ],
           };
+        } else if (request.url.path.endsWith('/children')) {
+          result = {'children': []};
         } else if (request.url.path.endsWith('/register')) {
           expect(
             body.containsKey('email') != body.containsKey('phone'),
@@ -108,17 +120,21 @@ void main() {
       }),
     );
   });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(startLaunchChannel, null);
+  });
   testWidgets('startup introduction completes into login', (tester) async {
     await openIntroduction(tester);
-    expect(find.text('Chăm sóc bé dễ dàng hơn'), findsOneWidget);
+    expect(find.text('Cùng con lớn khôn mỗi ngày'), findsOneWidget);
     await tester.ensureVisible(find.text('Tiếp tục'));
     await tester.tap(find.text('Tiếp tục'));
     await tester.pumpAndSettle();
-    expect(find.text('Đồng hành cùng bé mỗi ngày'), findsOneWidget);
+    expect(find.text('Lưu giữ hành trình, cùng nhau chăm bé'), findsOneWidget);
     await tester.ensureVisible(find.text('Bắt đầu'));
     await tester.tap(find.text('Bắt đầu'));
     await tester.pumpAndSettle();
-    expect(find.text('Chào mừng bạn trở lại'), findsOneWidget);
+    expect(find.text('Chào mừng ba mẹ!'), findsOneWidget);
   });
   testWidgets(
     'completion persists while introduction remains visible on restart',
@@ -138,10 +154,51 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox());
       await openIntroduction(tester);
-      expect(find.text('Chăm sóc bé dễ dàng hơn'), findsOneWidget);
+      expect(find.text('Cùng con lớn khôn mỗi ngày'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );
+  for (final systemBack in [false, true]) {
+    testWidgets('profile picker back preserves session (system: $systemBack)', (
+      tester,
+    ) async {
+      await openIntroduction(tester);
+      await tester.tap(find.text('Bỏ qua'));
+      await tester.pumpAndSettle();
+
+      Future<void> login(String email) async {
+        await tester.enterText(find.byType(TextFormField).first, email);
+        await tester.enterText(
+          find.byType(TextFormField).at(1),
+          DemoStore.password,
+        );
+        final button = find.widgetWithText(FilledButton, 'Đăng nhập');
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+      }
+
+      await login('first@example.test');
+      expect(find.byType(ChildProfileSelectionScreen), findsOneWidget);
+      final user = Map<String, dynamic>.from(AuthService.instance.user!);
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Quay lại'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(ChildProfileSelectionScreen), findsNothing);
+      expect(AuthService.instance.signedIn, isTrue);
+      expect(AuthService.instance.user, user);
+
+      await login('second@example.test');
+      expect(find.byType(ChildProfileSelectionScreen), findsOneWidget);
+      expect(AuthService.instance.user!['email'], 'second@example.test');
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets('login validates and authenticates shared parent fixture', (
     tester,
   ) async {
@@ -197,18 +254,16 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Người giám hộ khác'));
+    await tester.ensureVisible(find.text('Khác'));
     expect(
       tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Mẹ')).selected,
       true,
     );
-    await tester.tap(find.text('Người giám hộ khác'));
+    await tester.tap(find.text('Khác'));
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<ChoiceChip>(
-            find.widgetWithText(ChoiceChip, 'Người giám hộ khác'),
-          )
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Khác'))
           .selected,
       true,
     );
@@ -237,7 +292,9 @@ void main() {
         await tester.enterText(find.byType(TextFormField).at(i), values[i]);
       }
       await tester.ensureVisible(find.byType(Checkbox));
-      final termsLink = find.text('Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư');
+      final termsLink = find.text(
+        'Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư',
+      );
       await tester.ensureVisible(termsLink);
       await tester.tap(termsLink);
       await tester.pumpAndSettle();
@@ -308,12 +365,8 @@ void main() {
     ]) {
       expect(find.text(label), findsWidgets);
     }
-    await tester.scrollUntilVisible(
-      find.text('Cân nặng'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Chưa có số đo'), findsWidgets);
+    expect(find.text('Cân nặng'), findsNothing);
+    expect(find.text('Chiều cao'), findsNothing);
     expect(find.text('12,5 kg'), findsNothing);
     expect(find.text('Bé ăn ngon hơn'), findsNothing);
     expect(tester.takeException(), isNull);

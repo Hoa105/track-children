@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:track_children/app_colors.dart';
 import 'package:track_children/features/child/child_profile_screen.dart';
 
-// Development entry point for verifying the profile on a physical device.
+// Assessment entry point for verifying the profile on a physical device.
 void main() => runApp(
   MaterialApp(
     debugShowCheckedModeBanner: false,

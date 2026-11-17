@@ -1,0 +1,2979 @@
+openapi: 3.1.0
+info:
+  title: Track Children - Admin assessment API
+  version: 1.0.0
+  description: Implemented assessment API. Paths include the actual backend prefix. Mobile request/response
+    fields use snake_case. Admin model-backed fields use camelCase; unmodelled action, import, preview
+    and audit responses use snake_case. Free-form editorial payloads and computed commentary/action-plan
+    bodies are extensible objects.
+paths:
+  /admin/assessment/question-sets:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Sets
+      operationId: sets_admin_assessment_question_sets_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminQuestionSet'
+                title: Response Sets Admin Assessment Question Sets Get
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Create Set
+      operationId: create_set_admin_assessment_question_sets_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminQuestionSetCreate'
+            example:
+              code: blk-12m-v1
+              ageMonths: 12
+              version: '1'
+              locale: vi-VN
+              sourceName: Bé lớn khôn
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionSet'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/question-sets/{set_id}:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Get Set
+      operationId: get_set_admin_assessment_question_sets__set_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionSet'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    patch:
+      tags:
+      - 'admin: assessment'
+      summary: Update Set
+      operationId: update_set_admin_assessment_question_sets__set_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminQuestionSetUpdate'
+            example:
+              sourceName: Bé lớn khôn
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionSet'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    delete:
+      tags:
+      - 'admin: assessment'
+      summary: Delete Set
+      operationId: delete_set_admin_assessment_question_sets__set_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Soft delete/restore; restored content remains hidden until explicitly released.
+  /admin/assessment/question-sets/{set_id}/availability:
+    patch:
+      tags:
+      - 'admin: assessment'
+      summary: Set Availability
+      operationId: set_availability_admin_assessment_question_sets__set_id__availability_patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityUpdate'
+            example:
+              isActive: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/question-sets/{set_id}/restore:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Restore Set
+      operationId: restore_set_admin_assessment_question_sets__set_id__restore_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Soft delete/restore; restored content remains hidden until explicitly released.
+  /admin/assessment/question-sets/{set_id}/content:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Set Content
+      operationId: set_content_admin_assessment_question_sets__set_id__content_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      - name: kind
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^(skill|advice)$
+          - type: 'null'
+          title: Kind
+      - name: activeOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Activeonly
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminContentRow'
+                title: Response Set Content Admin Assessment Question Sets  Set Id  Content Get
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Create Content
+      operationId: create_content_admin_assessment_question_sets__set_id__content_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminContentCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/question-sets/{set_id}/order:
+    put:
+      tags:
+      - 'admin: assessment'
+      summary: Order
+      operationId: order_admin_assessment_question_sets__set_id__order_put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionOrder'
+            example:
+              contentIds:
+              - 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/question-sets/{set_id}/publish:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Publish Set
+      operationId: publish_set_admin_assessment_question_sets__set_id__publish_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishSetResult'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/question-sets/{set_id}/release:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Release Set
+      operationId: release_set_admin_assessment_question_sets__set_id__release_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Set Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionSet'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Publishes the current revision(s) and makes the content available after validation; distinct from
+        the editorial publish endpoint.
+  /admin/assessment/content:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: All Content
+      operationId: all_content_admin_assessment_content_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(skill|advice)$
+          default: advice
+          title: Kind
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminContentRow'
+                title: Response All Content Admin Assessment Content Get
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Content
+      operationId: content_admin_assessment_content__item_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    delete:
+      tags:
+      - 'admin: assessment'
+      summary: Delete
+      operationId: delete_admin_assessment_content__item_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Soft delete/restore; restored content remains hidden until explicitly released.
+  /admin/assessment/content/{item_id}/revisions:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Revisions
+      operationId: revisions_admin_assessment_content__item_id__revisions_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminContentRevision'
+                title: Response Revisions Admin Assessment Content  Item Id  Revisions Get
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Revise
+      operationId: revise_admin_assessment_content__item_id__revisions_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminContentRevisionCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}/gate:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Gate
+      operationId: gate_admin_assessment_content__item_id__gate_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentGate'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}/reviews:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Review
+      operationId: review_admin_assessment_content__item_id__reviews_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminReviewCreate'
+            example:
+              revision: 1
+              reviewType: qa
+              decision: approved
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}/publish:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Publish
+      operationId: publish_admin_assessment_content__item_id__publish_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRevision'
+            example:
+              expectedRevision: 1
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}/release:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Release Content
+      operationId: release_content_admin_assessment_content__item_id__release_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRevision'
+            example:
+              expectedRevision: 1
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Publishes the current revision(s) and makes the content available after validation; distinct from
+        the editorial publish endpoint.
+  /admin/assessment/content/{item_id}/availability:
+    patch:
+      tags:
+      - 'admin: assessment'
+      summary: Availability
+      operationId: availability_admin_assessment_content__item_id__availability_patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityUpdate'
+            example:
+              isActive: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/content/{item_id}/restore:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Restore
+      operationId: restore_admin_assessment_content__item_id__restore_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedAction'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Soft delete/restore; restored content remains hidden until explicitly released.
+  /admin/assessment/audit/{item_id}:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Audit
+      operationId: audit_admin_assessment_audit__item_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditEvent'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/review-queue:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Queue
+      operationId: queue_admin_assessment_review_queue_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: questionSetId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Questionsetid
+      - name: reviewType
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reviewtype
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminReviewRow'
+                title: Response Queue Admin Assessment Review Queue Get
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/export:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Export
+      operationId: export_admin_assessment_export_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: set_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Set Id
+      - name: kind
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^(skill|advice)$
+          - type: 'null'
+          title: Kind
+      - name: set_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+              format: uuid
+          - type: 'null'
+          title: Set Ids
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransferRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        JSON rows over HTTP; CSV parsing/formatting is performed by the admin client.
+  /admin/assessment/import/template:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Import Template
+      operationId: import_template_admin_assessment_import_template_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(skill|advice)$
+          default: skill
+          title: Kind
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransferRow'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        JSON rows over HTTP; CSV parsing/formatting is performed by the admin client.
+  /admin/assessment/seed-preview:
+    get:
+      tags:
+      - 'admin: assessment'
+      summary: Seed Preview
+      operationId: seed_preview_admin_assessment_seed_preview_get
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreview'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+      security:
+      - HTTPBearer: []
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+  /admin/assessment/import/preview:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Import Preview
+      operationId: import_preview_admin_assessment_import_preview_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportBody'
+        required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreview'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      security:
+      - HTTPBearer: []
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        JSON rows over HTTP; CSV parsing/formatting is performed by the admin client.
+  /admin/assessment/import/commit:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Import Commit
+      operationId: import_commit_admin_assessment_import_commit_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportBody'
+        required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportCounts'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      security:
+      - HTTPBearer: []
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Use rows and fingerprint from a fresh preview. Stale fingerprint returns 409. Import saves unpublished
+        drafts only. JSON rows over HTTP; CSV parsing/formatting is performed by the admin client.
+  /admin/assessment/preview-result:
+    post:
+      tags:
+      - 'admin: assessment'
+      summary: Preview Result
+      operationId: preview_result_admin_assessment_preview_result_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewBody'
+        required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultView'
+        '422':
+          description: Request validation errors (detail array) or business validation failure (detail
+            string).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/ServiceError'
+        '401':
+          description: Missing, expired or invalid access token/session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Account unavailable, insufficient permission or read-only child access.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '404':
+          description: Resource missing or child access hidden from this caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Authentication not configured or required published content unavailable.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/AuthError'
+                - $ref: '#/components/schemas/ServiceError'
+        '409':
+          description: Version conflict, invalid lifecycle state or unavailable milestone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+      security:
+      - HTTPBearer: []
+      description: Requires an active admin with assessment.read; actor identity is recorded for audit.
+        Sandbox simulation using current drafts; requires an answer for every skill and all six undeleted
+        advice variants. Does not save an attempt/result. Includes preview_diagnostics.
+components:
+  schemas:
+    AdminContentCreate:
+      properties:
+        kind:
+          type: string
+          enum:
+          - skill
+          - advice
+          title: Kind
+          default: skill
+        stableCode:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_-]{1,80}$
+          title: Stablecode
+        sourceDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourcedomain
+        appDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Appdomain
+        orderIndex:
+          type: integer
+          maximum: 1000.0
+          minimum: 0.0
+          title: Orderindex
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+        sourceRefs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Sourcerefs
+      type: object
+      required:
+      - stableCode
+      - orderIndex
+      title: AdminContentCreate
+    AdminContentRevision:
+      properties:
+        contentItemId:
+          type: string
+          format: uuid
+          title: Contentitemid
+        revision:
+          type: integer
+          title: Revision
+        locale:
+          type: string
+          title: Locale
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+        sourceRefs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Sourcerefs
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+      type: object
+      required:
+      - contentItemId
+      - revision
+      - locale
+      - payload
+      - sourceRefs
+      - createdAt
+      title: AdminContentRevision
+    AdminContentRevisionCreate:
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1.0
+          title: Expectedrevision
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+        sourceRefs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Sourcerefs
+        appDomain:
+          anyOf:
+          - type: string
+            enum:
+            - gross_motor
+            - fine_motor
+            - language_communication
+            - cognitive
+            - social_emotional
+          - type: 'null'
+          title: Appdomain
+      type: object
+      required:
+      - expectedRevision
+      - payload
+      title: AdminContentRevisionCreate
+    AdminContentRow:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        kind:
+          type: string
+          enum:
+          - skill
+          - advice
+          title: Kind
+        stableCode:
+          type: string
+          title: Stablecode
+        questionSetId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Questionsetid
+        sourceDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourcedomain
+        appDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Appdomain
+        orderIndex:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Orderindex
+        currentRevision:
+          type: integer
+          title: Currentrevision
+        publishedRevision:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Publishedrevision
+        isActive:
+          type: boolean
+          title: Isactive
+        deletedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deletedat
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+        sourceRefs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Sourcerefs
+        revisionCreatedAt:
+          type: string
+          format: date-time
+          title: Revisioncreatedat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+      type: object
+      required:
+      - id
+      - kind
+      - stableCode
+      - questionSetId
+      - sourceDomain
+      - appDomain
+      - orderIndex
+      - currentRevision
+      - publishedRevision
+      - isActive
+      - deletedAt
+      - payload
+      - revisionCreatedAt
+      - updatedAt
+      title: AdminContentRow
+    AdminQuestionSet:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        code:
+          type: string
+          title: Code
+        ageMonths:
+          type: integer
+          title: Agemonths
+        version:
+          type: string
+          title: Version
+        locale:
+          type: string
+          title: Locale
+        sourceName:
+          type: string
+          title: Sourcename
+        status:
+          type: string
+          enum:
+          - draft
+          - in_review
+          - published
+          - archived
+          title: Status
+        contentCount:
+          type: integer
+          title: Contentcount
+        publishedCount:
+          type: integer
+          title: Publishedcount
+        visibleQuestionCount:
+          type: integer
+          title: Visiblequestioncount
+          default: 0
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+        isActive:
+          type: boolean
+          title: Isactive
+          default: false
+        deletedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deletedat
+      type: object
+      required:
+      - id
+      - code
+      - ageMonths
+      - version
+      - locale
+      - sourceName
+      - status
+      - contentCount
+      - publishedCount
+      - createdAt
+      - updatedAt
+      title: AdminQuestionSet
+    AdminQuestionSetCreate:
+      properties:
+        code:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9_-]{1,60}$
+          title: Code
+        ageMonths:
+          type: integer
+          enum:
+          - 2
+          - 4
+          - 6
+          - 9
+          - 12
+          - 15
+          - 18
+          - 24
+          - 30
+          - 36
+          - 48
+          - 60
+          title: Agemonths
+        version:
+          type: string
+          maxLength: 40
+          minLength: 1
+          title: Version
+        locale:
+          type: string
+          maxLength: 16
+          minLength: 2
+          title: Locale
+          default: vi-VN
+        sourceName:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Sourcename
+          default: CDC Developmental Milestones
+      type: object
+      required:
+      - code
+      - ageMonths
+      - version
+      title: AdminQuestionSetCreate
+    AdminQuestionSetUpdate:
+      properties:
+        sourceName:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Sourcename
+      type: object
+      title: AdminQuestionSetUpdate
+    AdminReviewCreate:
+      properties:
+        revision:
+          type: integer
+          minimum: 1.0
+          title: Revision
+        reviewType:
+          type: string
+          enum:
+          - medical
+          - language
+          - qa
+          - media_rights
+          title: Reviewtype
+        decision:
+          type: string
+          enum:
+          - approved
+          - rejected
+          title: Decision
+        evidenceRef:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Evidenceref
+        note:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Note
+      type: object
+      required:
+      - revision
+      - reviewType
+      - decision
+      title: AdminReviewCreate
+    AdminReviewRow:
+      properties:
+        contentItemId:
+          type: string
+          format: uuid
+          title: Contentitemid
+        stableCode:
+          type: string
+          title: Stablecode
+        kind:
+          type: string
+          enum:
+          - skill
+          - advice
+          title: Kind
+        questionSetId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Questionsetid
+        revision:
+          type: integer
+          title: Revision
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+        sourceRefs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Sourcerefs
+        reviews:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          type: object
+          title: Reviews
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+      type: object
+      required:
+      - contentItemId
+      - stableCode
+      - kind
+      - questionSetId
+      - revision
+      - payload
+      - sourceRefs
+      - reviews
+      - createdAt
+      title: AdminReviewRow
+    AvailabilityUpdate:
+      properties:
+        isActive:
+          type: boolean
+          title: Isactive
+      type: object
+      required:
+      - isActive
+      title: AvailabilityUpdate
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ImportBody:
+      properties:
+        rows:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          maxItems: 500
+          title: Rows
+        fingerprint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fingerprint
+      type: object
+      required:
+      - rows
+      title: ImportBody
+    PreviewBody:
+      properties:
+        question_set_id:
+          type: string
+          format: uuid
+          title: Question Set Id
+        answers:
+          additionalProperties:
+            type: string
+            enum:
+            - achieved
+            - not_yet
+            - not_observed
+          type: object
+          title: Answers
+        regression:
+          type: string
+          enum:
+          - 'yes'
+          - 'no'
+          - unsure
+          title: Regression
+        caregiver_concern:
+          type: string
+          enum:
+          - 'yes'
+          - 'no'
+          title: Caregiver Concern
+      type: object
+      required:
+      - question_set_id
+      - answers
+      - regression
+      - caregiver_concern
+      title: PreviewBody
+    PublishRevision:
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1.0
+          title: Expectedrevision
+      type: object
+      required:
+      - expectedRevision
+      title: PublishRevision
+    QuestionOrder:
+      properties:
+        contentIds:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Contentids
+      type: object
+      required:
+      - contentIds
+      title: QuestionOrder
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    AgeMonths:
+      type: integer
+      enum:
+      - 2
+      - 4
+      - 6
+      - 9
+      - 12
+      - 15
+      - 18
+      - 24
+      - 30
+      - 36
+      - 48
+      - 60
+    Answer:
+      type: string
+      enum:
+      - achieved
+      - not_yet
+      - not_observed
+    SummaryCounts:
+      type: object
+      properties:
+        total: &id001
+          type: integer
+          minimum: 0
+        achieved: *id001
+        not_yet: *id001
+        not_observed: *id001
+      required:
+      - total
+      - achieved
+      - not_yet
+      - not_observed
+    QuestionSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code: &id002
+          type: string
+        domain: *id002
+        revision: *id001
+        order_index: *id001
+        payload: &id003
+          type: object
+          additionalProperties: true
+        source_refs:
+          type: array
+          items: *id003
+      required:
+      - id
+      - code
+      - domain
+      - revision
+      - order_index
+      - payload
+      - source_refs
+    ResultView:
+      type: object
+      properties:
+        schema_version: *id002
+        rules_version:
+          anyOf:
+          - *id002
+          - type: 'null'
+        advice_content_version:
+          anyOf:
+          - *id002
+          - type: 'null'
+        question_set_age_months:
+          $ref: '#/components/schemas/AgeMonths'
+        primary_result_code:
+          anyOf:
+          - *id002
+          - type: 'null'
+        reported_flags:
+          type: array
+          items: *id002
+        sections:
+          type: object
+          properties:
+            overview:
+              $ref: '#/components/schemas/SummaryCounts'
+            overall_comment: *id003
+            skills_to_note:
+              type: object
+              properties:
+                total: *id001
+                preview_count: *id001
+                preview:
+                  type: array
+                  items: *id003
+                all:
+                  type: array
+                  items: *id003
+                has_more:
+                  type: boolean
+              required:
+              - total
+              - preview_count
+              - preview
+              - all
+              - has_more
+            next_steps:
+              type: object
+              properties:
+                title: *id002
+                advice_items:
+                  type: array
+                  items: *id003
+                action_plan:
+                  anyOf:
+                  - *id003
+                  - type: 'null'
+                tts_text: *id002
+                auto_play:
+                  const: false
+              required:
+              - title
+              - advice_items
+              - action_plan
+              - tts_text
+              - auto_play
+          required:
+          - overview
+          - overall_comment
+          - skills_to_note
+          - next_steps
+        disclaimer: *id002
+        release_status: *id002
+        question_snapshot:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionSnapshot'
+        preview_diagnostics: *id003
+      required:
+      - schema_version
+      - rules_version
+      - advice_content_version
+      - question_set_age_months
+      - primary_result_code
+      - reported_flags
+      - sections
+      - disclaimer
+      - release_status
+    ServiceError:
+      type: object
+      properties:
+        detail: *id002
+      required:
+      - detail
+    AuthError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: *id002
+            message: *id002
+            fields: *id003
+            details: *id003
+          required:
+          - code
+          - message
+          - fields
+          - details
+      required:
+      - error
+    SavedAction:
+      type: object
+      properties:
+        saved:
+          const: true
+      required:
+      - saved
+    PublishSetResult:
+      type: object
+      properties:
+        question_set_id:
+          type: string
+          format: uuid
+        status:
+          const: published
+        published_revision_count: &id004
+          type: integer
+          minimum: 0
+      required:
+      - question_set_id
+      - status
+      - published_revision_count
+    ContentGate:
+      type: object
+      properties:
+        revision: *id004
+        blockers:
+          type: array
+          items: &id006
+            type: string
+        reviews:
+          type: object
+          additionalProperties: &id005
+            type: object
+            additionalProperties: true
+      required:
+      - revision
+      - blockers
+      - reviews
+    TransferRow: *id005
+    ImportPreview:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferRow'
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              message: *id006
+            required:
+            - row
+            - message
+        changes:
+          type: array
+          items: *id005
+        fingerprint: *id006
+      required:
+      - rows
+      - errors
+      - changes
+      - fingerprint
+    ImportCounts:
+      type: object
+      properties:
+        created: *id004
+        revised: *id004
+        unchanged: *id004
+      required:
+      - created
+      - revised
+      - unchanged
+    AuditEvent:
+      type: object
+      properties:
+        id: *id004
+        action: *id006
+        created_at:
+          type: string
+          format: date-time
+        before_data:
+          anyOf:
+          - *id005
+          - type: 'null'
+        after_data:
+          anyOf:
+          - *id005
+          - type: 'null'
+        actor:
+          anyOf:
+          - *id006
+          - type: 'null'
+      required:
+      - id
+      - action
+      - created_at
+      - before_data
+      - after_data
+      - actor
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Admin access JWT and live session; assessment.read is required on every endpoint.
+servers:
+- url: http://localhost:8000

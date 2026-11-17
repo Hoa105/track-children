@@ -12,7 +12,7 @@
         "--device-user",
         "0",
         "--dart-define=DEMO_MODE=false",
-        "--dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1"
+        "--dart-define=API_BASE_URL=http://127.0.0.1:8000"
       ]
     },
     {
@@ -26,7 +26,7 @@
         "--device-user",
         "0",
         "--dart-define=DEMO_MODE=false",
-        "--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
+        "--dart-define=API_BASE_URL=http://10.0.2.2:8000"
       ]
     },
     {
@@ -40,6 +40,19 @@
         "5174",
         "--dart-define=DEMO_MODE=false"
       ]
+    },
+    {
+      "name": "Mobile Chrome (UI Profile)",
+      "type": "dart",
+      "request": "launch",
+      "deviceId": "chrome",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--web-port",
+        "5174",
+        "--dart-define=DEMO_MODE=false"
+      ],
+      "flutterMode": "profile"
     }
   ]
 }

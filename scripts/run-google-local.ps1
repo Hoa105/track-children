@@ -55,7 +55,7 @@ if chosen not in s.google_client_ids or not chosen.endswith('.apps.googleusercon
     raise SystemExit('Flutter Google client ID must be present in backend GOOGLE_CLIENT_IDS.')
 out = root / '.auth-test-logs/google-dart-defines.json'
 out.parent.mkdir(parents=True, exist_ok=True)
-out.write_text(json.dumps({'GOOGLE_SERVER_CLIENT_ID': chosen, 'API_BASE_URL': sys.argv[2], 'DEMO_MODE': False}), encoding='utf-8')
+out.write_text(json.dumps({'GOOGLE_SERVER_CLIENT_ID': chosen, 'API_BASE_URL': sys.argv[2].split('/api/v1')[0], 'DEMO_MODE': False}), encoding='utf-8')
 mobile_config = root / 'mobile/lib/config/google_oauth_config.dart'
 mobile_config.parent.mkdir(parents=True, exist_ok=True)
 mobile_config.write_text(

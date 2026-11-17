@@ -1,3 +1,4 @@
+import yaml
 import json
 from pathlib import Path
 
@@ -56,7 +57,7 @@ def test_auth_setup_preserves_other_features_validation():
 
 def test_openapi_document():
     from openapi_spec_validator import validate
-    doc=json.loads((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
+    doc=yaml.safe_load((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.yaml').read_text(encoding='utf-8'))
     validate(doc)
     actual=app.openapi()['paths']
     for path,ops in doc['paths'].items():

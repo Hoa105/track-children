@@ -31,6 +31,34 @@ class PrimaryTooth {
 
   String get id => '${jaw.name}-${side.name}-${type.name}';
 
+  /// FDI notation uniquely identifies each primary tooth.
+  String get fdiCode {
+    final quadrant = switch ((jaw, side)) {
+      (Jaw.upper, JawSide.right) => 5,
+      (Jaw.upper, JawSide.left) => 6,
+      (Jaw.lower, JawSide.left) => 7,
+      (Jaw.lower, JawSide.right) => 8,
+    };
+    return '$quadrant${type.index + 1}';
+  }
+
+  /// Product code for the symmetric pair in the reference schedule.
+  int get pairCode => switch ((jaw, type)) {
+    (Jaw.lower, ToothType.centralIncisor) => 1,
+    (Jaw.upper, ToothType.centralIncisor) => 2,
+    (Jaw.upper, ToothType.lateralIncisor) => 3,
+    (Jaw.lower, ToothType.lateralIncisor) => 4,
+    (Jaw.upper, ToothType.firstMolar) => 5,
+    (Jaw.lower, ToothType.firstMolar) => 6,
+    (Jaw.upper, ToothType.canine) => 7,
+    (Jaw.lower, ToothType.canine) => 8,
+    (Jaw.lower, ToothType.secondMolar) => 9,
+    (Jaw.upper, ToothType.secondMolar) => 10,
+  };
+
+  String get positionLabel =>
+      '${jaw == Jaw.upper ? 'Hàm trên' : 'Hàm dưới'} · ${side == JawSide.right ? 'bên phải' : 'bên trái'} của bé';
+
   String get label =>
       '${type.label} ${jaw == Jaw.upper ? 'hàm trên' : 'hàm dưới'} ${side == JawSide.right ? 'bên phải' : 'bên trái'}';
 

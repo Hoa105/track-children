@@ -3,6 +3,7 @@
 Run after editing the contract: python scripts/export-auth-openapi.py.
 Response/error examples remain manually reviewed in the OpenAPI source file.
 """
+import yaml
 import json
 import sys
 from pathlib import Path
@@ -13,8 +14,8 @@ from app.features.auth import schemas  # noqa: E402
 
 
 def main():
-    path = root / 'docs/api/mobile-auth.openapi.json'
-    document = json.loads(path.read_text(encoding='utf-8'))
+    path = root / 'docs/api/mobile-auth.openapi.yaml'
+    document = yaml.safe_load(path.read_text(encoding='utf-8'))
     source = (root / 'docs/api/mobile-registration-v2.md').read_text(encoding='utf-8')
     document['info']['version'] = '2.0.0'
     document['info']['description'] = source[:source.index('## API')].strip()
@@ -98,7 +99,7 @@ def main():
             for value in node:
                 remove_examples(value)
     remove_examples(document['paths'])
-    path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    path.write_text(yaml.safe_dump(document, allow_unicode=True, sort_keys=False, width=100).rstrip() + '\n', encoding='utf-8')
     print('Auth OpenAPI updated.')
 
 

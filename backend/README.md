@@ -26,6 +26,18 @@ Khi chạy nhiều máy/container API độc lập, cần limiter phân tán dù
 không coi các file SQLite riêng là giới hạn toàn hệ thống.
 Cache lỗi thì API trả `503 RATE_LIMIT_UNAVAILABLE`, không bỏ qua giới hạn.
 
+## Growth tracking
+
+See [setup and API usage](../docs/api/mobile-growth.md),
+[OpenAPI contract](../docs/api/mobile-growth.openapi.yaml),
+[test plan](../docs/api/mobile-growth-test-plan.md) and
+[test results](../docs/api/mobile-growth-test-results.md).
+
+Set `DATABASE_URL` and a random `AUTH_SECRET` of at least 32 characters before
+using protected routes. For local startup from `backend/`, copy `.env.example`
+to `.env`, configure it, then run `uvicorn app.main:app --env-file .env --reload`.
+Docker Compose reads `AUTH_SECRET`/`CORS_ORIGINS` from the shell or root `.env`.
+
 ## Database migrations
 
 Start the local PostgreSQL containers from the repository root, then run:
@@ -62,5 +74,5 @@ c?a ch?nh ph? huynh trong request; endpoint n?y kh?ng t?o t?i kho?n.
 
 ## Admin authentication
 
-[Setup and API](../docs/api/admin-auth.md), [OpenAPI JSON](../docs/api/admin-auth.openapi.json).
+[Setup and API](../docs/api/admin-auth.md), [OpenAPI YAML](../docs/api/admin-auth.openapi.yaml).
 Implementation: `app/features/auth/admin/`. Requires migrations through 011.

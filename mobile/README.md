@@ -19,10 +19,70 @@ flutter devices
 
 ## 2. Chạy ứng dụng
 
+### Android thật qua USB: thiết lập kết nối trước mỗi lần chạy
+
+Từ gốc repository, dùng lệnh sau để kiểm tra backend và thiết lập lại `adb reverse` trước khi chạy Flutter (không yêu cầu cấu hình Google để đăng nhập email/mật khẩu):
+
+```powershell
+.\scripts\run-mobile-local.ps1
+```
+
+Nếu terminal đang ở `mobile`, chạy `..\scripts\run-mobile-local.ps1`. Khi có nhiều thiết bị, thêm `-DeviceId <serial>`. Backend cần chạy ở cổng 8000. Script truyền `API_BASE_URL=http://127.0.0.1:8000/api/v1` vào lần build/run đó. `flutter run` trực tiếp không tự thiết lập cổng backend; ánh xạ có thể mất khi ngắt USB hoặc khởi động lại ADB. Chỉ chuẩn bị kết nối cho app đang mở: `..\scripts\run-mobile-local.ps1 -PrepareOnly`, rồi thử đăng nhập lại.
+
 ### Auth trên Chrome
 
-Auth trên web mặc định gọi `http://localhost:8000/api/v1`. Backend cần
-`APP_ENV=local` và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Chạy bản web có bản sửa lỗi `ViewInsets cannot be negative` khi đóng bàn phím:
+
+```powershell
+# Từ gốc repository
+.\scripts\run-web-local.ps1
+```
+
+Script chuẩn bị Web SDK riêng tại `mobile/.dart_tool/web_engine/`, áp dụng bản
+sửa [Flutter #194020](https://github.com/flutter/flutter/pull/194020) cho engine
+3.47.5, rồi biên dịch lại cả debug JS và kernel cho bản build web. SDK cài trên máy
+không bị chỉnh sửa. Lần chuẩn bị tiếp theo dùng lại kết quả nếu engine không đổi.
+Cấu hình VS Code **Mobile Chrome (API)** cũng dùng SDK này. Dừng phiên debug cũ
+rồi chạy lại; hot reload/hot restart không thay thế engine đã tải trong trình duyệt.
+
+Kiểm tra hồi quy của handler resize đã biên dịch:
+
+```powershell
+cd mobile
+node tool/test_web_keyboard_fix.cjs
+```
+
+Nếu chạy `flutter run -d chrome` trực tiếp, công cụ vẫn dùng SDK gốc chưa có bản
+sửa. Để build với SDK riêng sau khi chuẩn bị:
+
+```powershell
+flutter --local-engine-src-path=.dart_tool/web_engine/src --local-web-sdk=keyboard_fix build web
+```
+
+Auth trên web mặc định gọi `http://localhost:8000/api/v1`.
+Nếu chạy backend bằng Docker Compose, thêm vào `.env` ở **gốc repository**:
+
+```dotenv
+CORS_ORIGINS='["http://localhost:5174","http://127.0.0.1:5174"]'
+```
+
+Sau đó áp dụng lại cấu hình bằng `docker compose up -d --no-deps backend`.
+Compose mặc định chạy `APP_ENV=production`, nên cần khai báo origin cụ thể như trên.
+Nếu chạy backend trực tiếp ở môi trường local, có thể dùng `APP_ENV=local`
+và khởi động lại để cho phép CORS từ localhost ở các cổng dev.
+Lỗi CORS có thể hiện thành “Không thể kết nối” trên app dù `/health` vẫn trả `200`.
+Nếu API auth trả `404` sau khi cập nhật mã nguồn, build lại image backend:
+`docker compose up -d --build --no-deps backend` (Compose không mount mã nguồn trực tiếp).
+
+Lưu ý: các biến `${...}` của Compose lấy từ `.env` ở gốc repository,
+không tự lấy từ `backend/.env`. Với kiểm thử local dùng API và OTP preview,
+cấu hình ở `.env` gốc: `APP_ENV=local`, `AUTH_SECRET` (ít nhất 32 ký tự),
+`AUTH_OTP_PREVIEW=true`, `AUTH_SKIP_OTP=false` và
+`LEGAL_DOCUMENTS_PATH=/app/local-config/legal-documents.local.json`.
+Compose mount file tài liệu local chỉ đọc; có thể đổi file nguồn bằng
+`LEGAL_DOCUMENTS_FILE`. Tài liệu `local-test-1` chỉ dành cho kiểm thử nội bộ.
+Ở chế độ local, backend cho phép cổng localhost ngẫu nhiên của `flutter run`.
+OTP preview hiện trong hộp thoại xác minh, chưa gửi email/SMS thật.
 Chọn **Mobile Chrome (API)** trong VS Code hoặc chạy trong thư mục `mobile`:
 
 ```bash

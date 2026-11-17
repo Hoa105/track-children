@@ -4,7 +4,11 @@ import 'otp_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
-import 'auth_entrance_animation.dart';
+import '../../services/demo_store.dart';
+
+import 'package:flutter/foundation.dart';
+
+import 'auth_layout.dart';
 import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
 import 'auth_form_style.dart';
@@ -31,13 +35,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _mascot = AuthMascotController();
+  late final _accountFocus = _mascot.field();
+  late final _passwordFocus = _mascot.field(obscured: () => _obscurePassword);
   bool _obscurePassword = true;
-  bool _rememberMe = true;
   bool _isLoading = false;
   String? _previewError;
 
   @override
   void dispose() {
+    _mascot.dispose();
     _accountController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -70,7 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (_isLoading) return;
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _mascot.showError();
+      return;
+    }
     setState(() {
       _isLoading = true;
       _previewError = null;
@@ -81,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.login(
         _accountController.text,
         _passwordController.text,
-        remember: _rememberMe,
       );
       valid = true;
     } on AuthException catch (e) {
@@ -93,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
               challenge: Map<String, dynamic>.from(
                 e.details['registration'] as Map,
               ),
-              remember: _rememberMe,
             ) ==
             true;
       } else {
@@ -109,7 +117,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _previewError = e.toString());
     }
     if (!mounted) return;
+    if (_previewError != null) _mascot.showError();
     if (valid) {
+      _mascot.showSuccess();
       setState(() => _isLoading = false);
       widget.onLoginSuccess?.call();
       if (widget.onLoginSuccess != null) return;
@@ -117,7 +127,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isLoading = false;
       _previewError ??= 'Chưa hoàn tất đăng nhập.';
+      if (!valid) _mascot.showError();
     });
+  }
+
+  Future<void> _quickLogin() async {
+    if (_isLoading) return;
+    final server = !AuthService.instance.demoMode;
+    _accountController.text = server
+        ? DemoStore.serverTestEmail
+        : DemoStore.demoEmail;
+    _passwordController.text = server
+        ? DemoStore.serverTestPassword
+        : DemoStore.password;
+    await _submit();
   }
 
   Future<void> _socialLogin(SocialProvider provider) async {
@@ -130,9 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.socialRegister(
         provider.name,
         acceptedTerms: true,
-        remember: _rememberMe,
       );
-      if (mounted) widget.onLoginSuccess?.call();
+      if (mounted) {
+        _mascot.showSuccess();
+        widget.onLoginSuccess?.call();
+      }
     } on AuthException catch (e) {
       if (mounted) {
         setState(() => _previewError = e.toString());
@@ -144,354 +169,216 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        if (_previewError != null) _mascot.showError();
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-                child: Column(
+  Widget build(BuildContext context) => AuthLayout(
+    title: 'Chào mừng ba mẹ!',
+    subtitle: 'Cùng bé lớn khôn mỗi ngày nhé!',
+    onBack: widget.onBack,
+    mascot: _mascot,
+    child: Form(
+      key: _formKey,
+      onChanged: _mascot.edited,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _FieldLabel(
+            'Email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i',
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _accountController,
+            focusNode: _accountFocus,
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 15,
+              color: HomeColors.ink,
+            ),
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [
+              AutofillHints.username,
+              AutofillHints.email,
+              AutofillHints.telephoneNumber,
+            ],
+            validator: _validateAccount,
+            decoration: authInputDecoration(
+              greenSprout: true,
+              hint: 'Email / 09xx xxx xxx',
+              icon: Icons.person_outline_rounded,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const _FieldLabel('Mật khẩu'),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            focusNode: _passwordFocus,
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 15,
+              color: HomeColors.ink,
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.password],
+            validator: _validatePassword,
+            onFieldSubmitted: (_) => _submit(),
+            decoration:
+                authInputDecoration(
+                  greenSprout: true,
+                  hint: '••••••••',
+                  icon: Icons.lock_outline_rounded,
+                ).copyWith(
+                  suffixIcon: IconButton(
+                    tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                    onPressed: () => setState(() {
+                      _obscurePassword = !_obscurePassword;
+                      _mascot.visibilityChanged();
+                    }),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                  ),
+                ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => showForgotPasswordSheet(
+                      context,
+                      recovery: widget.passwordRecovery,
+                      initialAccount: _accountController.text,
+                    ),
+              child: const Text('Qu\u00ean m\u1eadt kh\u1ea9u?'),
+            ),
+          ),
+          if (_previewError != null) ...[
+            const SizedBox(height: 16),
+            Semantics(
+              liveRegion: true,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCE7E7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 48,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          tooltip: 'Quay lại',
-                          onPressed: widget.onBack,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: Color(0xFF9E4545),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: Text(
-                        'Chào mừng bạn trở lại',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    AuthEntranceCard(
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x0A23332E),
-                              blurRadius: 16,
-                              offset: Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _FieldLabel(
-                                'Email ho\u1eb7c s\u1ed1 \u0111i\u1ec7n tho\u1ea1i',
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _accountController,
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 15,
-                                  color: Color(0xFF172B35),
-                                ),
-                                keyboardType: TextInputType.text,
-                                textInputAction: TextInputAction.next,
-                                autofillHints: const [
-                                  AutofillHints.username,
-                                  AutofillHints.email,
-                                  AutofillHints.telephoneNumber,
-                                ],
-                                validator: _validateAccount,
-                                decoration: authInputDecoration(
-                                  hint: 'Email / 09xx xxx xxx',
-                                  icon: Icons.person_outline_rounded,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const _FieldLabel('Mật khẩu'),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _passwordController,
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 15,
-                                  color: Color(0xFF172B35),
-                                ),
-                                obscureText: _obscurePassword,
-                                textInputAction: TextInputAction.done,
-                                autofillHints: const [AutofillHints.password],
-                                validator: _validatePassword,
-                                onFieldSubmitted: (_) => _submit(),
-                                decoration:
-                                    authInputDecoration(
-                                      hint: '••••••••',
-                                      icon: Icons.lock_outline_rounded,
-                                    ).copyWith(
-                                      suffixIcon: IconButton(
-                                        tooltip: _obscurePassword
-                                            ? 'Hiện mật khẩu'
-                                            : 'Ẩn mật khẩu',
-                                        onPressed: () => setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        }),
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.visibility_outlined
-                                              : Icons.visibility_off_outlined,
-                                        ),
-                                      ),
-                                    ),
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                alignment: WrapAlignment.spaceBetween,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (value) => setState(
-                                          () => _rememberMe = value ?? false,
-                                        ),
-                                        activeColor: AppColors.primary,
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                      const Flexible(
-                                        child: Text('Ghi nhớ đăng nhập'),
-                                      ),
-                                    ],
-                                  ),
-                                  TextButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () => showForgotPasswordSheet(
-                                            context,
-                                            recovery: widget.passwordRecovery,
-                                            initialAccount:
-                                                _accountController.text,
-                                          ),
-                                    child: const Text(
-                                      'Qu\u00ean m\u1eadt kh\u1ea9u?',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_previewError != null) ...[
-                                const SizedBox(height: 16),
-                                Semantics(
-                                  liveRegion: true,
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFCE7E7),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(
-                                          Icons.info_outline_rounded,
-                                          size: 18,
-                                          color: Color(0xFF9E4545),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _previewError!,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: const Color(
-                                                    0xFF793B3B,
-                                                  ),
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 24),
-                              SizedBox(
-                                height: 56,
-                                width: double.infinity,
-                                child: FilledButton(
-                                  onPressed: _isLoading ? null : _submit,
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    textStyle: const TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: _isLoading
-                                      ? const SizedBox.square(
-                                          dimension: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Text('Đăng nhập'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Row(
-                      children: [
-                        Expanded(child: Divider(color: AppColors.border)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Ho\u1eb7c ti\u1ebfp t\u1ee5c v\u1edbi',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: AppColors.border)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    for (final provider in const [
-                      SocialProvider.google,
-                      SocialProvider.apple,
-                    ]) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => _socialLogin(provider),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 52),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 14,
-                            ),
-                            backgroundColor: AppColors.surface,
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            textStyle: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ExcludeSemantics(
-                                child: SocialProviderIcon(provider: provider),
-                              ),
-                              const SizedBox(width: 12),
-                              Flexible(
-                                child: Text(
-                                  'Ti\u1ebfp t\u1ee5c v\u1edbi ${provider == SocialProvider.google ? 'Google' : 'Apple'}',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    const Text(
-                      'Bằng việc tiếp tục với Google hoặc Apple, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Center(
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            'Bạn chưa có tài khoản? ',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 14,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: widget.onSignUp,
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(48, 48),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                            ),
-                            child: const Text('Tạo tài khoản'),
-                          ),
-                        ],
+                        _previewError!,
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: const Color(0xFF793B3B)),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+          ],
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _isLoading ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: HomeColors.reminderCta,
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Đăng nhập'),
+            ),
           ),
-        ),
+          if (!kReleaseMode) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _quickLogin,
+                icon: const Icon(Icons.flash_on_rounded),
+                label: Text(
+                  AuthService.instance.demoMode
+                      ? 'Đăng nhập nhanh tài khoản demo'
+                      : 'Đăng nhập nhanh tài khoản test',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: HomeColors.reminderCta,
+                  side: const BorderSide(color: HomeColors.reminderCta),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text('Chưa có tài khoản?', style: TextStyle(fontSize: 14)),
+              TextButton(
+                onPressed: widget.onSignUp,
+                child: const Text('Đăng ký'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          AuthSocialButtons(onPressed: _isLoading ? null : _socialLogin),
+          const SizedBox(height: 14),
+          const Text(
+            'Bằng việc tiếp tục với Google hoặc Apple, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: HomeColors.ink),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.label);
-
   final String label;
-
   @override
-  Widget build(BuildContext context) => Text(label, style: authFieldLabelStyle);
+  Widget build(BuildContext context) =>
+      Text(label, style: authSproutFieldLabelStyle);
 }

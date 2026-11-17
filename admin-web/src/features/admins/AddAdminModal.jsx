@@ -1,12 +1,10 @@
 import React, { useState } from "react";
 import Icon from "../../shared/Icon.jsx";
-import { ADMIN_ROLES } from "../../core/session.js";
 import { passwordProblem } from "../../core/authApi.js";
 
 export default function AddAdminModal({ onClose, onSave, existingEmails }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("support");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -18,7 +16,7 @@ export default function AddAdminModal({ onClose, onSave, existingEmails }) {
     if (existingEmails.includes(normalized)) return setError("Email này đã là thành viên quản trị.");
     const problem = passwordProblem(password, confirm);
     if (problem) return setError(problem);
-    onSave({ fullName: fullName.trim(), email: normalized, role, password });
+    onSave({ fullName: fullName.trim(), email: normalized, role: "admin", password });
   }
 
   return <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -30,7 +28,7 @@ export default function AddAdminModal({ onClose, onSave, existingEmails }) {
       <label>MẬT KHẨU TẠM<input type="password" autoComplete="new-password" required value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} /></label>
       <label>XÁC NHẬN MẬT KHẨU<input type="password" autoComplete="new-password" required value={confirm} onChange={(event) => { setConfirm(event.target.value); setError(""); }} /></label>
       <p className="auth-hint">Tối thiểu 10 ký tự, gồm cả chữ và số.</p>
-      <label>VAI TRÒ<select value={role} onChange={(event) => setRole(event.target.value)}>{ADMIN_ROLES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
+      <label>VAI TRÒ<input value="Quản trị viên" disabled /></label>
       {error && <p className="auth-error">{error}</p>}
       <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Hủy</button><button className="button primary">Thêm thành viên</button></div>
     </form>

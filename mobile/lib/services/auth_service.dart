@@ -6,9 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'api_config.dart';
 import 'demo_store.dart';
 import 'social_identity.dart';
-import '../config/local_backend_config.dart';
 
 class AuthException implements Exception {
   AuthException(this.code, this.details);
@@ -100,12 +100,7 @@ class AuthService {
   static AuthService instance = AuthService(demoMode: demoEnabled);
   final bool demoMode;
   Map<String, dynamic>? _pendingRegistration;
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: kIsWeb
-        ? 'http://localhost:8000/api/v1'
-        : localMobileApiBaseUrl,
-  );
+  static final baseUrl = apiBaseUrl;
   final http.Client _client;
   final FlutterSecureStorage _storage;
   final Future<Map<String, dynamic>> Function(String, String?)
@@ -119,23 +114,36 @@ class AuthService {
   Map<String, dynamic>? user;
   bool get signedIn => user != null;
 
+  /// Shared authenticated transport for child features; no second token store.
+  Future<Map<String, dynamic>> authorizedRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) => _request(path, body: body, authorized: true, method: method,
+      timeout: const Duration(seconds: 30));
+
   Future<Map<String, dynamic>> _request(
     String path, {
     Map<String, dynamic>? body,
     bool authorized = false,
     bool retry = true,
+    String? method,
+    Duration timeout = const Duration(seconds: 20),
   }) async {
+    final generation = _generation;
     try {
       final headers = <String, String>{
         'Content-Type': 'application/json',
         if (authorized && _access != null) 'Authorization': 'Bearer $_access',
       };
       final uri = Uri.parse('$baseUrl$path');
-      final response =
-          await (body == null
-                  ? _client.get(uri, headers: headers)
-                  : _client.post(uri, headers: headers, body: jsonEncode(body)))
-              .timeout(const Duration(seconds: 20));
+      final request = http.Request(method ?? (body == null ? 'GET' : 'POST'), uri)
+        ..headers.addAll(headers);
+      if (body != null) request.body = jsonEncode(body);
+      final response = await http.Response.fromStream(
+        await _client.send(request).timeout(timeout),
+      ).timeout(timeout);
+      if (generation != _generation) throw AuthException('SESSION_CHANGED', {});
       var result = <String, dynamic>{};
       if (response.body.isNotEmpty) {
         try {
@@ -158,11 +166,14 @@ class AuthService {
             : <String, dynamic>{};
         if (authorized && retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
           await refresh();
+          if (generation != _generation) throw AuthException('SESSION_CHANGED', {});
           return await _request(
             path,
             body: body,
             authorized: true,
             retry: false,
+            method: method,
+            timeout: timeout,
           );
         }
         throw AuthException(
@@ -176,6 +187,8 @@ class AuthService {
             if (error['details'] is Map)
               ...Map<String, dynamic>.from(error['details'] as Map),
             if (error['fields'] is Map) 'fields': error['fields'],
+            // HTTPException của FastAPI: {"detail": "câu thông báo tiếng Việt"}
+            if (result['detail'] is String) 'message': result['detail'],
           },
         );
       }
@@ -423,6 +436,34 @@ class AuthService {
 
   Future<void> refresh() =>
       _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  /// Access token for the child APIs (see AuthorizedClient), refreshed when it
+  /// expires within a minute. Null when signed out or in demo mode.
+  Future<String?> accessToken() async {
+    if (demoMode || _access == null) return null;
+    if (_expiresSoon(_access!) && _refresh != null) {
+      try {
+        await refresh();
+      } on AuthException {
+        // The request goes out with the old token and gets a 401.
+      }
+    }
+    return _access;
+  }
+
+  static bool _expiresSoon(String jwt) {
+    try {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(jwt.split('.')[1]))),
+      );
+      final expiry = DateTime.fromMillisecondsSinceEpoch(
+        (payload['exp'] as int) * 1000,
+      );
+      return expiry.isBefore(DateTime.now().add(const Duration(minutes: 1)));
+    } catch (_) {
+      return false;
+    }
+  }
   bool _invalidSession(String code) => const {
     'REFRESH_TOKEN_INVALID',
     'REFRESH_TOKEN_REUSED',

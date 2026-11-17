@@ -1,0 +1,122 @@
+{
+  "version": 3,
+  "aspect_ratio": "6:4",
+  "format": "PNG RGBA",
+  "note": "Photo slots are bounding rectangles of fully transparent pixels; the PNG alpha defines exact clip shape. Use cover sizing for each image behind the overlay.",
+  "frames": [
+    {
+      "file": "organic_1photo.png",
+      "name_vi": "Lượn sóng mầm non",
+      "photo_count": 1,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 78,
+          "y": 69,
+          "width": 1644,
+          "height": 1025
+        }
+      ],
+      "transparent_percent": 73.0
+    },
+    {
+      "file": "scallop_1photo.png",
+      "name_vi": "Giấy cắt vỏ kem",
+      "photo_count": 1,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 76,
+          "y": 95,
+          "width": 1648,
+          "height": 981
+        }
+      ],
+      "transparent_percent": 73.3
+    },
+    {
+      "file": "scrapbook_1photo.png",
+      "name_vi": "Ảnh giấy xanh trời",
+      "photo_count": 1,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 82,
+          "y": 81,
+          "width": 1636,
+          "height": 1038
+        }
+      ],
+      "transparent_percent": 73.3
+    },
+    {
+      "file": "organic_2photo.png",
+      "name_vi": "Lượn sóng mầm non",
+      "photo_count": 2,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 56,
+          "y": 69,
+          "width": 822,
+          "height": 1025
+        },
+        {
+          "x": 922,
+          "y": 81,
+          "width": 822,
+          "height": 1000
+        }
+      ],
+      "transparent_percent": 72.5
+    },
+    {
+      "file": "scallop_2photo.png",
+      "name_vi": "Giấy cắt vỏ kem",
+      "photo_count": 2,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 52,
+          "y": 95,
+          "width": 824,
+          "height": 981
+        },
+        {
+          "x": 924,
+          "y": 95,
+          "width": 824,
+          "height": 981
+        }
+      ],
+      "transparent_percent": 72.8
+    },
+    {
+      "file": "scrapbook_2photo.png",
+      "name_vi": "Ảnh giấy xanh trời",
+      "photo_count": 2,
+      "width": 1800,
+      "height": 1200,
+      "photo_slots": [
+        {
+          "x": 59,
+          "y": 110,
+          "width": 819,
+          "height": 964
+        },
+        {
+          "x": 922,
+          "y": 99,
+          "width": 818,
+          "height": 962
+        }
+      ],
+      "transparent_percent": 67.8
+    }
+  ]
+}

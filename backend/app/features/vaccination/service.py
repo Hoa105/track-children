@@ -21,6 +21,7 @@ from app.features.vaccination.schema import (
     AdminVaccineUpdate,
     VaccinationRecord,
 )
+from app.shared.audit import audit as _audit
 
 SCOPE = "vaccination"
 OCCURRENCE_SEPARATOR = "@"  # mũi lặp lại: "flu-yearly@2" = lần nhắc thứ 2
@@ -405,21 +406,6 @@ def _integrity(error: Exception) -> HTTPException:
     if isinstance(error, errors.ForeignKeyViolation):
         return HTTPException(status.HTTP_409_CONFLICT, "Đang được sử dụng hoặc tham chiếu không tồn tại")
     return HTTPException(422, "Dữ liệu không hợp lệ")
-
-
-def _audit(cur, role: str, action: str, entity_type: str, entity_id, before, after) -> None:
-    # Chưa có admin_user_id thật (DEV_AUTH) — ghi vai trò vào after_data để truy vết
-    cur.execute(
-        """
-        INSERT INTO admin.admin_audit_logs (action, entity_type, entity_id, before_data, after_data)
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (
-            action, entity_type, str(entity_id),
-            json.dumps(before, default=str) if before else None,
-            json.dumps({**(after or {}), "_actor_role": role}, default=str),
-        ),
-    )
 
 
 def _create(conn, role, entity_type, table, select_sql, data: dict) -> dict:

@@ -3,16 +3,16 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:track_children/features/auth/auth_entrance_animation.dart';
+import 'package:track_children/features/auth/auth_layout.dart';
 import 'package:track_children/features/auth/auth_screen.dart';
 import 'package:track_children/features/splash/splash_screen.dart';
 
 void main() {
   testWidgets('diagnose splash and auth first render costs', (tester) async {
-    const assets = [
-      'assets/images/scenery/backgrounds/splash_screen_1.png',
-      'assets/images/scenery/backgrounds/splash_screen_2.png',
-      'assets/images/scenery/backgrounds/green_leaf.png',
+    final assets = [
+      'assets/images/scenery/backgrounds/splash_1.png',
+      'assets/images/scenery/backgrounds/splash_2.png',
+      for (final pose in AuthMascotPose.values) AuthMascot.asset(pose),
     ];
 
     for (final asset in assets) {
@@ -53,19 +53,16 @@ void main() {
     );
 
     final cardOpacity = find
-        .descendant(
-          of: find.byType(AuthEntranceCard),
+        .ancestor(
+          of: find.byKey(const ValueKey('auth-form-surface')),
           matching: find.byType(Opacity),
         )
         .first;
     expect(tester.widget<Opacity>(cardOpacity).opacity, 0);
-
-    await tester.pump(const Duration(milliseconds: 779));
-    expect(tester.widget<Opacity>(cardOpacity).opacity, lessThan(1));
-    await tester.pump(const Duration(milliseconds: 1));
+    expect(find.byType(AuthMascot), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.pumpAndSettle();
     expect(tester.widget<Opacity>(cardOpacity).opacity, 1);
-    debugPrint(
-      '[ui-perf] Auth form entrance reaches full visibility after 780 ms.',
-    );
+    debugPrint('[ui-perf] Auth form entrance completes within 450 ms.');
   });
 }

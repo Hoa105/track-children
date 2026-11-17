@@ -28,7 +28,7 @@ function Invoke-DatabaseCommand {
         [string[]]$Arguments
     )
 
-    & docker exec $Database.Container psql -v ON_ERROR_STOP=1 `
+    & docker exec -e "PGOPTIONS=-c client_min_messages=warning" $Database.Container psql -v ON_ERROR_STOP=1 `
         -U track_children -d $Database.Database @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "PostgreSQL command failed for database '$($Database.Database)'."
@@ -82,7 +82,7 @@ function Invoke-Migrations {
 
         Write-Host "  Applying $version..."
         Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 |
-            & docker exec -i $database.Container psql -v ON_ERROR_STOP=1 -1 `
+            & docker exec -i -e "PGOPTIONS=-c client_min_messages=warning" $database.Container psql -v ON_ERROR_STOP=1 -1 `
                 -U track_children -d $database.Database
         if ($LASTEXITCODE -ne 0) {
             throw "Migration '$version' failed for database '$($database.Database)'."

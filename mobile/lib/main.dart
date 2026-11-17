@@ -1,35 +1,98 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'platform/web_keyboard_insets.dart';
+import 'models/activity.dart';
+import 'services/activity_api.dart';
 import 'services/demo_store.dart';
+import 'services/sharing_invitations.dart';
+import 'services/journal_api.dart';
+import 'services/teething_api.dart';
+import 'services/progress_review_api.dart';
 import 'services/auth_service.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
+import 'services/video_insight_api.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/home/background/background_picker_service.dart';
+import 'features/home/background/home_background_repository.dart';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'features/growth/growth_overview.dart';
+import 'features/growth/api_growth_repository.dart';
+import 'features/growth/growth_tracking_flow.dart';
+
 import 'features/splash/splash_screen.dart';
 import 'features/splash/start_screen.dart';
+import 'features/splash/native_startup_screen.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    WebKeyboardInsets(
+      child: TrackChildrenApp(
+        initialize: initializeApplication,
+        nativeStart: arguments.contains('native-start'),
+      ),
+    ),
+  );
+}
+
+/// Start renders while the existing initialization sequence runs.
+Future<void> initializeApplication() async {
   await DemoStore.instance.initialize();
-  await DemoStore.instance.logout();
   await AuthService.instance.restore();
+  if (!AuthService.instance.signedIn) {
+    await DemoStore.instance.logout();
+  }
+  if (!kIsWeb) {
+    try {
+      final picker = BackgroundPickerService();
+      await picker.recoverInterrupted();
+      await const HomeBackgroundRepository().cleanupOrphans(
+        keepPending: await picker.recoveryPaths(),
+      );
+    } catch (_) {
+      /* A local media error must not prevent app startup. */
+    }
+  }
   final vaccinationApi = VaccinationApi();
   DemoStore.vaccinationRemote = vaccinationApi;
+  DemoStore.videoInsightRemote = VideoInsightApi();
+  DemoStore.progressReviewRemote = ProgressReviewApi();
+  DemoStore.activityRemote = ActivityApi.instance;
+  DemoStore.journalRemote = JournalApi();
+  DemoStore.teethingRemote = AuthService.instance.demoMode
+      ? null
+      : TeethingApi();
   // Không chờ: backend tắt thì dùng lịch tiêm có sẵn trong app.
   vaccinationApi.fetchSchedule().then(applyVaccineCatalog).catchError((_) {});
+  // Kho hoạt động từ DB; lỗi thì giữ danh sách có sẵn trong app.
+  ActivityApi.instance
+      .fetchCatalog()
+      .then(applyActivityCatalog)
+      .catchError((_) {});
   // Gửi lên backend các mũi đang chỉ lưu trên máy (vd thêm khi chưa có mạng).
   for (final child in DemoStore.instance.children) {
     DemoStore.instance.syncVaccinations(child['id'] as String);
+    DemoStore.instance.syncActivities(child['id'] as String);
+    DemoStore.instance.syncJournal(child['id'] as String);
+    DemoStore.instance.syncTeeth(child['id'] as String);
   }
-  runApp(const TrackChildrenApp());
 }
 
 class TrackChildrenApp extends StatefulWidget {
-  const TrackChildrenApp({super.key});
+  const TrackChildrenApp({
+    this.initialize,
+    this.nativeStart = false,
+    super.key,
+  });
+  final Future<void> Function()? initialize;
+  final bool nativeStart;
 
   @override
   State<TrackChildrenApp> createState() => _TrackChildrenAppState();
@@ -37,9 +100,14 @@ class TrackChildrenApp extends StatefulWidget {
 
 class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  GrowthRepository get _growthRepository =>
+      AuthService.instance.signedIn && !AuthService.instance.demoMode
+      ? ApiGrowthRepository()
+      : MockGrowthRepository();
 
   Future<void> _logout() async {
     final revocation = AuthService.instance.logout();
+    SharingInvitations.instance.clear();
     await DemoStore.instance.clearAuthenticatedCache();
     if (!mounted) return;
     await _showLoginAfterSplash();
@@ -63,6 +131,10 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       await _showChildProfileSelection();
       return;
     }
+    _showAuthScreen();
+  }
+
+  void _showAuthScreen() {
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => AuthScreen(
@@ -99,6 +171,31 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       await DemoStore.instance.bindAuthenticatedUser(
         AuthService.instance.user!,
       );
+      if (!AuthService.instance.demoMode) {
+        final owner = AuthService.instance.user!['id'] as String;
+        try {
+          final response = await AuthService.instance.authorizedRequest(
+            'GET',
+            '/children',
+          );
+          if (AuthService.instance.user?['id'] != owner) return;
+          await DemoStore.instance.cacheAuthenticatedChildren(
+            owner,
+            (response['children'] as List)
+                .map((c) => Map<String, dynamic>.from(c as Map))
+                .toList(),
+          );
+          // Lời mời chia sẻ hiện ngay trong Thông báo; không chờ để vào app nhanh.
+          SharingInvitations.instance.refresh();
+        } catch (error) {
+          if (mounted) {
+            ScaffoldMessenger.maybeOf(_navigatorKey.currentContext ?? context)
+                ?.showSnackBar(
+                  SnackBar(content: Text('Chưa tải được hồ sơ bé: $error')),
+                );
+          }
+        }
+      }
     }
     if (!mounted) return;
     _navigatorKey.currentState?.pushAndRemoveUntil(
@@ -106,6 +203,7 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
         builder: (_) => ChildProfileSelectionScreen(
           onSelectChild: _showDemoHome,
           onAddChild: _showChildProfilePreview,
+          onBack: _showAuthScreen,
         ),
       ),
       (_) => false,
@@ -142,6 +240,34 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       navigatorKey: _navigatorKey,
       title: 'Bé Lớn Khôn',
       debugShowCheckedModeBanner: false,
+      routes: {
+        '/home': (_) => HomeScreen(
+          childName:
+              DemoStore.instance.child?['full_name'] as String? ?? 'Bé của bạn',
+          onLogout: _logout,
+        ),
+        '/growth/bmi-detail': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'bmi',
+        ),
+        '/growth/head-detail': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'head',
+        ),
+        '/growth/length-detail': (_) => TrackingHistoryScreen(
+          repository: _growthRepository,
+          metric: GrowthMetric.lengthHeight,
+        ),
+        '/growth/weight-explanation': (_) => TrackingAssessmentScreen(
+          repository: _growthRepository,
+          kind: 'bmi',
+        ),
+        '/growth': (_) => GrowthOverview(repository: _growthRepository),
+        '/growth/weight-detail': (_) => TrackingHistoryScreen(
+          repository: _growthRepository,
+          metric: GrowthMetric.weight,
+        ),
+      },
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
@@ -174,7 +300,15 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
           labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
-      home: StartScreen(onLoginRequired: _showLoginAfterSplash),
+      home: widget.nativeStart
+          ? NativeStartupScreen(
+              onLoginRequired: _showLoginAfterSplash,
+              initialize: widget.initialize,
+            )
+          : StartScreen(
+              onLoginRequired: _showLoginAfterSplash,
+              initialize: widget.initialize,
+            ),
     );
   }
 }

@@ -1,0 +1,26 @@
+{
+  "key": "belonkhon-scallop-2photo",
+  "theme": "belonkhon",
+  "categoryTitle": "Bé Lớn Khôn",
+  "title": "Giấy cắt vỏ kem",
+  "format": "6:4",
+  "shape": "landscape",
+  "order": 4,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 52,
+      "y": 94,
+      "width": 824,
+      "height": 982,
+      "photo": 0
+    },
+    {
+      "x": 924,
+      "y": 94,
+      "width": 824,
+      "height": 982,
+      "photo": 1
+    }
+  ]
+}

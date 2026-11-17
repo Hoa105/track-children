@@ -1,0 +1,4 @@
+data/
+models/*
+# Model K-DST tự train: nhỏ, commit để build image không cần train lại
+!models/kdst/

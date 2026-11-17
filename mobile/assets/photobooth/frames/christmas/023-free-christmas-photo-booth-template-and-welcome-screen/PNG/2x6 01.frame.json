@@ -1,0 +1,40 @@
+{
+  "key": "christmas-starlight-2x6-01",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Ánh sao 01",
+  "format": "2×6 đôi",
+  "shape": "strip",
+  "order": 101,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 41,
+      "y": 45,
+      "width": 519,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 41,
+      "y": 610,
+      "width": 519,
+      "height": 519,
+      "photo": 1
+    },
+    {
+      "x": 641,
+      "y": 45,
+      "width": 519,
+      "height": 519,
+      "photo": 0
+    },
+    {
+      "x": 641,
+      "y": 610,
+      "width": 519,
+      "height": 519,
+      "photo": 1
+    }
+  ]
+}

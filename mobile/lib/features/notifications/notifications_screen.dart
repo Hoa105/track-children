@@ -4,7 +4,12 @@ import '../../app_colors.dart';
 import '../../app_layout.dart';
 import '../../services/app_notifications.dart';
 import '../../services/demo_store.dart';
+import '../../services/sharing_invitations.dart';
+import '../sharing/shared_with_me_screen.dart';
 import '../vaccination/vaccination_screen.dart';
+import '../assessment/assessment_screen.dart';
+import '../assessment/assessment_repository.dart';
+import '../assessment/assessment_reminders.dart';
 
 const _heading = TextStyle(
   fontSize: 20,
@@ -25,6 +30,24 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _unreadOnly = false, _busy = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadAssessment();
+    SharingInvitations.instance.refresh();
+  }
+
+  Future<void> _loadAssessment() async {
+    final repo = assessmentRepository();
+    for (final child in DemoStore.instance.children) {
+      try {
+        await repo.overview(child['id'] as String);
+      } catch (_) {
+        /* Keep existing notifications available if assessment API is offline. */
+      }
+    }
+  }
+
   Future<bool> _markRead(Iterable<String> ids) async {
     setState(() => _busy = true);
     try {
@@ -51,14 +74,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!await _markRead([notification.id]) || !mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => VaccinationScreen(childId: notification.childId),
+        builder: (_) => switch (notification.kind) {
+          'sharing' => const SharedWithMeScreen(),
+          'assessment' => AssessmentScreen(childId: notification.childId),
+          _ => VaccinationScreen(childId: notification.childId),
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: DemoStore.instance,
+    listenable: Listenable.merge([
+      DemoStore.instance,
+      AssessmentReminders.instance,
+      SharingInvitations.instance,
+    ]),
     builder: (context, _) {
       final store = DemoStore.instance;
       final all = careNotifications(store);
@@ -100,7 +131,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Theo dõi lịch dự kiến của các bé trong gia đình.',
+                    'Lời mời chia sẻ hồ sơ và lịch dự kiến của các bé trong gia đình.',
                     style: _body,
                   ),
                 ],
@@ -159,7 +190,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     Text(
                       !enabled
                           ? 'Bật Thông báo & nhắc nhở trong Cài đặt để xem lịch nhắc.'
-                          : 'Lịch tiêm dự kiến trong 7 ngày tới hoặc đã qua không quá 30 ngày sẽ xuất hiện ở đây.',
+                          : 'Các lịch nhắc tiêm chủng và đánh giá phát triển sẽ xuất hiện ở đây.',
                       style: _body,
                       textAlign: TextAlign.center,
                     ),
@@ -188,8 +219,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.vaccines_outlined,
+                              Icon(
+                                switch (entry.kind) {
+                                  'sharing' => Icons.group_add_outlined,
+                                  'assessment' => Icons.fact_check_outlined,
+                                  _ => Icons.vaccines_outlined,
+                                },
                                 color: AppColors.primary,
                               ),
                               const SizedBox(width: 12),
@@ -217,9 +252,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           const SizedBox(height: 12),
                           Text(entry.message, style: _body),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Xem sổ tiêm →',
-                            style: TextStyle(
+                          Text(
+                            switch (entry.kind) {
+                              'sharing' => 'Xem lời mời →',
+                              'assessment' => 'Xem đánh giá →',
+                              _ => 'Xem sổ tiêm →',
+                            },
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary,
@@ -233,7 +272,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             const SizedBox(height: 16),
             const Text(
-              'Lịch dự kiến lấy từ sổ tiêm của bé. Thông báo hiện trong ứng dụng; chưa gửi khi ứng dụng đóng.',
+              'Lịch nhắc theo hồ sơ và mốc tuổi của bé. Thông báo hiện trong ứng dụng; chưa gửi khi ứng dụng đóng.',
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,

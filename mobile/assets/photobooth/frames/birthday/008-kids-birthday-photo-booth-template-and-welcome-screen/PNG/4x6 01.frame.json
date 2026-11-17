@@ -1,0 +1,26 @@
+{
+  "key": "birthday-kids-4x6-01",
+  "theme": "birthday",
+  "categoryTitle": "Sinh nhật",
+  "title": "Sinh nhật bé 01",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 301,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 108,
+      "y": 380,
+      "width": 985,
+      "height": 649,
+      "photo": 0
+    },
+    {
+      "x": 109,
+      "y": 1063,
+      "width": 987,
+      "height": 649,
+      "photo": 1
+    }
+  ]
+}

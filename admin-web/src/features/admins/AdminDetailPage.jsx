@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../core/auth.jsx";
 import { mockAdmins, passwordProblem } from "../../core/authApi.js";
-import { ADMIN_ROLES, initialsOf, roleLabel } from "../../core/session.js";
+import { initialsOf, roleLabel } from "../../core/session.js";
 import { navigate } from "../../core/useHashRoute.js";
 import Icon from "../../shared/Icon.jsx";
 import { Badge, DataTable, MockNotice, Panel } from "../../shared/ui.jsx";
@@ -101,7 +101,7 @@ export default function AdminDetailPage({ id, onNotify }) {
   }
 
   return <div>
-    <button className="text-link detail-back" onClick={() => navigate("/admins")}><Icon name="arrow" size={14} /> Quản trị viên & vai trò</button>
+    <button className="text-link detail-back" onClick={() => navigate("/admins")}><Icon name="arrow" size={14} /> Quản trị viên</button>
     <div className="detail-header">
       <div className="avatar avatar-blue avatar-lg">{initialsOf(target.fullName)}</div>
       <div className="detail-title"><h1>{target.fullName}{isMe && " (bạn)"}</h1><p>{target.email} · {roleLabel(target.role)}</p></div>
@@ -116,16 +116,14 @@ export default function AdminDetailPage({ id, onNotify }) {
     <MockNotice />
     {target.mustChangePassword && <div className="detail-alert info">Thành viên chưa đăng nhập lần đầu — đang dùng mật khẩu tạm do quản trị viên cấp và sẽ phải đổi mật khẩu khi đăng nhập.</div>}
     {locked && <div className="detail-alert">{isMe
-      ? "Đây là tài khoản của bạn — không thể tự khóa hoặc tự đổi vai trò."
-      : "Super Admin đang hoạt động cuối cùng — không thể khóa hoặc hạ vai trò."}</div>}
+      ? "Đây là tài khoản của bạn — không thể tự khóa."
+      : "Tài khoản này đang được bảo vệ."}</div>}
 
     <div className="content-grid detail-grid">
       <Panel title="Thông tin" subtitle="admin.admin_users">
         <InfoList rows={[
           ["Email", target.email],
-          ["Vai trò", locked
-            ? roleLabel(target.role)
-            : <select className="inline-select" value={target.role} onChange={(event) => update({ role: event.target.value }, `Đã đổi vai trò của ${target.fullName} thành ${roleLabel(event.target.value)}`)}>{ADMIN_ROLES.map((role) => <option key={role.code} value={role.code}>{role.label}</option>)}</select>],
+          ["Vai trò", roleLabel(target.role)],
           ["Ngày tạo", target.createdAt],
           ["Đăng nhập gần nhất", target.lastLogin],
           ["Đăng nhập sai liên tiếp", target.failed > 0 ? <Badge tone="orange">{target.failed} lần</Badge> : 0],

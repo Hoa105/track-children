@@ -1,0 +1,19 @@
+{
+  "key": "halloween-kids-5x5-01",
+  "theme": "halloween",
+  "categoryTitle": "Halloween",
+  "title": "Halloween vui 01",
+  "format": "5×5",
+  "shape": "square",
+  "order": 701,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 240,
+      "y": 53,
+      "width": 1021,
+      "height": 1021,
+      "photo": 0
+    }
+  ]
+}

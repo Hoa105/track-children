@@ -1,4 +1,5 @@
 """Consolidated-schema API tests. Each run uses a new, disposable *_test DB."""
+import yaml
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -82,7 +83,7 @@ def test_registration_and_session(env,channel):
     r=verify(client,ch,sent[-1][2]);assert r.status_code==200,r.text
     result=r.json();assert result['user']['relationship']=='grandfather'
     from jsonschema import Draft202012Validator
-    contract=json.loads((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
+    contract=yaml.safe_load((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.yaml').read_text(encoding='utf-8'))
     Draft202012Validator({'$ref':'#/components/schemas/AuthResult',
         'components':contract['components']}).validate(result)
     headers={'Authorization':'Bearer '+result['accessToken']}

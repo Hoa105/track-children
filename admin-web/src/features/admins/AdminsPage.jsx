@@ -14,11 +14,9 @@ export function AdminStatus({ admin }) {
   return <Badge tone="green">Đang hoạt động</Badge>;
 }
 
-// Không tự khóa / tự đổi vai trò, và không bỏ super admin đang hoạt động cuối cùng
-// (DB cũng chặn bằng trigger trg_admin_users_keep_super_admin)
+// Không cho quản trị viên tự khóa tài khoản đang đăng nhập.
 export function isProtectedAdmin(item, me, admins) {
-  const activeSuperAdmins = admins.filter((other) => other.role === "super_admin" && other.status === "active").length;
-  return item.id === me.id || (item.role === "super_admin" && item.status === "active" && activeSuperAdmins === 1);
+  return item.id === me.id;
 }
 
 const copyMatrix = () => Object.fromEntries(Object.entries(ROLE_PERMISSIONS).map(([role, codes]) => [role, [...codes]]));
@@ -44,22 +42,15 @@ export default function AdminsPage({ onNotify }) {
     setDraft((current) => ({ ...current, admins: current.admins.map((item) => item.id === id ? { ...item, ...changes } : item) }));
   }
 
-  function togglePermission(role, code) {
-    setDraft((current) => {
-      const codes = current.matrix[role];
-      return { ...current, matrix: { ...current.matrix, [role]: codes.includes(code) ? codes.filter((item) => item !== code) : [...codes, code] } };
-    });
-  }
-
   function save() {
     draft.admins.forEach((item) => {
       const stored = mockAdmins.find((other) => other.id === item.id);
-      if (stored) Object.assign(stored, { role: item.role, status: item.status });  // để đăng nhập mock thấy thay đổi
+      if (stored) Object.assign(stored, { status: item.status });
     });
     Object.entries(draft.matrix).forEach(([role, codes]) => { ROLE_PERMISSIONS[role].splice(0, ROLE_PERMISSIONS[role].length, ...codes); });
     setAdmins(draft.admins);
     setDraft(null);
-    onNotify("Đã lưu thay đổi — vai trò & quyền áp dụng từ lần đăng nhập kế tiếp");
+    onNotify("Đã lưu thay đổi trạng thái tài khoản");
   }
 
   function addMember({ fullName, email, role, password }) {
@@ -71,7 +62,7 @@ export default function AdminsPage({ onNotify }) {
   }
 
   return <div>
-    <PageHeading eyebrow="HỆ THỐNG" title="Quản trị viên & vai trò" subtitle="Tài khoản web admin và phân quyền theo vai trò.">
+    <PageHeading eyebrow="HỆ THỐNG" title="Quản trị viên" subtitle="Mọi tài khoản quản trị dùng chung vai trò admin và bộ quyền từ backend.">
       {!editing && <>
         <button className="button secondary" onClick={startEditing}><Icon name="edit" size={16} /> Chỉnh sửa</button>
         <button className="button primary" onClick={() => setModalOpen(true)}><Icon name="user-plus" size={16} /> Thêm thành viên</button>
@@ -80,16 +71,14 @@ export default function AdminsPage({ onNotify }) {
     <MockNotice />
     <Tabs active={tab} onChange={setTab} tabs={[
       { id: "admins", label: "Quản trị viên", count: admins.length },
-      { id: "roles", label: "Vai trò & quyền" },
+      { id: "roles", label: "Quyền quản trị" },
     ]} />
-    {editing && <div className="matrix-edit-bar edit-mode-bar"><span>Đang chỉnh sửa vai trò, trạng thái tài khoản và phân quyền. Thay đổi chỉ áp dụng khi bấm Lưu.</span><div><button className="button secondary" onClick={() => setDraft(null)}>Hủy</button><button className="button primary" onClick={save}>Lưu thay đổi</button></div></div>}
+    {editing && <div className="matrix-edit-bar edit-mode-bar"><span>Đang chỉnh sửa trạng thái tài khoản. Vai trò và quyền được backend áp dụng thống nhất cho mọi admin.</span><div><button className="button secondary" onClick={() => setDraft(null)}>Hủy</button><button className="button primary" onClick={save}>Lưu thay đổi</button></div></div>}
 
     {tab === "admins" && <Panel title="Tài khoản quản trị" subtitle={editing ? "admin.admin_users · đang chỉnh sửa" : "admin.admin_users · bấm một dòng để xem chi tiết"}>
       <DataTable rowKey="id" rows={shownAdmins} paginate onRowClick={editing ? undefined : (item) => navigate(`/admins/${item.id}`)} columns={[
         { key: "name", label: "QUẢN TRỊ VIÊN", render: (item) => <div className="user-cell"><div className="avatar avatar-blue">{initialsOf(item.fullName)}</div><div><b>{item.fullName}{item.id === me.id && " (bạn)"}</b><span>{item.email}</span></div></div> },
-        { key: "role", label: "VAI TRÒ", render: (item) => !editing || isProtected(item)
-          ? roleLabel(item.role)
-          : <select className="inline-select" value={item.role} onClick={stopRowClick} onChange={(event) => editAdmin(item.id, { role: event.target.value })}>{ADMIN_ROLES.map((role) => <option key={role.code} value={role.code}>{role.label}</option>)}</select> },
+        { key: "role", label: "VAI TRÒ", render: (item) => roleLabel(item.role) },
         { key: "status", label: "TRẠNG THÁI", render: (item) => <AdminStatus admin={item} /> },
         { key: "lastLogin", label: "ĐĂNG NHẬP GẦN NHẤT", render: (item) => item.lastLogin ?? "—" },
         { key: "createdAt", label: "NGÀY TẠO" },
@@ -101,13 +90,11 @@ export default function AdminsPage({ onNotify }) {
       ]} />
     </Panel>}
 
-    {tab === "roles" && <Panel title="Ma trận vai trò × quyền" subtitle={editing ? "admin.role_permissions · đang chỉnh sửa — Super Admin luôn có toàn bộ quyền" : "admin.role_permissions — menu tự ẩn mục admin không có quyền"}>
+    {tab === "roles" && <Panel title="Quyền của quản trị viên" subtitle="Backend áp dụng cùng một bộ quyền cho mọi tài khoản admin đang hoạt động.">
       <div className="table-wrap"><table className="matrix"><thead><tr><th>QUYỀN</th>{ADMIN_ROLES.map((role) => <th key={role.code}>{role.label.toUpperCase()}</th>)}</tr></thead>
         <tbody>{PERMISSIONS.map((permission) => <tr key={permission.code}><td><div className="stack"><span>{permission.label}</span><small><code>{permission.code}</code></small></div></td>{ADMIN_ROLES.map((role) => {
           const has = matrix[role.code].includes(permission.code);
-          return <td key={role.code} className="matrix-cell">{editing
-            ? <input type="checkbox" aria-label={`${role.label} — ${permission.label}`} checked={has} disabled={role.code === "super_admin"} onChange={() => togglePermission(role.code, permission.code)} />
-            : has ? <span className="matrix-yes"><Icon name="check" size={14} /></span> : <span className="matrix-no">—</span>}</td>;
+          return <td key={role.code} className="matrix-cell">{has ? <span className="matrix-yes"><Icon name="check" size={14} /></span> : <span className="matrix-no">—</span>}</td>;
         })}</tr>)}</tbody>
       </table></div>
     </Panel>}

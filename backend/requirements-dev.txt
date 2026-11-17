@@ -1,2 +1,5 @@
 -r requirements.txt
 openapi-spec-validator>=0.7,<0.8
+PyYAML>=6.0,<7.0
+jsonschema[format]>=4.23,<5.0
+referencing>=0.35,<1.0

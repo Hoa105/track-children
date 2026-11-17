@@ -13,11 +13,136 @@ class ChildActivity {
     this.name,
     this.minMonths,
     this.maxMonths,
-    this.minutes,
-  );
+    this.minutes, {
+    this.summary,
+    this.thumbnailUrl,
+    this.remote = false,
+  });
+
+  /// GET /activities item (backend/app/features/activities/router.py).
+  /// Unknown groups fall back to "Nhận thức & Cảm xúc xã hội".
+  factory ChildActivity.fromJson(Map<String, dynamic> json) {
+    final group = activityGroupCodes.indexOf(json['groupCode'] as String? ?? '');
+    return ChildActivity(
+      json['id'] as String,
+      'g${group < 0 ? 3 : group}',
+      json['title'] as String,
+      json['ageFromMonths'] as int,
+      json['ageToMonths'] as int,
+      json['durationMinutes'] as int? ?? 0,
+      summary: json['summary'] as String?,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      remote: true,
+    );
+  }
+
   final String id, groupId, name;
+
+  /// 0 = không cố định thời lượng.
   final int minMonths, maxMonths, minutes;
+  final String? summary;
+
+  /// Relative to the backend (`/static/...`); resolve with `ActivityApi.imageUrl`.
+  final String? thumbnailUrl;
+
+  /// Loaded from the backend; details come from GET /activities/{id}.
+  final bool remote;
   String get ageLabel => '$minMonths–$maxMonths tháng';
+  String get durationLabel => minutes > 0
+      ? '$minutes phút'
+      : remote
+      ? 'Linh hoạt'
+      : 'Theo bữa';
+}
+
+/// GET /activities/{id}: content of the detail screen.
+class ActivityDetail {
+  const ActivityDetail({
+    required this.goal,
+    required this.materialItems,
+    required this.lyrics,
+    required this.sections,
+    required this.steps,
+    required this.media,
+  });
+
+  factory ActivityDetail.fromJson(Map<String, dynamic> json) => ActivityDetail(
+    goal: json['goal'] as String?,
+    materialItems: (json['materialItems'] as List).cast<String>(),
+    lyrics: json['lyrics'] as String?,
+    sections: [
+      for (final s in (json['sections'] as List).cast<Map<String, dynamic>>())
+        (s['title'] as String, s['body'] as String),
+    ],
+    steps: [
+      for (final s in (json['steps'] as List).cast<Map<String, dynamic>>())
+        ActivityStep(
+          s['number'] as int,
+          s['instruction'] as String,
+          s['imageUrl'] as String?,
+        ),
+    ],
+    media: [
+      for (final m in (json['media'] as List).cast<Map<String, dynamic>>())
+        if (m['mediaType'] == 'image') m['url'] as String,
+    ],
+  );
+
+  final String? goal, lyrics;
+  final List<String> materialItems;
+
+  /// (title, body) — "Chuẩn bị", "Hướng dẫn của chuyên gia"...
+  final List<(String, String)> sections;
+  final List<ActivityStep> steps;
+
+  /// Image urls, main photo first.
+  final List<String> media;
+
+  /// Text guide in the same shape as the bundled instructions (also sent to AI).
+  List<(String, String)> get guide => [
+    if (goal != null) ('Mục tiêu', goal!),
+    ...sections,
+    if (steps.isNotEmpty)
+      (
+        'Các bước thực hiện',
+        steps.map((s) => '${s.number}. ${s.instruction}').join('\n'),
+      ),
+    if (lyrics != null) ('Lời bài hát', lyrics!),
+  ];
+}
+
+class ActivityStep {
+  const ActivityStep(this.number, this.instruction, this.imageUrl);
+  final int number;
+  final String instruction;
+  final String? imageUrl;
+}
+
+/// activity_groups.code on the backend, by local group index (g0, g1...).
+const activityGroupCodes = [
+  'gross_motor',
+  'fine_motor',
+  'language',
+  'cognitive_social',
+  'music',
+  'story',
+];
+
+/// Catalog in use: backend activities once loaded, otherwise [bundledActivityCatalog].
+List<ChildActivity> get activityCatalog => activityCatalogState.value;
+final activityCatalogState = ValueNotifier<List<ChildActivity>>(
+  bundledActivityCatalog,
+);
+
+/// Replaces the bundled ideas of every group the backend has content for;
+/// groups still empty there (âm nhạc, kể chuyện) keep the bundled ones.
+void applyActivityCatalog(List<ChildActivity> remote) {
+  if (remote.isEmpty) return;
+  final groups = remote.map((a) => a.groupId).toSet();
+  activityCatalogState.value = [
+    ...remote,
+    ...bundledActivityCatalog.where((a) => !groups.contains(a.groupId)),
+  ];
 }
 
 const activityGroups = <ActivityGroup>[
@@ -58,7 +183,7 @@ const activityGroups = <ActivityGroup>[
     Icons.auto_stories_outlined,
   ),
 ];
-const activityCatalog = <ChildActivity>[
+const bundledActivityCatalog = <ChildActivity>[
   ChildActivity('g0-0', 'g0', 'Tummy time (nằm sấp)', 0, 3, 5),
   ChildActivity('g0-1', 'g0', 'Tập lẫy, lăn người', 3, 6, 10),
   ChildActivity('g0-2', 'g0', 'Tập ngồi có hỗ trợ', 5, 8, 10),

@@ -1,3 +1,4 @@
+import yaml
 import json
 from datetime import timedelta
 from uuid import uuid4
@@ -172,7 +173,7 @@ def test_concurrent_verify_and_refresh_logout(env,payload):
 
 def test_actual_response_schemas(env,payload):
     # Resolve local refs only. No external schema fetches during tests.
-    doc=json.loads((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.json').read_text(encoding='utf-8'))
+    doc=yaml.safe_load((Path(__file__).parents[3]/'docs/api/mobile-auth.openapi.yaml').read_text(encoding='utf-8'))
     def resolve(value):
         if isinstance(value,dict):
             if '$ref' in value:return resolve(doc['components']['schemas'][value['$ref'].split('/')[-1]])

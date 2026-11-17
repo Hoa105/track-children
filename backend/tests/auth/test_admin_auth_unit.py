@@ -34,6 +34,14 @@ def policy(monkeypatch):
 def data():return AdminLogin(email='admin@example.com',password='AdminPassword123')
 
 
+def test_profile_exposes_the_permissions_enforced_for_every_active_admin():
+    user = dict(id=uuid4(), email='admin@example.com', full_name='Admin')
+    profile = repo.profile(None, user)
+    assert profile['role'] == 'admin' and profile['roles'] == ['admin']
+    assert profile['permissions'] == list(repo.ADMIN_PERMISSIONS)
+    assert {'user.read', 'health.write', 'admin.manage'} <= set(profile['permissions'])
+
+
 @pytest.mark.parametrize('position',[0,1])
 def test_login_quota_prevents_password_check(policy,position):
     _,_,m=policy

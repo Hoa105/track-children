@@ -133,3 +133,35 @@ def require_admin(permission: str):
         return role["code"]
 
     return dependency
+
+
+def require_admin_user(permission: str):
+    """Like require_admin, but returns the authenticated admin id for audit rows."""
+
+    def dependency(
+        request: Request,
+        credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    ) -> dict:
+        error = ready()
+        if error:
+            raise AuthenticationRequired(output(error))
+        identity = token_identity(request, settings.auth_admin_audience)
+        if isinstance(identity, AuthFailure):
+            response = output(identity)
+            response.headers["WWW-Authenticate"] = "Bearer"
+            raise AuthenticationRequired(response)
+        with transaction() as db:
+            user = current_user(request, db, admin=True, identity=identity)
+            role = None
+            if not isinstance(user, AuthFailure):
+                role = repository.find_admin_permission(db, (user["id"], permission))
+        if isinstance(user, AuthFailure):
+            response = output(user)
+            if response.status_code == 401:
+                response.headers["WWW-Authenticate"] = "Bearer"
+            raise AuthenticationRequired(response)
+        if not role:
+            raise HTTPException(403, f"Missing permission: {permission}")
+        return {"id": user["id"], "permission": role["code"]}
+
+    return dependency

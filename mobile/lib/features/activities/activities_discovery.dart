@@ -19,6 +19,21 @@ class ActivitiesScreen extends StatefulWidget {
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
   int _suggestion = 0;
   int? _minutes;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lấy "Đã làm" / "Yêu thích" mới nhất (vd bố đánh dấu trên máy khác).
+    DemoStore.instance.syncActivities(widget.childId);
+  }
+
+  @override
+  void didUpdateWidget(ActivitiesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.childId != widget.childId) {
+      DemoStore.instance.syncActivities(widget.childId);
+    }
+  }
   void _open(ChildActivity a) => Navigator.push(
     context,
     MaterialPageRoute<void>(
@@ -29,7 +44,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: DemoStore.instance,
+    listenable: Listenable.merge([DemoStore.instance, activityCatalogState]),
     builder: (context, _) {
       final store = DemoStore.instance;
       final child = store.childById(widget.childId);
@@ -59,8 +74,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   done.contains(b.id) ? 1 : 0,
                 );
         });
+      // Chỉ gợi ý trò có hướng dẫn đầy đủ (từ kho hoạt động hoặc soạn sẵn).
       final suggestions =
-          ranked.where((a) => activityInstructions.containsKey(a.id)).toList()
+          ranked
+              .where(
+                (a) => a.remote || activityInstructions.containsKey(a.id),
+              )
+              .toList()
             ..sort((a, b) => distance(a).compareTo(distance(b)));
       final featured = suggestions[_suggestion % suggestions.length];
       final picks = ranked
@@ -171,6 +191,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                 child: _PlayArt(
                                   groupId: featured.groupId,
                                   large: true,
+                                  imageUrl: featured.thumbnailUrl,
                                 ),
                               ),
                             ),
@@ -186,7 +207,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '${featured.minutes} phút · ${featured.ageLabel}',
+                              '${featured.durationLabel} · ${featured.ageLabel}',
                               style: _secondary,
                             ),
                           ],
@@ -263,7 +284,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   onTap: () => _open(a),
                   child: Row(
                     children: [
-                      _PlayArt(groupId: a.groupId),
+                      _PlayArt(groupId: a.groupId, imageUrl: a.thumbnailUrl),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -272,7 +293,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                             Text(a.name, style: _title),
                             const SizedBox(height: 6),
                             Text(
-                              '${a.minutes} phút · ${a.ageLabel}',
+                              '${a.durationLabel} · ${a.ageLabel}',
                               style: _secondary,
                             ),
                             if (done.contains(a.id))
@@ -398,14 +419,31 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
 /// Layered icon artwork uses the app's existing toy asset and native vector icons.
 class _PlayArt extends StatelessWidget {
-  const _PlayArt({required this.groupId, this.large = false});
+  const _PlayArt({required this.groupId, this.large = false, this.imageUrl});
   final String groupId;
   final bool large;
+
+  /// Thumbnail from the backend; replaces the artwork when it loads.
+  final String? imageUrl;
   @override
   Widget build(BuildContext context) {
     final group = activityGroups.firstWhere((g) => g.id == groupId);
     final tint = _groupTints[int.parse(groupId.substring(1))];
     final size = large ? 156.0 : 64.0;
+    if (imageUrl != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(large ? 36 : 18),
+        child: Image.network(
+          ActivityApi.instance.imageUrl(imageUrl!),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          excludeFromSemantics: true,
+          errorBuilder: (_, _, _) =>
+              _PlayArt(groupId: groupId, large: large),
+        ),
+      );
+    }
     return SizedBox(
       width: size,
       height: size,

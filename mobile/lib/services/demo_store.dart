@@ -1,22 +1,36 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'activity_api.dart';
 import 'api_config.dart';
+import 'auth_service.dart';
+import 'journal_api.dart';
+import 'journal_media.dart';
+import 'teething_api.dart';
+import 'progress_review_api.dart';
 import 'vaccination_remote.dart';
+import 'video_insight_api.dart';
 import 'who_bmi_reference.dart';
+import 'growth_api.dart';
 import '../models/tooth.dart';
 import '../models/activity.dart';
+import '../models/progress_review.dart';
+import '../models/video_insight.dart';
 
 export 'vaccination_remote.dart';
 
 /// Local, fictional test database. Never authenticates against a real service.
 /// Vaccination records are the exception: with [vaccinationRemote] set they are
-/// saved to the backend first and cached here.
+/// saved to the backend first and cached here. Diary entries are saved here
+/// first and copied to the backend ([journalRemote]).
 class DemoStore extends ChangeNotifier {
-  DemoStore({DateTime? today}) : _data = _fixture(today ?? DateTime.now());
+  DemoStore({DateTime? today})
+    : _data = _DemoFixture.create(today ?? DateTime.now());
   static DemoStore _instance = DemoStore();
   static DemoStore get instance => _instance;
   @visibleForTesting
@@ -27,12 +41,33 @@ class DemoStore extends ChangeNotifier {
   /// Set in main(); null (as in tests) keeps vaccination records local only.
   static VaccinationRemote? vaccinationRemote;
 
+  /// Null in widget tests and demo mode; otherwise persists teeth remotely.
+  static TeethingRemote? teethingRemote;
+
+  /// Set in main(); null disables AI comments on diary videos.
+  static VideoInsightRemote? videoInsightRemote;
+
+  /// Set in main(); null disables AI progress reviews across diary videos.
+  static ProgressReviewRemote? progressReviewRemote;
+
+  /// Set in main(); null (as in tests) keeps "Đã làm" / "Yêu thích" local only.
+  static ActivityRemote? activityRemote;
+
+  /// Set in main(); null (as in tests) keeps the diary on this device only.
+  static JournalRemote? journalRemote;
+
   static const storageKey = 'synchronized_demo_v1';
+  static const demoEmail = 'demo@trackchildren.vn';
+  static const serverTestEmail = 'growth.parent@example.com';
+  static const serverTestPassword = 'BeLonKhon2026!';
   static const password = 'TreXanh123';
+  static const _cache = _DemoLocalCache(storageKey);
   Map<String, dynamic> _data;
   bool _loaded = false;
   Future<void>? _loading;
   Future<void>? _queue;
+  final Map<String, int> _growthRevisions = {};
+  late final _TeethingStore _teething = _TeethingStore(this);
   Map<String, dynamic> _copy(Map value) =>
       Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
   List<Map<String, dynamic>> get _parents =>
@@ -64,6 +99,14 @@ class DemoStore extends ChangeNotifier {
     return found.isEmpty ? null : found.first;
   }
 
+  String teethingAccess(String childId) => _teething.access(childId);
+  bool canViewTeething(String childId) => _teething.canView(childId);
+  bool canEditTeething(String childId) => _teething.canEdit(childId);
+  TeethingSyncStatus teethingSyncStatus(String childId) =>
+      _teething.status(childId);
+  Future<void> refreshTeethingAccess(String childId) =>
+      _teething.refreshAccess(childId);
+
   String? childIdForName(String name) {
     final match = children.where((c) => c['full_name'] == name);
     return match.isEmpty ? null : match.first['id'] as String;
@@ -73,9 +116,8 @@ class DemoStore extends ChangeNotifier {
       _loaded ? Future.value() : _loading ??= _initialize();
   Future<void> _initialize() async {
     if (_loaded) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(storageKey);
-    if (raw != null) _data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    final cached = await _cache.load();
+    if (cached != null) _data = cached;
     _loaded = true;
     notifyListeners();
   }
@@ -92,10 +134,7 @@ class DemoStore extends ChangeNotifier {
       }
       final next = _copy(_data);
       change(next);
-      final prefs = await SharedPreferences.getInstance();
-      if (!await prefs.setString(storageKey, jsonEncode(next))) {
-        throw StateError('Không lưu được dữ liệu test');
-      }
+      await _cache.save(next);
       _data = next;
       notifyListeners();
     })();
@@ -105,7 +144,11 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
-  Future<bool> login(String email, String pass) async {
+  Future<bool> login(
+    String email,
+    String pass, {
+    bool useServer = false,
+  }) async {
     await initialize();
     String normalizePhone(String value) {
       final phone = value.replaceAll(RegExp(r'[\s()-]'), '');
@@ -121,7 +164,44 @@ class DemoStore extends ChangeNotifier {
                     normalizePhone(account)) &&
           p['password'] == pass,
     );
-    if (matches.isEmpty) return false;
+    if (matches.isEmpty) {
+      if (!useServer) return false;
+      if (_parents.any(
+        (p) =>
+            p.containsKey('password') &&
+            p['email'].toString().toLowerCase() == email.trim().toLowerCase(),
+      )) {
+        return false;
+      }
+      await GrowthApi.instance.login(email, pass);
+      final api = GrowthApi.instance;
+      final owner = api.user!['id'] as String;
+      final result = await api.request('GET', '/children');
+      final profiles = (result['children'] as List)
+          .map(
+            (c) => GrowthApi.childFromApi(
+              Map<String, dynamic>.from(c as Map),
+              owner,
+            ),
+          )
+          .toList();
+      await _write((d) {
+        (d['parents'] as List).removeWhere((p) => p['id'] == owner);
+        (d['parents'] as List).add({
+          'id': owner,
+          'fullName': api.user!['fullName'],
+          'email': email,
+          'notifications': true,
+          'biometric': false,
+        });
+        (d['children'] as List).removeWhere((c) => c['parentId'] == owner);
+        (d['children'] as List).addAll(profiles);
+        d['parentId'] = owner;
+        d['childId'] = null;
+      });
+      return true;
+    }
+    GrowthApi.instance.clear();
     final id = matches.first['id'];
     await _write((d) {
       d['parentId'] = id;
@@ -138,6 +218,8 @@ class DemoStore extends ChangeNotifier {
   /// Local feature cache for a server-authenticated user, without credentials.
   Future<void> bindAuthenticatedUser(Map<String, dynamic> user) => _write((d) {
     final parents = d['parents'] as List;
+    final sameOwner = d['parentId'] == user['id'];
+    final selectedChildId = sameOwner ? d['childId'] : null;
     final existing = parents.where((p) => p['id'] == user['id']).firstOrNull;
     parents.removeWhere((p) => p['id'] == user['id']);
     parents.add(<String, dynamic>{
@@ -156,7 +238,7 @@ class DemoStore extends ChangeNotifier {
       'biometric': existing?['biometric'] ?? false,
     });
     d['parentId'] = user['id'];
-    d['childId'] = null;
+    d['childId'] = selectedChildId;
   });
 
   Future<void> updateAuthenticatedProfile(Map<String, dynamic> user) => _write((
@@ -180,11 +262,98 @@ class DemoStore extends ChangeNotifier {
     d['parentId'] = null;
     d['childId'] = null;
   });
-  Future<void> selectChild(String id) {
+
+  Future<void> cacheAuthenticatedChildren(
+    String owner,
+    List<Map<String, dynamic>> profiles,
+  ) => _write((d) {
+    if (d['parentId'] != owner) return;
+    (d['children'] as List).removeWhere(
+      (c) => c['parentId'] == owner && c['server'] == true,
+    );
+    // Bé do chính tài khoản này tạo trên máy và đã đăng ký lên máy chủ (serverIds)
+    // đã có sẵn: không thêm bản trùng. Bé của tài khoản khác dùng chung máy (vd.
+    // bé được chia sẻ cho mình) vẫn phải thêm.
+    final linked = <String>{
+      for (final entry in (d['serverIds'] as Map? ?? const {}).entries)
+        if ((d['children'] as List).any(
+          (c) => c['id'] == entry.key && c['parentId'] == owner,
+        ))
+          entry.value as String,
+    };
+    for (final profile in profiles) {
+      if (linked.contains(profile['id'])) continue;
+      (d['children'] as List).removeWhere((c) => c['id'] == profile['id']);
+      (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
+    }
+  });
+  /// Chủ hồ sơ (hoặc bé tạo trên máy) có toàn quyền; người được chia sẻ chỉ có
+  /// quyền theo từng mục do chủ hồ sơ cấp (F23).
+  bool isChildOwner(String? childId) {
+    final child = childId == null ? null : childById(childId);
+    return child == null || child['server'] != true || child['role'] != 'member';
+  }
+
+  /// 'none' | 'view' | 'edit' của tài khoản hiện tại với một mục của bé.
+  String childAccess(String? childId, String scope) {
+    if (isChildOwner(childId)) return 'edit';
+    final child = childById(childId!)!;
+    final access = child['access'];
+    final level = access is Map ? access[scope] : null;
+    if (level is String) return level;
+    // Bản cache cũ chỉ có growthAccess / teethingAccess
+    return (child['${scope}Access'] as String?) ?? 'none';
+  }
+
+  bool canViewChild(String? childId, String scope) =>
+      childAccess(childId, scope) != 'none';
+
+  bool canEditChild(String? childId, String scope) =>
+      childAccess(childId, scope) == 'edit';
+
+  /// Đã đăng nhập tài khoản thật (không phải demo): chia sẻ phải đi qua máy chủ.
+  bool get canShareOnServer =>
+      AuthService.instance.user != null && !AuthService.instance.demoMode;
+
+  /// Id trên máy chủ của bé để chia sẻ. Bé tạo trên máy được đăng ký lên máy chủ
+  /// trước (PUT /dev/profiles, như khi đồng bộ nhật ký / tiêm chủng).
+  Future<String> sharingChildId(String childId) async {
+    final child = childById(childId);
+    if (child == null) throw StateError('Không tìm thấy hồ sơ bé');
+    if (child['server'] == true) return childId;
+    final account = await linkedAccount(childId);
+    if (account == null) {
+      throw StateError('Cần kết nối máy chủ để chia sẻ hồ sơ bé');
+    }
+    return account.childId;
+  }
+
+  /// Tải lại danh sách bé (của mình + được chia sẻ) sau khi nhận lời mời / rời hồ sơ.
+  Future<void> reloadAuthenticatedChildren() async {
+    final user = AuthService.instance.user;
+    if (user == null || AuthService.instance.demoMode) return;
+    final owner = user['id'] as String;
+    final response = await AuthService.instance.authorizedRequest('GET', '/children');
+    if (AuthService.instance.user?['id'] != owner) return;
+    final profiles = (response['children'] as List)
+        .map((c) => Map<String, dynamic>.from(c as Map))
+        .toList();
+    await cacheAuthenticatedChildren(owner, profiles);
+    final selected = _data['childId'] as String?;
+    if (selected != null && childById(selected) == null) {
+      await _write((d) => d['childId'] = null);
+    }
+  }
+
+  Future<void> selectChild(String id) async {
     if (childById(id) == null) {
       throw StateError('Hồ sơ không thuộc tài khoản hiện tại');
     }
-    return _write((d) => d['childId'] = id);
+    if (GrowthApi.instance.signedIn &&
+        childById(id)?['growthAccess'] != 'none') {
+      await refreshGrowth(id);
+    }
+    await _write((d) => d['childId'] = id);
   }
 
   Future<void> saveParent(Map<String, Object?> fields) => _write((d) {
@@ -220,6 +389,39 @@ class DemoStore extends ChangeNotifier {
     d['childId'] = null;
   });
   Future<String> saveChild(String? id, Map<String, Object?> fields) async {
+    if (id != null &&
+        childById(id)?['server'] == true &&
+        !GrowthApi.instance.signedIn) {
+      throw GrowthApiException('SESSION_EXPIRED');
+    }
+    if (GrowthApi.instance.signedIn) {
+      if (_data['parentId'] != GrowthApi.instance.user?['id']) {
+        throw GrowthApiException('SESSION_CHANGED');
+      }
+      final owner = _data['parentId'];
+      final result = await GrowthApi.instance.request(
+        id == null ? 'POST' : 'PUT',
+        id == null ? '/children' : '/children/$id',
+        {
+          'fullName': fields['full_name'],
+          'dateOfBirth': fields['date_of_birth'],
+          'gender': fields['gender'],
+          'gestationalWeeks': fields['gestational_weeks'],
+          'birthWeightKg': fields['birth_weight_kg'],
+        },
+      );
+      final next = GrowthApi.childFromApi(result, owner as String);
+      await _write((d) {
+        if (d['parentId'] != owner) return;
+        final list = d['children'] as List;
+        final old = list.where((c) => c['id'] == result['id']).firstOrNull;
+        if (old != null) next['records'] = old['records'];
+        list.removeWhere((c) => c['id'] == result['id']);
+        list.add(next);
+        if (id == null) d['childId'] = result['id'];
+      });
+      return result['id'] as String;
+    }
     final childId = id ?? 'child_${DateTime.now().microsecondsSinceEpoch}';
     if (id != null && childById(id) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
@@ -247,9 +449,62 @@ class DemoStore extends ChangeNotifier {
       ((childById(id)?['records'] ?? []) as List)
           .map((r) => _copy(r as Map))
           .toList();
-  Future<void> addRecord(String id, Map<String, dynamic> record) {
+  Future<void> refreshGrowth(String id) async {
+    if (!GrowthApi.instance.signedIn) return;
+    final owner = _data['parentId'];
+    final key = '$owner:$id';
+    final revision = (_growthRevisions[key] ?? 0) + 1;
+    _growthRevisions[key] = revision;
+    final result = await GrowthApi.instance.request(
+      'GET',
+      '/children/$id/growth',
+    );
+    await _write((d) {
+      if (d['parentId'] != owner || _growthRevisions[key] != revision) return;
+      final profiles = d['children'] as List;
+      final c = profiles
+          .where((c) => c['id'] == id && c['parentId'] == owner)
+          .firstOrNull;
+      if (c == null) return;
+      c.addAll({
+        'records': GrowthApi.recordsFromApi(result),
+        'full_name': result['child']['fullName'],
+        'gender': result['child']['gender'],
+        'date_of_birth': result['child']['dateOfBirth'],
+        'growthAccess': result['child']['growthAccess'],
+      });
+    });
+  }
+
+  Future<void> deleteMeasurement(String childId, String measurementId) async {
+    if (!canEditChild(childId, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
+    await GrowthApi.instance.request(
+      'DELETE',
+      '/children/$childId/growth/measurements/$measurementId',
+    );
+    await refreshGrowth(childId);
+  }
+
+  Future<void> addRecord(String id, Map<String, dynamic> record) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa số đo');
-    return _write((d) {
+    if (!canEditChild(id, 'growth')) throw StateError('Bạn chỉ có quyền xem mục này');
+    if (childById(id)?['server'] == true && !GrowthApi.instance.signedIn) {
+      throw GrowthApiException('SESSION_EXPIRED');
+    }
+    if (GrowthApi.instance.signedIn) {
+      if (childById(id)?['server'] != true ||
+          _data['parentId'] != GrowthApi.instance.user?['id']) {
+        throw GrowthApiException('SESSION_CHANGED');
+      }
+      await GrowthApi.instance.request(
+        'PUT',
+        '/children/$id/growth/days/${record['date'].toString().substring(0, 10)}',
+        GrowthApi.dayPayload(record),
+      );
+      await refreshGrowth(id);
+      return;
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       (c['records'] as List).add({
         ...record,
@@ -290,49 +545,372 @@ class DemoStore extends ChangeNotifier {
     return entries;
   }
 
-  Future<void> saveJournalEntry(String childId, Map<String, dynamic> entry) {
-    if (childById(childId) == null) {
-      throw StateError('Không có quyền sửa nhật ký');
+  static List<Map<String, dynamic>> _mediaOf(Map? entry) => [
+    for (final m in (entry?['media'] as List? ?? const []))
+      Map<String, dynamic>.from(m as Map),
+  ];
+
+  /// Photo / video still to be uploaded from this device.
+  static bool _mediaPending(Map m) =>
+      m['uploaded'] != true && m['rejected'] == null && m['path'] != null;
+
+  /// Id for a new journal photo / video (diary_media.id on the backend).
+  static String newMediaId() => _uuidV4();
+
+  Future<void> _removeFiles(Iterable<Map> media) async {
+    for (final m in media) {
+      if (m['path'] != null) {
+        await JournalMediaFiles.instance.remove(m['path'] as String);
+      }
     }
-    final entries = journalEntries(childId);
-    final value = {...entry, 'childId': childId};
-    final index = entries.indexWhere((e) => e['id'] == entry['id']);
-    if (index < 0) {
-      entries.add(value);
-    } else {
-      entries[index] = value;
-    }
-    return _saveJournalEntries(childId, entries);
   }
 
-  Future<void> deleteJournalEntry(String childId, String entryId) {
-    if (childById(childId) == null) {
-      throw StateError('Không có quyền sửa nhật ký');
-    }
-    return _saveJournalEntries(
-      childId,
-      journalEntries(childId)..removeWhere((e) => e['id'] == entryId),
-    );
-  }
-
-  Future<void> _saveJournalEntries(
+  /// Saved on this device first (works offline), then sent to the backend in
+  /// the background: the entry, then its photos / videos (`media` items with a
+  /// local `path`). Until the backend confirms them the entry keeps
+  /// `pendingSync` / the items `uploaded: false`, and [syncJournal] sends them again.
+  Future<void> saveJournalEntry(
     String childId,
-    List<Map<String, dynamic>> entries,
+    Map<String, dynamic> entry,
+  ) async {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
+    final before = journalEntries(childId)
+        .where((e) => e['id'] == entry['id'])
+        .firstOrNull;
+    final value = {
+      ...entry,
+      'childId': childId,
+      'pendingSync': '${DateTime.now().microsecondsSinceEpoch}',
+    };
+    await _writeJournal(childId, (entries, _) {
+      final index = entries.indexWhere((e) => e['id'] == entry['id']);
+      index < 0 ? entries.add(value) : entries[index] = value;
+    });
+    final kept = {for (final m in _mediaOf(value)) m['id']};
+    await _removeFiles(_mediaOf(before).where((m) => !kept.contains(m['id'])));
+    unawaited(_pushJournal(childId));
+  }
+
+  Future<void> deleteJournalEntry(String childId, String entryId) async {
+    if (childById(childId) == null) {
+      throw StateError('Không có quyền sửa nhật ký');
+    }
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
+    final before = journalEntries(childId)
+        .where((e) => e['id'] == entryId)
+        .firstOrNull;
+    await _writeJournal(childId, (entries, deleted) {
+      entries.removeWhere((e) => e['id'] == entryId);
+      deleted.add(entryId);
+    });
+    await _removeFiles(_mediaOf(before));
+    unawaited(_pushJournal(childId));
+  }
+
+  /// Edits the journal of [childId] in one write: entries plus ids deleted on
+  /// this device that the backend has not confirmed yet (`journalDeleted`).
+  Future<void> _writeJournal(
+    String childId,
+    void Function(List<Map<String, dynamic>> entries, Set<String> deleted)
+    change,
   ) {
-    entries.sort(
-      (a, b) => b['date'].toString().compareTo(a['date'].toString()),
-    );
-    return saveChild(childId, {
-      'journalEntries': entries,
-      'journal': entries.isEmpty
+    final entries = journalEntries(childId);
+    return _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == childId);
+      final saved = c['journalEntries'] as List?;
+      // Đọc lại trong lượt ghi để không đè thay đổi vừa xếp hàng trước
+      final current = saved == null
+          ? entries
+          : [for (final e in saved) _copy(e as Map)];
+      final deleted = Set<String>.from(c['journalDeleted'] as List? ?? []);
+      change(current, deleted);
+      current.sort(
+        (a, b) => b['date'].toString().compareTo(a['date'].toString()),
+      );
+      c['journalEntries'] = current;
+      c['journalDeleted'] = deleted.toList();
+      c['journal'] = current.isEmpty
           ? null
           : {
-              ...entries.first,
-              'title': entries.first['note'],
+              ...current.first,
+              'title': current.first['note'],
               'category':
-                  (entries.first['domains'] as List?)?.join(' · ') ?? 'Nhật ký',
+                  (current.first['domains'] as List?)?.join(' · ') ?? 'Nhật ký',
+            };
+    });
+  }
+
+  final _journalPushes = <String, Future<bool>>{};
+
+  /// Sends pending saves / deletes / files of [childId]; one run per child at
+  /// a time. False when offline or not linked (pending items are kept).
+  Future<bool> _pushJournal(String childId) =>
+      _journalPushes[childId] ??= _pushJournalNow(childId).whenComplete(() {
+        // Không trả về Future đã xóa: whenComplete sẽ chờ chính nó
+        _journalPushes.remove(childId);
+      });
+
+  Future<bool> _pushJournalNow(String childId) async {
+    final remote = journalRemote;
+    if (remote == null) return false;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      // Mỗi bản (id + token) / mỗi file gửi 1 lần / lượt; bản sửa trong lúc
+      // gửi được gửi tiếp
+      final triedSaves = <String>{}, triedUploads = <String>{};
+      String saveKey(Map e) => '${e['id']}@${e['pendingSync']}';
+      while (true) {
+        final child = childById(childId);
+        if (child == null) return false;
+        final deletes = [
+          for (final id in (child['journalDeleted'] as List? ?? []))
+            if (triedSaves.add('delete:$id')) id as String,
+        ];
+        final work = journalEntries(childId).where((e) {
+          final save =
+              e['pendingSync'] != null && !triedSaves.contains(saveKey(e));
+          return save ||
+              _mediaOf(
+                e,
+              ).any((m) => _mediaPending(m) && !triedUploads.contains(m['id']));
+        }).toList();
+        if (deletes.isEmpty && work.isEmpty) return true;
+        for (final id in deletes) {
+          await remote.remove(account, id);
+          await _writeJournal(childId, (_, deleted) => deleted.remove(id));
+        }
+        for (final entry in work) {
+          final token = entry['pendingSync'];
+          if (token != null && triedSaves.add(saveKey(entry))) {
+            bool sameVersion(Map<String, dynamic> e) =>
+                e['id'] == entry['id'] && e['pendingSync'] == token;
+            try {
+              await remote.save(account, entry);
+            } on ApiException catch (e) {
+              // 410: đã xóa ở máy khác → bỏ trên máy này
+              if (e.statusCode == 410) {
+                await _writeJournal(
+                  childId,
+                  (entries, _) => entries.removeWhere(sameVersion),
+                );
+                await _removeFiles(_mediaOf(entry));
+              }
+              // Dữ liệu bị từ chối: giữ trên máy, lần đồng bộ sau gửi lại
+              if (!e.rejected) rethrow;
+              continue;
+            }
+            await _writeJournal(childId, (entries, _) {
+              for (final e in entries.where(sameVersion)) {
+                e.remove('pendingSync');
+              }
+            });
+          }
+          for (final media in _mediaOf(entry).where(_mediaPending)) {
+            if (triedUploads.add(media['id'] as String)) {
+              await _uploadJournalMedia(
+                remote,
+                account,
+                childId,
+                entry['id'] as String,
+                media,
+              );
+            }
+          }
+        }
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _uploadJournalMedia(
+    JournalRemote remote,
+    VaccinationAccount account,
+    String childId,
+    String entryId,
+    Map<String, dynamic> media,
+  ) async {
+    String? rejected;
+    if (!await JournalMediaFiles.instance.exists(media['path'] as String)) {
+      rejected = 'Không còn file trên máy';
+    } else {
+      try {
+        await remote.uploadMedia(account, entryId, media);
+      } on ApiException catch (e) {
+        if (!e.rejected) rethrow;
+        // Quá lớn / sai loại file: gửi lại cũng vậy. Lỗi 4xx khác thử lại sau.
+        if (e.statusCode != 413 && e.statusCode != 415) return;
+        rejected = e.message;
+      }
+    }
+    await _writeJournal(childId, (entries, _) {
+      for (final e in entries.where((e) => e['id'] == entryId)) {
+        // Gửi lại nhật ký để backend bỏ file bị từ chối khỏi danh sách
+        if (rejected != null) e['pendingSync'] = 'rejected-${media['id']}';
+        e['media'] = [
+          for (final m in _mediaOf(e))
+            m['id'] == media['id']
+                ? {
+                    ...m,
+                    if (rejected == null)
+                      'uploaded': true
+                    else
+                      'rejected': rejected,
+                  }
+                : m,
+        ];
+      }
+    });
+  }
+
+  /// Ảnh lưu base64 trong nhật ký (trước khi có MinIO) → file + media item.
+  Future<void> _convertLegacyPhotos(String childId) async {
+    for (final e in journalEntries(childId).where((e) => e['photo'] != null)) {
+      final id = newMediaId();
+      final String path;
+      try {
+        path = await JournalMediaFiles.instance.keepBytes(
+          base64Decode(e['photo'] as String),
+          id,
+          '.jpg',
+        );
+      } catch (_) {
+        continue;
+      }
+      await _writeJournal(childId, (entries, _) {
+        for (final x in entries.where(
+          (x) => x['id'] == e['id'] && x['photo'] == e['photo'],
+        )) {
+          x
+            ..remove('photo')
+            ..['media'] = [
+              ..._mediaOf(x),
+              {'id': id, 'type': 'image', 'path': path, 'uploaded': false},
+            ]
+            ..['pendingSync'] = 'photo-$id';
+        }
+      });
+    }
+  }
+
+  /// Sends what is saved only on this device, then replaces the cached diary
+  /// with the backend copy (entries still pending stay as on this device;
+  /// local copies of uploaded files are kept for offline viewing).
+  ///
+  /// The first sync of a child on this device uploads every local entry
+  /// (written before the diary was stored on the backend). Returns false when
+  /// offline (the cache is kept).
+  Future<bool> syncJournal(String childId) async {
+    final remote = journalRemote;
+    if (remote == null || childById(childId) == null) return false;
+    final parentId = _data['parentId'];
+    if (!((_data['journalSynced'] as List?) ?? const []).contains(childId)) {
+      await _writeJournal(childId, (entries, _) {
+        for (final e in entries) {
+          e['pendingSync'] ??= 'first-sync';
+        }
+      });
+    }
+    await _convertLegacyPhotos(childId);
+    final List<Map<String, dynamic>> server;
+    try {
+      if (canEditChild(childId, 'diary') && !await _pushJournal(childId)) {
+        return false;
+      }
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      server = await remote.fetch(account);
+    } catch (_) {
+      return false;
+    }
+    if (_data['parentId'] != parentId || childById(childId) == null) {
+      return false;
+    }
+    final dropped = <Map>[];
+    await _writeJournal(childId, (entries, deleted) {
+      final local = {for (final e in entries) e['id']: e};
+      final pending = entries.where((e) => e['pendingSync'] != null).toList();
+      final pendingIds = {for (final e in pending) e['id']};
+      final merged = [
+        for (final e in server)
+          if (!pendingIds.contains(e['id']) && !deleted.contains(e['id']))
+            {
+              ...e,
+              'childId': childId,
+              'media': _mergeMedia(_mediaOf(local[e['id']]), _mediaOf(e)),
             },
-    }).then((_) {});
+        ...pending,
+      ];
+      final keptIds = {
+        for (final e in merged)
+          for (final m in _mediaOf(e)) m['id'],
+      };
+      for (final e in entries) {
+        dropped.addAll(_mediaOf(e).where((m) => !keptIds.contains(m['id'])));
+      }
+      entries
+        ..clear()
+        ..addAll(merged);
+    });
+    await _removeFiles(dropped);
+    await _write((d) {
+      final synced = Set<String>.from(d['journalSynced'] as List? ?? []);
+      d['journalSynced'] = (synced..add(childId)).toList();
+    });
+    return true;
+  }
+
+  /// Backend files (with local `path` when this device has a copy) plus
+  /// local files not uploaded yet.
+  static List<Map<String, dynamic>> _mergeMedia(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final paths = {for (final m in local) m['id']: m['path']};
+    final serverIds = {for (final m in server) m['id']};
+    return [
+      for (final m in server) {...m, 'path': ?paths[m['id']]},
+      ...local.where(
+        (m) =>
+            !serverIds.contains(m['id']) &&
+            (_mediaPending(m) || m['rejected'] != null),
+      ),
+    ];
+  }
+
+  final _mediaUrls = <String, (String, DateTime)>{};
+
+  /// Download link for a photo / video not on this device (renewed before it
+  /// expires). Null when offline.
+  Future<String?> journalMediaUrl(
+    String childId,
+    String entryId,
+    Map media,
+  ) async {
+    bool fresh(DateTime? t) =>
+        t != null && t.isAfter(DateTime.now().add(const Duration(minutes: 1)));
+    final id = media['id'] as String;
+    final cached = _mediaUrls[id];
+    if (cached != null && fresh(cached.$2)) return cached.$1;
+    if (media['url'] != null &&
+        fresh(DateTime.tryParse(media['expiresAt'] as String? ?? ''))) {
+      return media['url'] as String;
+    }
+    final remote = journalRemote;
+    if (remote == null) return null;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return null;
+      final link = await remote.mediaUrl(account, entryId, id);
+      _mediaUrls[id] = link;
+      return link.$1;
+    } catch (_) {
+      return null;
+    }
   }
 
   Set<String> completedActivities(String childId) => Set<String>.from(
@@ -342,12 +920,24 @@ class DemoStore extends ChangeNotifier {
   Set<String> get favoriteActivities =>
       Set<String>.from(parent['favoriteActivities'] as List? ?? []);
 
-  Future<void> setActivityDone(String childId, String activityId, bool done) {
+  /// Library activities (uuid ids) are saved to the backend first, so a failed
+  /// request leaves the local state unchanged. Bundled ideas stay local.
+  Future<void> setActivityDone(
+    String childId,
+    String activityId,
+    bool done,
+  ) async {
     if (childById(childId) == null) {
       throw StateError('Không có quyền sửa hồ sơ');
     }
+    if (!canEditChild(childId, 'activities')) throw StateError('Bạn chỉ có quyền xem mục này');
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
+    }
+    final remote = activityRemote;
+    if (remote != null && _uuid.hasMatch(activityId)) {
+      final account = await linkedAccount(childId);
+      if (account != null) await remote.setDone(account, activityId, done);
     }
     return _write((d) {
       final child = (d['children'] as List).firstWhere(
@@ -359,12 +949,21 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
-  Future<void> setActivityFavorite(String activityId, bool favorite) {
+  Future<void> setActivityFavorite(String activityId, bool favorite) async {
     if (!signedIn) throw StateError('Vui lòng đăng nhập');
     if (!activityCatalog.any((a) => a.id == activityId)) {
       throw ArgumentError('Hoạt động không tồn tại');
     }
     final parentId = parent['id'];
+    final remote = activityRemote;
+    final anyChild = child;
+    // Yêu thích theo phụ huynh; cần 1 bé để đăng ký tài khoản (PUT /dev/profiles).
+    if (remote != null && anyChild != null && _uuid.hasMatch(activityId)) {
+      final account = await linkedAccount(anyChild['id'] as String);
+      if (account != null) {
+        await remote.setFavorite(account, activityId, favorite);
+      }
+    }
     return _write((d) {
       final account = (d['parents'] as List).firstWhere(
         (p) => p['id'] == parentId,
@@ -377,10 +976,84 @@ class DemoStore extends ChangeNotifier {
     });
   }
 
+  /// Replaces the library part of [childId]'s "Đã làm" and the parent's
+  /// favorites with the backend copy; bundled ideas (non-uuid ids) are kept.
+  ///
+  /// The first sync on this device uploads what was marked only locally.
+  /// Returns false when offline (the cache is kept).
+  Future<bool> syncActivities(String childId) async {
+    final remote = activityRemote;
+    if (remote == null) return false;
+    final parentId = _data['parentId'];
+    final Set<String> done, favorites;
+    try {
+      final account = await linkedAccount(childId);
+      if (account == null) return false;
+      Future<Set<String>> fetch() => remote.fetchDone(account);
+      final synced = Set<String>.from(_data['activitySynced'] as List? ?? []);
+      final keys = (child: 'child:$childId', parent: 'parent:$parentId');
+      var serverDone = await fetch();
+      var serverFavorites = await remote.fetchFavorites(account);
+      if (!synced.contains(keys.child) && canEditChild(childId, 'activities')) {
+        final localOnly = completedActivities(childId)
+            .where((id) => _uuid.hasMatch(id) && !serverDone.contains(id));
+        for (final id in localOnly) {
+          await remote.setDone(account, id, true);
+        }
+        if (localOnly.isNotEmpty) serverDone = await fetch();
+      }
+      if (!synced.contains(keys.parent)) {
+        final localOnly = favoriteActivities.where(
+          (id) => _uuid.hasMatch(id) && !serverFavorites.contains(id),
+        );
+        for (final id in localOnly) {
+          await remote.setFavorite(account, id, true);
+        }
+        if (localOnly.isNotEmpty) {
+          serverFavorites = await remote.fetchFavorites(account);
+        }
+      }
+      (done, favorites) = (serverDone, serverFavorites);
+    } catch (_) {
+      return false;
+    }
+    if (_data['parentId'] != parentId || childById(childId) == null) {
+      return false;
+    }
+    List<String> merge(List? local, Set<String> server) => [
+      ...?local?.cast<String>().where((id) => !_uuid.hasMatch(id)),
+      ...server,
+    ];
+    await _write((d) {
+      final c = (d['children'] as List).firstWhere((c) => c['id'] == childId);
+      c['completedActivities'] = merge(c['completedActivities'] as List?, done);
+      final account = (d['parents'] as List).firstWhere(
+        (p) => p['id'] == parentId,
+      );
+      account['favoriteActivities'] = merge(
+        account['favoriteActivities'] as List?,
+        favorites,
+      );
+      d['activitySynced'] = {
+        ...?(d['activitySynced'] as List?)?.cast<String>(),
+        'child:$childId',
+        'parent:$parentId',
+      }.toList();
+    });
+    return true;
+  }
+
   Map<String, DateTime> teeth(String id) => {
     for (final r in (childById(id)?['teeth'] ?? []) as List)
       r['toothId'] as String: DateTime.parse(r['date'] as String),
   };
+
+  String toothNote(String id, String? toothId) {
+    for (final record in (childById(id)?['teeth'] ?? []) as List) {
+      if (record['toothId'] == toothId) return record['note'] as String? ?? '';
+    }
+    return '';
+  }
 
   List<Map<String, dynamic>> vaccinations(String id) =>
       ((childById(id)?['vaccinations'] ?? []) as List)
@@ -394,6 +1067,9 @@ class DemoStore extends ChangeNotifier {
   Future<void> saveVaccinations(String id, List<Map<String, dynamic>> records) {
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     final dob = DateTime.parse(child['date_of_birth'] as String);
     final now = DateTime.now();
     final ids = <String>{};
@@ -423,6 +1099,9 @@ class DemoStore extends ChangeNotifier {
 
   Future<void> removeVaccination(String id, String doseId) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.remove(account, doseId),
@@ -443,6 +1122,9 @@ class DemoStore extends ChangeNotifier {
   /// `null` resets a vaccine to its default.
   Future<void> saveVaccinePlans(String id, Map<String, bool?> plans) {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
+    if (!canEditChild(id, 'vaccination')) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
     return _pushVaccinations(
       id,
       (remote, account) => remote.savePlans(account, plans),
@@ -461,22 +1143,29 @@ class DemoStore extends ChangeNotifier {
     );
   }
 
-  /// Backend uuids for local parent / child ids: the seeded demo ids, else a
-  /// uuid generated once on this device (registered via VaccinationRemote.link).
+  /// Backend uuids for local parent / child ids: ids that already are backend
+  /// uuids (server-authenticated user), the seeded demo ids, else a uuid
+  /// generated once on this device (registered via VaccinationRemote.link).
   Future<Map<String, String>> _serverIds(List<String> localIds) async {
-    String? known(String id) =>
-        demoServerIds[id] ?? (_data['serverIds'] as Map?)?[id] as String?;
+    String? known(String id) => _uuid.hasMatch(id)
+        ? id
+        : demoServerIds[id] ?? (_data['serverIds'] as Map?)?[id] as String?;
     if (localIds.any((id) => known(id) == null)) {
       await _write((d) {
         final saved = Map<String, dynamic>.from(d['serverIds'] as Map? ?? {});
         for (final id in localIds) {
-          if (demoServerIds[id] == null) saved[id] ??= _uuidV4();
+          if (known(id) == null) saved[id] ??= _uuidV4();
         }
         d['serverIds'] = saved;
       });
     }
     return {for (final id in localIds) id: known(id)!};
   }
+
+  static final _uuid = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
 
   static String _uuidV4() {
     final random = Random.secure();
@@ -501,6 +1190,77 @@ class DemoStore extends ChangeNotifier {
     );
   }
 
+  /// Backend identity of the signed-in parent + [childId], registered on the
+  /// backend first (dev: PUT /dev/profiles). Null when offline-only (tests) or
+  /// the child is not this parent's.
+  Future<VaccinationAccount?> linkedAccount(String childId) async {
+    final remote = vaccinationRemote;
+    if (remote == null) return null;
+    final account = await _account(childId);
+    if (account == null) return null;
+    // Bé người khác chia sẻ đã có trên máy chủ và thuộc chủ hồ sơ: không đăng ký
+    // lại dưới tài khoản này (máy chủ từ chối 403), quyền do chia sẻ quyết định.
+    if (!isChildOwner(childId)) return account;
+    await remote.link(account);
+    return account;
+  }
+
+  /// Fetches the latest AI comment for a journal entry and caches it in the
+  /// entry (`insight`). Null when the entry has no AI request or offline-only.
+  Future<VideoInsight?> refreshJournalInsight(
+    String childId,
+    String entryId,
+  ) async {
+    final remote = videoInsightRemote;
+    final entry = journalEntries(childId)
+        .where((e) => e['id'] == entryId)
+        .firstOrNull;
+    final saved = entry?['insight'] as Map?;
+    if (remote == null || entry == null || saved == null) return null;
+    final account = await linkedAccount(childId);
+    if (account == null) return null;
+    final insight = await remote.fetch(account, saved['id'] as String);
+    // Polling: chỉ lưu (và gửi lên backend) khi nhận xét thay đổi
+    if (jsonEncode(saved) != jsonEncode(insight.toJson())) {
+      await saveJournalEntry(childId, {...entry, 'insight': insight.toJson()});
+    }
+    return insight;
+  }
+
+  /// Journal entries with an AI comment request (`insight`), in diary order.
+  List<Map<String, dynamic>> analysedJournalEntries(String childId) =>
+      journalEntries(childId).where((e) => e['insight'] != null).toList();
+
+  Future<(ProgressReviewRemote, VaccinationAccount)> _reviewAccount(
+    String childId,
+  ) async {
+    final remote = progressReviewRemote;
+    final account = remote == null ? null : await linkedAccount(childId);
+    if (remote == null || account == null) {
+      throw ApiException(0, 'Cần kết nối máy chủ để đánh giá tổng hợp');
+    }
+    return (remote, account);
+  }
+
+  /// AI summary of the analysed videos [insightIds] of [childId].
+  Future<ProgressReview> createProgressReview(
+    String childId,
+    List<String> insightIds,
+  ) async {
+    if (!canEditChild(childId, 'diary')) throw StateError('Bạn chỉ có quyền xem mục này');
+    final (remote, account) = await _reviewAccount(childId);
+    return remote.create(account, insightIds);
+  }
+
+  /// Earlier progress reviews, newest first.
+  Future<List<ProgressReview>> progressReviews(
+    String childId, {
+    String? activityRef,
+  }) async {
+    final (remote, account) = await _reviewAccount(childId);
+    return remote.list(account, activityRef: activityRef);
+  }
+
   /// Saves to the backend first, so a failed request leaves the local book unchanged.
   Future<void> _pushVaccinations(
     String childId,
@@ -511,7 +1271,7 @@ class DemoStore extends ChangeNotifier {
     if (remote == null) return;
     final account = await _account(childId);
     if (account == null) return;
-    await remote.link(account);
+    if (isChildOwner(childId)) await remote.link(account);
     await push(remote, account);
   }
 
@@ -532,12 +1292,12 @@ class DemoStore extends ChangeNotifier {
     List<Map<String, dynamic>> records;
     Map<String, bool> plans;
     try {
-      await remote.link(account);
+      if (isChildOwner(childId)) await remote.link(account);
       (records, plans) = await (
         remote.fetch(account),
         remote.fetchPlans(account),
       ).wait;
-      if (firstSync) {
+      if (firstSync && canEditChild(childId, 'vaccination')) {
         final onServer = {for (final r in records) r['id']};
         final localOnly = vaccinations(childId)
             .where((r) => !onServer.contains(r['id']))
@@ -588,9 +1348,19 @@ class DemoStore extends ChangeNotifier {
     return true;
   }
 
-  Future<void> saveTooth(String id, String toothId, DateTime date) {
+  Future<void> saveTooth(
+    String id,
+    String toothId,
+    DateTime date, {
+    String? note,
+  }) async {
+    final savedNote = (note ?? toothNote(id, toothId)).trim();
+    if (savedNote.runes.length > 1000) {
+      throw ArgumentError('Ghi chú tối đa 1000 ký tự');
+    }
     final child = childById(id);
     if (child == null) throw StateError('Không có quyền sửa hồ sơ');
+    _teething.requireEdit(id);
     final day = DateTime(date.year, date.month, date.day);
     final now = DateTime.now();
     final dob = DateTime.parse(child['date_of_birth'] as String);
@@ -599,20 +1369,119 @@ class DemoStore extends ChangeNotifier {
         day.isAfter(DateTime(now.year, now.month, now.day))) {
       throw ArgumentError('Ngày mọc hoặc vị trí răng không hợp lệ');
     }
-    return _write((d) {
+    final remote = teethingRemote;
+    if (remote != null) {
+      final account = await _account(id);
+      if (account != null) {
+        await remote.save(account, toothId, day, note: savedNote);
+      }
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       final records = c.putIfAbsent('teeth', () => <dynamic>[]) as List;
       records.removeWhere((r) => r['toothId'] == toothId);
-      records.add({'toothId': toothId, 'date': day.toIso8601String()});
+      records.add({
+        'toothId': toothId,
+        'date': day.toIso8601String(),
+        'note': savedNote,
+      });
+      _teething.markChanged(id);
     });
   }
 
-  Future<void> removeTooth(String id, String toothId) {
+  Future<void> removeTooth(String id, String toothId) async {
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
-    return _write((d) {
+    if (!canEditTeething(id)) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
+    final remote = teethingRemote;
+    if (remote != null) {
+      final account = await _account(id);
+      if (account != null) await remote.remove(account, toothId);
+    }
+    await _write((d) {
       final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
       (c['teeth'] as List?)?.removeWhere((r) => r['toothId'] == toothId);
+      _teething.markChanged(id);
     });
+  }
+
+  /// Replaces the local cache with the authenticated backend copy.
+  Future<bool> syncTeeth(String childId) async {
+    final remote = teethingRemote;
+    if (remote == null) return false;
+    if (!canViewTeething(childId)) {
+      _teething.setStatus(childId, TeethingSyncStatus.noAccess);
+      return false;
+    }
+    _teething.setStatus(childId, TeethingSyncStatus.loading);
+    final revision = _teething.revision(childId);
+    try {
+      final account = await _account(childId);
+      if (account == null) return false;
+      final firstSync = !((_data['teethingSynced'] as List?) ?? const [])
+          .contains(childId);
+      final local = teeth(childId);
+      var records = await remote.fetch(account);
+      if (_teething.revision(childId) != revision) return false;
+      if (firstSync && canEditTeething(childId)) {
+        final missing = local.entries
+            .where((entry) => !records.containsKey(entry.key))
+            .toList();
+        for (final entry in missing) {
+          await remote.save(
+            account,
+            entry.key,
+            entry.value,
+            note: toothNote(childId, entry.key),
+          );
+        }
+        if (missing.isNotEmpty) records = await remote.fetch(account);
+      }
+      if (childById(childId) == null) return false;
+      var applied = false;
+      await _write((d) {
+        if (_teething.revision(childId) != revision) return;
+        final child = (d['children'] as List).firstWhere(
+          (item) => item['id'] == childId,
+        );
+        child['teeth'] = [
+          for (final entry in records.entries)
+            {
+              'toothId': entry.key,
+              'date': entry.value.date.toIso8601String(),
+              'note': entry.value.note,
+            },
+        ];
+        final synced = Set<String>.from(d['teethingSynced'] as List? ?? []);
+        d['teethingSynced'] = (synced..add(childId)).toList();
+        applied = true;
+      });
+      _teething.setStatus(childId, TeethingSyncStatus.ready);
+      return applied;
+    } on AuthException catch (error) {
+      if (error.code == 'HTTP_404') {
+        await _write((d) {
+          final matches = (d['children'] as List).where(
+            (item) => item['id'] == childId,
+          );
+          if (matches.isNotEmpty) {
+            matches.first['teeth'] = <dynamic>[];
+            matches.first['teethingAccess'] = 'none';
+          }
+        });
+        _teething.setStatus(childId, TeethingSyncStatus.noAccess);
+      } else if (error.code == 'NETWORK_ERROR' ||
+          error.code.startsWith('HTTP_5')) {
+        _teething.setStatus(childId, TeethingSyncStatus.offlineCache);
+      } else {
+        _teething.setStatus(childId, TeethingSyncStatus.failed);
+      }
+      return false;
+    } catch (_) {
+      _teething.setStatus(childId, TeethingSyncStatus.failed);
+      return false;
+    }
   }
 
   Future<void> saveSharing(
@@ -628,14 +1497,89 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> resetFixtures() async {
-    final next = _fixture(DateTime.now());
+    final next = _DemoFixture.create(DateTime.now());
     await _write((d) {
       d.clear();
       d.addAll(next);
     });
   }
 
-  static Map<String, dynamic> _fixture(DateTime now) {
+}
+
+/// Owns teething permissions and synchronization bookkeeping while the public
+/// API remains on [DemoStore] for backwards compatibility with existing UI.
+final class _TeethingStore {
+  _TeethingStore(this.root);
+
+  final DemoStore root;
+  final Map<String, int> _revisions = {};
+  final Map<String, TeethingSyncStatus> _statuses = {};
+
+  String access(String childId) {
+    final profile = root.childById(childId);
+    if (profile == null) return 'none';
+    if (profile['server'] != true) return 'edit';
+    return profile['teethingAccess'] as String? ?? 'none';
+  }
+
+  bool canView(String childId) => access(childId) != 'none';
+  bool canEdit(String childId) => access(childId) == 'edit';
+
+  void requireEdit(String childId) {
+    if (!canEdit(childId)) {
+      throw StateError('Bạn chỉ có quyền xem mục này');
+    }
+  }
+
+  int revision(String childId) => _revisions[childId] ?? 0;
+  void markChanged(String childId) {
+    _revisions[childId] = revision(childId) + 1;
+  }
+
+  TeethingSyncStatus status(String childId) =>
+      _statuses[childId] ?? TeethingSyncStatus.idle;
+
+  void setStatus(String childId, TeethingSyncStatus status) {
+    if (_statuses[childId] == status) return;
+    _statuses[childId] = status;
+    root.notifyListeners();
+  }
+
+  Future<void> refreshAccess(String childId) async {
+    if (root.childById(childId)?['server'] != true ||
+        AuthService.instance.user == null) {
+      return;
+    }
+    final response = await AuthService.instance.authorizedRequest(
+      'GET',
+      '/children',
+    );
+    final profile = (response['children'] as List)
+        .cast<Map>()
+        .where((item) => item['id'] == childId)
+        .firstOrNull;
+    await root._write((data) {
+      final matches = (data['children'] as List).where(
+        (item) => item['id'] == childId,
+      );
+      if (matches.isEmpty) return;
+      final child = matches.first as Map;
+      child['teethingAccess'] = profile?['teethingAccess'] ?? 'none';
+      child['growthAccess'] = profile?['growthAccess'] ?? 'none';
+      child['role'] = profile?['role'] ?? child['role'];
+      child['access'] = Map<String, dynamic>.from(
+        profile?['access'] as Map? ?? const {},
+      );
+      if (profile == null || profile['teethingAccess'] == 'none') {
+        child['teeth'] = <dynamic>[];
+      }
+    });
+  }
+}
+
+/// Builds the fictional data used by demo mode and widget tests.
+abstract final class _DemoFixture {
+  static Map<String, dynamic> create(DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
     Map<String, dynamic> baby(
       String id,
@@ -729,7 +1673,7 @@ class DemoStore extends ChangeNotifier {
           'email': 'demo@trackchildren.vn',
           'phone': '0900000001',
           'role': 'mother',
-          'password': password,
+          'password': DemoStore.password,
           'notifications': true,
           'biometric': false,
         },
@@ -740,7 +1684,7 @@ class DemoStore extends ChangeNotifier {
           'email': 'bo@trackchildren.vn',
           'phone': '0900000002',
           'role': 'father',
-          'password': password,
+          'password': DemoStore.password,
           'notifications': false,
           'biometric': false,
         },
@@ -778,7 +1722,31 @@ class DemoStore extends ChangeNotifier {
   }
 }
 
+/// Reads and writes the store snapshot without owning application state.
+final class _DemoLocalCache {
+  const _DemoLocalCache(this.key);
+
+  final String key;
+
+  Future<Map<String, dynamic>?> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    return raw == null
+        ? null
+        : Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  }
+
+  Future<void> save(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setString(key, jsonEncode(data))) {
+      throw StateError('Không lưu được dữ liệu test');
+    }
+  }
+}
+
 mixin DemoStoreBinding<T extends StatefulWidget> on State<T> {
+  bool _demoRefreshScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -786,7 +1754,24 @@ mixin DemoStoreBinding<T extends StatefulWidget> on State<T> {
   }
 
   void _refreshDemo() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    // A remote sync can finish while this subtree is being built. Calling
+    // setState directly from ChangeNotifier in that phase makes Flutter throw
+    // "setState() or markNeedsBuild() called during build". Coalesce those
+    // notifications and rebuild safely after the current frame instead.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      if (_demoRefreshScheduled) return;
+      _demoRefreshScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _demoRefreshScheduled = false;
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+
+    setState(() {});
   }
 
   @override

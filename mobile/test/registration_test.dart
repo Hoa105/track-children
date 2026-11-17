@@ -156,7 +156,9 @@ void main() {
             const ValueKey('registration-method-selector'),
           );
           await tester.ensureVisible(selector);
-          await tester.tap(selector);
+          await tester.tap(
+            find.descendant(of: selector, matching: find.text('Số điện thoại')),
+          );
           await tester.pumpAndSettle();
         }
         await tester.enterText(
@@ -165,7 +167,7 @@ void main() {
         );
         await tester.enterText(find.byType(TextFormField).at(2), 'password123');
         await tester.enterText(find.byType(TextFormField).at(3), 'password123');
-        final guardian = find.widgetWithText(ChoiceChip, 'Người giám hộ khác');
+        final guardian = find.widgetWithText(ChoiceChip, 'Khác');
         await tester.ensureVisible(guardian);
         await tester.tap(guardian);
         await tester.ensureVisible(find.byType(Checkbox));

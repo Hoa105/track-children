@@ -1,0 +1,61 @@
+{
+  "key": "christmas-merry-4x6-03",
+  "theme": "christmas",
+  "categoryTitle": "Giáng sinh",
+  "title": "Giáng sinh vui 03",
+  "format": "4×6",
+  "shape": "portrait",
+  "order": 2303,
+  "enabled": true,
+  "slots": [
+    {
+      "x": 41,
+      "y": 45,
+      "width": 518,
+      "height": 349,
+      "photo": 0
+    },
+    {
+      "x": 41,
+      "y": 448,
+      "width": 518,
+      "height": 348,
+      "photo": 1
+    },
+    {
+      "x": 41,
+      "y": 851,
+      "width": 518,
+      "height": 348,
+      "photo": 2
+    },
+    {
+      "x": 641,
+      "y": 45,
+      "width": 518,
+      "height": 349,
+      "photo": 0
+    },
+    {
+      "x": 641,
+      "y": 448,
+      "width": 518,
+      "height": 348,
+      "photo": 1
+    },
+    {
+      "x": 641,
+      "y": 851,
+      "width": 518,
+      "height": 348,
+      "photo": 2
+    },
+    {
+      "x": 641,
+      "y": 1254,
+      "width": 518,
+      "height": 348,
+      "photo": 3
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "schemaVersion": "1",
+  "visualRanges": {
+    "scale": {
+      "zMin": -4,
+      "zMax": 4
+    },
+    "bmi": [
+      {
+        "code": "SEVERE_THINNESS",
+        "label": "Rất gầy",
+        "zMin": null,
+        "zMinInclusive": false,
+        "zMax": -3,
+        "zMaxInclusive": false,
+        "color": "#B42318"
+      },
+      {
+        "code": "THINNESS",
+        "label": "Gầy",
+        "zMin": -3,
+        "zMinInclusive": true,
+        "zMax": -2,
+        "zMaxInclusive": false,
+        "color": "#E07916"
+      },
+      {
+        "code": "WITHIN_RANGE",
+        "label": "Cân đối",
+        "zMin": -2,
+        "zMinInclusive": true,
+        "zMax": 1,
+        "zMaxInclusive": true,
+        "color": "#179B80"
+      },
+      {
+        "code": "RISK_OVERWEIGHT",
+        "label": "Nguy cơ thừa cân",
+        "zMin": 1,
+        "zMinInclusive": false,
+        "zMax": 2,
+        "zMaxInclusive": true,
+        "color": "#E2A400"
+      },
+      {
+        "code": "OVERWEIGHT",
+        "label": "Thừa cân",
+        "zMin": 2,
+        "zMinInclusive": false,
+        "zMax": 3,
+        "zMaxInclusive": true,
+        "color": "#E07916"
+      },
+      {
+        "code": "OBESITY",
+        "label": "Béo phì",
+        "zMin": 3,
+        "zMinInclusive": false,
+        "zMax": null,
+        "zMaxInclusive": false,
+        "color": "#B42318"
+      }
+    ],
+    "head": [
+      {
+        "code": "VERY_LOW_HC",
+        "label": "Rất nhỏ",
+        "zMin": null,
+        "zMinInclusive": false,
+        "zMax": -3,
+        "zMaxInclusive": false,
+        "color": "#B42318"
+      },
+      {
+        "code": "LOW_HC",
+        "label": "Nhỏ",
+        "zMin": -3,
+        "zMinInclusive": true,
+        "zMax": -2,
+        "zMaxInclusive": false,
+        "color": "#E07916"
+      },
+      {
+        "code": "WITHIN_RANGE",
+        "label": "Phù hợp",
+        "zMin": -2,
+        "zMinInclusive": true,
+        "zMax": 2,
+        "zMaxInclusive": true,
+        "color": "#179B80"
+      },
+      {
+        "code": "HIGH_HC",
+        "label": "Lớn",
+        "zMin": 2,
+        "zMinInclusive": false,
+        "zMax": 3,
+        "zMaxInclusive": true,
+        "color": "#E07916"
+      },
+      {
+        "code": "VERY_HIGH_HC",
+        "label": "Rất lớn",
+        "zMin": 3,
+        "zMinInclusive": false,
+        "zMax": null,
+        "zMaxInclusive": false,
+        "color": "#B42318"
+      }
+    ]
+  },
+  "bmi": {
+    "SEVERE_THINNESS": {
+      "label": "Rất gầy",
+      "summary": "Bé đang rất gầy theo chỉ số BMI",
+      "action": "Đưa bé đi khám dinh dưỡng sớm."
+    },
+    "THINNESS": {
+      "label": "Gầy",
+      "summary": "Bé đang gầy theo chỉ số BMI",
+      "action": "Trao đổi với bác sĩ hoặc nhân viên dinh dưỡng."
+    },
+    "WITHIN_RANGE": {
+      "label": "Cân đối",
+      "summary": "BMI của bé đang ở mức cân đối",
+      "action": "Tiếp tục chăm sóc và theo dõi định kỳ."
+    },
+    "RISK_OVERWEIGHT": {
+      "label": "Nguy cơ thừa cân",
+      "summary": "Bé có nguy cơ thừa cân theo chỉ số BMI",
+      "action": "Theo dõi định kỳ; không tự cho bé ăn kiêng."
+    },
+    "OVERWEIGHT": {
+      "label": "Thừa cân",
+      "summary": "Bé đang thừa cân theo chỉ số BMI",
+      "action": "Trao đổi với bác sĩ hoặc chuyên gia dinh dưỡng."
+    },
+    "OBESITY": {
+      "label": "Béo phì",
+      "summary": "Bé đang ở mức béo phì theo chỉ số BMI",
+      "action": "Đưa bé đi đánh giá dinh dưỡng sớm."
+    }
+  },
+  "head": {
+    "VERY_LOW_HC": {
+      "label": "Rất nhỏ",
+      "summary": "Vòng đầu của bé đang rất nhỏ so với tuổi",
+      "action": "Kiểm tra lại cách đo một lần, sau đó đưa bé đến cơ sở y tế sớm. Mang theo lịch sử vòng đầu và thông tin về các mốc phát triển của bé; không trì hoãn khám chỉ để chờ lần đo tiếp theo."
+    },
+    "LOW_HC": {
+      "label": "Nhỏ",
+      "summary": "Vòng đầu của bé đang nhỏ hơn mức phù hợp theo tuổi",
+      "action": "Đo lại đúng kỹ thuật và đặt lịch với bác sĩ nhi để đánh giá thêm. Mang theo lịch sử vòng đầu và ghi chú các mốc phát triển của bé."
+    },
+    "WITHIN_RANGE": {
+      "label": "Phù hợp",
+      "summary": "Vòng đầu của bé đang phát triển phù hợp theo tuổi",
+      "action": "Tiếp tục đo và theo dõi vòng đầu theo lịch khám hoặc hướng dẫn của nhân viên y tế."
+    },
+    "HIGH_HC": {
+      "label": "Lớn",
+      "summary": "Vòng đầu của bé đang lớn hơn mức phù hợp theo tuổi",
+      "action": "Đo lại đúng kỹ thuật và đặt lịch với bác sĩ nhi để đánh giá thêm, đặc biệt nếu vòng đầu tăng nhanh hoặc bé có biểu hiện bất thường."
+    },
+    "VERY_HIGH_HC": {
+      "label": "Rất lớn",
+      "summary": "Vòng đầu của bé đang rất lớn so với tuổi",
+      "action": "Kiểm tra lại cách đo một lần, sau đó đưa bé đến cơ sở y tế sớm. Mang theo lịch sử vòng đầu và thông tin về các mốc phát triển của bé; đặc biệt không trì hoãn khám nếu vòng đầu tăng nhanh hoặc bé có biểu hiện bất thường."
+    }
+  }
+}
