@@ -10,6 +10,7 @@ import 'services/journal_api.dart';
 import 'services/teething_api.dart';
 import 'services/progress_review_api.dart';
 import 'services/auth_service.dart';
+import 'services/auth_entry_preferences.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
 import 'services/video_insight_api.dart';
@@ -127,17 +128,26 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
   }
 
   Future<void> _showLoginAfterSplash() async {
+    bool firstVisit = false;
+    try {
+      firstVisit = await AuthEntryPreferences().takeFirstVisit();
+    } catch (_) {
+      // A preference failure must not prevent access to either auth screen.
+      firstVisit = true;
+    }
+    if (!mounted) return;
     if (AuthService.instance.signedIn) {
       await _showChildProfileSelection();
       return;
     }
-    _showAuthScreen();
+    _showAuthScreen(initialSignUp: firstVisit);
   }
 
-  void _showAuthScreen() {
+  void _showAuthScreen({bool initialSignUp = false}) {
     _navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => AuthScreen(
+          initialSignUp: initialSignUp,
           onChildProfilePreview: _showChildProfilePreview,
           onLoginSuccess: _showChildProfileSelection,
           onBack: _showStartScreen,

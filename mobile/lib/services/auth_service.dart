@@ -37,6 +37,7 @@ class AuthException implements Exception {
     'ACCOUNT_CONFLICT' => 'Email hoặc số điện thoại đã được dùng.',
     'OTP_DELIVERY_UNAVAILABLE' =>
       'Kênh gửi mã xác minh chưa sẵn sàng. Vui lòng thử lại sau.',
+    'OTP_FIRST_UNAVAILABLE' => 'Đăng ký bằng số điện thoại đang được cập nhật. Bạn có thể tiếp tục với Google hoặc Apple.',
     'LEGAL_DOCUMENTS_UNAVAILABLE' =>
       'Chưa tải được điều khoản. Vui lòng thử lại sau.',
     'LEGAL_CONSENT_REQUIRED' => 'Vui lòng đồng ý với điều khoản và chính sách.',
@@ -75,9 +76,13 @@ class AuthException implements Exception {
 }
 
 class SocialRegistrationConsent {
-  const SocialRegistrationConsent({required this.relationship});
+  const SocialRegistrationConsent({
+    required this.relationship,
+    this.displayName,
+  });
 
   final String relationship;
+  final String? displayName;
 }
 
 class AuthService {
@@ -119,8 +124,13 @@ class AuthService {
     String method,
     String path, {
     Map<String, dynamic>? body,
-  }) => _request(path, body: body, authorized: true, method: method,
-      timeout: const Duration(seconds: 30));
+  }) => _request(
+    path,
+    body: body,
+    authorized: true,
+    method: method,
+    timeout: const Duration(seconds: 30),
+  );
 
   Future<Map<String, dynamic>> _request(
     String path, {
@@ -137,8 +147,10 @@ class AuthService {
         if (authorized && _access != null) 'Authorization': 'Bearer $_access',
       };
       final uri = Uri.parse('$baseUrl$path');
-      final request = http.Request(method ?? (body == null ? 'GET' : 'POST'), uri)
-        ..headers.addAll(headers);
+      final request = http.Request(
+        method ?? (body == null ? 'GET' : 'POST'),
+        uri,
+      )..headers.addAll(headers);
       if (body != null) request.body = jsonEncode(body);
       final response = await http.Response.fromStream(
         await _client.send(request).timeout(timeout),
@@ -166,7 +178,8 @@ class AuthService {
             : <String, dynamic>{};
         if (authorized && retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
           await refresh();
-          if (generation != _generation) throw AuthException('SESSION_CHANGED', {});
+          if (generation != _generation)
+            throw AuthException('SESSION_CHANGED', {});
           return await _request(
             path,
             body: body,
@@ -285,6 +298,7 @@ class AuthService {
         });
         if (consent == null) throw AuthException('SOCIAL_CANCELLED', {});
         relationship = consent.relationship;
+        displayName = consent.displayName ?? displayName;
       }
       final result = await _request(
         '/auth/social',
@@ -464,6 +478,7 @@ class AuthService {
       return false;
     }
   }
+
   bool _invalidSession(String code) => const {
     'REFRESH_TOKEN_INVALID',
     'REFRESH_TOKEN_REUSED',

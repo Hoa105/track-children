@@ -14,6 +14,9 @@ import 'package:track_children/features/auth/login_screen.dart';
 import 'package:track_children/features/auth/sign_up_screen.dart';
 import 'package:track_children/services/auth_service.dart';
 
+import 'registration_steps_test.dart'
+    show FakeRegistrationGateway, enter, tapNext;
+
 void main() {
   setUpAll(() async {
     await (FontLoader('Nunito')..addFont(
@@ -153,7 +156,7 @@ void main() {
             if (size.width == 360 && scale == 1) {
               await capture(tester, key, signup ? 'signup_top' : 'login');
             }
-            final password = find.byType(TextFormField).at(signup ? 3 : 1);
+            final password = find.byType(TextFormField).at(signup ? 0 : 1);
             await tester.ensureVisible(password);
             await tester.tap(password);
             tester.view.viewInsets = const FakeViewPadding(bottom: 280);
@@ -170,7 +173,7 @@ void main() {
             await tester.pumpAndSettle();
             final submit = find.widgetWithText(
               FilledButton,
-              signup ? 'Đăng ký' : 'Đăng nhập',
+              signup ? 'Tiếp tục' : 'Đăng nhập',
             );
             await tester.ensureVisible(submit);
             await tester.pumpAndSettle();
@@ -241,7 +244,11 @@ void main() {
         MaterialApp(
           home: MediaQuery(
             data: const MediaQueryData(disableAnimations: true),
-            child: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+            child: SignUpScreen(
+              registrationGateway: FakeRegistrationGateway(),
+              onLogin: () {},
+              onChildProfilePreview: () {},
+            ),
           ),
         ),
       );
@@ -249,8 +256,12 @@ void main() {
           .widget<AuthMascot>(find.byType(AuthMascot))
           .controller;
       expect(mascot.pose, AuthMascotPose.idle);
-      final first = find.byType(TextFormField).at(2);
-      final confirm = find.byType(TextFormField).at(3);
+      await enter(tester, 'registration-phone', '0912345678');
+      await tapNext(tester);
+      await enter(tester, 'registration-otp', '012345');
+      await tapNext(tester);
+      final first = find.byKey(const ValueKey('registration-password'));
+      final confirm = find.byKey(const ValueKey('registration-confirm'));
       await tester.ensureVisible(first);
       await tester.enterText(first, 'password123');
       await tester.tap(find.byTooltip('Hiện mật khẩu'));
@@ -263,7 +274,8 @@ void main() {
       await tester.tap(find.byTooltip('Hiện xác nhận mật khẩu'));
       await tester.pumpAndSettle();
       expect(mascot.pose, AuthMascotPose.passwordVisible);
-      final button = find.widgetWithText(FilledButton, 'Đăng ký');
+      await tester.enterText(confirm, 'different123');
+      final button = find.widgetWithText(FilledButton, 'Tiếp tục');
       await tester.ensureVisible(button);
       await tester.tap(button);
       await tester.pumpAndSettle();

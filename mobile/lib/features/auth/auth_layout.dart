@@ -323,7 +323,8 @@ class _AuthLayoutState extends State<AuthLayout>
         ),
       ),
     );
-    final height = widget.compact ? 180.0 : 200.0;
+    // One artwork viewport across login, every signup step and social profile.
+    const height = 180.0;
     return Theme(
       data: theme,
       child: Scaffold(
@@ -361,16 +362,18 @@ class _AuthLayoutState extends State<AuthLayout>
                         color: HomeColors.ink,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.subtitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 14,
-                        color: HomeColors.ink,
+                    if (widget.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.subtitle,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 14,
+                          color: HomeColors.ink,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 12),
                     AnimatedBuilder(
                       animation: _entrance,

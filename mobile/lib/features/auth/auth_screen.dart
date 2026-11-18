@@ -9,19 +9,21 @@ class AuthScreen extends StatefulWidget {
     required this.onLoginSuccess,
     required this.onChildProfilePreview,
     required this.onBack,
+    this.initialSignUp = false,
     super.key,
   });
 
   final VoidCallback onLoginSuccess;
   final VoidCallback onChildProfilePreview;
   final VoidCallback onBack;
+  final bool initialSignUp;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  bool _showSignUp = false;
+  late bool _showSignUp = widget.initialSignUp;
 
   void _openSignUp() => setState(() => _showSignUp = true);
 

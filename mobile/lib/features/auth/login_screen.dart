@@ -4,14 +4,13 @@ import 'otp_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
-import '../../services/demo_store.dart';
-
-import 'package:flutter/foundation.dart';
 
 import 'auth_layout.dart';
 import 'forgot_password_sheet.dart';
 import 'social_provider_icon.dart';
 import 'auth_form_style.dart';
+import 'social_profile_screen.dart';
+import 'registration_profile_form.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -60,9 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Email ch\u01b0a \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.';
       }
     } else {
-      var phone = account.replaceAll(RegExp(r'[\s()-]'), '');
-      if (phone.startsWith('0')) phone = '+84${phone.substring(1)}';
-      if (!RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(phone)) {
+      if (!RegExp(r'^(0[0-9]{9}|\+84[0-9]{9})$').hasMatch(account)) {
         return 'S\u1ed1 \u0111i\u1ec7n tho\u1ea1i ch\u01b0a \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.';
       }
     }
@@ -113,8 +110,11 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       }
-    } catch (e) {
-      if (mounted) setState(() => _previewError = e.toString());
+    } catch (_) {
+      if (mounted)
+        setState(
+          () => _previewError = 'Không thể đăng nhập. Vui lòng thử lại.',
+        );
     }
     if (!mounted) return;
     if (_previewError != null) _mascot.showError();
@@ -131,18 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> _quickLogin() async {
-    if (_isLoading) return;
-    final server = !AuthService.instance.demoMode;
-    _accountController.text = server
-        ? DemoStore.serverTestEmail
-        : DemoStore.demoEmail;
-    _passwordController.text = server
-        ? DemoStore.serverTestPassword
-        : DemoStore.password;
-    await _submit();
-  }
-
   Future<void> _socialLogin(SocialProvider provider) async {
     if (_isLoading) return;
     setState(() {
@@ -152,13 +140,21 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.instance.socialRegister(
         provider.name,
-        acceptedTerms: true,
+        acceptedTerms: false,
+        requestConsent: (account) =>
+            Navigator.of(context).push<SocialRegistrationConsent>(
+              MaterialPageRoute(
+                builder: (_) =>
+                    SocialProfileScreen(provider: provider, account: account),
+              ),
+            ),
       );
       if (mounted) {
         _mascot.showSuccess();
         widget.onLoginSuccess?.call();
       }
     } on AuthException catch (e) {
+      if (e.code == 'SOCIAL_CANCELLED') return;
       if (mounted) {
         setState(() => _previewError = e.toString());
       }
@@ -179,8 +175,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) => AuthLayout(
     title: 'Chào mừng ba mẹ!',
-    subtitle: 'Cùng bé lớn khôn mỗi ngày nhé!',
-    onBack: widget.onBack,
+    subtitle: '',
+    onBack: _isLoading ? null : widget.onBack,
     mascot: _mascot,
     child: Form(
       key: _formKey,
@@ -193,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 8),
           TextFormField(
+            enabled: !_isLoading,
             controller: _accountController,
             focusNode: _accountFocus,
             style: const TextStyle(
@@ -210,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
             validator: _validateAccount,
             decoration: authInputDecoration(
               greenSprout: true,
-              hint: 'Email / 09xx xxx xxx',
+              hint: 'Nhập email hoặc số điện thoại',
               icon: Icons.person_outline_rounded,
             ),
           ),
@@ -218,6 +215,9 @@ class _LoginScreenState extends State<LoginScreen> {
           const _FieldLabel('Mật khẩu'),
           const SizedBox(height: 8),
           TextFormField(
+            enabled: !_isLoading,
+            autocorrect: false,
+            enableSuggestions: false,
             controller: _passwordController,
             focusNode: _passwordFocus,
             style: const TextStyle(
@@ -233,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration:
                 authInputDecoration(
                   greenSprout: true,
-                  hint: '••••••••',
+                  hint: 'Nhập mật khẩu',
                   icon: Icons.lock_outline_rounded,
                 ).copyWith(
                   suffixIcon: IconButton(
@@ -325,30 +325,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   : const Text('Đăng nhập'),
             ),
           ),
-          if (!kReleaseMode) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _isLoading ? null : _quickLogin,
-                icon: const Icon(Icons.flash_on_rounded),
-                label: Text(
-                  AuthService.instance.demoMode
-                      ? 'Đăng nhập nhanh tài khoản demo'
-                      : 'Đăng nhập nhanh tài khoản test',
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                  foregroundColor: HomeColors.reminderCta,
-                  side: const BorderSide(color: HomeColors.reminderCta),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-          ],
-
           const SizedBox(height: 12),
           Wrap(
             alignment: WrapAlignment.center,
@@ -356,18 +332,17 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text('Chưa có tài khoản?', style: TextStyle(fontSize: 14)),
               TextButton(
-                onPressed: widget.onSignUp,
+                onPressed: _isLoading ? null : widget.onSignUp,
                 child: const Text('Đăng ký'),
               ),
             ],
           ),
           const SizedBox(height: 12),
           AuthSocialButtons(onPressed: _isLoading ? null : _socialLogin),
-          const SizedBox(height: 14),
-          const Text(
-            'Bằng việc tiếp tục với Google hoặc Apple, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: HomeColors.ink),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _isLoading ? null : () => showAuthPolicies(context),
+            child: const Text('Điều khoản và quyền riêng tư'),
           ),
         ],
       ),
