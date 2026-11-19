@@ -3,6 +3,7 @@
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
     </dependencies>
     <scenes>
         <!--View Controller-->
@@ -15,7 +16,32 @@
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="start-top-space">
+                                <rect key="frame" x="0.0" y="59" width="393" height="129.2"/>
+                            </view>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="StartTitle" translatesAutoresizingMaskIntoConstraints="NO" id="start-title">
+                                <rect key="frame" x="81.5" y="188.2" width="230" height="48"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="start-title" secondAttribute="height" multiplier="230:48" id="start-title-aspect"/>
+                                    <constraint firstAttribute="width" relation="lessThanOrEqual" constant="230" id="start-title-max-width"/>
+                                    <constraint firstAttribute="width" constant="230" priority="750" id="start-title-preferred-width"/>
+                                </constraints>
+                            </imageView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="start-safe-area"/>
                         <color key="backgroundColor" red="0.941176" green="0.960784" blue="0.905882" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <!-- Match Flutter's 17% safe-area top gap and min(1, width/360, height/752) title scale. -->
+                        <constraints>
+                            <constraint firstItem="start-top-space" firstAttribute="top" secondItem="start-safe-area" secondAttribute="top" id="start-space-top"/>
+                            <constraint firstItem="start-top-space" firstAttribute="leading" secondItem="start-safe-area" secondAttribute="leading" id="start-space-leading"/>
+                            <constraint firstItem="start-top-space" firstAttribute="trailing" secondItem="start-safe-area" secondAttribute="trailing" id="start-space-trailing"/>
+                            <constraint firstItem="start-top-space" firstAttribute="height" secondItem="start-safe-area" secondAttribute="height" multiplier="0.17" id="start-space-height"/>
+                            <constraint firstItem="start-title" firstAttribute="top" secondItem="start-top-space" secondAttribute="bottom" id="start-title-top"/>
+                            <constraint firstItem="start-title" firstAttribute="centerX" secondItem="start-safe-area" secondAttribute="centerX" id="start-title-center"/>
+                            <constraint firstItem="start-title" firstAttribute="width" relation="lessThanOrEqual" secondItem="start-safe-area" secondAttribute="width" multiplier="230:360" id="start-title-width-scale"/>
+                            <constraint firstItem="start-title" firstAttribute="width" relation="lessThanOrEqual" secondItem="start-safe-area" secondAttribute="height" multiplier="230:752" id="start-title-height-scale"/>
+                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -23,4 +49,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="StartTitle" width="230" height="48"/>
+    </resources>
 </document>
