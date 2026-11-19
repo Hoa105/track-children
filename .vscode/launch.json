@@ -2,7 +2,39 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Mobile Android (Auth simulation)",
+      "preLaunchTask": "Prepare auth simulation device",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--no-enable-impeller",
+        "--device-user", "0",
+        "--dart-define=AUTH_SIMULATION=true",
+        "--dart-define=DEMO_MODE=false",
+        "--dart-define=API_BASE_URL=http://127.0.0.1:8010/api/v1"
+      ]
+    },
+    {
       "name": "Mobile Android (user 0)",
+      "preLaunchTask": "Prepare auth simulation device",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "toolArgs": [
+        "--no-enable-impeller",
+        "--device-user",
+        "0",
+        "--dart-define=AUTH_SIMULATION=true",
+        "--dart-define=DEMO_MODE=false",
+        "--dart-define=API_BASE_URL=http://127.0.0.1:8010/api/v1"
+      ]
+    },
+    {
+      "name": "Mobile Android (Real API)",
       "preLaunchTask": "Prepare Google mobile configuration",
       "type": "dart",
       "request": "launch",
@@ -10,10 +42,10 @@
       "program": "${workspaceFolder}/mobile/lib/main.dart",
       "toolArgs": [
         "--dart-define-from-file=${workspaceFolder}/.auth-test-logs/google-dart-defines.json",
-        "--device-user",
-        "0",
+        "--device-user", "0",
+        "--dart-define=AUTH_SIMULATION=false",
         "--dart-define=DEMO_MODE=false",
-        "--dart-define=API_BASE_URL=http://127.0.0.1:8000"
+        "--dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1"
       ]
     },
     {
@@ -28,7 +60,7 @@
         "--device-user",
         "0",
         "--dart-define=DEMO_MODE=false",
-        "--dart-define=API_BASE_URL=http://10.0.2.2:8000"
+        "--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
       ]
     },
     {

@@ -36,6 +36,7 @@ def legal(db):
 
 def public_user(u):
     return {"id": u["id"], "email": u["email"], "phone": u["phone"],
+            'hasPassword':bool(u.get('password_hash')) and not str(u['password_hash']).startswith('!'),
             "displayName": u["display_name"], "fullName": u["display_name"],
             "defaultRelationship": u["default_relationship"], "relationship": u["default_relationship"],
             "status": u["status"], "emailVerifiedAt": u["email_verified_at"],
@@ -58,6 +59,9 @@ def new_session(db, user, device, remember, ip=None):
         ),
     )
     repository.record_successful_login(db, (t, user["id"]))
+    if settings.auth_v2_enabled:
+        from app.features.auth.transactions import record_device
+        record_device(db, user['id'], device)
     return token_result(row, raw)
 
 
@@ -148,6 +152,8 @@ def login(db, data, ip):
         return failure(403, "ACCOUNT_LOCKED"), None
     cancelled = False
     if u["status"] == "pending_deletion":
+        if settings.auth_v2_enabled:
+            return failure(403,'ACCOUNT_UNAVAILABLE'), None
         r = repository.lock_deletion_request(db, (u["id"],))
         if (
             not r
@@ -171,6 +177,9 @@ def login(db, data, ip):
 def session_by_token(db, raw):
     hashed = sec.secret_hash(raw)
     found = repository.find_session_reference(db, (hashed,))
+    if not found and settings.auth_v2_enabled:
+        found=db.execute('''SELECT s.user_id,s.id FROM account.auth_refresh_history h
+          JOIN account.user_sessions s ON s.id=h.session_id WHERE h.token_hash=%s''',(hashed,)).fetchone()
     if not found:
         return None
     u = repository.lock_user(db, (found["user_id"],))
@@ -179,6 +188,8 @@ def session_by_token(db, raw):
 
 
 def refresh(db, raw):
+    if settings.auth_v2_enabled:
+        return rotating_refresh(db,raw)
     pair = session_by_token(db, raw)
     if not pair:
         return failure(401, "REFRESH_TOKEN_INVALID")
@@ -195,6 +206,34 @@ def refresh(db, raw):
     # 009 stores one hash per session and has no replay-history table. Keep the
     # opaque refresh secret stable until its fixed session expiry or revocation.
     return token_result(s, raw)
+
+
+def rotating_refresh(db,raw):
+    import hmac
+    import hashlib
+    hashed=sec.secret_hash(raw)
+    reference=db.execute('''SELECT id,user_id FROM account.user_sessions WHERE refresh_token_hash=%s
+       UNION ALL SELECT s.id,s.user_id FROM account.auth_refresh_history h
+       JOIN account.user_sessions s ON s.id=h.session_id WHERE h.token_hash=%s LIMIT 1''',(hashed,hashed)).fetchone()
+    if not reference:
+        return failure(401,'REFRESH_TOKEN_INVALID')
+    user=repository.lock_user(db,(reference['user_id'],))
+    session=repository.lock_session(db,(reference['id'],))
+    if not session or session['revoked_at'] or user['status']!='active' or session['expires_at']<=sec.now():
+        return failure(401,'SESSION_REVOKED')
+    next_raw=hmac.new(settings.auth_secret.encode(),('refresh:'+str(session['id'])+':'+raw).encode(),hashlib.sha256).hexdigest()
+    if session['refresh_token_hash'] != hashed:
+        previous=db.execute('SELECT used_at FROM account.auth_refresh_history WHERE token_hash=%s',(hashed,)).fetchone()
+        if (previous and sec.now()-previous['used_at'] <= timedelta(seconds=5)
+                and session['refresh_token_hash']==sec.secret_hash(next_raw)):
+            return token_result(session,next_raw)
+        revoke(db,session['id'])
+        return failure(401,'REFRESH_TOKEN_REUSED')
+    db.execute('INSERT INTO account.auth_refresh_history(token_hash,session_id,expires_at,used_at) VALUES (%s,%s,%s,%s)',
+               (hashed,session['id'],session['expires_at'],sec.now()))
+    session=db.execute('UPDATE account.user_sessions SET refresh_token_hash=%s WHERE id=%s RETURNING *',
+                        (sec.secret_hash(next_raw),session['id'])).fetchone()
+    return token_result(session,next_raw)
 
 
 def logout(db, raw):

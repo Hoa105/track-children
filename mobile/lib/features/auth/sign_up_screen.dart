@@ -10,6 +10,7 @@ import 'auth_layout.dart';
 import 'auth_form_style.dart';
 import 'parent_role.dart';
 import 'registration_gateway.dart';
+import 'otp_status.dart';
 import 'registration_profile_form.dart';
 import 'social_provider_icon.dart';
 import 'social_profile_screen.dart';
@@ -41,13 +42,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late final _passwordFocus = _mascot.field(obscured: () => _hidePassword);
   late final _confirmFocus = _mascot.field(obscured: () => _hideConfirm);
   late final RegistrationGateway _gateway =
-      widget.registrationGateway ?? UnavailableRegistrationGateway();
+      widget.registrationGateway ?? ApiRegistrationGateway();
   int _step = 0;
   bool _busy = false, _accepted = false, _attempted = false;
   bool _hidePassword = true, _hideConfirm = true;
   ParentRole? _role;
   Map<String, dynamic>? _challenge, _grant;
   String? _error;
+  bool _resent = false;
   late final Timer _timer;
   static const _titles = [
     'Tạo tài khoản',
@@ -84,9 +86,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _confirm.clear();
     setState(() {
       _grant = null;
-      _step = 1;
-      _error =
-          'Phiên xác minh đã hết hạn. Vui lòng xác minh lại số điện thoại.';
+      _step = 0;
+      _challenge = null;
+      _accepted = false;
+      _error = 'Phiên xác minh đã hết hạn. Vui lòng yêu cầu mã mới.';
     });
   }
 
@@ -99,19 +102,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  void _back() {
+  Future<void> _back() async {
     if (_busy) return;
     if (_step == 0) {
       widget.onLogin();
       return;
     }
     if (_step == 1) {
-      _challenge = null;
-      _grant = null;
-      _code.clear();
-      _password.clear();
-      _confirm.clear();
-      _accepted = false;
+      await _run(() async {
+        try {
+          final gateway = _gateway;
+          if (_challenge != null && gateway is RevocableRegistrationGateway) {
+            await gateway.invalidate(_challenge!);
+          }
+        } on AuthException catch (e) {
+          if (e.code != 'TRANSACTION_INVALID') rethrow;
+        }
+        if (!mounted) return;
+        _challenge = null;
+        _grant = null;
+        _code.clear();
+        _password.clear();
+        _confirm.clear();
+        _accepted = false;
+        _go(0);
+      });
+      return;
     }
     _go(_step - 1);
   }
@@ -127,7 +143,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on AuthException catch (e) {
       if (!mounted) return;
       if (e.code == 'SOCIAL_CANCELLED') return;
-      if (e.code == 'REGISTRATION_CHALLENGE_INVALID' && _step > 1) _expire();
+      if (e.code == 'ACCOUNT_ALREADY_CREATED') {
+        widget.onLogin();
+        return;
+      }
+      if ((e.code == 'REGISTRATION_CHALLENGE_INVALID' ||
+              e.code == 'TRANSACTION_INVALID') &&
+          _step > 1) {
+        _expire();
+      }
       setState(() => _error = e.toString());
       _mascot.showError();
     } catch (_) {
@@ -144,6 +168,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _next() async {
     if (_busy) return;
+    if (_step == 1 &&
+        _grant == null &&
+        !OtpTiming(_challenge).canVerify(_code.text)) {
+      return;
+    }
     FocusScope.of(context).unfocus();
     setState(() => _attempted = true);
     if (!(_form.currentState?.validate() ?? false) ||
@@ -159,11 +188,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _go(3);
       return;
     }
+    if (_step == 1 && _grant != null && _left(_grant, 'expiresAt') > 0) {
+      _go(2);
+      return;
+    }
     await _run(() async {
       if (_step == 0) {
         final result = await _gateway.start(_phone.text.trim());
         if (!mounted) return;
         _challenge = result;
+        _resent = false;
         _code.clear();
         _go(1);
       } else if (_step == 1) {
@@ -179,6 +213,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await _gateway.complete(_grant!, {
           'phone': _phone.text.trim(),
           'password': _password.text,
+          'confirmPassword': _confirm.text,
           'displayName': _name.text.trim(),
           'defaultRelationship': _role!.registrationValue,
           'acceptedTerms': _accepted,
@@ -193,7 +228,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _resend() => _run(() async {
+    _resent = false;
     final value = await _gateway.resend(_challenge!);
+    _resent = true;
     if (!mounted) return;
     setState(() {
       _challenge = value;
@@ -340,63 +377,59 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              TextButton(
-                onPressed: _busy ? null : () => showAuthPolicies(context),
-                child: const Text('Điều khoản và chính sách quyền riêng tư'),
-              ),
             ],
             if (_step == 1) ...[
-              Text(
-                'Nhập mã xác minh gồm 6 chữ số đã gửi đến ${_challenge?['targetMasked'] ?? ''}.',
-              ),
-              const SizedBox(height: 16),
-              const Text('Mã xác minh', style: authSproutFieldLabelStyle),
-              const SizedBox(height: 8),
-              TextFormField(
-                key: const ValueKey('registration-otp'),
-                controller: _code,
-                focusNode: _codeFocus,
-                enabled: !_busy,
-                keyboardType: TextInputType.number,
-                autofillHints: const [AutofillHints.oneTimeCode],
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _next(),
-                decoration: authInputDecoration(
-                  greenSprout: true,
-                  hint: 'Nhập mã xác minh 6 số',
-                  icon: Icons.sms_outlined,
+              if (_grant != null && _left(_grant, 'expiresAt') > 0) ...[
+                const Text(
+                  'Số điện thoại đã được xác minh. Chọn Tiếp tục để tạo mật khẩu.',
                 ),
-                validator: (v) => RegExp(r'^[0-9]{6}$').hasMatch(v ?? '')
-                    ? null
-                    : 'Vui lòng nhập đủ 6 chữ số.',
-              ),
-              Text(
-                _left(_challenge, 'expiresAt') == 0
-                    ? 'Mã đã hết hạn. Vui lòng gửi lại.'
-                    : 'Mã hết hạn sau ${_left(_challenge, 'expiresAt') ~/ 60}:${(_left(_challenge, 'expiresAt') % 60).toString().padLeft(2, '0')}.',
-              ),
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _busy ? null : _back,
-                    child: const Text('Sửa số điện thoại'),
+                TextButton(
+                  onPressed: _busy ? null : _back,
+                  child: const Text('Sửa số điện thoại'),
+                ),
+              ] else ...[
+                Text('Đã gửi mã đến ${_challenge?['targetMasked'] ?? ''}.'),
+                const SizedBox(height: 16),
+                const Text('Mã xác minh', style: authSproutFieldLabelStyle),
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: const ValueKey('registration-otp'),
+                  controller: _code,
+                  onChanged: (_) => setState(() {}),
+                  focusNode: _codeFocus,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  maxLength: 6,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _next(),
+                  decoration: authInputDecoration(
+                    greenSprout: true,
+                    hint: 'Nhập mã xác minh 6 số',
+                    icon: Icons.sms_outlined,
                   ),
-                  TextButton(
-                    onPressed:
-                        !_busy && _left(_challenge, 'resendAvailableAt') == 0
-                        ? _resend
-                        : null,
-                    child: Text(
-                      _left(_challenge, 'resendAvailableAt') > 0
-                          ? 'Gửi lại sau ${_left(_challenge, 'resendAvailableAt')} giây'
-                          : 'Gửi lại mã',
+                  validator: (v) => RegExp(r'^[0-9]{6}$').hasMatch(v ?? '')
+                      ? null
+                      : 'Vui lòng nhập đủ 6 chữ số.',
+                ),
+                if (_resent && !OtpTiming(_challenge).expired)
+                  const Text('Đã gửi mã mới.'),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OtpStatus(
+                      ticket: _challenge,
+                      busy: _busy,
+                      onResend: _resend,
                     ),
-                  ),
-                ],
-              ),
+                    TextButton(
+                      onPressed: _busy ? null : _back,
+                      child: const Text('Sửa số điện thoại'),
+                    ),
+                  ],
+                ),
+              ],
             ],
             if (_step == 2) ...[
               const Text('Mật khẩu', style: authSproutFieldLabelStyle),
@@ -404,7 +437,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               _passwordField(confirmation: false),
               const SizedBox(height: 8),
               const Text(
-                '8–64 ký tự, không dấu, khoảng trắng hoặc emoji.',
+                '8–64 ký tự, gồm chữ cái không dấu, chữ số hoặc ký tự đặc biệt. Không dùng khoảng trắng.',
                 style: TextStyle(fontSize: 13),
               ),
               const SizedBox(height: 20),
@@ -436,7 +469,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             const SizedBox(height: 24),
             FilledButton(
               key: const ValueKey('registration-next'),
-              onPressed: _busy ? null : _next,
+              onPressed:
+                  _busy ||
+                      (_step == 1 &&
+                          _grant == null &&
+                          !OtpTiming(_challenge).canVerify(_code.text))
+                  ? null
+                  : _next,
               child: _busy
                   ? const SizedBox.square(
                       dimension: 20,
@@ -445,7 +484,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   : Text(
                       _step == 3
                           ? 'Hoàn tất đăng ký'
-                          : _step == 1
+                          : _step == 1 && _grant == null
                           ? 'Xác minh'
                           : 'Tiếp tục',
                     ),
@@ -454,9 +493,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: 20),
               AuthSocialButtons(onPressed: _busy ? null : _social),
               const SizedBox(height: 12),
-              TextButton(
-                onPressed: _busy ? null : widget.onLogin,
-                child: const Text('Đã có tài khoản? Đăng nhập'),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'Đã có tài khoản?',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  TextButton(
+                    onPressed: _busy ? null : widget.onLogin,
+                    child: const Text('Đăng nhập'),
+                  ),
+                ],
               ),
             ],
             const SizedBox(height: 24),

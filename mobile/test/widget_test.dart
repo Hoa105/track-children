@@ -11,6 +11,11 @@ import 'package:track_children/services/demo_store.dart';
 
 import 'dart:convert';
 
+import 'registration_steps_test.dart' as steps;
+
+import 'package:track_children/features/auth/social_profile_screen.dart';
+import 'package:track_children/features/auth/social_provider_icon.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -124,7 +129,9 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(startLaunchChannel, null);
   });
-  testWidgets('startup introduction completes into login', (tester) async {
+  testWidgets('first startup introduction completes into signup', (
+    tester,
+  ) async {
     await openIntroduction(tester);
     expect(find.text('Cùng con lớn khôn mỗi ngày'), findsOneWidget);
     await tester.ensureVisible(find.text('Tiếp tục'));
@@ -134,7 +141,7 @@ void main() {
     await tester.ensureVisible(find.text('Bắt đầu'));
     await tester.tap(find.text('Bắt đầu'));
     await tester.pumpAndSettle();
-    expect(find.text('Chào mừng ba mẹ!'), findsOneWidget);
+    expect(find.byType(SignUpScreen), findsOneWidget);
   });
   testWidgets(
     'completion persists while introduction remains visible on restart',
@@ -166,6 +173,12 @@ void main() {
       await tester.tap(find.text('Bỏ qua'));
       await tester.pumpAndSettle();
 
+      if (find.byType(SignUpScreen).evaluate().isNotEmpty) {
+        final link = find.widgetWithText(TextButton, 'Đăng nhập');
+        await tester.ensureVisible(link);
+        await tester.tap(link);
+        await tester.pumpAndSettle();
+      }
       Future<void> login(String email) async {
         await tester.enterText(find.byType(TextFormField).first, email);
         await tester.enterText(
@@ -245,107 +258,98 @@ void main() {
     expect(loggedIn, true);
     expect(AuthService.instance.user!['email'], 'demo@trackchildren.vn');
   });
-  testWidgets('signup role selection uses current parent roles', (
-    tester,
-  ) async {
+  testWidgets('profile role selection has no implicit choice', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+      const MaterialApp(
+        home: SocialProfileScreen(
+          provider: SocialProvider.google,
+          account: {'displayName': 'Parent'},
+        ),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Khác'));
     expect(
       tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Mẹ')).selected,
-      true,
+      false,
     );
-    await tester.tap(find.text('Khác'));
+    final other = find.widgetWithText(ChoiceChip, 'Khác');
+    await tester.ensureVisible(other);
+    await tester.tap(other);
     await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Khác'))
-          .selected,
-      true,
-    );
-    expect(find.text('Đây có phải lần đầu bạn có con?'), findsNothing);
+    expect(tester.widget<ChoiceChip>(other).selected, true);
   });
+
   testWidgets(
-    'signup accepts server terms and verifies OTP before child form',
+    'signup verifies OTP and explicitly accepts policies before completion',
     (tester) async {
-      var openChild = false;
+      var opened = false;
+      final gateway = steps.FakeRegistrationGateway();
       await tester.pumpWidget(
         MaterialApp(
           home: SignUpScreen(
+            registrationGateway: gateway,
             onLogin: () {},
-            onChildProfilePreview: () => openChild = true,
+            onChildProfilePreview: () => opened = true,
           ),
         ),
       );
+      await steps.enter(tester, 'registration-phone', '0912345678');
+      await steps.tapNext(tester);
+      expect(gateway.completions, 0);
+      await steps.enter(tester, 'registration-otp', '012345');
+      await steps.tapNext(tester);
+      await steps.enter(tester, 'registration-password', 'Q7!m2#Zx');
+      await steps.enter(tester, 'registration-confirm', 'Q7!m2#Zx');
+      await steps.tapNext(tester);
+      await steps.enter(tester, 'registration-name', 'Phụ huynh thử');
+      final role = find.widgetWithText(ChoiceChip, 'Mẹ');
+      await tester.ensureVisible(role);
+      await tester.tap(role);
       await tester.pumpAndSettle();
-      final values = [
-        'Phụ huynh thử',
-        'new.parent@example.test',
-        'abcdefgh',
-        'abcdefgh',
-      ];
-      for (var i = 0; i < values.length; i++) {
-        await tester.enterText(find.byType(TextFormField).at(i), values[i]);
-      }
-      await tester.ensureVisible(find.byType(Checkbox));
-      final termsLink = find.text(
-        'Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư',
-      );
-      await tester.ensureVisible(termsLink);
-      await tester.tap(termsLink);
+      final read = find.text('Đọc điều khoản và chính sách');
+      await tester.ensureVisible(read);
+      await tester.tap(read);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Điều khoản sử dụng'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Test terms'), findsOneWidget);
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(Checkbox));
-      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Đăng ký'));
-      await tester.tap(find.widgetWithText(FilledButton, 'Đăng ký'));
-      await tester.pump(const Duration(milliseconds: 400));
+      await steps.tapNext(tester);
+      expect(opened, false);
+      expect(gateway.completions, 0);
+      final consent = find.byKey(const ValueKey('registration-consent'));
+      await tester.ensureVisible(consent);
+      await tester.tap(consent);
       await tester.pumpAndSettle();
-      expect(find.text('Xác thực OTP'), findsOneWidget);
-      await tester.enterText(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.byType(TextField),
-        ),
-        '734821',
-      );
-      await tester.tap(find.widgetWithText(FilledButton, 'Xác nhận'));
-      await tester.pumpAndSettle();
-      expect(openChild, true);
-      expect(AuthService.instance.user!['email'], 'new.parent@example.test');
-      expect(DemoStore.instance.children, isEmpty);
+      await steps.tapNext(tester);
+      expect(opened, true);
+      expect(gateway.completions, 1);
+      expect(gateway.saved!['acceptedTerms'], true);
+      await tester.pumpWidget(const SizedBox());
     },
   );
   testWidgets(
-    'signup switches to phone without requiring email or display name',
+    'signup starts with phone only and rejects an email in that field',
     (tester) async {
+      final gateway = steps.FakeRegistrationGateway();
       await tester.pumpWidget(
         MaterialApp(
-          home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+          home: SignUpScreen(
+            registrationGateway: gateway,
+            onLogin: () {},
+            onChildProfilePreview: () {},
+          ),
         ),
       );
-      await tester.pumpAndSettle();
-      final phoneOption = find.byKey(
-        const ValueKey('registration-method-selector'),
-      );
-      await tester.ensureVisible(phoneOption);
-      await tester.tap(phoneOption);
-      await tester.pumpAndSettle();
-      expect(find.byType(TextFormField), findsNWidgets(4));
-      await tester.enterText(find.byType(TextFormField).at(1), '0912345678');
-      await tester.enterText(find.byType(TextFormField).at(2), 'abcdefgh');
-      await tester.enterText(find.byType(TextFormField).at(3), 'abcdefgh');
-      final form = tester.widget<Form>(find.byType(Form));
-      expect(
-        (form.key as GlobalKey<FormState>).currentState!.validate(),
-        isTrue,
-      );
-      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsOneWidget);
+      await steps.enter(tester, 'registration-phone', 'parent@example.com');
+      await steps.tapNext(tester);
+      expect(gateway.starts, 0);
+      await steps.enter(tester, 'registration-phone', '0912345678');
+      await steps.tapNext(tester);
+      expect(gateway.starts, 1);
+      expect(find.byKey(const ValueKey('registration-otp')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
     },
   );
   testWidgets('standalone Home has shortcuts but no private measurements', (

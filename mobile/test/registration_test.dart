@@ -1,5 +1,10 @@
 import 'dart:convert';
 
+import 'registration_steps_test.dart' as steps;
+
+import 'package:track_children/features/auth/social_profile_screen.dart';
+import 'package:track_children/features/auth/social_provider_icon.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,9 +32,7 @@ http.Response json(Object body, [int status = 200]) => http.Response(
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
-  testWidgets('invalid form and missing consent never call registration API', (
-    tester,
-  ) async {
+  testWidgets('invalid phone never calls registration API', (tester) async {
     var calls = 0;
     AuthService.instance = AuthService(
       client: MockClient((_) async {
@@ -42,24 +45,12 @@ void main() {
         home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
       ),
     );
-    final submit = find.widgetWithText(FilledButton, 'Đăng ký');
-    await tester.ensureVisible(submit);
-    await tester.tap(submit);
-    await tester.pumpAndSettle();
+    await steps.tapNext(tester);
     expect(calls, 0);
-    expect(find.text('Vui lòng đồng ý với các điều khoản.'), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField).at(1), 'bad-email');
-    await tester.enterText(find.byType(TextFormField).at(2), 'short');
-    await tester.enterText(find.byType(TextFormField).at(3), 'different');
-    await tester.ensureVisible(find.byType(Checkbox));
-    await tester.tap(find.byType(Checkbox));
-    await tester.ensureVisible(submit);
-    await tester.tap(submit);
-    await tester.pumpAndSettle();
+    await steps.enter(tester, 'registration-phone', 'bad-email');
+    await steps.tapNext(tester);
     expect(calls, 0);
-    expect(find.text('Email chưa đúng định dạng.'), findsOneWidget);
-    expect(find.text('Mật khẩu cần có 8–64 ký tự.'), findsOneWidget);
-    expect(find.text('Mật khẩu chưa trùng khớp.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('registration-step-1')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -73,6 +64,17 @@ void main() {
         },
         client: MockClient((request) async {
           final body = jsonDecode(request.body) as Map;
+          if (request.url.path.endsWith('/social/start')) {
+            expect(body['idToken'], 'provider-token');
+            return json({
+              'requiresProfile': true,
+              'transactionId': 'id',
+              'transactionToken': 'token',
+              'documentsDigest': 'digest',
+              'displayName': 'Provider Name',
+            });
+          }
+          expect(request.url.path, endsWith('/social/complete'));
           expect(body['displayName'], 'Tên đã nhập');
           expect(body['defaultRelationship'], 'grandmother');
           expect(body.containsKey('password'), false);
@@ -96,115 +98,57 @@ void main() {
     },
   );
 
-  for (final phone in [false, true]) {
+  for (final invalid in [false, true]) {
     testWidgets(
-      'registration ${phone ? 'phone' : 'email'} resumes replacement OTP and creates session',
+      'phone-first registration validates OTP before profile; invalid=$invalid',
       (tester) async {
-        var registrations = 0;
-        var navigated = false;
-        AuthService.instance = AuthService(
-          client: MockClient((request) async {
-            final body = jsonDecode(request.body) as Map;
-            if (request.url.path.endsWith('/register')) {
-              registrations++;
-              expect(
-                body.keys,
-                unorderedEquals([
-                  'displayName',
-                  phone ? 'phone' : 'email',
-                  'password',
-                  'defaultRelationship',
-                  'acceptedTerms',
-                ]),
-              );
-              expect(body['displayName'], 'Phụ huynh');
-              expect(body['defaultRelationship'], 'other_guardian');
-              expect(
-                body[phone ? 'phone' : 'email'],
-                phone ? '0912345678' : 'parent@example.com',
-              );
-              return json(challenge('original'), 201);
-            }
-            if (request.url.path.endsWith('/resend'))
-              return json(challenge('replacement'));
-            expect(request.url.path, '/api/v1/auth/register/verify');
-            expect(body['verificationId'], 'replacement');
-            expect(body['registrationToken'], 'signed-replacement');
-            expect(body['code'], '123456');
-            return json({
-              'accessToken': 'access',
-              'refreshToken': 'refresh',
-              'user': {
-                'id': 'parent',
-                'displayName': 'Phụ huynh',
-                'defaultRelationship': 'other_guardian',
-              },
-            });
-          }),
-        );
+        var opened = false;
+        final gateway = steps.FakeRegistrationGateway();
         await tester.pumpWidget(
           MaterialApp(
             home: SignUpScreen(
+              registrationGateway: gateway,
               onLogin: () {},
-              onChildProfilePreview: () => navigated = true,
+              onChildProfilePreview: () => opened = true,
             ),
           ),
         );
-        await tester.pumpAndSettle();
-        if (phone) {
-          final selector = find.byKey(
-            const ValueKey('registration-method-selector'),
+        await steps.enter(tester, 'registration-phone', '0912345678');
+        await steps.tapNext(tester);
+        await steps.enter(
+          tester,
+          'registration-otp',
+          invalid ? '999999' : '012345',
+        );
+        await steps.tapNext(tester);
+        if (invalid) {
+          expect(
+            find.byKey(const ValueKey('registration-step-2')),
+            findsOneWidget,
           );
-          await tester.ensureVisible(selector);
-          await tester.tap(
-            find.descendant(of: selector, matching: find.text('Số điện thoại')),
-          );
+          expect(opened, false);
+          expect(gateway.completions, 0);
+        } else {
+          await steps.enter(tester, 'registration-password', 'Q7!m2#Zx');
+          await steps.enter(tester, 'registration-confirm', 'Q7!m2#Zx');
+          await steps.tapNext(tester);
+          await steps.enter(tester, 'registration-name', 'Phụ huynh');
+          final role = find.widgetWithText(ChoiceChip, 'Khác');
+          await tester.ensureVisible(role);
+          await tester.tap(role);
           await tester.pumpAndSettle();
+          await steps.tapNext(tester);
+          expect(gateway.completions, 0);
+          expect(opened, false);
+          final consent = find.byKey(const ValueKey('registration-consent'));
+          await tester.ensureVisible(consent);
+          await tester.tap(consent);
+          await tester.pumpAndSettle();
+          await steps.tapNext(tester);
+          expect(opened, true);
+          expect(gateway.completions, 1);
+          expect(gateway.saved!['defaultRelationship'], 'other_guardian');
         }
-        await tester.enterText(
-          find.byType(TextFormField).at(1),
-          phone ? '0912345678' : 'parent@example.com',
-        );
-        await tester.enterText(find.byType(TextFormField).at(2), 'password123');
-        await tester.enterText(find.byType(TextFormField).at(3), 'password123');
-        final guardian = find.widgetWithText(ChoiceChip, 'Khác');
-        await tester.ensureVisible(guardian);
-        await tester.tap(guardian);
-        await tester.ensureVisible(find.byType(Checkbox));
-        await tester.tap(find.byType(Checkbox));
-        final submit = find.widgetWithText(FilledButton, 'Đăng ký');
-        await tester.ensureVisible(submit);
-        await tester.tap(submit);
-        await tester.pumpAndSettle();
-        expect(find.byType(OtpDialog), findsOneWidget);
-        expect(navigated, false);
-        expect(AuthService.instance.signedIn, false);
-        await tester.tap(find.text('Gửi lại OTP'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Hủy'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(submit);
-        await tester.tap(submit);
-        await tester.pumpAndSettle();
-        expect(registrations, 1);
-        await tester.enterText(
-          find.descendant(
-            of: find.byType(OtpDialog),
-            matching: find.byType(TextField),
-          ),
-          '123456',
-        );
-        await tester.tap(find.text('Xác nhận'));
-        await tester.pumpAndSettle();
-        expect(navigated, true);
-        expect(
-          AuthService.instance.user!['defaultRelationship'],
-          'other_guardian',
-        );
-        expect(
-          await const FlutterSecureStorage().read(key: 'auth.refresh'),
-          'refresh',
-        );
         await tester.pumpWidget(const SizedBox());
       },
     );
@@ -251,19 +195,29 @@ void main() {
       }),
     );
     await tester.pumpWidget(
-      MaterialApp(
-        home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+      const MaterialApp(
+        home: SocialProfileScreen(
+          provider: SocialProvider.google,
+          account: {'displayName': 'Parent'},
+        ),
       ),
     );
-    final terms = find.text(
-      'Tôi đồng ý với Điều khoản sử dụng & Chính sách quyền riêng tư',
-    );
-    await tester.ensureVisible(terms);
-    await tester.tap(terms);
+    final consent = find.byKey(const ValueKey('registration-consent'));
+    expect(tester.widget<CheckboxListTile>(consent).value, false);
+    final read = find.text('Đọc điều khoản và chính sách');
+    await tester.ensureVisible(read);
+    await tester.tap(read);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Chính sách dữ liệu — v1'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Đồng ý'));
+    await tester.tap(find.text('Chính sách dữ liệu'));
     await tester.pumpAndSettle();
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, true);
+    expect(find.text('Nội dung data_policy'), findsOneWidget);
+    await tester.tap(find.text('Đóng'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(consent).value, false);
+    await tester.ensureVisible(consent);
+    await tester.tap(consent);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(consent).value, true);
+    await tester.pumpWidget(const SizedBox());
   });
 }

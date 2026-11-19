@@ -144,6 +144,14 @@ class MainActivity : FragmentActivity(), FlutterEngineConfigurator, FlutterUiDis
         flutter?.onNewIntent(intent)
     }
 
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        // Plugins such as image_picker start the picker through the Activity.
+        // Its result must reach Flutter's plugin listeners on this custom host.
+        flutter?.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         flutter?.onUserLeaveHint()

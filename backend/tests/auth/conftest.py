@@ -1,5 +1,6 @@
 """Integration tests use only a dedicated, explicitly named *_test database."""
 import os
+import json
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -31,26 +32,37 @@ def database_url():
 
 
 @pytest.fixture
-def env(database_url,monkeypatch):
+def env(database_url,monkeypatch,tmp_path):
     monkeypatch.setattr(settings,'database_url',database_url)
     monkeypatch.setattr(settings,'auth_secret','test-secret-only-not-for-production-123456789')
+    monkeypatch.setattr(settings,'auth_v2_enabled',False)
+    monkeypatch.setattr(settings,'auth_skip_otp',False)
+    monkeypatch.setattr(settings,'auth_rate_limit_path',str(tmp_path/'limits.sqlite3'))
+    monkeypatch.setattr(settings,'auth_rate_limit_backend','sqlite')
+    monkeypatch.setattr(settings,'email_provider','webhook')
+    monkeypatch.setattr(settings,'email_webhook_url','https://email.test.invalid')
+    monkeypatch.setattr(settings,'email_webhook_token','test-only')
+    monkeypatch.setattr(settings,'sms_webhook_url','https://sms.test.invalid')
+    monkeypatch.setattr(settings,'sms_webhook_token','test-only')
+    monkeypatch.setattr(settings,'auth_otp_preview',False)
+    path=tmp_path/'legal.json'
+    path.write_text(json.dumps([{'docType':kind,'version':'1','content':'Test policy',
+        'isRequired':True,'effectiveAt':'2020-01-01T00:00:00Z'} for kind in ['terms','privacy','data_policy']]),encoding='utf-8')
+    monkeypatch.setattr(settings,'legal_documents_path',str(path))
     sms=[]
     monkeypatch.setattr(sms_gateway,'send_sms',lambda phone,code: sms.append((phone,code)) or True)
+    monkeypatch.setattr(sms_gateway,'send_code',lambda channel,target,code: sms_gateway.send_sms(target,code))
     with psycopg.connect(database_url,row_factory=dict_row,autocommit=True) as db:
         # CASCADE is restricted to the dedicated *_test database guarded above.
-        db.execute('TRUNCATE account.users,account.legal_documents,account.auth_rate_limits CASCADE')
-        for kind in ['terms','privacy','data_policy']:
-            db.execute("INSERT INTO account.legal_documents(doc_type,version,content,effective_at) VALUES (%s,'1','test legal text',now()-interval '1 day')",(kind,))
+        db.execute('TRUNCATE account.users CASCADE')
         yield TestClient(app,client=('127.0.0.1',50000)),db,sms
 
 
 @pytest.fixture
 def payload(env):
     client,db,_=env
-    docs=client.get('/api/v1/legal-documents?context=registration').json()['documents']
-    return {'fullName':'Test Parent','username':'parent_test','email':'parent@example.com',
-            'phone':'0912345678','password':'Password12345!', 'relationship':'mother',
-            'consents':[{'documentId':str(d['id']),'isAccepted':True} for d in docs]}
+    return {'displayName':'Test Parent','email':'parent@example.com',
+            'password':'Password12345!', 'defaultRelationship':'mother','acceptedTerms':True}
 
 
 DEVICE={'deviceId':'installation-1','platform':'android'}

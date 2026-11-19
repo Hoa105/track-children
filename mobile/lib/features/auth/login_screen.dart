@@ -111,10 +111,11 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _previewError = 'Không thể đăng nhập. Vui lòng thử lại.',
         );
+      }
     }
     if (!mounted) return;
     if (_previewError != null) _mascot.showError();
@@ -325,6 +326,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   : const Text('Đăng nhập'),
             ),
           ),
+          const SizedBox(height: 20),
+          AuthSocialButtons(onPressed: _isLoading ? null : _socialLogin),
           const SizedBox(height: 12),
           Wrap(
             alignment: WrapAlignment.center,
@@ -337,8 +340,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          AuthSocialButtons(onPressed: _isLoading ? null : _socialLogin),
           const SizedBox(height: 8),
           TextButton(
             onPressed: _isLoading ? null : () => showAuthPolicies(context),

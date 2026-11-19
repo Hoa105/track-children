@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/io_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:track_children/services/demo_store.dart';
 import 'package:track_children/services/auth_service.dart';
 
 // Inherit the real IO client instead of the widget binding's fake HTTP override.
@@ -13,6 +15,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('live PostgreSQL auth smoke over real HTTP', () async {
     FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    DemoStore.resetInstanceForTesting();
     await HttpOverrides.runWithHttpOverrides(() async {
       final client = IOClient(HttpClient());
       final auth = AuthService(client: client);

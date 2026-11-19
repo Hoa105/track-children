@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 
 import 'auth_form_style.dart';
+import 'auth_policies_dialog.dart';
 import 'parent_role.dart';
 import '../../services/auth_service.dart';
 
@@ -12,37 +13,7 @@ Future<void> showAuthPolicies(BuildContext context) async {
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: const Text('Điều khoản và chính sách'),
-        content: SizedBox(
-          width: 440,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final doc in docs)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: SelectableText(
-                    '${switch (doc['docType']) {
-                      'terms' => 'Điều khoản sử dụng',
-                      'privacy' => 'Chính sách quyền riêng tư',
-                      'data_policy' => 'Chính sách dữ liệu',
-                      _ => 'Tài liệu',
-                    }} — ${doc['version']}\n${doc['content']}',
-                  ),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
-      ),
+      builder: (context) => AuthPoliciesDialog(documents: docs),
     );
   } catch (_) {
     if (context.mounted) {

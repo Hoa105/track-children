@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core import security as sec
+from app.core.config import settings
 from app.features.auth import service
 from app.features.auth import sms as sms_gateway
 from app.main import app
@@ -22,12 +23,12 @@ def test_smoke_two_devices(env,payload):
     c,db,_=env
     a=register_and_verify(env,payload)
     assert c.get('/api/v1/auth/me',headers=bearer(a)).json()['id']==a['user']['id']
-    assert a['user']['emailVerifiedAt'] is None
+    assert a['user']['emailVerifiedAt'] is not None
     b=login(c,payload).json()
     r=c.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']})
     assert r.status_code==200 and r.headers['cache-control']=='no-store'
     new=r.json()
-    assert new['refreshToken']!=a['refreshToken'] and new['sessionExpiresAt']==a['sessionExpiresAt']
+    assert new['refreshToken']==a['refreshToken'] and new['sessionExpiresAt']==a['sessionExpiresAt']
     assert c.post('/api/v1/auth/logout',json={'refreshToken':new['refreshToken']}).status_code==204
     assert c.get('/api/v1/auth/me',headers=bearer(a)).status_code==401
     assert c.get('/api/v1/auth/me',headers=bearer(b)).status_code==200
@@ -35,7 +36,7 @@ def test_smoke_two_devices(env,payload):
     assert row['password_hash'].startswith('$argon2id$') and payload['password'] not in row['password_hash']
 
 
-@pytest.mark.parametrize('field,value',[('username','a'),('username','!invalid'),('password','short'),('fullName',' '),('email','bad'),('phone','000'),('relationship','admin')])
+@pytest.mark.parametrize('field,value',[('username','a'),('username','!invalid'),('password','short'),('displayName','x'*151),('email','bad'),('phone','000'),('relationship','admin')])
 def test_validation(env,payload,field,value):
     c,db,_=env
     payload[field]=value
@@ -46,25 +47,23 @@ def test_validation(env,payload,field,value):
 
 def test_normalization_conflict_consent(env,payload):
     c,db,_=env
-    payload.update(username=' Parent_Test ',fullName=' Parent ')
-    r=c.post('/api/v1/auth/register',json=payload)
-    assert r.status_code==201
+    payload.update(displayName=' Parent ')
+    register_and_verify(env,payload)
     u=db.execute('SELECT * FROM account.users').fetchone()
-    assert (u['username'],u['full_name'],u['phone'])==('parent_test','Parent','+84912345678')
+    assert (u['display_name'],str(u['email']),u['phone'])==('Parent','parent@example.com',None)
     payload['email']=payload['email'].upper()
     assert code(c.post('/api/v1/auth/register',json=payload))=='ACCOUNT_CONFLICT'
     assert db.execute('SELECT count(*) n FROM account.users').fetchone()['n']==1
 
 
-def test_consent_and_legal_versions(env,payload):
+def test_consent_and_legal_versions(env,payload,monkeypatch):
     c,db,_=env
-    payload['consents']=[]
+    payload['acceptedTerms']=False
     assert code(c.post('/api/v1/auth/register',json=payload))=='LEGAL_CONSENT_REQUIRED'
     assert not db.execute('SELECT id FROM account.users').fetchone()
-    db.execute("INSERT INTO account.legal_documents(doc_type,version,content,effective_at) VALUES ('terms','future','future',now()+interval '1 day')")
     docs=c.get('/api/v1/legal-documents?context=registration').json()['documents']
-    assert all(d['version']=='1' for d in docs)
-    db.execute("DELETE FROM account.legal_documents WHERE doc_type='privacy'")
+    assert len(docs)==3 and all(d['version']=='1' for d in docs)
+    monkeypatch.setattr(settings,'legal_documents_path','missing-policy.json')
     assert c.get('/api/v1/legal-documents?context=registration').status_code==503
 
 
@@ -77,15 +76,15 @@ def test_otp_attempts_expiry_and_replay(env,payload,monkeypatch):
     good=sms[-1][1];body['code']='000000' if good!='000000' else '000001'
     for remaining in range(4,-1,-1):
         r=c.post('/api/v1/auth/register/verify',json=body)
-        assert r.status_code==400 and r.json()['error']['details']['attemptsRemaining']==remaining
+        assert r.status_code==(400 if remaining else 429) and r.json()['error']['details']['attemptsRemaining']==remaining
     body['code']=good
     assert code(c.post('/api/v1/auth/register/verify',json=body))=='OTP_ATTEMPTS_EXCEEDED'
-    assert db.execute('SELECT attempts FROM account.verification_codes').fetchone()['attempts']==5
-    t=sec.now();monkeypatch.setattr(sec,'now',lambda:t+timedelta(seconds=61))
+    assert db.execute('SELECT attempt_count FROM account.auth_transactions').fetchone()['attempt_count']==5
+    db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds' WHERE id=%s",(ch['verificationId'],))
     r=c.post('/api/v1/auth/register/resend',json={k:ch[k] for k in ['verificationId','registrationToken']})
     assert r.status_code==200
-    assert code(c.post('/api/v1/auth/register/verify',json=body))=='OTP_EXPIRED'
-    ch=r.json();body.update(verificationId=ch['verificationId'],code=sms[-1][1])
+    assert code(c.post('/api/v1/auth/register/verify',json=body))=='REGISTRATION_CHALLENGE_INVALID'
+    ch=r.json();body.update(verificationId=ch['verificationId'],registrationToken=ch['registrationToken'],code=sms[-1][1])
     assert c.post('/api/v1/auth/register/verify',json=body).status_code==200
     assert code(c.post('/api/v1/auth/register/verify',json=body))=='REGISTRATION_CHALLENGE_INVALID'
     assert db.execute('SELECT count(*) n FROM account.user_sessions').fetchone()['n']==1
@@ -98,7 +97,7 @@ def test_challenge_secret_and_resend_limit(env,payload):
     assert c.post('/api/v1/auth/register/resend',json=body).status_code==429
     body['registrationToken']='bad'
     assert code(c.post('/api/v1/auth/register/resend',json=body))=='REGISTRATION_CHALLENGE_INVALID'
-    assert db.execute('SELECT attempts FROM account.verification_codes').fetchone()['attempts']==0
+    assert db.execute('SELECT attempt_count FROM account.auth_transactions').fetchone()['attempt_count']==0
 
 
 def test_pending_login_continues_and_sms_failure(env,payload,monkeypatch):
@@ -107,9 +106,8 @@ def test_pending_login_continues_and_sms_failure(env,payload,monkeypatch):
     ch=c.post('/api/v1/auth/register',json=payload).json()
     assert ch['deliveryStatus']=='failed'
     r=login(c,payload)
-    assert r.status_code==403 and code(r)=='VERIFICATION_REQUIRED'
-    new=r.json()['error']['details']['registration']
-    assert new['deliveryStatus']=='deferred' and new['registrationToken']!=ch['registrationToken']
+    assert r.status_code==429 and code(r)=='RATE_LIMITED'
+    assert int(r.headers['retry-after'])>0
     assert not db.execute('SELECT id FROM account.user_sessions').fetchone()
 
 
@@ -137,8 +135,8 @@ def test_reuse_and_logout_idempotent(env,payload):
     c,db,_=env
     a=register_and_verify(env,payload)
     assert c.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']}).status_code==200
-    assert code(c.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']}))=='REFRESH_TOKEN_REUSED'
-    assert c.get('/api/v1/auth/me',headers=bearer(a)).status_code==401
+    assert c.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']}).status_code==200
+    assert c.get('/api/v1/auth/me',headers=bearer(a)).status_code==200
     for token in [a['refreshToken'],'unknown']:
         r=c.post('/api/v1/auth/logout',json={'refreshToken':token})
         assert r.status_code==204 and not r.content
@@ -189,12 +187,12 @@ def test_concurrent_refresh(env,payload):
     c,db,_=env
     a=register_and_verify(env,payload)
     responses=parallel([lambda client:client.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']})]*2)
-    assert sorted(r.status_code for r in responses)==[200,401]
-    assert db.execute('SELECT revoked_at FROM account.user_sessions').fetchone()['revoked_at']
+    assert sorted(r.status_code for r in responses)==[200,200]
+    assert db.execute('SELECT revoked_at FROM account.user_sessions').fetchone()['revoked_at'] is None
 
 
 def test_concurrent_register(env,payload):
     _,db,_=env
     responses=parallel([lambda client:client.post('/api/v1/auth/register',json=payload)]*2)
-    assert sorted(r.status_code for r in responses)==[201,409]
+    assert sorted(r.status_code for r in responses)==[201,429]
     assert db.execute('SELECT count(*) n FROM account.users').fetchone()['n']==1

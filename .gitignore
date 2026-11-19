@@ -2,6 +2,11 @@
 .test-deps/
 .auth-test-pg/
 .auth-test-logs/
+.runtime/auth-high-risk/
+.runtime/auth-app-cutover/
+.runtime/precommit-full/
+.runtime/auth-cleanup/
+.runtime/auth-schema/
 .env
 .env.*
 !.env.example
@@ -91,3 +96,5 @@ __pycache__/
 .pytest_cache/
 **/.pytest_cache/
 /backend/.pytest_tmp/
+/.runtime/auth-cleanup/
+/.runtime/auth-schema/

@@ -2,15 +2,17 @@ openapi: 3.1.0
 info:
   title: Track Children - Mobile Auth API
   version: 2.0.0
-  description: '# Đăng ký App với schema 009
+  description: '# App registration with schema 009
 
 
-    Cập nhật 23/10/2026. Tài liệu này thay thế phần đăng ký/OTP/phiên trong hợp đồng auth cũ.
+    Updated October 23, 2026. This document replaces the registration, OTP and session
+    sections of the previous auth contract.
 
-    Luồng đăng nhập bằng mật khẩu và web admin sẽ được đồng bộ trong hạng mục tiếp theo.
+    Password login and web admin authentication will be aligned in a subsequent work
+    item.
 
 
-    Cập nhật 25/10/2026: bổ sung API cập nhật thông tin và đổi mật khẩu tài khoản app.'
+    Updated October 25, 2026: added app account profile and password update APIs.'
 servers:
 - url: http://localhost:8000/api/v1
   description: Local backend
@@ -22,8 +24,9 @@ paths:
       operationId: get_legal_documents
       tags:
       - Mobile Auth
-      summary: Lấy điều khoản đăng ký
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Get registration legal documents
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '200':
@@ -57,8 +60,9 @@ paths:
       operationId: post_auth_register
       tags:
       - Mobile Auth
-      summary: Đăng ký
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Register an account
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '201':
@@ -98,7 +102,8 @@ paths:
                 type: integer
                 minimum: 0
         '503':
-          description: DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED; LEGAL_DOCUMENTS_UNAVAILABLE; OTP_DELIVERY_UNAVAILABLE
+          description: DATABASE_UNAVAILABLE; AUTH_NOT_CONFIGURED; LEGAL_DOCUMENTS_UNAVAILABLE;
+            OTP_DELIVERY_UNAVAILABLE
           content:
             application/json:
               schema:
@@ -114,8 +119,9 @@ paths:
       operationId: post_auth_register_verify
       tags:
       - Mobile Auth
-      summary: Xác thực OTP đăng ký
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Verify the registration OTP
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '200':
@@ -195,8 +201,9 @@ paths:
       operationId: post_auth_register_resend
       tags:
       - Mobile Auth
-      summary: Gửi lại OTP
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Resend the registration OTP
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '200':
@@ -258,7 +265,7 @@ paths:
       operationId: post_auth_login
       tags:
       - Mobile Auth
-      summary: Đăng nhập
+      summary: Log in
       description: Password login still requires migration to schema 009.
       security: []
       responses:
@@ -327,8 +334,9 @@ paths:
       operationId: post_auth_refresh
       tags:
       - Mobile Auth
-      summary: Làm mới phiên
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Refresh the session
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '200':
@@ -378,8 +386,9 @@ paths:
       operationId: post_auth_logout
       tags:
       - Mobile Auth
-      summary: Đăng xuất
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Log out
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security: []
       responses:
         '204':
@@ -407,8 +416,9 @@ paths:
       operationId: get_auth_me
       tags:
       - Mobile Auth
-      summary: Lấy người dùng hiện tại
-      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior and deployment configuration.
+      summary: Get the current user
+      description: Schema 009. See docs/api/mobile-registration-v2.md for behavior
+        and deployment configuration.
       security:
       - bearerAuth: []
       responses:
@@ -419,7 +429,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
         '401':
-          description: ACCESS_TOKEN_INVALID; ACCESS_TOKEN_EXPIRED; SESSION_EXPIRED; SESSION_REVOKED
+          description: ACCESS_TOKEN_INVALID; ACCESS_TOKEN_EXPIRED; SESSION_EXPIRED;
+            SESSION_REVOKED
           content:
             application/json:
               schema:
@@ -444,7 +455,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     patch:
       operationId: patch_auth_me
-      summary: Cập nhật thông tin tài khoản app
+      summary: Update the app account profile
       security:
       - bearerAuth: []
       requestBody:
@@ -469,8 +480,8 @@ paths:
       operationId: social_register
       tags:
       - Mobile Auth
-      description: Google/Apple verified sign-in. See docs/api/mobile-social-auth.md. No automatic email
-        linking.
+      description: Google/Apple verified sign-in. See docs/api/mobile-social-auth.md.
+        No automatic email linking.
       requestBody:
         required: true
         content:
@@ -505,7 +516,7 @@ paths:
   /auth/change-password:
     post:
       operationId: post_auth_change_password
-      summary: Đổi mật khẩu tài khoản app
+      summary: Change the app account password
       security:
       - bearerAuth: []
       requestBody:
@@ -1030,80 +1041,112 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 x-status: registration-implemented; password-login-pending-schema-009
-x-implementation-notes: "# Đăng ký App với schema 009\n\nCập nhật 23/10/2026. Tài liệu này thay thế phần\
-  \ đăng ký/OTP/phiên trong hợp đồng auth cũ.\nLuồng đăng nhập bằng mật khẩu và web admin sẽ được đồng\
-  \ bộ trong hạng mục tiếp theo.\n\n## API\n\nBase path: `/api/v1`. Gửi JSON, nhận lỗi dạng `error.code`,\
-  \ `error.fields`, `error.details`.\n\n`GET /legal-documents?context=registration` đọc 3 nội dung đã\
-  \ triển khai trong file\n`LEGAL_DOCUMENTS_PATH`: `terms`, `privacy`, `data_policy`. Định dạng file giống\n\
-  `backend/legal-documents.local.json`. File mẫu chỉ dành cho thử nghiệm local.\nThiếu nội dung hợp lệ/đang\
-  \ có hiệu lực trả `503 LEGAL_DOCUMENTS_UNAVAILABLE`.\nKhông sử dụng các bảng legal/consent đã xóa; DB\
-  \ chỉ ghi `consented_at`.\n\n`POST /auth/register`:\n\n```json\n{\n  \"displayName\": \"Ngọc Anh\",\n\
-  \  \"email\": \"anh@example.com\",\n  \"password\": \"a password 123\",\n  \"defaultRelationship\":\
-  \ \"mother\",\n  \"acceptedTerms\": true\n}\n```\n\nChỉ cung cấp một trong `email` hoặc `phone`. SĐT\
-  \ đầu `0` được đổi sang `+84`.\nTên không bắt buộc, mặc định `Phụ huynh`, tối đa 150 ký tự. Mật khẩu\
-  \ 8–64 ký tự,\ngiữ nguyên khoảng trắng. Quan hệ nhận `mother`, `father`, `grandfather`,\n`grandmother`,\
-  \ `other_guardian`. Không nhận `username` hoặc danh sách consent cũ.\n\nThành công `201`: `requiresOtp=true`,\
-  \ `verificationId`, `registrationToken`,\n`channel`, `targetMasked`, `expiresAt`, `resendAvailableAt`,\
-  \ `deliveryStatus`.\nMã được băm HMAC trong `account.auth_codes`, purpose `verify_contact`.\nChallenge\
-  \ là JWT có chữ ký và audience riêng, ràng buộc user/code, hiệu lực 30 phút.\nOTP có 6 số, hiệu lực\
-  \ 5 phút, tối đa 5 lần nhập sai. Gửi lại sau 60 giây,\ntối đa 5 mã/liên hệ/giờ và 100 mã/toàn hệ thống/giờ.\
-  \ Giới hạn này dùng PostgreSQL\nvà khóa transaction, áp dụng chung giữa các worker; không phải giới\
-  \ hạn theo IP.\nGiới hạn IP tại reverse proxy cần được cấu hình trước khi mở dịch vụ công khai.\n\n\
-  Tài khoản đang pending chỉ được tiếp tục với cùng mật khẩu; thông tin đã lưu không\nbị ghi đè. Tài khoản\
-  \ active hoặc mật khẩu khác trả `409 ACCOUNT_CONFLICT`.\nTrong thời gian chờ gửi lại trả `429 RATE_LIMITED`,\
-  \ header `Retry-After`.\n\n`POST /auth/register/resend`: gửi `verificationId`, `registrationToken`.\n\
-  Nhận challenge mới và vô hiệu mã trước. App phải thay challenge ngay cả khi\n`deliveryStatus=failed`,\
-  \ vì mã trước đã bị vô hiệu.\n\n`POST /auth/register/verify`: gửi hai trường challenge, `code`,\n`device:\
-  \ {\"platform\":\"android\"}`, `rememberMe` (mặc định true).\n`platform` nhận android/ios/web; metadata\
-  \ device cũ được chấp nhận nhưng không lưu.\nSai mã ghi nhận lượt thử ngay cả khi API trả lỗi. Hết hạn\
-  \ trả `OTP_EXPIRED`,\nhết lượt trả `OTP_ATTEMPTS_EXCEEDED`, challenge cũ/đã dùng trả\n`REGISTRATION_CHALLENGE_INVALID`.\n\
-  \nXác minh thành công: user active, ghi `email_verified_at` hoặc `phone_verified_at`,\ncode có `verified_at`\
-  \ và `consumed_at`, tạo session và trả token cùng user.\nApp lưu refresh token trong secure storage\
-  \ rồi chuyển sang màn hình tạo hồ sơ bé.\nKhông tạo hồ sơ bé tự động. Xác minh đồng thời/nhắc lại không\
-  \ tạo thêm session.\n\n`GET /auth/me`, `POST /auth/refresh`, `POST /auth/logout` sử dụng được với phiên\
-  \ mới.\nAccess token 15 phút; session 30 ngày nếu remember=true, 24 giờ nếu false.\nSchema 009 chỉ giữ\
-  \ một refresh hash/session: refresh secret ổn định đến khi hết hạn\nhoặc thu hồi, không có cơ chế xoay\
-  \ token/lịch sử phát hiện replay của schema cũ.\n`fullName` và `relationship` trong user vẫn là alias\
-  \ cho các màn hình App hiện có;\nđồng thời trả `displayName`, `defaultRelationship`. Không trả username/avatar\
-  \ cũ.\n\n## Chạy local khi chưa có nhà cung cấp\n\nTrong `backend/.env`:\n\n```dotenv\nAPP_ENV=local\n\
-  AUTH_SKIP_OTP=false\nAUTH_OTP_PREVIEW=true\nLEGAL_DOCUMENTS_PATH=legal-documents.local.json\n```\n\n\
-  Khởi động backend từ thư mục `backend` để đường dẫn tương đối đúng. Cần\n`AUTH_SECRET` ít nhất 32 ký\
-  \ tự và `DATABASE_URL` trỏ DB mới.\nChế độ preview không gửi email/SMS; response có `deliveryStatus=preview`,\n\
-  `devOtp` và App hiển thị rõ mã thử nghiệm. Cấu hình preview bị từ chối khi\nAPP_ENV khác local. Không\
-  \ cần thay DB hoặc chạy lại migration 009.\n\n## Gửi thật\n\n### SMTP2GO (đang chọn)\n\nBackend tích\
-  \ hợp API SMTP2GO trực tiếp. Trong SMTP2GO, vào\n`Sending > Verified Senders > Single sender emails`,\
-  \ thêm mail sinh viên và\nmở thư xác minh. Tạo API key tại `Sending > API Keys`, rồi điền `backend/.env`:\n\
-  \n```dotenv\nEMAIL_PROVIDER=smtp2go\nSMTP2GO_API_KEY=your-private-api-key\nSMTP2GO_SENDER_EMAIL=your-verified-student-email\n\
-  SMTP2GO_SENDER_NAME=Track Children\nAUTH_OTP_PREVIEW=false\nAUTH_SKIP_OTP=false\n```\n\nKhông dùng API\
-  \ key Brevo làm key SMTP2GO. Không cần mật khẩu hộp thư sinh viên.\nChỉ tắt preview sau khi có key và\
-  \ sender đã xác minh, rồi khởi động lại backend.\nKhi preview còn bật ở local, API vẫn trả mã thử nghiệm\
-  \ và không gọi nhà cung cấp.\n\nAdapter gọi `POST https://api.smtp2go.com/v3/email/send` với header\n\
-  `X-Smtp2go-Api-Key`, payload sender/to/subject/text_body. Chỉ coi là tiếp nhận\nthành công khi HTTP\
-  \ 200 và `data.succeeded=1`, `data.failed=0`, không có lỗi.\nKhông tự retry vì có thể gửi trùng. Timeout,\
-  \ response không hợp lệ hoặc provider\ntừ chối được chuyển thành `deliveryStatus=failed`; App cho phép\
-  \ gửi lại theo cooldown.\nXem [API chính thức](https://developers.smtp2go.com/docs/send-an-email).\n\
-  \n`.env` local đã chọn SMTP2GO; các giá trị key/sender hiện có được giữ nguyên,\nbiến chưa có được thêm\
-  \ rỗng. Không tự chuyển key hoặc địa chỉ sender từ Brevo.\nDocker nhận các biến SMTP2GO tương ứng từ\
-  \ môi trường Compose.\n\n### Brevo với email sinh viên\n\nAdapter Brevo đã tích hợp trực tiếp, không\
-  \ cần webhook trung gian.\nTạo tài khoản Brevo, thêm email sinh viên làm sender và hoàn tất xác minh\
-  \ hộp thư.\nViệc Brevo cho phép gửi phụ thuộc trạng thái tài khoản/sender; nhóm không có quyền\nDNS\
-  \ của trường nên không thể tự xác thực tên miền trường. Brevo có thể thay địa chỉ gửi.\n\nSau khi sender\
-  \ sẵn sàng, tạo API key và điền vào `backend/.env` (không commit key):\n\n```dotenv\nEMAIL_PROVIDER=brevo\n\
-  BREVO_API_KEY=your-private-api-key\nBREVO_SENDER_EMAIL=your-student-email\nBREVO_SENDER_NAME=Track Children\n\
-  AUTH_OTP_PREVIEW=false\nAUTH_SKIP_OTP=false\n```\n\nKhởi động lại backend. Adapter gọi `POST https://api.brevo.com/v3/smtp/email`,\n\
-  header `api-key`, body gồm sender/to/subject/textContent. Chỉ trả thành công\nkhi Brevo trả 201; lỗi\
-  \ quyền, hết quota hoặc timeout trả trạng thái gửi thất bại.\nChưa cấu hình key/sender thì đăng ký email\
-  \ báo OTP_DELIVERY_UNAVAILABLE.\nKhông cần mật khẩu hộp thư sinh viên. Khi tắt preview, SMS cũng cần\
-  \ dịch vụ gửi\nthật riêng; nếu chưa cấu hình, đăng ký bằng SĐT báo chưa sẵn sàng.\n\n### Webhook chung\n\
-  \nTắt preview, cấu hình `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_TOKEN` và/hoặc\n`SMS_WEBHOOK_URL`, `SMS_WEBHOOK_TOKEN`.\
-  \ Webhook phải dùng HTTPS, nhận Bearer token\nvà JSON `{to, message}`; email có thêm `subject`. Trả\
-  \ 2xx khi tiếp nhận gửi.\nAdapter timeout 10 giây, không theo redirect, không ghi mã hoặc token vào\
-  \ log.\nThiếu cấu hình trả `503 OTP_DELIVERY_UNAVAILABLE` trước khi tạo user.\nGửi thất bại sau commit\
-  \ trả `deliveryStatus=failed`; người dùng có thể gửi lại.\n2xx chỉ xác nhận nhà cung cấp đã tiếp nhận,\
-  \ không chứng minh người dùng đã nhận thư.\n\nVới Docker, mount file legal đã duyệt vào container rồi\
-  \ đặt `LEGAL_DOCUMENTS_PATH`\ntheo đường dẫn trong container. Không đưa nội dung thử nghiệm local vào\
-  \ production.\nGoogle/Apple đã được nối theo [luồng xác thực xã hội](mobile-social-auth.md),\ncần cấu\
-  \ hình nhà cung cấp riêng và không dùng chế độ OTP demo.\n\nKết quả 23/10/2026: 34 kiểm thử backend\
-  \ đăng ký/hợp đồng/adapter đạt; toàn bộ Flutter\n183 đạt, 1 live test bỏ qua, 6 lỗi ở `home_layout_test.dart`\
-  \ (ngoài màn hình đăng ký).\nNhóm kiểm thử đăng ký/auth chạy riêng đạt 25/25. Phân tích toàn App còn\n\
-  9 thông báo ở login/forgot-password/sharing; các file đăng ký được kiểm tra riêng.\n"
+x-implementation-notes: "# App registration with schema 009\n\nUpdated October 23,\
+  \ 2026. This document replaces the registration, OTP and session sections of the\
+  \ previous auth contract.\nPassword login and web admin authentication will be aligned\
+  \ in a subsequent work item.\n\n## API\n\nBase path: `/api/v1`. Send JSON. Errors\
+  \ use `error.code`, `error.fields` and `error.details`.\n\n`GET /legal-documents?context=registration`\
+  \ reads three deployed documents from\n`LEGAL_DOCUMENTS_PATH`: `terms`, `privacy`\
+  \ and `data_policy`. The file format matches\n`backend/legal-documents.local.json`.\
+  \ The sample file is for local testing only.\nMissing, invalid or not-yet-effective\
+  \ content returns `503 LEGAL_DOCUMENTS_UNAVAILABLE`.\nThe removed legal/consent\
+  \ tables are not used; the database only records `consented_at`.\n\n`POST /auth/register`:\n\
+  \n```json\n{\n  \"displayName\": \"Ngọc Anh\",\n  \"email\": \"anh@example.com\"\
+  ,\n  \"password\": \"a password 123\",\n  \"defaultRelationship\": \"mother\",\n\
+  \  \"acceptedTerms\": true\n}\n```\n\nProvide exactly one of `email` or `phone`.\
+  \ Vietnamese phone numbers starting with `0`\nare normalized to `+84`. The name\
+  \ is optional, defaults to `Phụ huynh`, and accepts\nup to 150 characters. Passwords\
+  \ contain 8–64 characters; whitespace is preserved.\nRelationship values are `mother`,\
+  \ `father`, `grandfather`, `grandmother` and\n`other_guardian`. Neither `username`\
+  \ nor the legacy consent list is accepted.\n\nA successful `201` response includes\
+  \ `requiresOtp=true`, `verificationId`,\n`registrationToken`, `channel`, `targetMasked`,\
+  \ `expiresAt`, `resendAvailableAt`\nand `deliveryStatus`. Codes are HMAC-hashed\
+  \ in `account.auth_codes` with purpose\n`verify_contact`. The challenge is a signed\
+  \ JWT with a dedicated audience, bound\nto the user and code, and valid for 30 minutes.\
+  \ The six-digit OTP is valid for\nfive minutes and allows up to five incorrect attempts.\
+  \ Resending is available\nafter 60 seconds, with limits of five codes per contact\
+  \ per hour and 100 codes\nsystem-wide per hour. PostgreSQL transaction locks enforce\
+  \ these limits across\nworkers; they are not IP limits. Configure IP limits at the\
+  \ reverse proxy before\nmaking the service public.\n\nA pending account can only\
+  \ be resumed with the same password; stored information\nis not overwritten. Active\
+  \ accounts or a different password return\n`409 ACCOUNT_CONFLICT`. Requests during\
+  \ the resend cooldown return\n`429 RATE_LIMITED` with the `Retry-After` header.\n\
+  \n`POST /auth/register/resend`: send `verificationId` and `registrationToken`.\n\
+  The response issues a new challenge and invalidates the previous code. The app\n\
+  must replace the challenge even when `deliveryStatus=failed`, because the\nprevious\
+  \ code has already been invalidated.\n\n`POST /auth/register/verify`: send both\
+  \ challenge fields, `code`,\n`device: {\"platform\":\"android\"}` and `rememberMe`\
+  \ (default: true).\nAccepted platforms are android/ios/web. Legacy device metadata\
+  \ is accepted but\nnot stored. Incorrect attempts are recorded even when the API\
+  \ returns an error.\nExpired codes return `OTP_EXPIRED`; exhausted attempts return\n\
+  `OTP_ATTEMPTS_EXCEEDED`; stale or consumed challenges return\n`REGISTRATION_CHALLENGE_INVALID`.\n\
+  \nSuccessful verification activates the user, records `email_verified_at` or\n`phone_verified_at`,\
+  \ sets the code's `verified_at` and `consumed_at`, creates a\nsession, and returns\
+  \ tokens and the user. The app stores the refresh token in\nsecure storage and opens\
+  \ the child profile creation screen. No child profile\nis created automatically.\
+  \ Concurrent or repeated verification does not create\nadditional sessions.\n\n\
+  `GET /auth/me`, `POST /auth/refresh` and `POST /auth/logout` work with the new\n\
+  sessions. Access tokens last 15 minutes; sessions last 30 days when remember=true\n\
+  or 24 hours when false. Schema 009 keeps one refresh hash per session: the refresh\n\
+  secret remains stable until expiration or revocation, without the old schema's\n\
+  rotation and replay detection history. User fields `fullName` and `relationship`\n\
+  remain aliases for existing app screens; `displayName` and `defaultRelationship`\n\
+  are also returned. Legacy username/avatar fields are not returned.\n\n## Running\
+  \ locally without providers\n\nIn `backend/.env`:\n\n```dotenv\nAPP_ENV=local\n\
+  AUTH_SKIP_OTP=false\nAUTH_OTP_PREVIEW=true\nLEGAL_DOCUMENTS_PATH=legal-documents.local.json\n\
+  ```\n\nStart the backend from the `backend` directory so relative paths resolve\n\
+  correctly. Set `AUTH_SECRET` to at least 32 characters and point `DATABASE_URL`\n\
+  to the new database. Preview mode sends no email/SMS; responses include\n`deliveryStatus=preview`\
+  \ and `devOtp`, and the app clearly displays the test code.\nPreview configuration\
+  \ is rejected outside APP_ENV=local. There is no need to\nswitch databases or rerun\
+  \ migration 009.\n\n## Live delivery\n\n### SMTP2GO (selected provider)\n\nThe backend\
+  \ integrates directly with the SMTP2GO API. In SMTP2GO, open\n`Sending > Verified\
+  \ Senders > Single sender emails`, add the student email\naddress and verify it\
+  \ through the received email. Create an API key under\n`Sending > API Keys`, then\
+  \ configure `backend/.env`:\n\n```dotenv\nEMAIL_PROVIDER=smtp2go\nSMTP2GO_API_KEY=your-private-api-key\n\
+  SMTP2GO_SENDER_EMAIL=your-verified-student-email\nSMTP2GO_SENDER_NAME=Track Children\n\
+  AUTH_OTP_PREVIEW=false\nAUTH_SKIP_OTP=false\n```\n\nDo not use a Brevo API key as\
+  \ an SMTP2GO key. The student mailbox password is not\nrequired. Disable preview\
+  \ only after configuring the key and verified sender,\nthen restart the backend.\
+  \ While local preview remains enabled, the API returns\ntest codes without calling\
+  \ the provider.\n\nThe adapter calls `POST https://api.smtp2go.com/v3/email/send`\
+  \ using the\n`X-Smtp2go-Api-Key` header and sender/to/subject/text_body payload\
+  \ fields.\nDelivery is considered accepted only for HTTP 200 with `data.succeeded=1`,\n\
+  `data.failed=0` and no errors. Automatic retries are disabled to avoid duplicate\n\
+  messages. Timeouts, invalid responses and provider rejections produce\n`deliveryStatus=failed`;\
+  \ the app allows resending after the cooldown.\nSee the [official API documentation](https://developers.smtp2go.com/docs/send-an-email).\n\
+  \nThe local `.env` selects SMTP2GO; existing key/sender values are preserved and\n\
+  missing variables are added empty. Keys or sender addresses are not automatically\n\
+  copied from Brevo. Docker receives the corresponding SMTP2GO variables from the\n\
+  Compose environment.\n\n### Brevo with a student email address\n\nThe Brevo adapter\
+  \ is integrated directly and needs no intermediate webhook.\nCreate a Brevo account,\
+  \ add the student email as a sender and verify the mailbox.\nSending permission\
+  \ depends on the account and sender status. Without access to\nthe university's\
+  \ DNS, the team cannot verify its domain. Brevo may replace the\nsender address.\n\
+  \nOnce the sender is ready, create an API key and configure `backend/.env`\n(never\
+  \ commit the key):\n\n```dotenv\nEMAIL_PROVIDER=brevo\nBREVO_API_KEY=your-private-api-key\n\
+  BREVO_SENDER_EMAIL=your-student-email\nBREVO_SENDER_NAME=Track Children\nAUTH_OTP_PREVIEW=false\n\
+  AUTH_SKIP_OTP=false\n```\n\nRestart the backend. The adapter calls `POST https://api.brevo.com/v3/smtp/email`\n\
+  with the `api-key` header and sender/to/subject/textContent fields. Only HTTP 201\n\
+  is treated as success; permission errors, exhausted quotas and timeouts produce\n\
+  a failed delivery status. Missing key/sender configuration causes email\nregistration\
+  \ to return OTP_DELIVERY_UNAVAILABLE. The student mailbox password\nis not required.\
+  \ When preview is disabled, SMS also requires a separate live\ndelivery service;\
+  \ otherwise phone registration reports that it is unavailable.\n\n### Generic webhook\n\
+  \nDisable preview and configure `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_TOKEN` and/or\n\
+  `SMS_WEBHOOK_URL`, `SMS_WEBHOOK_TOKEN`. Webhooks must use HTTPS, accept a Bearer\n\
+  token and JSON `{to, message}`; email also includes `subject`. Return 2xx when\n\
+  delivery is accepted. The adapter times out after 10 seconds, does not follow\n\
+  redirects, and does not log codes or tokens. Missing configuration returns\n`503\
+  \ OTP_DELIVERY_UNAVAILABLE` before user creation. Delivery failures after\ncommit\
+  \ return `deliveryStatus=failed`, allowing the user to resend. A 2xx\nresponse only\
+  \ confirms provider acceptance, not receipt by the user.\n\nWith Docker, mount the\
+  \ approved legal file into the container and set\n`LEGAL_DOCUMENTS_PATH` to its\
+  \ container path. Do not deploy local test content\nto production. Google/Apple\
+  \ are connected through the\n[social authentication flow](mobile-social-auth.md);\
+  \ they require separate\nprovider configuration and do not use OTP demo mode.\n\n\
+  Results on October 23, 2026: all 34 backend registration/contract/adapter tests\n\
+  passed. The full Flutter suite had 183 passes, one skipped live test and six\nfailures\
+  \ in `home_layout_test.dart` (outside registration screens). The isolated\nregistration/auth\
+  \ group passed 25/25. Full app analysis still reported nine\nissues in login/forgot-password/sharing;\
+  \ registration files were checked separately.\n"

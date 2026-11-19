@@ -13,6 +13,10 @@ from app.features.auth.router import router
 def install_auth(app):
     from app.features.auth.admin.router import router as admin_router
     app.include_router(router)
+    from app.features.auth.router_v2 import router as router_v2
+    app.include_router(router_v2)
+    from app.features.auth.simulation import router as simulation_router
+    app.include_router(simulation_router)
     app.include_router(admin_router)
 
     @app.exception_handler(AuthenticationRequired)

@@ -74,6 +74,13 @@ def current_user(request, db, *, admin=False, identity=None):
         return failure(401, "SESSION_EXPIRED")
     if row["status"] != "active":
         return failure(403, "ACCOUNT_UNAVAILABLE")
+    if not admin and settings.auth_v2_enabled:
+        from datetime import timedelta
+        # Hourly activity watermark, also covers long-lived authenticated sessions.
+        if not row['last_login_at'] or row['last_login_at'] < security.now()-timedelta(hours=1):
+            db.execute('UPDATE account.users SET last_login_at=%s WHERE id=%s AND (last_login_at IS NULL OR last_login_at<%s)',
+                       (security.now(),row['id'],security.now()-timedelta(hours=1)))
+            row['last_login_at']=security.now()
     return row
 
 

@@ -69,7 +69,7 @@ def test_success_contact_normalization_and_session_lifetime(login_env, contact, 
     assert r.status_code == 200, r.text
     data = r.json()
     assert data['user']['id'] == str(user['id'])
-    assert 'password' not in str(data['user']).lower()
+    assert not {'password','passwordHash','password_hash','refreshToken'} & data['user'].keys()
     assert data['tokenType'] == 'Bearer' and 0 < data['expiresIn'] <= 900
     session = db.execute('SELECT * FROM account.user_sessions').fetchone()
     assert session['refresh_token_hash'] == sec.secret_hash(data['refreshToken'])

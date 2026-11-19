@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:track_children/features/auth/sign_up_screen.dart';
+import 'package:track_children/features/auth/social_profile_screen.dart';
 import 'package:track_children/services/auth_service.dart';
 
 void main() {
@@ -14,7 +15,7 @@ void main() {
   for (final provider in ['Google', 'Apple']) {
     for (final cancel in [false, true]) {
       testWidgets(
-        '$provider selects account then consent then role; cancel=$cancel',
+        '$provider requires profile and explicit consent; cancel=$cancel',
         (tester) async {
           var selected = false;
           var submitted = false;
@@ -42,20 +43,39 @@ void main() {
                 );
               }
               expect(selected, true);
+              if (request.url.path.endsWith('/social/start')) {
+                final body = jsonDecode(request.body) as Map;
+                expect(body['provider'], provider.toLowerCase());
+                expect(body.containsKey('acceptedTerms'), false);
+                if (provider == 'Apple') {
+                  expect(body['challenge'], 'signed-challenge');
+                }
+                return http.Response(
+                  jsonEncode({
+                    'requiresProfile': true,
+                    'transactionId': 'social-registration',
+                    'transactionToken': 'test-transaction-token',
+                    'documentsDigest': 'test-documents-digest',
+                    'displayName': 'Người chăm sóc',
+                  }),
+                  200,
+                  headers: {'content-type': 'application/json; charset=utf-8'},
+                );
+              }
+              expect(request.url.path, endsWith('/social/complete'));
               submitted = true;
               final body = jsonDecode(request.body) as Map;
-              expect(body['provider'], provider.toLowerCase());
               expect(body['acceptedTerms'], true);
               expect(body['defaultRelationship'], 'other_guardian');
               expect(body.containsKey('email'), false);
-              if (provider == 'Apple')
-                expect(body['challenge'], 'signed-challenge');
+              expect(body['transactionId'], 'social-registration');
+              expect(body['documentsDigest'], 'test-documents-digest');
               return http.Response(
                 jsonEncode({
                   'accessToken': 'access',
                   'refreshToken': 'refresh',
                   'user': {'id': 'parent'},
-                  'isNewUser': false,
+                  'isNewUser': true,
                 }),
                 200,
               );
@@ -79,30 +99,40 @@ void main() {
           await tester.pumpAndSettle();
           expect(selected, true);
           expect(submitted, false);
-          expect(find.text('parent@example.com'), findsOneWidget);
+          expect(find.byType(SocialProfileScreen), findsOneWidget);
           if (cancel) {
-            await tester.tap(find.text('Hủy'));
+            await tester.tap(find.byTooltip('Quay lại'));
             await tester.pumpAndSettle();
             expect(submitted, false);
             expect(AuthService.instance.signedIn, false);
             expect(created || existing, false);
           } else {
-            await tester.tap(find.byKey(const ValueKey('social-consent')));
-            await tester.pumpAndSettle();
-            await tester.tap(find.widgetWithText(FilledButton, 'Tiếp tục'));
+            final finish = find.widgetWithText(
+              FilledButton,
+              'Hoàn tất đăng ký',
+            );
+            await tester.ensureVisible(finish);
+            await tester.tap(finish);
             await tester.pumpAndSettle();
             expect(submitted, false);
-            await tester.tap(
-              find.widgetWithText(ChoiceChip, 'Người giám hộ khác').last,
-            );
+            final role = find.widgetWithText(ChoiceChip, 'Khác');
+            await tester.ensureVisible(role);
+            await tester.tap(role);
             await tester.pumpAndSettle();
-            await tester.tap(
-              find.widgetWithText(FilledButton, 'Hoàn tất đăng ký'),
-            );
+            await tester.ensureVisible(finish);
+            await tester.tap(finish);
+            await tester.pumpAndSettle();
+            expect(submitted, false);
+            final consent = find.byKey(const ValueKey('registration-consent'));
+            await tester.ensureVisible(consent);
+            await tester.tap(consent);
+            await tester.pumpAndSettle();
+            await tester.ensureVisible(finish);
+            await tester.tap(finish);
             await tester.pumpAndSettle();
             expect(submitted, true);
-            expect(existing, true);
-            expect(created, false);
+            expect(existing, false);
+            expect(created, true);
             expect(AuthService.instance.signedIn, true);
           }
           await tester.pumpWidget(const SizedBox());

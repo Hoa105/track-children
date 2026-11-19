@@ -19,6 +19,9 @@ class AuthException implements Exception {
     'VALIDATION_ERROR' =>
       'Thông tin chưa hợp lệ. Vui lòng kiểm tra: ${((details['fields'] as Map?)?.keys ?? ['thông tin đã nhập']).map((field) => switch (field.toString().split('.').first) {
         'currentPassword' => 'mật khẩu hiện tại',
+        'confirmPassword' => 'xác nhận mật khẩu',
+        'target' || 'identifier' => 'email hoặc số điện thoại',
+        'providerCredential' || 'credential' => 'xác minh Google/Apple',
         'newPassword' => 'mật khẩu mới (8–64 ký tự)',
         'defaultRelationship' => 'vai trò với bé',
         'password' => 'mật khẩu (8–64 ký tự)',
@@ -38,6 +41,28 @@ class AuthException implements Exception {
     'OTP_DELIVERY_UNAVAILABLE' =>
       'Kênh gửi mã xác minh chưa sẵn sàng. Vui lòng thử lại sau.',
     'OTP_FIRST_UNAVAILABLE' => 'Đăng ký bằng số điện thoại đang được cập nhật. Bạn có thể tiếp tục với Google hoặc Apple.',
+    'AUTH_V2_UNAVAILABLE' || 'AUTH_CLIENT_UPGRADE_REQUIRED' =>
+      'Dịch vụ xác thực đang được cập nhật. Vui lòng thử lại sau.',
+    'TRANSACTION_INVALID' =>
+      'Phiên xác minh đã hết hạn hoặc không còn hợp lệ. Vui lòng bắt đầu lại.',
+    'LEGAL_DOCUMENTS_CHANGED' =>
+      'Điều khoản đã được cập nhật. Vui lòng bắt đầu lại và đọc nội dung mới.',
+    'PASSWORD_POLICY_UNAVAILABLE' =>
+      'Dịch vụ bảo mật chưa sẵn sàng. Vui lòng thử lại sau.',
+    'CURRENT_PASSWORD_INVALID' => 'Mật khẩu hiện tại không chính xác.',
+    'ACCOUNT_ALREADY_CREATED' => 'Tài khoản đã được tạo. Vui lòng đăng nhập.',
+    'VERIFIED_IDENTIFIER_REQUIRED' =>
+      'Hãy xác minh email hoặc số điện thoại trước khi tiếp tục.',
+    'CHILD_OWNERSHIP_REQUIRED' => 'Hãy chuyển quyền hoặc xóa các hồ sơ trẻ đang sở hữu trước khi xóa tài khoản.',
+    'LAST_LOGIN_METHOD' =>
+      'Hãy thiết lập thêm phương thức đăng nhập trước khi hủy liên kết.',
+    'PROVIDER_ALREADY_LINKED' => 'Phương thức này đã được liên kết.',
+    'PROVIDER_NOT_LINKED' => 'Phương thức này chưa được liên kết.',
+    'SOCIAL_REAUTH_REQUIRED' =>
+      'Vui lòng xác thực lại với Google hoặc Apple để tiếp tục.',
+    'PASSWORD_UNCHANGED' => 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+    'RECOVERY_SUPPORT_REQUIRED' ||
+    'RECOVERY_ADDITIONAL_VERIFICATION_REQUIRED' => 'Yêu cầu này cần được kiểm tra thêm để bảo vệ tài khoản. Vui lòng dùng phương thức đã liên kết hoặc liên hệ hỗ trợ.',
     'LEGAL_DOCUMENTS_UNAVAILABLE' =>
       'Chưa tải được điều khoản. Vui lòng thử lại sau.',
     'LEGAL_CONSENT_REQUIRED' => 'Vui lòng đồng ý với điều khoản và chính sách.',
@@ -178,8 +203,9 @@ class AuthService {
             : <String, dynamic>{};
         if (authorized && retry && error['code'] == 'ACCESS_TOKEN_EXPIRED') {
           await refresh();
-          if (generation != _generation)
+          if (generation != _generation) {
             throw AuthException('SESSION_CHANGED', {});
+          }
           return await _request(
             path,
             body: body,
@@ -291,9 +317,26 @@ class AuthService {
         provider,
         challenge?['nonce'] as String?,
       );
+      final started = await _request(
+        '/auth/v2/social/start',
+        body: {
+          'provider': provider,
+          'idToken': credential['idToken'],
+          if (credential['authorizationCode'] != null)
+            'authorizationCode': credential['authorizationCode'],
+          if (challenge != null) 'challenge': challenge['challenge'],
+          'displayName': credential['displayName'] ?? '',
+          'device': await device(),
+          'rememberMe': remember,
+        },
+      );
+      if (started['requiresProfile'] != true) {
+        await _accept(started, remember);
+        return false;
+      }
       if (requestConsent != null) {
         final consent = await requestConsent({
-          'displayName': credential['displayName'],
+          'displayName': started['displayName'],
           'email': credential['email'],
         });
         if (consent == null) throw AuthException('SOCIAL_CANCELLED', {});
@@ -301,28 +344,289 @@ class AuthService {
         displayName = consent.displayName ?? displayName;
       }
       final result = await _request(
-        '/auth/social',
+        '/auth/v2/social/complete',
         body: {
-          'provider': provider,
-          'idToken': credential['idToken'],
-          if (credential['authorizationCode'] != null)
-            'authorizationCode': credential['authorizationCode'],
-          if (credential['displayName'] != null)
-            'displayName': credential['displayName'],
-          if (displayName != null && displayName.trim().isNotEmpty)
-            'displayName': displayName.trim(),
-          if (challenge != null) 'challenge': challenge['challenge'],
+          'transactionId': started['transactionId'],
+          'transactionToken': started['transactionToken'],
+          'documentsDigest': started['documentsDigest'],
+          'displayName': (displayName ?? started['displayName'] ?? '')
+              .toString()
+              .trim(),
           'defaultRelationship': relationship,
           'acceptedTerms': true,
           'device': await device(),
           'rememberMe': remember,
         },
       );
+      if (result['requiresLogin'] == true) {
+        throw AuthException('SOCIAL_REAUTH_REQUIRED', {});
+      }
       await _accept(result, remember);
       return result['isNewUser'] == true;
     } on SocialIdentityException catch (e) {
       throw AuthException(e.code, {});
     }
+  }
+
+  Future<Map<String, dynamic>> startPhoneSignup(String phone) async => _request(
+    '/auth/v2/signup/start',
+    body: {'phone': phone, 'device': await device()},
+  );
+
+  Map<String, dynamic> _signupTicket(Map<String, dynamic> value) => {
+    'transactionId': value['transactionId'],
+    'transactionToken': value['transactionToken'],
+  };
+
+  Future<Map<String, dynamic>> resendPhoneSignup(
+    Map<String, dynamic> value,
+  ) async {
+    final result = await _request(
+      '/auth/v2/signup/resend',
+      body: _signupTicket(value),
+    );
+    return {...value, ...result};
+  }
+
+  Future<Map<String, dynamic>> verifyPhoneSignup(
+    Map<String, dynamic> value,
+    String code,
+  ) => _request(
+    '/auth/v2/signup/verify',
+    body: {..._signupTicket(value), 'code': code},
+  );
+
+  Future<void> invalidatePhoneSignup(Map<String, dynamic> value) async {
+    await _request('/auth/v2/signup/invalidate', body: _signupTicket(value));
+  }
+
+  Future<void> completePhoneSignup(
+    Map<String, dynamic> grant,
+    Map<String, dynamic> profile,
+  ) async {
+    final result = await _request(
+      '/auth/v2/signup/complete',
+      body: {
+        ..._signupTicket(grant),
+        'documentsDigest': grant['documentsDigest'],
+        'password': profile['password'],
+        'confirmPassword': profile['confirmPassword'],
+        'displayName': profile['displayName'],
+        'defaultRelationship': profile['defaultRelationship'],
+        'acceptedTerms': profile['acceptedTerms'],
+        'device': await device(),
+      },
+    );
+    if (result['requiresLogin'] == true) {
+      throw AuthException('ACCOUNT_ALREADY_CREATED', {});
+    }
+    await _accept(result, true);
+  }
+
+  Future<Map<String, dynamic>> accountSecurity() =>
+      _request('/auth/v2/security', authorized: true);
+
+  Future<Map<String, dynamic>> providerProof(String provider) async {
+    final challenge = provider == 'apple'
+        ? await _request('/auth/social/apple/challenge', body: {})
+        : null;
+    try {
+      final proof = await _socialIdentityProvider(
+        provider,
+        challenge?['nonce'] as String?,
+      );
+      return {
+        'provider': provider,
+        'idToken': proof['idToken'],
+        if (proof['authorizationCode'] != null)
+          'authorizationCode': proof['authorizationCode'],
+        if (challenge != null) 'challenge': challenge['challenge'],
+        'device': await device(),
+      };
+    } on SocialIdentityException catch (e) {
+      throw AuthException(e.code, {});
+    }
+  }
+
+  Future<Map<String, dynamic>> reauthenticate(
+    String action, {
+    String? target,
+    String? password,
+    String? provider,
+  }) async => _request(
+    '/auth/v2/reauth',
+    authorized: true,
+    body: {
+      'action': action,
+      'target': ?target,
+      'currentPassword': ?password,
+      if (provider != null) 'providerCredential': await providerProof(provider),
+    },
+  );
+
+  Future<Map<String, dynamic>> startIdentifier(
+    Map<String, dynamic> grant,
+    String kind,
+  ) => _request(
+    '/auth/v2/$kind/start',
+    authorized: true,
+    body: _signupTicket(grant),
+  );
+
+  Future<Map<String, dynamic>> resendIdentifier(
+    Map<String, dynamic> grant,
+    String kind,
+  ) => _request(
+    '/auth/v2/$kind/resend',
+    authorized: true,
+    body: _signupTicket(grant),
+  );
+
+  Future<void> verifyIdentifier(
+    Map<String, dynamic> grant,
+    String kind,
+    String code,
+  ) async {
+    final result = await _request(
+      '/auth/v2/$kind/verify',
+      authorized: true,
+      body: {..._signupTicket(grant), 'code': code},
+    );
+    _generation++;
+    _profileRevision++;
+    await _accept(result, _remember);
+  }
+
+  Future<void> setupPassword(
+    Map<String, dynamic> grant,
+    String password,
+    String confirmation,
+  ) async {
+    final result = await _request(
+      '/auth/v2/password/setup',
+      authorized: true,
+      body: {
+        ..._signupTicket(grant),
+        'newPassword': password,
+        'confirmPassword': confirmation,
+        'device': await device(),
+      },
+    );
+    _generation++;
+    _profileRevision++;
+    await _accept(result, _remember);
+  }
+
+  Future<void> changeProvider(
+    Map<String, dynamic> grant,
+    String provider, {
+    required bool link,
+  }) async {
+    await _request(
+      '/auth/v2/providers/${link ? 'link' : 'unlink'}',
+      authorized: true,
+      body: {
+        ..._signupTicket(grant),
+        if (link || provider == 'apple')
+          'credential': await providerProof(provider),
+        if (!link) 'provider': provider,
+      },
+    );
+  }
+
+  Future<void> deleteVerifiedAccount(
+    Map<String, dynamic> grant, {
+    required bool appleLinked,
+  }) async {
+    await _request(
+      '/auth/v2/account/delete',
+      authorized: true,
+      body: {
+        ..._signupTicket(grant),
+        if (appleLinked) 'appleCredential': await providerProof('apple'),
+      },
+    );
+    await clear();
+  }
+
+  Future<Map<String, dynamic>> startRecovery(String identifier) async =>
+      _request(
+        '/auth/v2/recovery/start',
+        body: {'identifier': identifier, 'device': await device()},
+      );
+
+  Future<Map<String, dynamic>> resendRecovery(
+    Map<String, dynamic> ticket,
+  ) async => _request(
+    '/auth/v2/recovery/resend',
+    body: {..._signupTicket(ticket), 'device': await device()},
+  );
+
+  Future<Map<String, dynamic>> verifyRecovery(
+    Map<String, dynamic> ticket,
+    String code,
+  ) async => _request(
+    '/auth/v2/recovery/verify',
+    body: {..._signupTicket(ticket), 'code': code, 'device': await device()},
+  );
+
+  Future<Map<String, dynamic>> recoveryEmail(Map<String, dynamic> ticket) =>
+      _request('/auth/v2/recovery/email/start', body: _signupTicket(ticket));
+
+  Future<void> verifyRecoveryEmail(
+    Map<String, dynamic> ticket,
+    String code,
+  ) async {
+    await _request(
+      '/auth/v2/recovery/email/verify',
+      body: {..._signupTicket(ticket), 'code': code},
+    );
+  }
+
+  Future<void> verifyRecoveryProvider(
+    Map<String, dynamic> ticket,
+    String provider,
+  ) async {
+    Map<String, dynamic>? challenge;
+    if (provider == 'apple') {
+      challenge = await _request('/auth/social/apple/challenge', body: {});
+    }
+    try {
+      final credential = await _socialIdentityProvider(
+        provider,
+        challenge?['nonce'] as String?,
+      );
+      await _request(
+        '/auth/v2/recovery/provider',
+        body: {
+          ..._signupTicket(ticket),
+          'provider': provider,
+          'idToken': credential['idToken'],
+          if (credential['authorizationCode'] != null)
+            'authorizationCode': credential['authorizationCode'],
+          if (challenge != null) 'challenge': challenge['challenge'],
+          'device': await device(),
+        },
+      );
+    } on SocialIdentityException catch (e) {
+      throw AuthException(e.code, {});
+    }
+  }
+
+  Future<void> completeRecovery(
+    Map<String, dynamic> ticket,
+    String password,
+    String confirmation,
+  ) async {
+    await _request(
+      '/auth/v2/recovery/complete',
+      body: {
+        ..._signupTicket(ticket),
+        'newPassword': password,
+        'confirmPassword': confirmation,
+      },
+    );
+    await clear();
   }
 
   Future<Map<String, dynamic>> resend(Map<String, dynamic> challenge) async =>
@@ -605,15 +909,27 @@ class AuthService {
         throw AuthException('INVALID_CREDENTIALS', {});
       }
       await DemoStore.instance.saveParent({'password': newPassword});
-      await clear();
+      _setDemoUser();
       return;
     }
-    await _request(
-      '/auth/change-password',
-      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    final result = await _request(
+      '/auth/v2/password/change',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmPassword': newPassword,
+        'device': await device(),
+      },
       authorized: true,
     );
-    await clear();
+    // The server replaced this session. Ignore responses from its predecessor,
+    // including a refresh that failed after password change committed.
+    _generation++;
+    _profileRevision++;
+    _access = result['accessToken'] as String;
+    _refresh = result['refreshToken'] as String;
+    user = result['user'] as Map<String, dynamic>? ?? user;
+    await _accept(result, _remember);
   }
 
   Future<bool> logout() async {

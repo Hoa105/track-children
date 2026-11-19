@@ -65,10 +65,40 @@ Future<void> tapNext(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+class OtpRegistrationGateway extends FakeRegistrationGateway {
+  Map<String, dynamic> value = {
+    'targetMasked': '+84******123',
+    'expiresAt': DateTime.now()
+        .add(const Duration(minutes: 5))
+        .toIso8601String(),
+    'resendAvailableAt': DateTime.now()
+        .add(const Duration(seconds: 60))
+        .toIso8601String(),
+  };
+  bool failResend = true;
+  @override
+  Map<String, dynamic> challenge() => value;
+  @override
+  Future<Map<String, dynamic>> resend(Map<String, dynamic> old) async {
+    if (failResend) throw AuthException('OTP_DELIVERY_UNAVAILABLE', {});
+    value = {
+      ...value,
+      'expiresAt': DateTime.now()
+          .add(const Duration(minutes: 5))
+          .toIso8601String(),
+      'resendAvailableAt': DateTime.now()
+          .add(const Duration(seconds: 60))
+          .toIso8601String(),
+    };
+    return value;
+  }
+}
+
 Future<void> enter(WidgetTester tester, String key, String value) async {
   final field = find.byKey(ValueKey(key));
   await tester.ensureVisible(field);
   await tester.enterText(field, value);
+  await tester.pump();
 }
 
 void main() {
@@ -95,6 +125,84 @@ void main() {
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
   });
+
+  testWidgets(
+    'OTP states preserve old code on failed resend and clear it only after success',
+    (tester) async {
+      final gateway = OtpRegistrationGateway();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SignUpScreen(
+            registrationGateway: gateway,
+            onLogin: () {},
+            onChildProfilePreview: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Điều khoản và chính sách quyền riêng tư'),
+        findsNothing,
+      );
+      await enter(tester, 'registration-phone', '0912345678');
+      await tapNext(tester);
+      expect(find.text('Đã gửi mã đến +84******123.'), findsOneWidget);
+      FilledButton next() => tester.widget<FilledButton>(
+        find.byKey(const ValueKey('registration-next')),
+      );
+      expect(next().onPressed, isNull);
+      await enter(tester, 'registration-otp', '01234');
+      await tester.pump();
+      expect(next().onPressed, isNull);
+      await enter(tester, 'registration-otp', '012345');
+      await tester.pump();
+      expect(next().onPressed, isNotNull);
+      gateway.value['resendAvailableAt'] = DateTime.now()
+          .subtract(const Duration(seconds: 1))
+          .toIso8601String();
+      await tester.pump(const Duration(seconds: 1));
+      final expiry = gateway.value['expiresAt'];
+      await tester.ensureVisible(find.text('Gửi lại mã'));
+      await tester.tap(find.text('Gửi lại mã'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('registration-otp')),
+            )
+            .controller!
+            .text,
+        '012345',
+      );
+      expect(gateway.value['expiresAt'], expiry);
+      expect(find.text('Đã gửi mã mới.'), findsNothing);
+      gateway.failResend = false;
+      await tester.tap(find.text('Gửi lại mã'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('registration-otp')),
+            )
+            .controller!
+            .text,
+        isEmpty,
+      );
+      expect(find.text('Đã gửi mã mới.'), findsOneWidget);
+      expect(find.textContaining('Mã hết hạn sau'), findsNothing);
+      expect(next().onPressed, isNull);
+      gateway.value['expiresAt'] = DateTime.now()
+          .subtract(const Duration(seconds: 1))
+          .toIso8601String();
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find.text('Mã đã hết hạn. Vui lòng yêu cầu mã mới.'),
+        findsOneWidget,
+      );
+      expect(next().onPressed, isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('four steps require OTP and explicit profile consent', (
     tester,
@@ -187,7 +295,11 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SignUpScreen(onLogin: () {}, onChildProfilePreview: () {}),
+        home: SignUpScreen(
+          registrationGateway: UnavailableRegistrationGateway(),
+          onLogin: () {},
+          onChildProfilePreview: () {},
+        ),
       ),
     );
     await tester.pumpAndSettle();

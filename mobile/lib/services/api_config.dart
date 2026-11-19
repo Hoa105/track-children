@@ -2,10 +2,17 @@ import '../config/local_backend_config.dart';
 
 /// Backend base URL. Override with `--dart-define=API_BASE_URL=http://<ip>:8000`
 /// (thiết bị thật cần IP LAN của máy chạy backend).
+String normalizeApiBaseUrl(String value) {
+  final base = value.replaceFirst(RegExp(r'/+$'), '');
+  final uri = Uri.parse(base);
+  // Older local launch files supplied just the origin. Auth routes are versioned.
+  return uri.path.isEmpty ? '$base/api/v1' : base;
+}
+
 String get apiBaseUrl {
   const configured = String.fromEnvironment('API_BASE_URL');
-  if (configured.isNotEmpty) return configured;
-  return localMobileApiBaseUrl;
+  if (configured.isNotEmpty) return normalizeApiBaseUrl(configured);
+  return normalizeApiBaseUrl(localMobileApiBaseUrl);
 }
 
 /// Host-only URL (no `/api/v1`) for the routes still mounted at the backend root:

@@ -1,0 +1,1292 @@
+openapi: 3.1.0
+info:
+  title: Track Children - Mobile Auth v2 API
+  version: 2.1.0
+  description: 'Request schemas generated from implementation. Response contracts,
+    compatibility and deployment gates: docs/api/mobile-auth-v2.md.'
+paths:
+  /api/v1/auth/v2/documents:
+    get:
+      tags:
+      - Mobile Auth v2
+      summary: Documents
+      operationId: documents_api_v1_auth_v2_documents_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/v1/auth/v2/security:
+    get:
+      tags:
+      - Mobile Auth v2
+      summary: Security State
+      operationId: security_state_api_v1_auth_v2_security_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/v1/auth/v2/signup/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Signup Start
+      operationId: signup_start_api_v1_auth_v2_signup_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Start'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/signup/resend:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Signup Resend
+      operationId: signup_resend_api_v1_auth_v2_signup_resend_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/signup/verify:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Signup Verify
+      operationId: signup_verify_api_v1_auth_v2_signup_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Verify'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/signup/complete:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Signup Complete
+      operationId: signup_complete_api_v1_auth_v2_signup_complete_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Complete'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/signup/invalidate:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Signup Invalidate
+      operationId: signup_invalidate_api_v1_auth_v2_signup_invalidate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/social/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Social Start
+      operationId: social_start_api_v1_auth_v2_social_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialStart'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/social/complete:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Social Complete
+      operationId: social_complete_api_v1_auth_v2_social_complete_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialComplete'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/password/change:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Change Password
+      operationId: change_password_api_v1_auth_v2_password_change_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/reauth:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Reauth
+      operationId: reauth_api_v1_auth_v2_reauth_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reauth'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/password/setup:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Password Setup
+      operationId: password_setup_api_v1_auth_v2_password_setup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupPassword'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/email/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Email Start
+      operationId: email_start_api_v1_auth_v2_email_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/phone/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Phone Start
+      operationId: phone_start_api_v1_auth_v2_phone_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/email/verify:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Email Verify
+      operationId: email_verify_api_v1_auth_v2_email_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentifierVerify'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/email/resend:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Email Resend
+      operationId: email_resend_api_v1_auth_v2_email_resend_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/phone/resend:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Phone Resend
+      operationId: phone_resend_api_v1_auth_v2_phone_resend_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/phone/verify:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Phone Verify
+      operationId: phone_verify_api_v1_auth_v2_phone_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentifierVerify'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Start
+      operationId: recovery_start_api_v1_auth_v2_recovery_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryStart'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/verify:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Verify
+      operationId: recovery_verify_api_v1_auth_v2_recovery_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryVerify'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/resend:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Resend
+      operationId: recovery_resend_api_v1_auth_v2_recovery_resend_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryResend'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/email/start:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Email Start
+      operationId: recovery_email_start_api_v1_auth_v2_recovery_email_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryEmail'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/email/verify:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Email Verify
+      operationId: recovery_email_verify_api_v1_auth_v2_recovery_email_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Verify'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/provider:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Provider
+      operationId: recovery_provider_api_v1_auth_v2_recovery_provider_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryProvider'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/recovery/complete:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Recovery Complete
+      operationId: recovery_complete_api_v1_auth_v2_recovery_complete_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryComplete'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/account/delete:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Delete Account
+      operationId: delete_account_api_v1_auth_v2_account_delete_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccount'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/providers/link:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Provider Link
+      operationId: provider_link_api_v1_auth_v2_providers_link_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderLink'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/providers/unlink:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Provider Unlink
+      operationId: provider_unlink_api_v1_auth_v2_providers_unlink_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderUnlink'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/v2/providers/apple/events:
+    post:
+      tags:
+      - Mobile Auth v2
+      summary: Apple Event
+      operationId: apple_event_api_v1_auth_v2_providers_apple_events_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleEvent'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AppleEvent:
+      properties:
+        payload:
+          type: string
+          maxLength: 20000
+          minLength: 1
+          title: Payload
+      additionalProperties: false
+      type: object
+      required:
+      - payload
+      title: AppleEvent
+    ChangePassword:
+      properties:
+        newPassword:
+          type: string
+          title: Newpassword
+        confirmPassword:
+          type: string
+          title: Confirmpassword
+        currentPassword:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Currentpassword
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - newPassword
+      - confirmPassword
+      - currentPassword
+      - device
+      title: ChangePassword
+    Complete:
+      properties:
+        displayName:
+          type: string
+          title: Displayname
+        defaultRelationship:
+          type: string
+          enum:
+          - mother
+          - father
+          - grandfather
+          - grandmother
+          - other_guardian
+          title: Defaultrelationship
+        acceptedTerms:
+          type: boolean
+          title: Acceptedterms
+        documentsDigest:
+          type: string
+          maxLength: 64
+          minLength: 64
+          pattern: ^[0-9a-f]{64}$
+          title: Documentsdigest
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        password:
+          type: string
+          title: Password
+        confirmPassword:
+          type: string
+          title: Confirmpassword
+        device:
+          $ref: '#/components/schemas/Device'
+        rememberMe:
+          type: boolean
+          title: Rememberme
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - displayName
+      - defaultRelationship
+      - acceptedTerms
+      - documentsDigest
+      - transactionId
+      - transactionToken
+      - password
+      - confirmPassword
+      - device
+      title: Complete
+    DeleteAccount:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        appleCredential:
+          anyOf:
+          - $ref: '#/components/schemas/SocialStart'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      title: DeleteAccount
+    Device:
+      properties:
+        deviceId:
+          anyOf:
+          - type: string
+            maxLength: 100
+            minLength: 1
+          - type: 'null'
+          title: Deviceid
+        deviceName:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Devicename
+        platform:
+          type: string
+          enum:
+          - android
+          - ios
+          - web
+          title: Platform
+      additionalProperties: false
+      type: object
+      required:
+      - platform
+      title: Device
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IdentifierVerify:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+          pattern: ^[0-9]{6}$
+          title: Code
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - code
+      title: IdentifierVerify
+    ProviderLink:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        credential:
+          $ref: '#/components/schemas/SocialStart'
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - credential
+      title: ProviderLink
+    ProviderUnlink:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        provider:
+          type: string
+          enum:
+          - google
+          - apple
+          title: Provider
+        credential:
+          anyOf:
+          - $ref: '#/components/schemas/SocialStart'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - provider
+      title: ProviderUnlink
+    Reauth:
+      properties:
+        action:
+          type: string
+          enum:
+          - change_email
+          - change_phone
+          - set_password
+          - delete_account
+          - link_google
+          - link_apple
+          - unlink_google
+          - unlink_apple
+          title: Action
+        target:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Target
+        currentPassword:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Currentpassword
+        providerCredential:
+          anyOf:
+          - $ref: '#/components/schemas/SocialStart'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      required:
+      - action
+      title: Reauth
+    RecoveryComplete:
+      properties:
+        newPassword:
+          type: string
+          title: Newpassword
+        confirmPassword:
+          type: string
+          title: Confirmpassword
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+      additionalProperties: false
+      type: object
+      required:
+      - newPassword
+      - confirmPassword
+      - transactionId
+      - transactionToken
+      title: RecoveryComplete
+    RecoveryEmail:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      title: RecoveryEmail
+    RecoveryProvider:
+      properties:
+        provider:
+          type: string
+          enum:
+          - google
+          - apple
+          title: Provider
+        idToken:
+          type: string
+          maxLength: 16000
+          minLength: 1
+          title: Idtoken
+        authorizationCode:
+          anyOf:
+          - type: string
+            maxLength: 4096
+          - type: 'null'
+          title: Authorizationcode
+        challenge:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          title: Challenge
+        displayName:
+          type: string
+          maxLength: 150
+          title: Displayname
+          default: ''
+        device:
+          $ref: '#/components/schemas/Device'
+        rememberMe:
+          type: boolean
+          title: Rememberme
+          default: true
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+      additionalProperties: false
+      type: object
+      required:
+      - provider
+      - idToken
+      - device
+      - transactionId
+      - transactionToken
+      title: RecoveryProvider
+    RecoveryResend:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - device
+      title: RecoveryResend
+    RecoveryStart:
+      properties:
+        identifier:
+          type: string
+          title: Identifier
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - identifier
+      - device
+      title: RecoveryStart
+    RecoveryVerify:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+          pattern: ^[0-9]{6}$
+          title: Code
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - code
+      - device
+      title: RecoveryVerify
+    SetupPassword:
+      properties:
+        newPassword:
+          type: string
+          title: Newpassword
+        confirmPassword:
+          type: string
+          title: Confirmpassword
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - newPassword
+      - confirmPassword
+      - transactionId
+      - transactionToken
+      - device
+      title: SetupPassword
+    SocialComplete:
+      properties:
+        displayName:
+          type: string
+          title: Displayname
+        defaultRelationship:
+          type: string
+          enum:
+          - mother
+          - father
+          - grandfather
+          - grandmother
+          - other_guardian
+          title: Defaultrelationship
+        acceptedTerms:
+          type: boolean
+          title: Acceptedterms
+        documentsDigest:
+          type: string
+          maxLength: 64
+          minLength: 64
+          pattern: ^[0-9a-f]{64}$
+          title: Documentsdigest
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        device:
+          $ref: '#/components/schemas/Device'
+        rememberMe:
+          type: boolean
+          title: Rememberme
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - displayName
+      - defaultRelationship
+      - acceptedTerms
+      - documentsDigest
+      - transactionId
+      - transactionToken
+      - device
+      title: SocialComplete
+    SocialStart:
+      properties:
+        provider:
+          type: string
+          enum:
+          - google
+          - apple
+          title: Provider
+        idToken:
+          type: string
+          maxLength: 16000
+          minLength: 1
+          title: Idtoken
+        authorizationCode:
+          anyOf:
+          - type: string
+            maxLength: 4096
+          - type: 'null'
+          title: Authorizationcode
+        challenge:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          title: Challenge
+        displayName:
+          type: string
+          maxLength: 150
+          title: Displayname
+          default: ''
+        device:
+          $ref: '#/components/schemas/Device'
+        rememberMe:
+          type: boolean
+          title: Rememberme
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - provider
+      - idToken
+      - device
+      title: SocialStart
+    Start:
+      properties:
+        phone:
+          type: string
+          title: Phone
+        device:
+          $ref: '#/components/schemas/Device'
+      additionalProperties: false
+      type: object
+      required:
+      - phone
+      - device
+      title: Start
+    Ticket:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      title: Ticket
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    Verify:
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+          title: Transactionid
+        transactionToken:
+          type: string
+          maxLength: 256
+          minLength: 32
+          title: Transactiontoken
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+          pattern: ^[0-9]{6}$
+          title: Code
+      additionalProperties: false
+      type: object
+      required:
+      - transactionId
+      - transactionToken
+      - code
+      title: Verify

@@ -14,7 +14,7 @@ import 'delete_account_screen.dart';
 import '../growth/growth_screen.dart';
 import '../explore/explore_screen.dart';
 import 'demo_data_screen.dart';
-import 'live_change_password_dialog.dart';
+import 'security_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({this.onLogout, this.childName = 'Bé An', super.key});
@@ -39,15 +39,12 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
   }
 
   Future<void> _changePassword() async {
-    if (AuthService.instance.signedIn) {
-      final changed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const LiveChangePasswordDialog(),
+    if (AuthService.instance.signedIn && !AuthService.instance.demoMode) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => SecurityScreen(onDeleted: widget.onLogout),
+        ),
       );
-      if (!mounted || changed != true) return;
-      _toast('Đã đổi mật khẩu. Vui lòng đăng nhập lại.');
-      widget.onLogout?.call();
       return;
     }
     final changed = await showDialog<String>(
@@ -237,7 +234,11 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                         children: [
                           _SettingsActionTile(
                             icon: Icons.lock_outline_rounded,
-                            title: 'Đổi mật khẩu',
+                            title:
+                                AuthService.instance.signedIn &&
+                                    !AuthService.instance.demoMode
+                                ? 'Bảo mật tài khoản'
+                                : 'Đổi mật khẩu',
                             onTap: _changePassword,
                           ),
                           const _SettingsDivider(),
@@ -352,7 +353,11 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                             destructive: true,
                             onTap: () => Navigator.of(context).push<void>(
                               MaterialPageRoute(
-                                builder: (_) => const DeleteAccountScreen(),
+                                builder: (_) =>
+                                    AuthService.instance.signedIn &&
+                                        !AuthService.instance.demoMode
+                                    ? SecurityScreen(onDeleted: widget.onLogout)
+                                    : const DeleteAccountScreen(),
                               ),
                             ),
                           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
 import 'parent_role.dart';
+import 'auth_policies_dialog.dart';
 
 class SocialRegistrationDialog extends StatefulWidget {
   const SocialRegistrationDialog({
@@ -35,40 +36,12 @@ class _SocialRegistrationDialogState extends State<SocialRegistrationDialog> {
       if (!mounted) return;
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          scrollable: true,
-          title: const Text('Điều khoản và chính sách'),
-          content: SizedBox(
-            width: 480,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final document in documents)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      '${switch (document['docType']) {
-                        'terms' => 'Điều khoản sử dụng',
-                        'privacy' => 'Chính sách quyền riêng tư',
-                        'data_policy' => 'Chính sách dữ liệu',
-                        _ => document['docType'],
-                      }} — ${document['version']}\n${document['content']}',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Đóng'),
-            ),
-          ],
-        ),
+        builder: (context) => AuthPoliciesDialog(documents: documents),
       );
-    } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Ch?a t?i ???c ?i?u kho?n. Vui l?ng th? l?i.');
+      }
     } finally {
       if (mounted) setState(() => _loadingDocuments = false);
     }

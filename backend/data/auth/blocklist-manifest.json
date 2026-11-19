@@ -1,0 +1,9 @@
+{
+  "source": "https://raw.githubusercontent.com/danielmiessler/SecLists/0247dfd46495df842868b2ab6a2cce0c75709215/Passwords/Common-Credentials/xato-net-10-million-passwords-100000.txt",
+  "commit": "0247dfd46495df842868b2ab6a2cce0c75709215",
+  "upstreamSha256": "1472aafa2561df5e3293aee252aee3ca660c12b399a283cf808bb01b39be388b",
+  "sha256": "e41fb888f17d0adf97caae113efe6ef90894cbdd15bde9adea5020d0196958cd",
+  "entries": 38511,
+  "license": "MIT",
+  "transformation": "ASCII 8-64, casefold, unique; app-specific additions"
+}

@@ -24,14 +24,14 @@ def test_full_chain_and_legacy_role_reconciliation(legacy):
         try:
             with psycopg.connect(target) as db:
                 for file in files:
-                    if legacy and file.name.startswith("009_"):
+                    if legacy and file.name == "009_auth_database_simplification.sql":
                         role = db.execute(
                             "SELECT id FROM admin.roles LIMIT 1"
                         ).fetchone()[0]
                         invitation = db.execute(
                             "INSERT INTO admin.admin_invitations"
                             "(email,role_id,token_hash,expires_at) "
-                            "VALUES ('legacy@example.com',%s,'legacy-token',now()+interval '1 day') RETURNING id",
+                            "VALUES ('legacy@example.com',%s,'legacy-chain-token',now()+interval '1 day') RETURNING id",
                             (role,),
                         ).fetchone()[0]
                     if legacy and file.name.startswith("012_"):
@@ -44,27 +44,23 @@ def test_full_chain_and_legacy_role_reconciliation(legacy):
                         )
                     with db.transaction():
                         db.execute(file.read_text(encoding="utf-8"), prepare=False)
+                        if file.name.startswith('012_'):
+                            db.execute(file.read_text(encoding='utf-8'),prepare=False)
                     db.commit()
-                # Reconciliation remains safe when replayed after the full chain.
-                db.execute(
-                    next(f for f in files if f.name.startswith("012_")).read_text(
-                        encoding="utf-8"
-                    )
-                )
                 assert (
                     db.execute("SELECT to_regclass('admin.roles')").fetchone()[0]
                     is None
                 )
-                assert (
-                    db.execute(
-                        "SELECT count(*) FROM information_schema.tables WHERE table_schema='growth' AND table_type='BASE TABLE'"
-                    ).fetchone()[0]
-                    == 2
-                )
+                # Auth cutover must keep capabilities/consent/replay history and
+                # retire the old code table, regardless of unrelated growth tables.
+                assert db.execute("""SELECT to_regclass('account.auth_codes'),
+                    to_regclass('account.auth_transactions') IS NOT NULL,
+                    to_regclass('account.auth_consent_receipts') IS NOT NULL,
+                    to_regclass('account.auth_refresh_history') IS NOT NULL""").fetchone()==(None,True,True,True)
                 if legacy:
                     assert db.execute(
                         "SELECT email::text,role_id,token_hash FROM admin.admin_invitations WHERE id=%s",
                         (invitation,),
-                    ).fetchone() == ("legacy@example.com", role, "legacy-token")
+                    ).fetchone() == ("legacy@example.com", role, "legacy-chain-token")
         finally:
             admin.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))

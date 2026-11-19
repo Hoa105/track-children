@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../services/auth_service.dart';
 import 'auth_form_style.dart';
+import 'recovery_screen.dart';
 
 abstract class PasswordRecovery {
   Future<Map<String, dynamic>> send(String account);
@@ -17,13 +18,28 @@ Future<void> showForgotPasswordSheet(
   String initialAccount = '',
   PasswordRecovery? recovery,
 }) async {
+  if (recovery == null) {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => RecoveryScreen(initialAccount: initialAccount),
+      ),
+    );
+    if (saved == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã cập nhật mật khẩu. Bạn có thể đăng nhập.'),
+        ),
+      );
+    }
+    return;
+  }
   final token = await showDialog<String>(
     context: context,
     barrierDismissible: false,
     builder: (_) =>
         _RecoveryDialog(account: initialAccount, recovery: recovery),
   );
-  if (token == null || recovery == null || !context.mounted) return;
+  if (token == null || !context.mounted) return;
   final saved = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
@@ -99,11 +115,12 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
   String? _validateAccount(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Nhập email hoặc số điện thoại.';
-    if (v.contains('@'))
+    if (v.contains('@')) {
       return v.length <= 254 &&
               RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v)
           ? null
           : 'Email chưa đúng định dạng.';
+    }
     var phone = v.replaceAll(RegExp(r'[\s()-]'), '');
     if (phone.startsWith('0')) phone = '+84${phone.substring(1)}';
     return RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(phone)
@@ -137,8 +154,9 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
         _code.clear();
       });
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Chưa gửi được OTP. Vui lòng thử lại.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -166,7 +184,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
         if (mounted) Navigator.pop(context, token);
       }
     } on AuthException catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           if (e.code == 'OTP_INVALID') {
             _attempts = (_attempts - 1).clamp(0, 5);
@@ -178,6 +196,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
           }
           _error = e.toString();
         });
+      }
     } catch (_) {
       if (mounted) setState(() => _error = 'Chưa hoàn tất. Vui lòng thử lại.');
     } finally {

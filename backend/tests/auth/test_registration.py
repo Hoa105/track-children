@@ -107,13 +107,13 @@ def test_attempts_resend_expiry_resume_and_conflict(env):
     assert verify(c,ch,sent[-1][2]).status_code==429
     body={k:ch[k] for k in ['verificationId','registrationToken']}
     assert c.post('/api/v1/auth/register/resend',json=body).status_code==429
-    db.execute("UPDATE account.auth_codes SET created_at=now()-interval '61 seconds'")
+    db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds'")
     new=c.post('/api/v1/auth/register/resend',json=body).json()
     assert new['verificationId']!=ch['verificationId']
     assert verify(c,ch,wrong).status_code==401
-    db.execute("UPDATE account.auth_codes SET expires_at=now()-interval '1 second' WHERE id=%s",(new['verificationId'],))
+    db.execute("UPDATE account.auth_transactions SET expires_at=now()-interval '1 second' WHERE id=%s",(new['verificationId'],))
     assert verify(c,new,sent[-1][2]).json()['error']['code']=='OTP_EXPIRED'
-    db.execute("UPDATE account.auth_codes SET created_at=now()-interval '61 seconds'")
+    db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds'")
     r=c.post('/api/v1/auth/register',json=payload());assert r.status_code==201,r.text
     assert db.execute('SELECT count(*) n FROM account.users').fetchone()['n']==1
     assert c.post('/api/v1/auth/register',json=payload(password='another password')).status_code==409
@@ -148,9 +148,9 @@ def test_tampered_token_and_contact_limit(env):
     bad={**ch,'registrationToken':ch['registrationToken']+'x'}
     assert verify(c,bad,sent[-1][2]).status_code==401
     for _ in range(4):
-        db.execute("UPDATE account.auth_codes SET created_at=now()-interval '61 seconds'")
+        db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds'")
         ch=c.post('/api/v1/auth/register',json=payload()).json()
-    db.execute("UPDATE account.auth_codes SET created_at=now()-interval '61 seconds'")
+    db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds'")
     assert c.post('/api/v1/auth/register',json=payload()).status_code==429
 
 

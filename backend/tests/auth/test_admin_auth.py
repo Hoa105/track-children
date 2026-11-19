@@ -39,8 +39,6 @@ def admin_env(database,monkeypatch,tmp_path,hashed):
         db.execute('TRUNCATE admin.admin_users CASCADE')
         user=db.execute('''INSERT INTO admin.admin_users(email,password_hash,full_name)
             VALUES ('admin@example.com',%s,'Test Admin') RETURNING *''',(hashed,)).fetchone()
-        db.execute('''INSERT INTO admin.admin_user_roles SELECT %s,id FROM admin.roles
-            WHERE code='super_admin' ''',(user['id'],))
         with TestClient(app,client=('127.0.0.1',50000),headers=HEADERS) as client:
             yield client,db,user
 
@@ -69,7 +67,7 @@ def test_login_profile_token_cookie_and_storage(admin_env,email):
     assert set(data)=={'accessToken','tokenType','expiresIn','admin'}
     assert data['tokenType']=='Bearer' and 0<data['expiresIn']<=900
     assert data['admin']['id']==str(user['id'])
-    assert data['admin']['role']=='super_admin'
+    assert data['admin']['role']=='admin'
     assert 'health.write' in data['admin']['permissions']
     claims=jwt.decode(data['accessToken'],settings.auth_secret,algorithms=['HS256'],
                       audience=settings.auth_admin_audience,issuer=settings.auth_issuer)
@@ -253,17 +251,14 @@ def test_live_session_state_checked(admin_env,state):
     error(client.get('/admin/auth/me',headers=auth),status,code)
 
 
-def test_permissions_from_database_and_multiple_roles(admin_env):
+def test_active_admin_has_complete_unique_permissions(admin_env):
     client,db,user=admin_env
-    auth=bearer(login(client))
-    db.execute('DELETE FROM admin.admin_user_roles')
-    empty=client.get('/admin/auth/me',headers=auth).json()
-    assert empty['roles']==[] and empty['permissions']==[]
-    db.execute("INSERT INTO admin.admin_user_roles SELECT %s,id FROM admin.roles WHERE code IN ('support','moderator')",(user['id'],))
-    data=client.get('/admin/auth/me',headers=auth).json()
-    assert data['roles']==['moderator','support'] and data['role']=='moderator'
-    assert 'user.read' in data['permissions'] and len(data['permissions'])==len(set(data['permissions']))
-    assert client.get('/admin/vaccines',headers=auth).status_code==403
+    data=login(client).json()['admin']
+    assert data['roles']==['admin'] and data['role']=='admin'
+    assert set(data['permissions'])==set(repository.ADMIN_PERMISSIONS)
+    assert len(data['permissions'])==len(set(data['permissions']))
+    db.execute('UPDATE admin.admin_users SET is_active=false WHERE id=%s',(user['id'],))
+    error(login(client),403,'ACCOUNT_UNAVAILABLE')
 
 
 def test_logout_revokes_only_current_session_and_is_idempotent(admin_env):

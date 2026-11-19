@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator
+from pydantic import model_validator, Field
+from typing import Literal
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -28,7 +30,22 @@ class Settings(BaseSettings):
     app_env: str = "production"
     auth_skip_otp: bool = False
     auth_rate_limit_path: str = ""
+    auth_rate_limit_backend: Literal['sqlite','postgres'] = 'sqlite'
     auth_otp_preview: bool = False
+    auth_v2_enabled: bool = False
+    auth_simulation: bool = False
+    auth_security_webhook_url: str = ""
+    auth_security_webhook_token: str = ""
+    auth_worker_interval_seconds: int = Field(default=30, ge=5, le=60)
+    auth_password_blocklist_path: str = str(Path(__file__).resolve().parents[2]/'data'/'auth'/'common-passwords.txt')
+    auth_otp_secret: str = ""
+    auth_otp_target_limit: int = Field(default=5,ge=1,le=100)
+    auth_otp_ip_limit: int = Field(default=20,ge=1,le=10000)
+    auth_otp_global_limit: int = Field(default=100,ge=1,le=1000000)
+    auth_recovery_inactive_days: int = Field(default=90,ge=1,le=3650)
+    auth_recovery_failure_limit: int = Field(default=5,ge=1,le=100)
+    auth_recovery_failure_minutes: int = Field(default=30,ge=1,le=60)
+    auth_recovery_security_hours: int = Field(default=24,ge=1,le=720)
     google_client_ids: list[str] = []
     apple_client_ids: list[str] = []
     apple_team_id: str = ""
@@ -56,6 +73,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def local_otp_only(self):
+        if self.auth_simulation:
+            from psycopg.conninfo import conninfo_to_dict
+            if self.app_env!='local' or not conninfo_to_dict(self.database_url).get('dbname','').endswith('_test'):
+                raise ValueError('AUTH_SIMULATION requires APP_ENV=local and a dedicated *_test database')
         if self.auth_skip_otp and self.app_env != "local":
             raise ValueError("AUTH_SKIP_OTP requires APP_ENV=local")
         if self.auth_otp_preview and self.app_env != "local":

@@ -14,11 +14,11 @@ def test_local_register_login_session_logout(env, payload, monkeypatch):
     c, db, sms = env
     payload['password'] = SAMPLE_PASSWORD
     r = c.post('/api/v1/auth/register', json=payload)
-    assert r.status_code == 201 and r.json()['requiresOtp'] is False
-    assert not sms
+    assert r.status_code == 201 and r.json()['requiresOtp'] is True
+    assert len(sms)==1
     u = db.execute('SELECT * FROM account.users').fetchone()
-    assert u['status'] == 'active' and u['phone_verified_at'] is None
-    assert db.execute('SELECT count(*) n FROM account.verification_codes').fetchone()['n'] == 0
+    assert u['status'] == 'pending' and u['phone_verified_at'] is None
+    assert db.execute('SELECT count(*) n FROM account.auth_transactions').fetchone()['n'] == 1
     body = dict(email=payload['email'], password=SAMPLE_PASSWORD, device=DEVICE)
     assert c.post('/api/v1/auth/login', json={**body, 'password':'wrong'}).status_code == 401
     result = c.post('/api/v1/auth/login', json=body)
@@ -50,8 +50,8 @@ def test_sample_migration_idempotent_and_ten_logins(env, monkeypatch):
     seed(db)
     db.commit()
     assert db.execute('SELECT count(*) n FROM account.users').fetchone()['n'] == 10
-    for n in range(1, 11):
-        r = c.post('/api/v1/auth/login', json=dict(email=f'parent{n:02}@example.com', password=SAMPLE_PASSWORD, device=DEVICE))
+    for row in db.execute('SELECT email FROM account.users ORDER BY email').fetchall():
+        r = c.post('/api/v1/auth/login', json=dict(email=str(row['email']), password=SAMPLE_PASSWORD, device=DEVICE))
         assert r.status_code == 200, r.text
         assert r.json()['user']['status'] == 'active'
     assert not sms
@@ -73,9 +73,11 @@ def test_login_with_registered_phone(env, payload, monkeypatch, phone):
     local_mode(monkeypatch)
     client, db, sms = env
     payload['password'] = SAMPLE_PASSWORD
+    payload.pop('email')
+    payload['phone']='0912345678'
     assert client.post('/api/v1/auth/register', json=payload).status_code == 201
     body = dict(phone=phone, password=SAMPLE_PASSWORD, device=DEVICE)
     assert client.post('/api/v1/auth/login', json={**body, 'password': 'wrong'}).status_code == 401
     response = client.post('/api/v1/auth/login', json=body)
     assert response.status_code == 200
-    assert response.json()['user']['email'] == payload['email']
+    assert response.json()['user']['phone'] == '+84912345678'

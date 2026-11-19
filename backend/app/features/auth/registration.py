@@ -16,6 +16,7 @@ import psycopg
 from app.core import security as sec
 from app.core.config import settings
 from app.features.auth.errors import AuthFailure, failure
+from app.features.auth import code_storage
 
 
 def legal():
@@ -36,6 +37,8 @@ def legal():
 
 
 def configured(channel):
+    from app.features.auth.simulation import enabled
+    if enabled():return True
     if settings.auth_otp_preview and settings.app_env == 'local':
         return True
     if channel == 'email' and settings.email_provider == 'brevo':
@@ -71,22 +74,21 @@ def issue(db, user):
     # Transaction-scoped lock makes limits consistent across API workers. The
     # global hourly ceiling bounds abuse without a new rate-limit table.
     db.execute("SELECT pg_advisory_xact_lock(hashtextextended('registration-issuance',0))")
-    recent = db.execute("""SELECT count(*) AS total,
+    table, purpose = code_storage.storage(db)
+    recent = db.execute(f"""SELECT count(*) AS total,
         count(*) FILTER (WHERE target=%s) AS contact,
         max(created_at) FILTER (WHERE target=%s) AS latest
-        FROM account.auth_codes WHERE purpose='verify_contact'
-        AND created_at > %s""", (target, target, sec.now()-timedelta(hours=1))).fetchone()
+        FROM {table} WHERE purpose=%s
+        AND created_at > %s""", (target, target, purpose, sec.now()-timedelta(hours=1))).fetchone()
     if recent['latest'] and recent['latest'] + timedelta(seconds=60) > sec.now():
         return failure(429, 'RATE_LIMITED', retry=max(1, int((recent['latest']+timedelta(seconds=60)-sec.now()).total_seconds())+1)), None
     if recent['contact'] >= 5 or recent['total'] >= 100:
         return failure(429, 'RATE_LIMITED', retry=3600), None
-    db.execute("""UPDATE account.auth_codes SET consumed_at=%s
-        WHERE user_id=%s AND purpose='verify_contact' AND consumed_at IS NULL""", (sec.now(), user['id']))
+    db.execute(f"""UPDATE {table} SET consumed_at=%s
+        WHERE user_id=%s AND purpose=%s AND consumed_at IS NULL""", (sec.now(), user['id'], purpose))
     vid, raw = uuid4(), f'{secrets.randbelow(1000000):06d}'
-    code = db.execute("""INSERT INTO account.auth_codes
-        (id,user_id,purpose,channel,target,code_hash,expires_at)
-        VALUES (%s,%s,'verify_contact',%s,%s,%s,%s) RETURNING *""",
-        (vid,user['id'],channel,target,sec.otp_hash(raw,str(vid)),sec.now()+timedelta(minutes=5))).fetchone()
+    code = code_storage.insert(db, user['id'], channel, target, vid,
+        sec.otp_hash(raw,str(vid)), sec.now()+timedelta(minutes=5))
     result = challenge(user, code)
     if settings.auth_otp_preview and settings.app_env == 'local':
         result.update(deliveryStatus='preview', devOtp=raw)
@@ -138,8 +140,9 @@ def subject(db, data):
     except (jwt.PyJWTError, ValueError, TypeError, KeyError):
         return failure(401,'REGISTRATION_CHALLENGE_INVALID')
     user = db.execute('SELECT * FROM account.users WHERE id=%s FOR UPDATE',(uid,)).fetchone()
-    code = db.execute("""SELECT * FROM account.auth_codes WHERE id=%s AND user_id=%s
-        AND purpose='verify_contact' FOR UPDATE""",(data.verificationId,uid)).fetchone()
+    table, purpose = code_storage.storage(db)
+    code = db.execute(f"""SELECT * FROM {table} WHERE id=%s AND user_id=%s
+        AND purpose=%s FOR UPDATE""",(data.verificationId,uid,purpose)).fetchone()
     if not user or user['status'] != 'pending' or not code or code['consumed_at']:
         return failure(401,'REGISTRATION_CHALLENGE_INVALID')
     if code['target'] != str(user['email'] if code['channel']=='email' else user['phone']):
@@ -153,15 +156,16 @@ def verify(db, data, ip):
     if isinstance(pair,AuthFailure):
         return pair
     user,code = pair
+    table, _ = code_storage.storage(db)
     if code['expires_at'] <= sec.now():
         return failure(400,'OTP_EXPIRED')
     if code['attempt_count'] >= 5:
         return failure(429,'OTP_ATTEMPTS_EXCEEDED')
     if not hmac.compare_digest(code['code_hash'],sec.otp_hash(data.code,str(code['id']))):
-        db.execute('UPDATE account.auth_codes SET attempt_count=attempt_count+1 WHERE id=%s',(code['id'],))
+        db.execute(f'UPDATE {table} SET attempt_count=attempt_count+1 WHERE id=%s',(code['id'],))
         remaining = 4-code['attempt_count']
         return failure(400 if remaining else 429,'OTP_INVALID' if remaining else 'OTP_ATTEMPTS_EXCEEDED', details={'attemptsRemaining':remaining})
-    db.execute('UPDATE account.auth_codes SET verified_at=%s,consumed_at=%s WHERE id=%s',(sec.now(),sec.now(),code['id']))
+    db.execute(f'UPDATE {table} SET verified_at=%s,consumed_at=%s WHERE id=%s',(sec.now(),sec.now(),code['id']))
     column = 'email_verified_at' if code['channel']=='email' else 'phone_verified_at'
     user = db.execute(f"UPDATE account.users SET status='active',{column}=%s WHERE id=%s RETURNING *",(sec.now(),user['id'])).fetchone()
     return {**new_session(db,user,data.device,data.rememberMe,ip),'user':public_user(user)}

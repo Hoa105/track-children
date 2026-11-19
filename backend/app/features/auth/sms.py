@@ -7,6 +7,11 @@ from app.core.config import settings
 
 
 def send_code(channel, target, code):
+    from app.features.auth import simulation
+    if simulation.enabled():
+        if simulation.delivery_fails():return False
+        simulation.record('otp',channel=channel,target=target,code=code)
+        return True
     if channel == 'sms':
         return send_sms(target, code)
     if channel == 'email' and settings.email_provider == 'brevo':
@@ -82,6 +87,11 @@ def send_sms(phone, code):
 
     No console OTP fallback. Tests replace this function with a private harness.
     """
+    from app.features.auth import simulation
+    if simulation.enabled():
+        if simulation.delivery_fails():return False
+        simulation.record('otp',channel='sms',target=phone,code=code)
+        return True
     if (
         not settings.sms_webhook_url.startswith("https://")
         or not settings.sms_webhook_token

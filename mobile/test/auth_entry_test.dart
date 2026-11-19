@@ -33,7 +33,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(SignUpScreen), findsOneWidget);
-    final link = find.text('Đã có tài khoản? Đăng nhập');
+    final link = find.widgetWithText(TextButton, 'Đăng nhập');
     await tester.ensureVisible(link);
     await tester.tap(link);
     await tester.pumpAndSettle();

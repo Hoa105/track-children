@@ -2,6 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Prepare auth simulation device",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/run-mobile-auth-simulation.ps1", "-PrepareOnly"],
+      "problemMatcher": []
+    },
+    {
       "label": "Prepare Google emulator configuration",
       "type": "process",
       "command": "powershell.exe",

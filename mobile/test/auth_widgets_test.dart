@@ -40,7 +40,7 @@ void main() {
     AuthService.instance = AuthService(
       socialIdentityProvider: (_, _) async => {'idToken': 'signed-token'},
       client: MockClient((request) async {
-        expect(request.url.path, '/api/v1/auth/social');
+        expect(request.url.path, '/api/v1/auth/v2/social/start');
         return response({...result, 'isNewUser': false});
       }),
     );
@@ -60,7 +60,7 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(opened, true);
   });
-  testWidgets('Google cancellation is visible instead of silently returning', (
+  testWidgets('Google cancellation preserves login and creates no session', (
     tester,
   ) async {
     AuthService.instance = AuthService(
@@ -77,29 +77,36 @@ void main() {
     await tester.ensureVisible(google);
     await tester.tap(google);
     await tester.pumpAndSettle();
-    expect(
-      find.text('Chưa đăng nhập được. Kiểm tra mạng và thử lại.'),
-      findsOneWidget,
-    );
+    expect(AuthService.instance.signedIn, false);
+    expect(tester.widget<OutlinedButton>(google).onPressed, isNotNull);
+    expect(find.byType(AlertDialog), findsNothing);
   });
   testWidgets(
-    'Google registration requires consent and opens child form after session',
+    'Google registration requires explicit profile consent before completion',
     (tester) async {
-      var calls = 0;
-      var opened = false;
+      var completed = false, opened = false;
       AuthService.instance = AuthService(
-        socialIdentityProvider: (provider, nonce) async {
-          expect(provider, 'google');
-          return {'idToken': 'provider-signed-token'};
+        socialIdentityProvider: (_, _) async => {
+          'idToken': 'signed-token',
+          'displayName': 'Parent',
         },
         client: MockClient((request) async {
-          calls++;
           final body = jsonDecode(request.body) as Map;
-          expect(request.url.path, '/api/v1/auth/social');
-          expect(body['idToken'], 'provider-signed-token');
+          if (request.url.path.endsWith('/social/start')) {
+            expect(body.containsKey('acceptedTerms'), false);
+            return response({
+              'requiresProfile': true,
+              'displayName': 'Parent',
+              'transactionId': 'social-id',
+              'transactionToken': 'social-token',
+              'documentsDigest': 'digest',
+            });
+          }
+          expect(request.url.path, endsWith('/social/complete'));
           expect(body['acceptedTerms'], true);
           expect(body['defaultRelationship'], 'father');
           expect(body.containsKey('password'), false);
+          completed = true;
           return response({...result, 'isNewUser': true});
         }),
       );
@@ -115,34 +122,24 @@ void main() {
       await tester.ensureVisible(google);
       await tester.tap(google);
       await tester.pumpAndSettle();
-      expect(calls, 0);
-      final consent = find.byKey(const ValueKey('social-consent'));
-      expect(consent, findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Tiếp tục'))
-            .onPressed,
-        isNull,
-      );
+      final finish = find.widgetWithText(FilledButton, 'Hoàn tất đăng ký');
+      await tester.ensureVisible(finish);
+      await tester.tap(finish);
+      await tester.pumpAndSettle();
+      expect(completed, false);
+      expect(opened, false);
+      final role = find.widgetWithText(ChoiceChip, 'Bố');
+      await tester.ensureVisible(role);
+      await tester.tap(role);
+      await tester.pumpAndSettle();
+      final consent = find.byKey(const ValueKey('registration-consent'));
+      await tester.ensureVisible(consent);
       await tester.tap(consent);
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Tiếp tục'));
+      await tester.ensureVisible(finish);
+      await tester.tap(finish);
       await tester.pumpAndSettle();
-      expect(calls, 0);
-      expect(find.text('Chọn vai trò với bé'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Hoàn tất đăng ký'),
-            )
-            .onPressed,
-        isNull,
-      );
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Bố').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Hoàn tất đăng ký'));
-      await tester.pumpAndSettle();
-      expect(calls, 1);
+      expect(completed, true);
       expect(opened, true);
       expect(AuthService.instance.signedIn, true);
     },

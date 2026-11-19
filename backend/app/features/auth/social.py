@@ -24,6 +24,8 @@ def keys(provider):
 
 
 def apple_configured():
+    from app.features.auth.simulation import enabled
+    if enabled():return True
     return bool(settings.apple_client_ids and settings.apple_team_id
                 and settings.apple_key_id and settings.apple_private_key_path)
 
@@ -40,6 +42,8 @@ def apple_challenge():
 
 
 def verify_identity(data):
+    from app.features.auth import simulation
+    if simulation.enabled():return simulation.verify(data)
     audiences = settings.google_client_ids if data.provider == 'google' else settings.apple_client_ids
     if not audiences or (data.provider == 'apple' and not apple_configured()):
         return failure(503, 'SOCIAL_AUTH_NOT_CONFIGURED')
@@ -76,13 +80,17 @@ def verify_identity(data):
                 response = http.post('https://appleid.apple.com/auth/token', data=body)
             if response.status_code != 200:
                 return failure(401, 'SOCIAL_TOKEN_INVALID')
-            exchanged = response.json()['id_token']
+            exchange_result = response.json()
+            exchanged = exchange_result['id_token']
             other_key = keys('apple').get_signing_key_from_jwt(exchanged)
             other = jwt.decode(exchanged, other_key.key, algorithms=['RS256'],
                 issuer='https://appleid.apple.com', audience=client,
                 options={'require': ['sub','iss','aud','exp']})
             if other['sub'] != claims['sub'] or other.get('nonce') != claims.get('nonce'):
                 raise ValueError()
+            # Internal transient data only, never returned to clients or persisted.
+            claims['_apple_access_token']=exchange_result.get('access_token')
+            claims['_apple_client_id']=client
         return claims
     except jwt.PyJWKClientConnectionError:
         return failure(503, 'SOCIAL_PROVIDER_UNAVAILABLE')
@@ -90,6 +98,27 @@ def verify_identity(data):
         return failure(503, 'SOCIAL_PROVIDER_UNAVAILABLE')
     except (jwt.PyJWTError, ValueError, TypeError, KeyError):
         return failure(401, 'SOCIAL_TOKEN_INVALID')
+
+
+def revoke_apple(claims):
+    from app.features.auth import simulation
+    if simulation.enabled():
+        simulation.record('apple-revoked',subject=claims['sub'])
+        return None
+    try:
+        client=claims['_apple_client_id'];token=claims['_apple_access_token']
+        if not token:
+            return failure(503,'SOCIAL_PROVIDER_UNAVAILABLE')
+        secret=jwt.encode({'iss':settings.apple_team_id,'sub':client,'aud':'https://appleid.apple.com',
+            'iat':sec.now(),'exp':sec.now()+timedelta(minutes=5)},
+            Path(settings.apple_private_key_path).read_text(encoding='utf-8'),algorithm='ES256',headers={'kid':settings.apple_key_id})
+        with httpx.Client(timeout=10,follow_redirects=False) as http:
+            response=http.post('https://appleid.apple.com/auth/revoke',data={
+                'client_id':client,'client_secret':secret,'token':token,'token_type_hint':'access_token'})
+        if response.status_code!=200:
+            return failure(503,'SOCIAL_PROVIDER_UNAVAILABLE')
+    except (OSError,httpx.HTTPError,KeyError,ValueError):
+        return failure(503,'SOCIAL_PROVIDER_UNAVAILABLE')
 
 
 def register(db, data, claims):

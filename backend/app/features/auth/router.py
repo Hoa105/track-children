@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlencode
 import re
 
 from app.core.database import transaction
+from app.core.config import settings
 from app.features.auth import schemas, service
 from app.features.auth.dependencies import require_user, ready, client_ip
 from app.features.auth.errors import AuthFailure
@@ -46,6 +47,8 @@ def apple_social_challenge():
 
 @router.post('/auth/social')
 def social_register(data: schemas.SocialRegister):
+    if settings.auth_v2_enabled:
+        return output(AuthFailure(409,'AUTH_CLIENT_UPGRADE_REQUIRED'))
     from app.features.auth import social
     if err := ready():
         return output(err)
@@ -70,6 +73,8 @@ def documents(context: Literal["registration"]):
 
 @router.post("/auth/register", status_code=201)
 def register(data: schemas.Register, request: Request):
+    if settings.auth_v2_enabled:
+        return output(AuthFailure(409,'AUTH_CLIENT_UPGRADE_REQUIRED'))
     if err := ready():
         return output(err)
     with transaction() as db:
@@ -138,6 +143,8 @@ def update_profile(data: schemas.ProfileUpdate, request: Request):
 
 @router.post("/auth/change-password", status_code=204)
 def change_password(data: schemas.PasswordChange, request: Request):
+    if settings.auth_v2_enabled:
+        return output(AuthFailure(409,'AUTH_CLIENT_UPGRADE_REQUIRED'))
     if err := ready():
         return output(err)
     with transaction() as db:

@@ -5,5 +5,9 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Bản debug gọi backend local qua http (10.0.2.2:8000 / IP LAN). -->
-    <application android:usesCleartextTraffic="true"/>
+    <application android:usesCleartextTraffic="true">
+        <!-- Debug compatibility: OPPO/Adreno startup ANRs were captured while
+             the platform thread waited on Impeller's GLES surface setup. -->
+        <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false"/>
+    </application>
 </manifest>

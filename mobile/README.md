@@ -1,5 +1,9 @@
 # Mobile App — Track Children (Bé Lớn Khôn)
 
+Bản Android release yêu cầu keystore riêng; không còn ký bằng debug key. TestFlight yêu cầu tài khoản Apple Developer và môi trường build macOS.
+
+Test auth khi chưa có SMS/Google/Apple thật: chạy `scripts/run-auth-simulation.ps1` và `scripts/run-mobile-auth-simulation.ps1` từ gốc repository. Chế độ này chỉ dùng DB test và Flutter debug.
+
 Ứng dụng Flutter cho phụ huynh và người chăm sóc trẻ.
 
 Bộ dữ liệu kiểm thử đồng bộ: xem [tài khoản mẫu và phạm vi mô phỏng](docs/demo-data.md). Trong app, mở **Cài đặt → Dữ liệu kiểm thử** để xem hoặc khôi phục bộ mẫu.

@@ -69,13 +69,21 @@ services:
           create_host_path: false
       # Ảnh hoạt động (kể cả ảnh admin tải lên) không mất khi build lại image
       - ./backend/static:/app/static
+      - auth_runtime:/app/auth-runtime
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env.example
     environment:
       DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
+      AUTH_RATE_LIMIT_PATH: /app/auth-runtime/limits.sqlite3
+      AUTH_RATE_LIMIT_BACKEND: ${AUTH_RATE_LIMIT_BACKEND:-sqlite}
+      AUTH_SECURITY_WEBHOOK_URL: ${AUTH_SECURITY_WEBHOOK_URL:-}
+      AUTH_SECURITY_WEBHOOK_TOKEN: ${AUTH_SECURITY_WEBHOOK_TOKEN:-}
       AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_V2_ENABLED: ${AUTH_V2_ENABLED:-false}
+      AUTH_OTP_SECRET: ${AUTH_OTP_SECRET:-}
+      AUTH_PASSWORD_BLOCKLIST_PATH: ${AUTH_PASSWORD_BLOCKLIST_PATH:-/app/data/auth/common-passwords.txt}
       APP_ENV: ${APP_ENV:-production}
       # Chỉ có tác dụng khi APP_ENV=local (PUT /dev/profiles cho mobile)
       DEV_AUTH: ${DEV_AUTH:-false}
@@ -110,6 +118,52 @@ services:
       db:
         condition: service_healthy
       minio:
+        condition: service_healthy
+
+  auth-worker:
+    profiles: ["auth-v2"]
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.features.auth.worker"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.features.auth.worker", "--health"]
+      interval: 60s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    env_file:
+      - ./backend/.env.example
+    environment:
+      DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
+      AUTH_V2_ENABLED: ${AUTH_V2_ENABLED:-false}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_OTP_SECRET: ${AUTH_OTP_SECRET:-}
+      AUTH_PASSWORD_BLOCKLIST_PATH: ${AUTH_PASSWORD_BLOCKLIST_PATH:-/app/data/auth/common-passwords.txt}
+      AUTH_RATE_LIMIT_PATH: /app/auth-runtime/limits.sqlite3
+      AUTH_RATE_LIMIT_BACKEND: ${AUTH_RATE_LIMIT_BACKEND:-sqlite}
+      APP_ENV: ${APP_ENV:-production}
+      SMS_WEBHOOK_URL: ${SMS_WEBHOOK_URL:-}
+      SMS_WEBHOOK_TOKEN: ${SMS_WEBHOOK_TOKEN:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp2go}
+      EMAIL_WEBHOOK_URL: ${EMAIL_WEBHOOK_URL:-}
+      EMAIL_WEBHOOK_TOKEN: ${EMAIL_WEBHOOK_TOKEN:-}
+      SMTP2GO_API_KEY: ${SMTP2GO_API_KEY:-}
+      SMTP2GO_SENDER_EMAIL: ${SMTP2GO_SENDER_EMAIL:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      LEGAL_DOCUMENTS_PATH: ${LEGAL_DOCUMENTS_PATH:-}
+      AUTH_SECURITY_WEBHOOK_URL: ${AUTH_SECURITY_WEBHOOK_URL:-}
+      AUTH_SECURITY_WEBHOOK_TOKEN: ${AUTH_SECURITY_WEBHOOK_TOKEN:-}
+    volumes:
+      - auth_runtime:/app/auth-runtime
+      - type: bind
+        source: ${LEGAL_DOCUMENTS_FILE:-./backend/legal-documents.local.json}
+        target: /app/local-config/legal-documents.local.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      db:
         condition: service_healthy
 
   ai-service:
@@ -150,6 +204,7 @@ services:
       AI_SERVICE_URL: http://ai-service:8001
 
 volumes:
+  auth_runtime:
   track_children_postgres_data:
   track_children_ai_postgres_data:
   track_children_minio_data:

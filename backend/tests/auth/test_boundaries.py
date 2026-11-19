@@ -17,9 +17,9 @@ from .test_auth import bearer,code,login,parallel
 
 
 @pytest.mark.parametrize('field,size,valid',[
-    ('fullName',1,True),('fullName',150,True),('fullName',151,False),
-    ('username',3,True),('username',30,True),('username',31,False),
-    ('password',5,False),('password',6,True),('password',128,True),('password',129,False)])
+    ('displayName',1,True),('displayName',150,True),('displayName',151,False),
+    ('username',3,False),('username',30,False),('username',31,False),
+    ('password',5,False),('password',8,True),('password',64,True),('password',65,False)])
 def test_length_boundaries(env,payload,field,size,valid):
     c,_,_=env
     payload[field]=('Aa1!'+'a'*(size-4)) if field=='password' else 'a'*size
@@ -34,28 +34,26 @@ def test_malformed_body(env,body):
 
 def test_consent_duplicates_and_unknown(env,payload):
     c,db,_=env
-    payload['consents'].append(payload['consents'][0])
-    assert c.post('/api/v1/auth/register',json=payload).status_code==422
-    payload['consents']=payload['consents'][:-1]+[{'documentId':str(uuid4()),'isAccepted':True}]
-    assert code(c.post('/api/v1/auth/register',json=payload))=='LEGAL_CONSENT_REQUIRED'
+    for value in (False, 'true', 1, None):
+        assert c.post('/api/v1/auth/register',json={**payload,'acceptedTerms':value}).status_code==422
+    assert c.post('/api/v1/auth/register',json={**payload,'consents':[]}).status_code==422
     assert not db.execute('SELECT id FROM account.users').fetchone()
 
 
-@pytest.mark.parametrize('field,value',[
-    ('email','PARENT@EXAMPLE.COM'),('phone','+84912345678'),('username','PARENT_TEST')])
+@pytest.mark.parametrize('field,value',[('email','PARENT@EXAMPLE.COM'),('phone','+84912345678')])
 def test_each_unique_identifier_independently(env,payload,field,value):
     c,db,_=env
-    assert c.post('/api/v1/auth/register',json=payload).status_code==201
-    changed={**payload,'email':'new@example.com','phone':'0987654321','username':'new_parent'}
-    changed[field]=value
-    assert code(c.post('/api/v1/auth/register',json=changed))=='ACCOUNT_CONFLICT'
+    data={k:v for k,v in payload.items() if k!='email'}
+    data[field]='parent@example.com' if field=='email' else '0912345678'
+    register_and_verify(env,data)
+    assert code(c.post('/api/v1/auth/register',json={**data,field:value}))=='ACCOUNT_CONFLICT'
     assert db.execute('SELECT count(*) n FROM account.users').fetchone()['n']==1
 
 
 def test_registration_rolls_back_after_insert(env,payload,monkeypatch):
     def broken(db, parameters):
         raise RuntimeError('test rollback')
-    monkeypatch.setattr(service.repository, 'create_registration_code', broken)
+    monkeypatch.setattr(__import__('app.features.auth.code_storage',fromlist=['insert']), 'insert', lambda *a,**k:broken(None,None))
     with pytest.raises(RuntimeError,match='test rollback'):
         env[0].post('/api/v1/auth/register',json=payload)
     assert not env[1].execute('SELECT id FROM account.users').fetchone()
@@ -71,7 +69,7 @@ def test_verify_rolls_back_activation_and_attempts_on_db_error(env,payload,monke
     monkeypatch.setattr(service,'new_session',lambda *args:(_ for _ in ()).throw(RuntimeError('test rollback')))
     with pytest.raises(RuntimeError,match='test rollback'):c.post('/api/v1/auth/register/verify',json=body)
     assert db.execute('SELECT status FROM account.users').fetchone()['status']=='pending'
-    assert db.execute('SELECT used_at FROM account.verification_codes').fetchone()['used_at'] is None
+    assert db.execute('SELECT consumed_at FROM account.auth_transactions').fetchone()['consumed_at'] is None
     monkeypatch.setattr(service,'new_session',original)
     assert c.post('/api/v1/auth/register/verify',json=body).status_code==200
 
@@ -81,18 +79,18 @@ def test_exact_otp_and_challenge_expiry(env,payload,monkeypatch):
     ch=c.post('/api/v1/auth/register',json=payload).json()
     body={k:ch[k] for k in ['verificationId','registrationToken']}
     body.update(code=sms[-1][1],device=DEVICE)
-    expiry=db.execute('SELECT expires_at FROM account.verification_codes').fetchone()['expires_at']
+    expiry=db.execute('SELECT expires_at FROM account.auth_transactions').fetchone()['expires_at']
     monkeypatch.setattr(sec,'now',lambda:expiry)
     assert code(c.post('/api/v1/auth/register/verify',json=body))=='OTP_EXPIRED'
-    expiry=db.execute('SELECT expires_at FROM account.registration_challenges').fetchone()['expires_at']
+    expiry=sec.now()+timedelta(minutes=31)
     monkeypatch.setattr(sec,'now',lambda:expiry)
-    assert code(c.post('/api/v1/auth/register/verify',json=body))=='REGISTRATION_CHALLENGE_INVALID'
+    assert code(c.post('/api/v1/auth/register/verify',json=body))=='OTP_EXPIRED'
 
 
 def test_cross_user_challenge(env,payload):
     c,db,sms=env
     a=c.post('/api/v1/auth/register',json=payload).json()
-    payload.update(username='other_parent',email='other@example.com',phone='0987654321')
+    payload.update(email='other@example.com')
     b=c.post('/api/v1/auth/register',json=payload).json()
     r=c.post('/api/v1/auth/register/verify',json={'verificationId':b['verificationId'],
       'registrationToken':a['registrationToken'],'code':sms[-1][1],'device':DEVICE})
@@ -106,14 +104,14 @@ def test_send_quota_and_failed_delivery_count(env,payload,monkeypatch):
     ch=c.post('/api/v1/auth/register',json=payload).json()
     start=sec.now()
     for i in range(1,5):
-        monkeypatch.setattr(sec,'now',lambda i=i:start+timedelta(seconds=61*i))
+        db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds' WHERE id=%s",(ch['verificationId'],))
         r=c.post('/api/v1/auth/register/resend',json={k:ch[k] for k in ['verificationId','registrationToken']})
         assert r.status_code==200 and r.json()['deliveryStatus']=='failed'
         ch=r.json()
-    monkeypatch.setattr(sec,'now',lambda:start+timedelta(seconds=61*5))
+    db.execute("UPDATE account.auth_transactions SET created_at=now()-interval '61 seconds' WHERE id=%s",(ch['verificationId'],))
     r=c.post('/api/v1/auth/register/resend',json={k:ch[k] for k in ['verificationId','registrationToken']})
     assert r.status_code==429 and 'retry-after' in r.headers
-    assert db.execute('SELECT count(*) n FROM account.verification_codes').fetchone()['n']==5
+    assert db.execute('SELECT count(*) n FROM account.auth_transactions').fetchone()['n']==5
 
 
 @pytest.mark.parametrize('state,scheduled', [('pending','past'),('processing','future'),('pending','null')])

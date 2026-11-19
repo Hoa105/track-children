@@ -38,9 +38,9 @@ def test_anonymize_cascades_new_auth_tables(env,payload):
     a=register_and_verify(env,payload)
     assert c.post('/api/v1/auth/refresh',json={'refreshToken':a['refreshToken']}).status_code==200
     db.execute('SELECT account.anonymize_user(%s)',(a['user']['id'],))
-    for table in ['user_sessions','verification_codes','registration_challenges','refresh_token_history']:
+    for table in ['user_sessions','auth_transactions','auth_refresh_history']:
         assert db.execute('SELECT count(*) n FROM account.'+table).fetchone()['n']==0
-    assert db.execute('SELECT count(*) n FROM account.user_consents').fetchone()['n']==3
+    assert db.execute('SELECT consented_at IS NOT NULL AS accepted FROM account.users').fetchone()['accepted']
 
 
 def test_login_races_due_anonymize(env,payload):
@@ -92,8 +92,8 @@ def test_two_resends_at_same_cooldown(env,payload,monkeypatch):
     monkeypatch.setattr(sec,'now',lambda:t)
     body={k:ch[k] for k in ['verificationId','registrationToken']}
     responses=parallel([lambda client:client.post('/api/v1/auth/register/resend',json=body)]*2)
-    assert sorted(r.status_code for r in responses)==[200,429]
-    assert db.execute("SELECT count(*) n FROM account.verification_codes WHERE expires_at>%s AND used_at IS NULL",(t,)).fetchone()['n']==1
+    assert sorted(r.status_code for r in responses)==[200,401]
+    assert db.execute("SELECT count(*) n FROM account.auth_transactions WHERE expires_at>%s AND consumed_at IS NULL",(t,)).fetchone()['n']==1
 
 
 def test_verify_races_resend(env,payload,monkeypatch):
@@ -105,7 +105,7 @@ def test_verify_races_resend(env,payload,monkeypatch):
       lambda client:client.post('/api/v1/auth/register/verify',json={**body,'code':sms[-1][1],'device':DEVICE}),
       lambda client:client.post('/api/v1/auth/register/resend',json=body)])
     statuses=[r.status_code for r in responses]
-    assert statuses in [[200,401],[410,200]]
+    assert statuses in [[200,401],[401,200]]
     count=db.execute('SELECT count(*) n FROM account.user_sessions').fetchone()['n']
     assert count==(1 if statuses[0]==200 else 0)
 
@@ -138,6 +138,8 @@ def test_login_limits_unknown_identity_and_unlock(env,payload,monkeypatch):
     bad={**payload,'password':'wrong'}
     for _ in range(5):assert login(c,bad).status_code==401
     t=sec.now();monkeypatch.setattr(sec,'now',lambda:t+timedelta(minutes=16))
+    from app.features.auth import rate_limit
+    monkeypatch.setattr(rate_limit.time,'time',lambda:(t+timedelta(minutes=16)).timestamp())
     assert login(c,payload).status_code==200
     u=db.execute('SELECT failed_login_attempts,locked_until FROM account.users').fetchone()
     assert u['failed_login_attempts']==0 and u['locked_until'] is None

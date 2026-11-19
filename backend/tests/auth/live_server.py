@@ -31,11 +31,16 @@ def main():
         temporary.replace(sms_file)
         return True
     sms_gateway.send_sms=fake_sms
-    with transaction() as db:
-        for kind in ['terms','privacy','data_policy']:
-            db.execute("""INSERT INTO account.legal_documents(doc_type,version,content,effective_at)
-                VALUES (%s,'live-test','Local integration test terms',now()-interval '1 day')
-                ON CONFLICT(doc_type,version) DO NOTHING""",(kind,))
+    sms_gateway.send_code=lambda channel,target,code:fake_sms(target,code)
+    settings.auth_v2_enabled=False
+    settings.app_env='local'
+    settings.auth_skip_otp=False
+    settings.auth_otp_preview=False
+    settings.email_provider='webhook'
+    settings.email_webhook_url='https://email.test.invalid'
+    settings.email_webhook_token='test-only'
+    settings.legal_documents_path=str(Path(__file__).parents[2]/'legal-documents.local.json')
+    settings.auth_rate_limit_path=str(sms_file.parent/'live-limits.sqlite3')
     uvicorn.run(app,host='127.0.0.1',port=8009,access_log=False)
 
 

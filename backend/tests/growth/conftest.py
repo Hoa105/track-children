@@ -36,7 +36,7 @@ def env(database, monkeypatch):
     from psycopg.rows import dict_row
     with psycopg.connect(database, row_factory=dict_row) as db:
         db.execute('TRUNCATE account.users CASCADE')
-        db.execute('TRUNCATE account.mobile_login_limits')
+        # Login throttling no longer uses the retired mobile_login_limits table.
         users, tokens = {}, {}
         for name in ['owner', 'other', 'view', 'edit', 'none', 'revoked', 'left']:
             uid, sid = uuid4(), uuid4()

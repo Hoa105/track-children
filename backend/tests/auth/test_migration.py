@@ -22,7 +22,7 @@ def test_upgrade_preserves_existing_account(database_url):
                     db.execute(file.read_text(encoding='utf-8'))
                 uid=db.execute("INSERT INTO account.users(email,password_hash,full_name,status) VALUES ('existing@example.com','existing-hash','Existing Parent','active') RETURNING id").fetchone()[0]
                 db.execute("INSERT INTO account.user_sessions(user_id,refresh_token_hash,expires_at) VALUES (%s,'existing-session',now()+interval '1 day')",(uid,))
-                db.execute(next(f for f in files if f.name.startswith('007')).read_text(encoding='utf-8'))
+                db.execute(next(f for f in files if f.name=='007_mobile_auth.sql').read_text(encoding='utf-8'))
                 assert db.execute('SELECT password_hash,status,failed_login_attempts FROM account.users WHERE id=%s',(uid,)).fetchone()==('existing-hash','active',0)
                 assert db.execute('SELECT last_used_at IS NOT NULL FROM account.user_sessions').fetchone()[0]
         finally:

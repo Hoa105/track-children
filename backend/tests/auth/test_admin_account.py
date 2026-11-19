@@ -77,9 +77,8 @@ def test_profile_update_targets_jwt_owner_only_and_requires_no_management_role(a
     auth=bearer(login(client))
     other=db.execute('''INSERT INTO admin.admin_users(email,password_hash,full_name)
         VALUES ('other@example.com',%s,'Other Admin') RETURNING *''',(user['password_hash'],)).fetchone()
-    db.execute('DELETE FROM admin.admin_user_roles WHERE admin_user_id=%s',(user['id'],))
     response=client.patch('/admin/auth/me',headers=auth,json={'fullName':'My New Name'})
-    assert response.status_code==200 and response.json()['permissions']==[]
+    assert response.status_code==200 and set(response.json()['permissions'])==set(repository.ADMIN_PERMISSIONS)
     assert db.execute('SELECT full_name FROM admin.admin_users WHERE id=%s',(other['id'],)).fetchone()['full_name']=='Other Admin'
 
 

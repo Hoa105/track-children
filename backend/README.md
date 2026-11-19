@@ -43,11 +43,16 @@ Docker Compose reads `AUTH_SECRET`/`CORS_ORIGINS` from the shell or root `.env`.
 Start the local PostgreSQL containers from the repository root, then run:
 
 ```powershell
-.\scripts\migrate.ps1 -Target backend
+.\scripts\migrate.ps1 -Target backend -ApproveAuthCompaction
 ```
 
 Migrations are stored in `backend/migrations/` and are applied in filename
 order. The `public.schema_migrations` table records each applied migration.
+Pending migrations and their ledger entries commit in one transaction per database.
+The approval switch is required only while auth migrations 025/026 are pending;
+an up-to-date database can be checked again without it. Run
+`Get-Help ./scripts/migrate.ps1 -Full` for target and bootstrap options.
+Auth regression checks: `./scripts/test-auth-full.ps1`.
 
 ## Dữ liệu demo cho mobile
 

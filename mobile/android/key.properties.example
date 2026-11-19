@@ -1,0 +1,7 @@
+# Copy to key.properties (ignored by Git). Use the registered application ID.
+applicationId=REPLACE_WITH_REGISTERED_APPLICATION_ID
+# Absolute path, using forward slashes on Windows. Keep key backups privately.
+storeFile=REPLACE_WITH_PRIVATE_KEYSTORE_PATH
+storePassword=REPLACE_LOCALLY
+keyAlias=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY

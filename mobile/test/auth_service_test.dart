@@ -88,24 +88,25 @@ void main() {
     },
   );
 
-  test('password change clears credentials only after success', () async {
+  test('password change replaces credentials only after success', () async {
     var reject = true;
     final service = AuthService(
       client: MockClient((request) async {
         if (request.url.path.endsWith('/login')) {
           return jsonResponse(tokens('old'));
         }
-        expect(request.url.path, '/api/v1/auth/change-password');
-        expect(jsonDecode(request.body), {
-          'currentPassword': 'old-password',
-          'newPassword': 'new-password',
-        });
+        expect(request.url.path, '/api/v1/auth/v2/password/change');
+        final body = jsonDecode(request.body) as Map;
+        expect(body['currentPassword'], 'old-password');
+        expect(body['newPassword'], 'new-password');
+        expect(body['confirmPassword'], 'new-password');
+        expect(body['device'], isA<Map>());
         if (reject) {
           return jsonResponse({
             'error': {'code': 'INVALID_CREDENTIALS'},
           }, 401);
         }
-        return http.Response('', 204);
+        return jsonResponse(tokens('changed'));
       }),
     );
     await service.login('parent@example.com', 'password');
@@ -122,10 +123,10 @@ void main() {
       currentPassword: 'old-password',
       newPassword: 'new-password',
     );
-    expect(service.signedIn, false);
+    expect(service.signedIn, true);
     expect(
       await const FlutterSecureStorage().read(key: 'auth.refresh'),
-      isNull,
+      'refresh-changed',
     );
   });
 
@@ -154,7 +155,7 @@ void main() {
           expect(body['challenge'], 'signed-challenge');
           expect(body['authorizationCode'], 'one-time-code');
           expect(body['rememberMe'], false);
-          return jsonResponse({...tokens('apple'), 'isNewUser': true});
+          return jsonResponse({...tokens('apple'), 'isNewUser': false});
         }),
       );
       expect(
@@ -163,7 +164,7 @@ void main() {
           acceptedTerms: true,
           remember: false,
         ),
-        true,
+        false,
       );
       expect(service.signedIn, true);
       expect(
@@ -172,8 +173,51 @@ void main() {
       );
       expect(calls, [
         '/api/v1/auth/social/apple/challenge',
-        '/api/v1/auth/social',
+        '/api/v1/auth/v2/social/start',
       ]);
+    },
+  );
+
+  test(
+    'late old-session refresh cannot clear the replacement password session',
+    () async {
+      final pending = Completer<http.Response>();
+      final started = Completer<void>();
+      final service = AuthService(
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/login')) {
+            return jsonResponse(tokens('old'));
+          }
+          if (request.url.path.endsWith('/refresh')) {
+            started.complete();
+            return pending.future;
+          }
+          return jsonResponse(tokens('changed'));
+        }),
+      );
+      await service.login('parent@example.com', 'password');
+      final refreshCheck = expectLater(
+        service.refresh(),
+        throwsA(
+          isA<AuthException>().having((e) => e.code, 'code', 'SESSION_CHANGED'),
+        ),
+      );
+      await started.future;
+      await service.changePassword(
+        currentPassword: 'old-password',
+        newPassword: 'new-password',
+      );
+      pending.complete(
+        jsonResponse({
+          'error': {'code': 'SESSION_REVOKED'},
+        }, 401),
+      );
+      await refreshCheck;
+      expect(service.signedIn, true);
+      expect(
+        await const FlutterSecureStorage().read(key: 'auth.refresh'),
+        'refresh-changed',
+      );
     },
   );
 

@@ -1,4 +1,11 @@
 import 'package:flutter/foundation.dart';
+
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import 'api_config.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -23,6 +30,29 @@ class SocialIdentity {
     String provider, {
     String? nonce,
   }) async {
+    if (const bool.fromEnvironment('AUTH_SIMULATION')) {
+      if (!kDebugMode) {
+        throw const SocialIdentityException('SOCIAL_AUTH_NOT_CONFIGURED');
+      }
+      final response = await http
+          .post(
+            Uri.parse('$apiBaseUrl/auth/testing/provider'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'provider': provider,
+              'nonce': nonce,
+              'account': const String.fromEnvironment(
+                'AUTH_SIMULATION_ACCOUNT',
+                defaultValue: 'parent01',
+              ),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        throw const SocialIdentityException('SOCIAL_AUTH_NOT_CONFIGURED');
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
     if (kIsWeb ||
         (defaultTargetPlatform != TargetPlatform.android &&
             defaultTargetPlatform != TargetPlatform.iOS)) {
@@ -61,7 +91,9 @@ class SocialIdentity {
         }
         if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
             e.code == GoogleSignInExceptionCode.providerConfigurationError) {
-          throw const SocialIdentityException('GOOGLE_OAUTH_CONFIGURATION_ERROR');
+          throw const SocialIdentityException(
+            'GOOGLE_OAUTH_CONFIGURATION_ERROR',
+          );
         }
         if (e.code == GoogleSignInExceptionCode.canceled) {
           throw const SocialIdentityException('SOCIAL_CANCELLED');
