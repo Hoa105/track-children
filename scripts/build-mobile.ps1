@@ -3,11 +3,19 @@ param(
     [string]$ApiBaseUrl = 'http://127.0.0.1:8000/api/v1',
     [switch]$Release,
     [switch]$NoInstall,
+    [switch]$RequireBackend,
     [string]$DeviceId = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+$api = $null
+if (-not [Uri]::TryCreate($ApiBaseUrl, [UriKind]::Absolute, [ref]$api) -or
+    $api.Scheme -notin @('http', 'https') -or
+    $api.AbsolutePath.TrimEnd('/') -ne '/api/v1' -or
+    $api.Query -or $api.Fragment) {
+    throw 'ApiBaseUrl must be an HTTP(S) URL ending in /api/v1 (without query or fragment).'
+}
 Push-Location (Join-Path $root 'mobile')
 try {
     $mode = if ($Release) { 'release' } else { 'debug' }
@@ -37,15 +45,25 @@ try {
             throw 'Multiple Android devices found. Pass -DeviceId <id>.'
         }
     }
-    $api = [Uri]$ApiBaseUrl
-    if ($api.Scheme -notin @('http', 'https') -or
-        $api.AbsolutePath.TrimEnd('/') -ne '/api/v1') {
-        throw 'ApiBaseUrl must be an HTTP(S) URL ending in /api/v1.'
-    }
-    if ($api.Host -in @('127.0.0.1', 'localhost', '::1')) {
+    $isLocalApi = $api.IsLoopback
+    if ($isLocalApi -or $RequireBackend) {
         $healthUrl = $api.GetLeftPart([UriPartial]::Authority) + '/health'
-        $health = Invoke-RestMethod $healthUrl -TimeoutSec 10
-        if ($health.status -ne 'ok') { throw "Backend is not ready at $healthUrl." }
+        try {
+            $health = Invoke-RestMethod $healthUrl -TimeoutSec 10 -ErrorAction Stop
+            if ($health.status -ne 'ok') { throw 'Health response status is not ok.' }
+            Write-Host "Backend ready: $healthUrl"
+        } catch {
+            $hint = if ($isLocalApi) {
+                "Start the backend from the backend directory: python -m uvicorn app.main:app --env-file .env --host 127.0.0.1 --port $($api.Port)."
+            } else {
+                'Check ApiBaseUrl and that the backend is running and reachable.'
+            }
+            $message = "Backend unavailable at $healthUrl. $hint"
+            if ($RequireBackend) { throw $message }
+            Write-Warning "$message Continuing APK installation; server features will be unavailable until the backend is ready."
+        }
+    }
+    if ($isLocalApi) {
         & $adb.Source -s $DeviceId reverse "tcp:$($api.Port)" "tcp:$($api.Port)"
         if ($LASTEXITCODE -ne 0) {
             throw "Could not forward localhost:$($api.Port) to device $DeviceId."

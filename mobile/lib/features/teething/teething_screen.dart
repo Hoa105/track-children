@@ -7,9 +7,12 @@ import '../../models/tooth.dart';
 import '../../services/demo_store.dart';
 import '../../services/teething_api.dart';
 import 'teething_reference_tab.dart';
+import 'teething_theme.dart';
 import 'tooth_chart.dart';
 import 'teething_date_picker.dart';
 import 'teething_age_selector.dart';
+import 'teething_stage_selector.dart';
+import 'teething_knowledge_sheet.dart';
 
 String toothDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
@@ -22,17 +25,28 @@ class TeethingScreen extends StatefulWidget {
 }
 
 class _TeethingScreenState extends State<TeethingScreen> {
-  int? _referenceMonth;
-  int? _trackingMonth;
-  int _mode = 0;
+  final _referenceMonth = ValueNotifier<int?>(null);
+  final _trackingMonth = ValueNotifier<int?>(null);
+  final _mode = ValueNotifier<int>(0);
+  late final _controls = Listenable.merge([
+    _mode,
+    _referenceMonth,
+    _trackingMonth,
+  ]);
   String get childId => widget.childId;
+
+  @override
+  void dispose() {
+    _referenceMonth.dispose();
+    _trackingMonth.dispose();
+    _mode.dispose();
+    super.dispose();
+  }
 
   void _showLatestRecords() {
     if (!mounted) return;
-    setState(() {
-      _trackingMonth = null;
-      _mode = 1;
-    });
+    _trackingMonth.value = null;
+    _mode.value = 1;
   }
 
   Future<void> _editTooth(PrimaryTooth tooth) async {
@@ -49,7 +63,9 @@ class _TeethingScreenState extends State<TeethingScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chưa kiểm tra lại được quyền truy cập.')),
+          const SnackBar(
+            content: Text('Chưa kiểm tra lại được quyền truy cập.'),
+          ),
         );
       }
     }
@@ -62,7 +78,9 @@ class _TeethingScreenState extends State<TeethingScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
+  Widget build(BuildContext context) => TeethingTheme(builder: _buildContent);
+
+  Widget _buildContent(BuildContext context) => ListenableBuilder(
     listenable: DemoStore.instance,
     builder: (context, _) {
       final store = DemoStore.instance;
@@ -75,7 +93,7 @@ class _TeethingScreenState extends State<TeethingScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: TeethingColors.textPrimary,
               ),
             ),
           ),
@@ -94,38 +112,28 @@ class _TeethingScreenState extends State<TeethingScreen> {
           dob.month -
           (now.day < dob.day ? 1 : 0);
       final currentMonth = months.clamp(0, 60);
-      final referenceMonth = (_referenceMonth ?? currentMonth).clamp(0, 60);
-      final trackingMonth = (_trackingMonth ?? currentMonth).clamp(
-        0,
-        currentMonth,
+      final referenceTab = ValueListenableBuilder<int?>(
+        valueListenable: _referenceMonth,
+        builder: (context, month, _) => TeethingReferenceTab(
+          initialAgeMonths: (month ?? currentMonth).clamp(0, 60),
+          onMonthSelected: (month) => _referenceMonth.value = month,
+        ),
       );
-      final selectedMonth = _mode == 0 ? referenceMonth : trackingMonth;
-      final cutoff = DateTime(dob.year, dob.month + trackingMonth + 1, 1);
-      final cutoffDay = dob.day.clamp(
-        1,
-        DateTime(cutoff.year, cutoff.month + 1, 0).day,
+      final trackingTab = ValueListenableBuilder<int?>(
+        valueListenable: _trackingMonth,
+        builder: (context, selectedMonth, _) => _buildTrackingTab(
+          context,
+          selectedMonth,
+          dob,
+          currentMonth,
+          canView,
+          canEdit,
+          syncStatus,
+          allRecords,
+        ),
       );
-      final endExclusive = DateTime(cutoff.year, cutoff.month, cutoffDay);
-      final records = {
-        for (final entry in allRecords.entries)
-          if (trackingMonth == currentMonth ||
-              entry.value.isBefore(endExclusive))
-            entry.key: entry.value,
-      };
-      final pending =
-          PrimaryTooth.all
-              .where((tooth) => !records.containsKey(tooth.id))
-              .toList()
-            ..sort(
-              (a, b) => a.eruptionMonths.$1.compareTo(b.eruptionMonths.$1),
-            );
-      final pairs = <int>{};
-      final upcoming = pending
-          .where((tooth) => pairs.add(tooth.pairCode))
-          .take(3)
-          .toList();
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: TeethingColors.background,
         appBar: AppBar(
           title: const FittedBox(
             fit: BoxFit.scaleDown,
@@ -135,11 +143,11 @@ class _TeethingScreenState extends State<TeethingScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: TeethingColors.textPrimary,
               ),
             ),
           ),
-          backgroundColor: AppColors.background,
+          backgroundColor: TeethingColors.background,
           scrolledUnderElevation: 0,
         ),
         bottomNavigationBar: SafeArea(
@@ -149,12 +157,13 @@ class _TeethingScreenState extends State<TeethingScreen> {
             child: Center(
               heightFactor: 1,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: _TeethingModeSwitcher(
-                  value: _mode,
-                  onChanged: (value) => setState(() {
-                    _mode = value;
-                  }),
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _mode,
+                  builder: (context, mode, _) => _TeethingModeSwitcher(
+                    value: mode,
+                    onChanged: (value) => _mode.value = value,
+                  ),
                 ),
               ),
             ),
@@ -162,154 +171,41 @@ class _TeethingScreenState extends State<TeethingScreen> {
         ),
         body: Column(
           children: [
-            TeethingAgeSelector(
-              month: selectedMonth,
-              currentMonth: currentMonth,
-              maxMonth: _mode == 1 ? currentMonth : 60,
-              onChanged: (month) => setState(() {
-                if (_mode == 0) {
-                  _referenceMonth = month;
-                } else {
-                  _trackingMonth = month;
-                }
-              }),
+            AnimatedBuilder(
+              animation: _controls,
+              builder: (context, _) => _mode.value == 0
+                  ? TeethingStageSelector(
+                      month: _referenceMonth.value ?? currentMonth,
+                      onChanged: (month) => _referenceMonth.value = month,
+                    )
+                  : TeethingAgeSelector(
+                      month: _mode.value == 0
+                          ? (_referenceMonth.value ?? currentMonth).clamp(0, 60)
+                          : (_trackingMonth.value ?? currentMonth).clamp(
+                              0,
+                              currentMonth,
+                            ),
+                      currentMonth: currentMonth,
+                      maxMonth: _mode.value == 1 ? currentMonth : 60,
+                      onChanged: (month) {
+                        if (_mode.value == 0) {
+                          _referenceMonth.value = month;
+                        } else {
+                          _trackingMonth.value = month;
+                        }
+                      },
+                    ),
             ),
             Expanded(
-              child: IndexedStack(
-                index: _mode,
-                children: [
-                  TeethingReferenceTab(
-                    initialAgeMonths: referenceMonth,
-                    onMonthSelected: (month) =>
-                        setState(() => _referenceMonth = month),
-                  ),
-                  if (!canView)
-                    _TeethingNoAccess(onRetry: _retryTeething)
-                  else
-                  ListView(
-                    key: const PageStorageKey('child-teething-tab'),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: MediaQuery.sizeOf(context).width > 650
-                          ? (MediaQuery.sizeOf(context).width - 600) / 2
-                          : 16,
-                      vertical: 16,
-                    ),
-                    children: [
-                      if (syncStatus != TeethingSyncStatus.ready &&
-                          syncStatus != TeethingSyncStatus.idle) ...[
-                        _TeethingStatusBanner(
-                          status: syncStatus,
-                          onRetry: _retryTeething,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 8),
-                              Text(
-                                'Đã mọc ${records.length}/20 răng sữa',
-                                key: const Key('child-teething-summary'),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryDark,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                canEdit
-                                    ? 'Chạm vào răng để ghi nhận hoặc sửa'
-                                    : 'Bạn đang có quyền xem dữ liệu mọc răng',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              ToothChart(
-                                eruptedIds: records.keys.toSet(),
-                                ageMonths: trackingMonth,
-                                showPairNumbers: true,
-                                onToothTap: canEdit ? _editTooth : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Material(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(22),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          key: const Key('erupted-teeth-list-button'),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => ToothListScreen(
-                                childId: childId,
-                                onRecordSaved: _showLatestRecords,
-                              ),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    '${allRecords.length}',
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primaryDark,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                const Expanded(
-                                  child: Text(
-                                    'Danh sách răng đã mọc',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primaryDark,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: AppColors.primary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (upcoming.isNotEmpty) ...[
-                        _UpcomingTeeth(teeth: upcoming),
-                        const SizedBox(height: 16),
-                      ],
-                      const _ParentReminder(),
-                    ],
-                  ),
-                ],
+              child: ValueListenableBuilder<int>(
+                valueListenable: _mode,
+                builder: (context, mode, _) => IndexedStack(
+                  index: mode,
+                  children: [
+                    TickerMode(enabled: mode == 0, child: referenceTab),
+                    TickerMode(enabled: mode == 1, child: trackingTab),
+                  ],
+                ),
               ),
             ),
           ],
@@ -317,6 +213,165 @@ class _TeethingScreenState extends State<TeethingScreen> {
       );
     },
   );
+  Widget _buildTrackingTab(
+    BuildContext context,
+    int? selectedMonth,
+    DateTime dob,
+    int currentMonth,
+    bool canView,
+    bool canEdit,
+    TeethingSyncStatus syncStatus,
+    Map<String, DateTime> allRecords,
+  ) {
+    final trackingMonth = (selectedMonth ?? currentMonth).clamp(
+      0,
+      currentMonth,
+    );
+    final cutoff = DateTime(dob.year, dob.month + trackingMonth + 1, 1);
+    final cutoffDay = dob.day.clamp(
+      1,
+      DateTime(cutoff.year, cutoff.month + 1, 0).day,
+    );
+    final endExclusive = DateTime(cutoff.year, cutoff.month, cutoffDay);
+    final records = {
+      for (final entry in allRecords.entries)
+        if (trackingMonth == currentMonth || entry.value.isBefore(endExclusive))
+          entry.key: entry.value,
+    };
+    final pending =
+        PrimaryTooth.all
+            .where((tooth) => !records.containsKey(tooth.id))
+            .toList()
+          ..sort((a, b) => a.eruptionMonths.$1.compareTo(b.eruptionMonths.$1));
+    final pairs = <int>{};
+    final upcoming = pending
+        .where((tooth) => pairs.add(tooth.pairCode))
+        .take(3)
+        .toList();
+    if (!canView) {
+      return _TeethingNoAccess(onRetry: _retryTeething);
+    }
+    return ListView(
+      key: const PageStorageKey('child-teething-tab'),
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.sizeOf(context).width > 650
+            ? (MediaQuery.sizeOf(context).width - 600) / 2
+            : 16,
+        vertical: 16,
+      ),
+      children: [
+        if (syncStatus != TeethingSyncStatus.ready &&
+            syncStatus != TeethingSyncStatus.idle) ...[
+          _TeethingStatusBanner(status: syncStatus, onRetry: _retryTeething),
+          const SizedBox(height: 12),
+        ],
+        Card(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  'Đã mọc ${records.length}/20 răng sữa',
+                  key: const Key('child-teething-summary'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: TeethingColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  canEdit
+                      ? 'Chạm vào răng để ghi nhận hoặc sửa'
+                      : 'Bạn đang có quyền xem dữ liệu mọc răng',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: TeethingColors.textSecondary,
+                  ),
+                ),
+                ToothChart(
+                  eruptedIds: records.keys.toSet(),
+                  ageMonths: trackingMonth,
+                  showPairNumbers: true,
+                  onToothTap: canEdit ? _editTooth : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Material(
+          color: TeethingColors.primarySoft,
+          borderRadius: BorderRadius.circular(22),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: const Key('erupted-teeth-list-button'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ToothListScreen(
+                  childId: childId,
+                  onRecordSaved: _showLatestRecords,
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${allRecords.length}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: TeethingColors.primaryDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text(
+                      'Danh sách răng đã mọc',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: TeethingColors.primaryDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: TeethingColors.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (upcoming.isNotEmpty) ...[
+          _UpcomingTeeth(teeth: upcoming),
+          const SizedBox(height: 16),
+        ],
+        _ParentReminder(ageMonths: currentMonth),
+      ],
+    );
+  }
 }
 
 class _TeethingNoAccess extends StatelessWidget {
@@ -330,7 +385,11 @@ class _TeethingNoAccess extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_outline_rounded, size: 52, color: AppColors.textSecondary),
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 52,
+            color: TeethingColors.textSecondary,
+          ),
           const SizedBox(height: 16),
           const Text(
             'Bạn không có quyền xem dữ liệu mọc răng của bé.',
@@ -386,19 +445,12 @@ class _TeethingModeSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Container(
-      height: 62,
-      padding: const EdgeInsets.all(5),
+      height: 52,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x140B3D2E),
-            blurRadius: 20,
-            offset: Offset(0, 7),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TeethingColors.border),
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -406,7 +458,7 @@ class _TeethingModeSwitcher extends StatelessWidget {
           AnimatedAlign(
             duration: reduceMotion
                 ? Duration.zero
-                : const Duration(milliseconds: 260),
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             alignment: value == 0
                 ? Alignment.centerLeft
@@ -416,19 +468,8 @@ class _TeethingModeSwitcher extends StatelessWidget {
               heightFactor: 1,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFEAF4EE), Color(0xFFD9EADF)],
-                  ),
-                  borderRadius: BorderRadius.circular(17),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1F286B52),
-                      blurRadius: 10,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
+                  color: TeethingColors.accent,
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
             ),
@@ -474,7 +515,7 @@ class _ModeButton extends StatelessWidget {
       selected: selected,
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -483,19 +524,17 @@ class _ModeButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: AnimatedDefaultTextStyle(
-                  duration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
+                // Do not interpolate variable-font weights every animation tick.
+                child: Text(
+                  label,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontFamily: 'Nunito',
+                    fontSize: 14,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     color: selected
-                        ? AppColors.primaryDark
-                        : AppColors.textSecondary,
+                        ? TeethingColors.primaryDark
+                        : TeethingColors.textSecondary,
                   ),
-                  child: Text(label),
                 ),
               ),
             ),
@@ -515,7 +554,7 @@ class _UpcomingTeeth extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: TeethingColors.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +564,7 @@ class _UpcomingTeeth extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: TeethingColors.textPrimary,
           ),
         ),
         const SizedBox(height: 6),
@@ -548,13 +587,13 @@ class _UpcomingTeeth extends StatelessWidget {
                         '${tooth.type.label} ${tooth.jaw == Jaw.upper ? 'hàm trên' : 'hàm dưới'}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: TeethingColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         tooth.eruptionLabel,
-                        style: const TextStyle(color: AppColors.primary),
+                        style: const TextStyle(color: TeethingColors.primary),
                       ),
                     ],
                   ),
@@ -568,14 +607,15 @@ class _UpcomingTeeth extends StatelessWidget {
 }
 
 class _ParentReminder extends StatelessWidget {
-  const _ParentReminder();
+  const _ParentReminder({required this.ageMonths});
+  final int ageMonths;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: TeethingColors.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,13 +625,13 @@ class _ParentReminder extends StatelessWidget {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: AppColors.primaryDark,
+            color: TeethingColors.primaryDark,
           ),
         ),
         const SizedBox(height: 10),
         const Text(
           'Mỗi bé có nhịp mọc răng riêng. Các mốc tuổi chỉ mang tính tham khảo.',
-          style: TextStyle(height: 1.5, color: AppColors.textSecondary),
+          style: TextStyle(height: 1.5, color: TeethingColors.textSecondary),
         ),
         const SizedBox(height: 8),
         TextButton(
@@ -600,84 +640,8 @@ class _ParentReminder extends StatelessWidget {
             isScrollControlled: true,
             useSafeArea: true,
             showDragHandle: true,
-            backgroundColor: AppColors.background,
-            builder: (context) => ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * .8,
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        tooltip: 'Đóng',
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ),
-                    const Text(
-                      'Kiến thức mọc răng',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    for (final item in const [
-                      (
-                        'Dấu hiệu mọc răng là gì?',
-                        'Bé có thể chảy nhiều nước dãi, quấy hoặc khó ngủ khi mọc răng.',
-                      ),
-                      (
-                        'Khi nào bé bắt đầu mọc răng?',
-                        'Răng sữa thường bắt đầu mọc trong khoảng 6–12 tháng. Thời điểm mọc khác nhau ở mỗi bé; các mốc trên sơ đồ chỉ mang tính tham khảo.',
-                      ),
-                      (
-                        'Khi nào cần liên hệ bác sĩ?',
-                        'Nếu bé sốt hoặc tiêu chảy, hãy liên hệ bác sĩ; không mặc định do mọc răng.',
-                      ),
-                    ])
-                      Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        child: ExpansionTile(
-                          title: Text(
-                            item.$1,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          childrenPadding: const EdgeInsets.fromLTRB(
-                            16,
-                            0,
-                            16,
-                            18,
-                          ),
-                          children: [
-                            Text(item.$2, style: const TextStyle(height: 1.5)),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Nguồn tham khảo',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    const SelectableText(
-                      'American Dental Association · MouthHealthy\nhttps://www.mouthhealthy.org/all-topics-a-z/eruption-charts\nhttps://www.mouthhealthy.org/all-topics-a-z/teething',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            backgroundColor: TeethingColors.background,
+            builder: (_) => TeethingKnowledgeSheet(ageMonths: ageMonths),
           ),
           child: const Text('Tìm hiểu thêm →'),
         ),
@@ -691,7 +655,9 @@ class ToothListScreen extends StatelessWidget {
   final String childId;
   final VoidCallback? onRecordSaved;
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
+  Widget build(BuildContext context) => TeethingTheme(builder: _buildContent);
+
+  Widget _buildContent(BuildContext context) => ListenableBuilder(
     listenable: DemoStore.instance,
     builder: (context, _) {
       final canView = DemoStore.instance.canViewTeething(childId);
@@ -714,7 +680,7 @@ class ToothListScreen extends StatelessWidget {
           PrimaryTooth.all.where((t) => records.containsKey(t.id)).toList()
             ..sort((a, b) => records[b.id]!.compareTo(records[a.id]!));
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: TeethingColors.background,
         appBar: AppBar(
           title: const FittedBox(
             fit: BoxFit.scaleDown,
@@ -723,7 +689,7 @@ class ToothListScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: TeethingColors.textPrimary,
               ),
             ),
           ),
@@ -736,8 +702,8 @@ class ToothListScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 64,
-                        height: 72,
+                        width: 80,
+                        height: 80,
                         child: ToothIllustration(erupted: false),
                       ),
                       SizedBox(height: 20),
@@ -746,14 +712,14 @@ class ToothListScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: TeethingColors.textPrimary,
                         ),
                       ),
                       SizedBox(height: 8),
                       Text(
                         'Chạm vào răng trên sơ đồ để lưu cột mốc đầu tiên.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: TeethingColors.textSecondary),
                       ),
                     ],
                   ),
@@ -771,7 +737,7 @@ class ToothListScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 20),
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
+                      color: TeethingColors.primarySoft,
                       borderRadius: BorderRadius.circular(26),
                     ),
                     child: Column(
@@ -782,7 +748,7 @@ class ToothListScreen extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.primaryDark,
+                            color: TeethingColors.primaryDark,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -792,7 +758,7 @@ class ToothListScreen extends StatelessWidget {
                             value: teeth.length / 20,
                             minHeight: 8,
                             backgroundColor: Colors.white,
-                            color: AppColors.primary,
+                            color: TeethingColors.primary,
                           ),
                         ),
                       ],
@@ -805,16 +771,18 @@ class ToothListScreen extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
-                        side: const BorderSide(color: AppColors.border),
+                        side: const BorderSide(color: TeethingColors.border),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
                         leading: Container(
                           width: 64,
                           height: 64,
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: AppColors.primarySoft.withValues(alpha: .6),
+                            color: TeethingColors.primarySoft.withValues(
+                              alpha: .6,
+                            ),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: ToothIllustration(type: t.type),
@@ -824,7 +792,7 @@ class ToothListScreen extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: TeethingColors.textPrimary,
                           ),
                         ),
                         subtitle: Column(
@@ -836,7 +804,7 @@ class ToothListScreen extends StatelessWidget {
                               '${t.jaw == Jaw.upper ? 'Hàm trên' : 'Hàm dưới'} · ${t.side == JawSide.left ? 'Bên trái' : 'Bên phải'}',
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: TeethingColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -846,13 +814,13 @@ class ToothListScreen extends StatelessWidget {
                                 vertical: 7,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
+                                color: TeethingColors.primarySoft,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 toothDate(records[t.id]!),
                                 style: const TextStyle(
-                                  color: AppColors.primaryDark,
+                                  color: TeethingColors.primaryDark,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -865,15 +833,21 @@ class ToothListScreen extends StatelessWidget {
                               ? Icons.chevron_right_rounded
                               : Icons.visibility_outlined,
                           color: canEdit
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? TeethingColors.primary
+                              : TeethingColors.textSecondary,
                         ),
-                        onTap: canEdit ? () async {
-                          if (await _openEditor(context, childId, tooth: t) ==
-                              true) {
-                            onRecordSaved?.call();
-                          }
-                        } : null,
+                        onTap: canEdit
+                            ? () async {
+                                if (await _openEditor(
+                                      context,
+                                      childId,
+                                      tooth: t,
+                                    ) ==
+                                    true) {
+                                  onRecordSaved?.call();
+                                }
+                              }
+                            : null,
                       ),
                     ),
                 ],
@@ -914,6 +888,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
   late DateTime _date;
   late final TextEditingController _note;
   bool _busy = false;
+  bool _confirmingRemoval = false;
   // A mounted editor may predate this field after a web hot reload.
   // Fall back to the saved record until the parent makes a selection.
   bool? _markedErupted;
@@ -940,6 +915,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
   }
 
   Future<void> _save() async {
+    if (_busy || _confirmingRemoval) return;
     if (_toothId == null) {
       setState(() => _error = 'Vui lòng chọn răng.');
       return;
@@ -952,23 +928,31 @@ class _ToothEditorState extends State<ToothEditorScreen> {
       return;
     }
     if (remove) {
-      final yes = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Bỏ đánh dấu răng đã mọc?'),
-          content: const Text('Bản ghi ngày mọc của răng này sẽ được xóa.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy'),
+      _confirmingRemoval = true;
+      bool? yes;
+      try {
+        yes = await showDialog<bool>(
+          context: context,
+          builder: (context) => TeethingTheme(
+            builder: (context) => AlertDialog(
+              title: const Text('Bỏ đánh dấu răng đã mọc?'),
+              content: const Text('Bản ghi ngày mọc của răng này sẽ được xóa.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Hủy'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Bỏ đánh dấu'),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Bỏ đánh dấu'),
-            ),
-          ],
-        ),
-      );
+          ),
+        );
+      } finally {
+        _confirmingRemoval = false;
+      }
       if (yes != true || !mounted) return;
     }
     setState(() {
@@ -1011,7 +995,9 @@ class _ToothEditorState extends State<ToothEditorScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => TeethingTheme(builder: _buildContent);
+
+  Widget _buildContent(BuildContext context) {
     final store = DemoStore.instance;
     final child = store.childById(widget.childId);
     final records = store.teeth(widget.childId);
@@ -1027,14 +1013,14 @@ class _ToothEditorState extends State<ToothEditorScreen> {
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: TeethingColors.background,
         appBar: AppBar(
           title: Text(
             editing ? 'Sửa răng đã mọc' : 'Ghi nhận răng đã mọc',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: TeethingColors.textPrimary,
             ),
           ),
         ),
@@ -1055,7 +1041,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
+                              color: TeethingColors.primarySoft,
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: Column(
@@ -1081,7 +1067,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                     fontSize: 16,
                                     height: 1.4,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryDark,
+                                    color: TeethingColors.primaryDark,
                                   ),
                                 ),
                               ],
@@ -1123,7 +1109,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                                   value: status.$1,
                                                   enabled: !_busy,
                                                   activeColor:
-                                                      AppColors.primary,
+                                                      TeethingColors.primary,
                                                 ),
                                               ),
                                             ),
@@ -1137,7 +1123,8 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w600,
-                                                  color: AppColors.primaryDark,
+                                                  color: TeethingColors
+                                                      .primaryDark,
                                                 ),
                                               ),
                                             ),
@@ -1182,7 +1169,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                             maxLength: 1000,
                             textCapitalization: TextCapitalization.sentences,
                             style: const TextStyle(
-                              color: AppColors.textPrimary,
+                              color: TeethingColors.textPrimary,
                               fontSize: 16,
                               height: 1.5,
                             ),
@@ -1190,7 +1177,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                               labelText: 'Ghi chú',
                               hintText: 'Nhập ghi chú về lần mọc răng của bé…',
                               hintStyle: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: TeethingColors.textSecondary,
                               ),
                               counterText: '',
                               alignLabelWithHint: true,
@@ -1200,7 +1187,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.all(18),
                               labelStyle: TextStyle(
-                                color: AppColors.primaryDark,
+                                color: TeethingColors.primaryDark,
                                 fontWeight: FontWeight.w600,
                               ),
                               border: OutlineInputBorder(
@@ -1220,7 +1207,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                   Radius.circular(18),
                                 ),
                                 borderSide: BorderSide(
-                                  color: AppColors.primary,
+                                  color: TeethingColors.primary,
                                   width: 1.5,
                                 ),
                               ),
@@ -1234,7 +1221,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                                   'Ngày mọc',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryDark,
+                                    color: TeethingColors.primaryDark,
                                   ),
                                 ),
                               ),
@@ -1279,7 +1266,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
               key: const Key('tooth-editor-footer'),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border)),
+                border: Border(top: BorderSide(color: TeethingColors.border)),
               ),
               child: SafeArea(
                 top: false,
@@ -1304,7 +1291,7 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                           FilledButton(
                             key: const Key('save-tooth-button'),
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: TeethingColors.primary,
                               minimumSize: const Size.fromHeight(56),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               textStyle: const TextStyle(

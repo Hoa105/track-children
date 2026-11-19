@@ -58,6 +58,20 @@ abstract final class StartColors {
   static const slogan = HomeColors.reminderCta;
 }
 
+/// Green Sprout palette scoped to teething; shared app colors stay unchanged.
+abstract final class TeethingColors {
+  static const background = HomeColors.background;
+  static const surface = HomeColors.surface;
+  static const primary = HomeColors.primary;
+  static const primaryDark = HomeColors.ink;
+  static const primarySoft = HomeColors.reminderBackground;
+  static const textPrimary = HomeColors.ink;
+  static const textSecondary = HomeColors.reminderCta;
+  static const border = HomeColors.iconBackground;
+  static const accent = HomeColors.milestoneAccent;
+  static const iconBackground = HomeColors.iconBackground;
+}
+
 /// Green Sprout palette scoped to child profile selection.
 abstract final class ChildProfileSelectionColors {
   static const background = HomeColors.background;

@@ -7,6 +7,7 @@ import 'package:track_children/models/tooth.dart';
 import 'package:track_children/services/demo_store.dart';
 import 'package:track_children/services/teething_api.dart';
 import 'package:track_children/features/teething/teething_screen.dart';
+import 'package:track_children/features/teething/teething_knowledge_sheet.dart';
 import 'package:track_children/features/teething/teething_age_selector.dart';
 import 'package:track_children/features/teething/tooth_chart.dart';
 import 'package:track_children/features/teething/teething_date_picker.dart';
@@ -84,6 +85,7 @@ void main() {
       await tester.tap(find.text('Tìm hiểu thêm →'));
       await tester.pumpAndSettle();
       expect(find.text('Kiến thức mọc răng'), findsOneWidget);
+      expect(find.byType(TeethingKnowledgeSheet), findsOneWidget);
       await tester.tap(find.text('Dấu hiệu mọc răng là gì?'));
       await tester.pumpAndSettle();
       expect(
@@ -268,16 +270,16 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: TeethingScreen(childId: id)));
       await tester.pumpAndSettle();
       final ages = find.descendant(
-        of: find.byKey(const Key('teething-age-selector')),
+        of: find.byType(TeethingAgeSelector),
         matching: find.byType(Scrollable),
       );
       await tester.scrollUntilVisible(
-        find.byKey(const Key('reference-age-6')),
+        find.byKey(const Key('reference-stage-S03')),
         -150,
         scrollable: ages,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('reference-age-6')));
+      await tester.tap(find.byKey(const Key('reference-stage-S03')));
       await tester.pumpAndSettle();
       final referenceTooth = PrimaryTooth.all.firstWhere(
         (tooth) => tooth.eruptionMonths.$1 == 6,
@@ -333,15 +335,15 @@ void main() {
         tester
             .widget<TeethingAgeSelector>(find.byType(TeethingAgeSelector))
             .month,
-        16,
+        13,
       );
       await tester.scrollUntilVisible(
-        find.byKey(const Key('reference-age-60')),
+        find.byKey(const Key('reference-stage-S09')),
         250,
         scrollable: ages,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('reference-age-60')));
+      await tester.tap(find.byKey(const Key('reference-stage-S09')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Răng của bé'));
       await tester.pumpAndSettle();
@@ -354,6 +356,26 @@ void main() {
         PrimaryTooth.all[0].id,
       });
       expect(store.teeth(id), hasLength(2));
+      // Knowledge follows the child's real age, not the selected history month.
+      await tester.scrollUntilVisible(
+        find.text('Tìm hiểu thêm →'),
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const PageStorageKey('child-teething-tab')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tìm hiểu thêm →'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TeethingKnowledgeSheet>(find.byType(TeethingKnowledgeSheet))
+            .ageMonths,
+        selector.currentMonth,
+      );
+      await tester.tap(find.byTooltip('Đóng'));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     },
   );
@@ -459,13 +481,21 @@ void main() {
       tester.widget<ToothChart>(find.byType(ToothChart)).onToothTap,
       isNull,
     );
-    await tester.tap(find.byKey(const Key('erupted-teeth-list-button')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ToothEditorScreen), findsNothing);
-    expect(
-      tester.widget<ListTile>(find.byType(ListTile).last).onTap,
-      isNull,
+    final listButton = find.byKey(const Key('erupted-teeth-list-button'));
+    await tester.scrollUntilVisible(
+      listButton,
+      200,
+      scrollable: find.descendant(
+        of: find.byKey(const PageStorageKey('child-teething-tab')),
+        matching: find.byType(Scrollable),
+      ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(listButton);
+    await tester.pumpAndSettle();
+    expect(find.byType(ToothListScreen), findsOneWidget);
+    expect(find.byType(ToothEditorScreen), findsNothing);
+    expect(tester.widget<ListTile>(find.byType(ListTile).last).onTap, isNull);
   });
 
   test('view-only caregiver cannot bypass the UI to save a tooth', () async {

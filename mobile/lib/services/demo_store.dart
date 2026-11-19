@@ -68,6 +68,7 @@ class DemoStore extends ChangeNotifier {
   Future<void>? _queue;
   final Map<String, int> _growthRevisions = {};
   late final _TeethingStore _teething = _TeethingStore(this);
+  int _ownerEpoch = 0;
   Map<String, dynamic> _copy(Map value) =>
       Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
   List<Map<String, dynamic>> get _parents =>
@@ -95,9 +96,15 @@ class DemoStore extends ChangeNotifier {
   }
 
   Map<String, dynamic>? childById(String id) {
-    final found = children.where((c) => c['id'] == id);
-    return found.isEmpty ? null : found.first;
+    final found = _findChild(id);
+    return found == null ? null : _copy(found);
   }
+
+  // Filter before copying; do not serialize unrelated children's media/journals.
+  // Internal readers must not mutate this map outside _write.
+  Map<String, dynamic>? _findChild(String id) => _children
+      .where((c) => c['parentId'] == _data['parentId'] && c['id'] == id)
+      .firstOrNull;
 
   String teethingAccess(String childId) => _teething.access(childId);
   bool canViewTeething(String childId) => _teething.canView(childId);
@@ -135,6 +142,10 @@ class DemoStore extends ChangeNotifier {
       final next = _copy(_data);
       change(next);
       await _cache.save(next);
+      if (_data['parentId'] != next['parentId']) {
+        _ownerEpoch++;
+        _teething.clearStatus();
+      }
       _data = next;
       notifyListeners();
     })();
@@ -283,7 +294,9 @@ class DemoStore extends ChangeNotifier {
     };
     for (final profile in profiles) {
       if (linked.contains(profile['id'])) continue;
-      (d['children'] as List).removeWhere((c) => c['id'] == profile['id']);
+      (d['children'] as List).removeWhere(
+        (c) => c['id'] == profile['id'] && c['parentId'] == owner,
+      );
       (d['children'] as List).add(GrowthApi.childFromApi(profile, owner));
     }
   });
@@ -1044,12 +1057,12 @@ class DemoStore extends ChangeNotifier {
   }
 
   Map<String, DateTime> teeth(String id) => {
-    for (final r in (childById(id)?['teeth'] ?? []) as List)
+    for (final r in (_findChild(id)?['teeth'] ?? []) as List)
       r['toothId'] as String: DateTime.parse(r['date'] as String),
   };
 
   String toothNote(String id, String? toothId) {
-    for (final record in (childById(id)?['teeth'] ?? []) as List) {
+    for (final record in (_findChild(id)?['teeth'] ?? []) as List) {
       if (record['toothId'] == toothId) return record['note'] as String? ?? '';
     }
     return '';
@@ -1354,6 +1367,8 @@ class DemoStore extends ChangeNotifier {
     DateTime date, {
     String? note,
   }) async {
+    final owner = _data['parentId'];
+    final epoch = _ownerEpoch;
     final savedNote = (note ?? toothNote(id, toothId)).trim();
     if (savedNote.runes.length > 1000) {
       throw ArgumentError('Ghi chú tối đa 1000 ký tự');
@@ -1372,12 +1387,20 @@ class DemoStore extends ChangeNotifier {
     final remote = teethingRemote;
     if (remote != null) {
       final account = await _account(id);
+      if (_ownerEpoch != epoch || _data['parentId'] != owner || !canEditTeething(id)) {
+        throw StateError('Quyền truy cập đã thay đổi.');
+      }
       if (account != null) {
         await remote.save(account, toothId, day, note: savedNote);
       }
     }
     await _write((d) {
-      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      if (_ownerEpoch != epoch || d['parentId'] != owner || !canEditTeething(id)) {
+        throw StateError('Quyền truy cập đã thay đổi.');
+      }
+      final c = (d['children'] as List).firstWhere(
+        (c) => c['id'] == id && c['parentId'] == owner,
+      );
       final records = c.putIfAbsent('teeth', () => <dynamic>[]) as List;
       records.removeWhere((r) => r['toothId'] == toothId);
       records.add({
@@ -1390,6 +1413,8 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> removeTooth(String id, String toothId) async {
+    final owner = _data['parentId'];
+    final epoch = _ownerEpoch;
     if (childById(id) == null) throw StateError('Không có quyền sửa hồ sơ');
     if (!canEditTeething(id)) {
       throw StateError('Bạn chỉ có quyền xem mục này');
@@ -1397,10 +1422,18 @@ class DemoStore extends ChangeNotifier {
     final remote = teethingRemote;
     if (remote != null) {
       final account = await _account(id);
+      if (_ownerEpoch != epoch || _data['parentId'] != owner || !canEditTeething(id)) {
+        throw StateError('Quyền truy cập đã thay đổi.');
+      }
       if (account != null) await remote.remove(account, toothId);
     }
     await _write((d) {
-      final c = (d['children'] as List).firstWhere((c) => c['id'] == id);
+      if (_ownerEpoch != epoch || d['parentId'] != owner || !canEditTeething(id)) {
+        throw StateError('Quyền truy cập đã thay đổi.');
+      }
+      final c = (d['children'] as List).firstWhere(
+        (c) => c['id'] == id && c['parentId'] == owner,
+      );
       (c['teeth'] as List?)?.removeWhere((r) => r['toothId'] == toothId);
       _teething.markChanged(id);
     });
@@ -1408,6 +1441,15 @@ class DemoStore extends ChangeNotifier {
 
   /// Replaces the local cache with the authenticated backend copy.
   Future<bool> syncTeeth(String childId) async {
+    final owner = _data['parentId'];
+    final epoch = _ownerEpoch;
+    bool sameSession() => _ownerEpoch == epoch && _data['parentId'] == owner;
+    bool readable() {
+      if (!sameSession()) return false;
+      if (canViewTeething(childId)) return true;
+      _teething.setStatus(childId, TeethingSyncStatus.noAccess);
+      return false;
+    }
     final remote = teethingRemote;
     if (remote == null) return false;
     if (!canViewTeething(childId)) {
@@ -1418,17 +1460,19 @@ class DemoStore extends ChangeNotifier {
     final revision = _teething.revision(childId);
     try {
       final account = await _account(childId);
-      if (account == null) return false;
+      if (account == null || !readable()) return false;
       final firstSync = !((_data['teethingSynced'] as List?) ?? const [])
           .contains(childId);
       final local = teeth(childId);
       var records = await remote.fetch(account);
+      if (!readable()) return false;
       if (_teething.revision(childId) != revision) return false;
       if (firstSync && canEditTeething(childId)) {
         final missing = local.entries
             .where((entry) => !records.containsKey(entry.key))
             .toList();
         for (final entry in missing) {
+          if (!readable() || !canEditTeething(childId) || _teething.revision(childId) != revision) return false;
           await remote.save(
             account,
             entry.key,
@@ -1438,12 +1482,13 @@ class DemoStore extends ChangeNotifier {
         }
         if (missing.isNotEmpty) records = await remote.fetch(account);
       }
+      if (!readable()) return false;
       if (childById(childId) == null) return false;
       var applied = false;
       await _write((d) {
-        if (_teething.revision(childId) != revision) return;
+        if (!readable() || _teething.revision(childId) != revision) return;
         final child = (d['children'] as List).firstWhere(
-          (item) => item['id'] == childId,
+          (item) => item['id'] == childId && item['parentId'] == owner,
         );
         child['teeth'] = [
           for (final entry in records.entries)
@@ -1457,13 +1502,17 @@ class DemoStore extends ChangeNotifier {
         d['teethingSynced'] = (synced..add(childId)).toList();
         applied = true;
       });
-      _teething.setStatus(childId, TeethingSyncStatus.ready);
+      if (sameSession() && canViewTeething(childId)) {
+        _teething.setStatus(childId, TeethingSyncStatus.ready);
+      }
       return applied;
     } on AuthException catch (error) {
+      if (!readable()) return false;
       if (error.code == 'HTTP_404') {
         await _write((d) {
+          if (!sameSession()) return;
           final matches = (d['children'] as List).where(
-            (item) => item['id'] == childId,
+            (item) => item['id'] == childId && item['parentId'] == owner,
           );
           if (matches.isNotEmpty) {
             matches.first['teeth'] = <dynamic>[];
@@ -1479,10 +1528,13 @@ class DemoStore extends ChangeNotifier {
       }
       return false;
     } catch (_) {
+      if (!readable()) return false;
       _teething.setStatus(childId, TeethingSyncStatus.failed);
       return false;
     }
   }
+
+  void _notifyTeethingStatusChanged() => notifyListeners();
 
   Future<void> saveSharing(
     String id,
@@ -1514,9 +1566,10 @@ final class _TeethingStore {
   final DemoStore root;
   final Map<String, int> _revisions = {};
   final Map<String, TeethingSyncStatus> _statuses = {};
+  void clearStatus() => _statuses.clear();
 
   String access(String childId) {
-    final profile = root.childById(childId);
+    final profile = root._findChild(childId);
     if (profile == null) return 'none';
     if (profile['server'] != true) return 'edit';
     return profile['teethingAccess'] as String? ?? 'none';
@@ -1542,7 +1595,7 @@ final class _TeethingStore {
   void setStatus(String childId, TeethingSyncStatus status) {
     if (_statuses[childId] == status) return;
     _statuses[childId] = status;
-    root.notifyListeners();
+    root._notifyTeethingStatusChanged();
   }
 
   Future<void> refreshAccess(String childId) async {

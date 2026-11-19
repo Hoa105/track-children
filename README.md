@@ -1,5 +1,7 @@
 # Track Children
 
+Hệ màu giao diện mobile: [APP_COLORS.md](docs/APP_COLORS.md).
+
 Ứng dụng hỗ trợ phụ huynh và người chăm sóc theo dõi sức khỏe, sự phát triển
 và các hoạt động hằng ngày của trẻ.
 
@@ -105,6 +107,10 @@ Build APK nhanh trên Windows:
 ```powershell
 .\scripts\build-mobile.ps1
 ```
+
+Backend localhost chưa chạy sẽ hiện cảnh báo nhưng không chặn cài APK. Các chức năng
+cần máy chủ chỉ hoạt động khi backend sẵn sàng. Dùng `-RequireBackend` nếu muốn
+dừng cài đặt khi kiểm tra `/health` thất bại.
 
 Trong Git Bash:
 

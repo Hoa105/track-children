@@ -35,6 +35,12 @@ class ToothChart extends StatelessWidget {
       final a = width / 2 - (width * .08 + 6);
       final b = height / 2 - 50;
       final angles = _archAngles(a, b);
+      final selectedPairCode = selectedReferenceId == null
+          ? null
+          : PrimaryTooth.all
+                .where((tooth) => tooth.id == selectedReferenceId)
+                .firstOrNull
+                ?.pairCode;
       return RepaintBoundary(
         child: SizedBox(
           height: height,
@@ -42,12 +48,21 @@ class ToothChart extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: RepaintBoundary(
-                  child: CustomPaint(painter: _MouthPainter()),
+                  child: CustomPaint(isComplex: true, painter: _MouthPainter()),
                 ),
               ),
               for (final jaw in Jaw.values)
                 for (var i = 0; i < 10; i++)
-                  _positionTooth(context, jaw, i, center, a, b, angles[i]),
+                  _positionTooth(
+                    context,
+                    jaw,
+                    i,
+                    center,
+                    a,
+                    b,
+                    angles[i],
+                    selectedPairCode,
+                  ),
             ],
           ),
         ),
@@ -63,6 +78,7 @@ class ToothChart extends StatelessWidget {
     double a,
     double b,
     double theta,
+    int? selectedPairCode,
   ) {
     final type = ToothType.values[i < 5 ? 4 - i : i - 5];
     final tooth = PrimaryTooth(jaw, i < 5 ? JawSide.right : JawSide.left, type);
@@ -76,12 +92,6 @@ class ToothChart extends StatelessWidget {
     final expected = referenceIds == null
         ? !erupted && tooth.eruptionMonths.$1 <= ageMonths
         : reference;
-    final selectedPairCode = selectedReferenceId == null
-        ? null
-        : PrimaryTooth.all
-              .where((item) => item.id == selectedReferenceId)
-              .firstOrNull
-              ?.pairCode;
     final selectedReference =
         referenceIds != null && selectedPairCode == tooth.pairCode;
     final state = referenceIds != null
@@ -116,10 +126,14 @@ class ToothChart extends StatelessWidget {
             child: AnimatedOpacity(
               duration: MediaQuery.disableAnimationsOf(context)
                   ? Duration.zero
-                  : const Duration(milliseconds: 250),
+                  : const Duration(milliseconds: 120),
               opacity: referenceIds != null
                   ? (reference ? 1 : .55)
-                  : (erupted ? 1 : .55),
+                  : (erupted
+                        ? 1
+                        : expected
+                        ? .72
+                        : .55),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -153,7 +167,7 @@ class ToothChart extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: referenceIds != null && !reference
                                 ? const Color(0xFFC5AAAD)
-                                : AppColors.primary,
+                                : TeethingColors.primary,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 1.2),
                           ),
@@ -181,7 +195,12 @@ class ToothChart extends StatelessWidget {
   }
 
   // Calculate the arc table once for both jaws, rather than for every tooth.
+  static final _angleCache = <(double, double), List<double>>{};
+
   static List<double> _archAngles(double a, double b) {
+    final key = (a, b);
+    final cached = _angleCache[key];
+    if (cached != null) return cached;
     const steps = 200;
     final lengths = <double>[0];
     var previous = Offset(-a, 0);
@@ -191,7 +210,7 @@ class ToothChart extends StatelessWidget {
       lengths.add(lengths.last + (point - previous).distance);
       previous = point;
     }
-    return List.generate(10, (index) {
+    final angles = List.generate(10, (index) {
       final target = lengths.last * (index + .5) / 10;
       final segment = lengths.indexWhere((length) => length >= target);
       final fraction =
@@ -199,6 +218,10 @@ class ToothChart extends StatelessWidget {
           (lengths[segment] - lengths[segment - 1]);
       return math.pi - (segment - 1 + fraction) * math.pi / steps;
     });
+    // Bound retained geometry when rotating/resizing the viewport.
+    if (_angleCache.length >= 8) _angleCache.remove(_angleCache.keys.first);
+    _angleCache[key] = angles;
+    return angles;
   }
 }
 
@@ -221,23 +244,11 @@ class ToothIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = selectedReference
-        ? const _ToothColors(
-            Colors.white,
-            Colors.white,
-            AppColors.primary,
-          )
+        ? const _ToothColors(Colors.white, Colors.white, TeethingColors.primary)
         : reference
-        ? const _ToothColors(
-            Colors.white,
-            Colors.white,
-            Color(0xFFE58FA3),
-          )
+        ? const _ToothColors(Colors.white, Colors.white, Color(0xFFE58FA3))
         : erupted
-        ? const _ToothColors(
-            Colors.white,
-            Color(0xFFFFF0F3),
-            Color(0xFFE58FA3),
-          )
+        ? const _ToothColors(Colors.white, Color(0xFFFFF0F3), Color(0xFFE58FA3))
         : _ToothColors(
             const Color(0xFFFFFEFB),
             const Color(0xFFF0E9E2),
@@ -247,18 +258,20 @@ class ToothIllustration extends StatelessWidget {
       tween: _ToothColorsTween(begin: colors, end: colors),
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
-          : const Duration(milliseconds: 320),
+          : const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
-      builder: (context, value, _) => CustomPaint(
-        size: const Size(40, 40),
-        painter: _ToothPainter(
-          type,
-          erupted,
-          expected,
-          reference,
-          selectedReference,
-          value,
-          faceRotation,
+      builder: (context, value, _) => RepaintBoundary(
+        child: CustomPaint(
+          size: const Size(40, 40),
+          painter: _ToothPainter(
+            type,
+            erupted,
+            expected,
+            reference,
+            selectedReference,
+            value,
+            faceRotation,
+          ),
         ),
       ),
     );
@@ -490,7 +503,10 @@ class _ToothPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
-    canvas.scale(size.width / 40, size.height / 40);
+    // Fit the square artwork inside rectangular icon slots without stretching.
+    final side = math.min(size.width, size.height);
+    canvas.translate((size.width - side) / 2, (size.height - side) / 2);
+    canvas.scale(side / 40, side / 40);
     final molar = type == ToothType.firstMolar || type == ToothType.secondMolar;
     final canine = type == ToothType.canine;
     final path = Path();
@@ -629,7 +645,10 @@ class _LegendDot extends StatelessWidget {
       const SizedBox(width: 6),
       Text(
         label,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: const TextStyle(
+          fontSize: 12,
+          color: TeethingColors.textSecondary,
+        ),
       ),
     ],
   );
@@ -659,8 +678,8 @@ class ToothChartLegend extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: item.$2 == 'Đã mọc'
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
+                      ? TeethingColors.primary
+                      : TeethingColors.textSecondary,
                   fontWeight: item.$2 == 'Đã mọc'
                       ? FontWeight.w600
                       : FontWeight.w400,

@@ -45,7 +45,7 @@ class TeethingDatePicker extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: TeethingColors.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
@@ -71,7 +71,7 @@ class TeethingDatePicker extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: TeethingColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,10 +165,10 @@ class _NumberWheelState extends State<_NumberWheel> {
     selectionOverlay: Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: AppColors.primarySoft.withValues(alpha: .35),
+        color: TeethingColors.primarySoft.withValues(alpha: .35),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: .45),
+          color: TeethingColors.primary.withValues(alpha: .45),
           width: 1.5,
         ),
       ),
@@ -189,8 +189,8 @@ class _NumberWheelState extends State<_NumberWheel> {
                       ? FontWeight.w800
                       : FontWeight.w400,
                   color: n == widget.selected
-                      ? AppColors.primaryDark
-                      : AppColors.textSecondary,
+                      ? TeethingColors.primaryDark
+                      : TeethingColors.textSecondary,
                 ),
               ),
             ),

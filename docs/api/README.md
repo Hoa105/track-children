@@ -61,18 +61,8 @@ tháng đóng gói trong ứng dụng và không gửi dữ liệu trẻ lên m�
 
 ## Mobile growth
 
-[OpenAPI 3.1 YAML](mobile-growth.openapi.yaml) l? ??c t? ??c l?p cho API growth.
-Ch?nh s?a tr?c ti?p file YAML; kh?ng c?n c?c t?i li?u growth ngu?n ?? x?a.
-
-C?i dependency v? ki?m tra ??c t? t? th? m?c g?c d? ?n:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
-.\.venv\Scripts\python.exe docs/api/tools/validate_growth_openapi.py
-```
-
-Validator ki?m tra OpenAPI, references, examples, t?nh nh?t qu?n enum/reason
-v? c?c tr??ng h?p d? li?u sai; kh?ng ki?m tra endpoint ?ang ch?y.
+[OpenAPI 3.1 YAML](mobile-growth.openapi.yaml) là đặc tả độc lập cho API tăng trưởng.
+Chỉnh sửa trực tiếp file YAML; không cần các tài liệu nguồn về tăng trưởng đã xóa.
 
 ## Mobile auth
 
