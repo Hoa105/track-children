@@ -1156,6 +1156,15 @@ class DemoStore extends ChangeNotifier {
     );
   }
 
+  /// Existing server identity only; never registers or creates a profile.
+  /// Resolve within the active owner's cache so another account cannot reuse it.
+  String? serverChildId(String childId) {
+    if (_findChild(childId) == null) return null;
+    if (_uuid.hasMatch(childId)) return childId;
+    return demoServerIds[childId] ??
+        (_data['serverIds'] as Map?)?[childId] as String?;
+  }
+
   /// Backend uuids for local parent / child ids: ids that already are backend
   /// uuids (server-authenticated user), the seeded demo ids, else a uuid
   /// generated once on this device (registered via VaccinationRemote.link).

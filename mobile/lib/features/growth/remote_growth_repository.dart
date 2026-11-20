@@ -49,7 +49,10 @@ class RemoteGrowthRepository {
             : () =>
                   owner != null &&
                   AuthService.instance.user?['id'] == owner &&
-                  DemoStore.instance.child?['id'] == childId);
+                  DemoStore.instance.serverChildId(
+                        DemoStore.instance.child?['id'] as String? ?? '',
+                      ) ==
+                      childId);
   }
   final String childId;
   late final GrowthTransport _send;

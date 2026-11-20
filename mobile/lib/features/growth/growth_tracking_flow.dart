@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../services/auth_service.dart';
 import 'growth_repository.dart';
+import 'growth_measurement_chart.dart';
 
 Color trackingMetricColor(GrowthMetric metric) => switch (metric) {
   GrowthMetric.weight => const Color(0xFFE58C45),
@@ -42,6 +43,20 @@ String trackingError(Object error) {
     };
   }
   return 'Chưa thực hiện được. Vui lòng thử lại.';
+}
+
+const _invalidMeasurementDate = 'Ngày đo phải từ ngày sinh đến hôm nay.';
+const _missingMeasurementBirth =
+    'Chưa tải được ngày sinh của bé. Vui lòng thử lại.';
+
+String? _measurementDateError(DateTime day, DateTime? birth) {
+  if (birth == null) return _missingMeasurementBirth;
+  final date = DateUtils.dateOnly(day);
+  final first = DateUtils.dateOnly(birth);
+  final last = DateUtils.dateOnly(DateTime.now());
+  return date.isBefore(first) || date.isAfter(last) || first.isAfter(last)
+      ? _invalidMeasurementDate
+      : null;
 }
 
 Future<DateTime?> pickTrackingDate(
@@ -349,11 +364,17 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
   }
 
   Future<void> _pickDate() async {
-    final first = DateUtils.dateOnly(
-      widget.repository.dateOfBirth ?? DateTime(1900),
-    );
+    final birth = widget.repository.dateOfBirth;
+    if (birth == null) {
+      setState(() => _error = _missingMeasurementBirth);
+      return;
+    }
+    final first = DateUtils.dateOnly(birth);
     final last = DateUtils.dateOnly(DateTime.now());
-    if (first.isAfter(last)) return;
+    if (first.isAfter(last)) {
+      setState(() => _error = _invalidMeasurementDate);
+      return;
+    }
     final chosen = await pickTrackingDate(
       context,
       initialDate: _day.isBefore(first)
@@ -378,10 +399,12 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
       setState(() => _error = 'Mẹ hãy xác nhận bé được đo nằm hay đứng.');
       return;
     }
-    final birth = widget.repository.dateOfBirth;
-    if (_day.isAfter(DateUtils.dateOnly(DateTime.now())) ||
-        birth != null && _day.isBefore(DateUtils.dateOnly(birth))) {
-      setState(() => _error = 'Ngày đo phải từ ngày sinh đến hôm nay.');
+    final dateError = _measurementDateError(
+      _day,
+      widget.repository.dateOfBirth,
+    );
+    if (dateError != null) {
+      setState(() => _error = dateError);
       return;
     }
     setState(() {
@@ -533,25 +556,17 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                     borderRadius: BorderRadius.circular(12),
                     onTap: _busy ? null : _delete,
                     child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.delete_forever_rounded,
-                            size: 18,
-                            color: Color(0xFFDC2626),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Xóa',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFDC2626),
-                            ),
-                          ),
-                        ],
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        'Xóa',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFDC2626),
+                        ),
                       ),
                     ),
                   ),
@@ -830,11 +845,17 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
   }
 
   Future<void> _pickDate() async {
-    final first = DateUtils.dateOnly(
-      widget.repository.dateOfBirth ?? DateTime(1900),
-    );
+    final birth = widget.repository.dateOfBirth;
+    if (birth == null) {
+      setState(() => _error = _missingMeasurementBirth);
+      return;
+    }
+    final first = DateUtils.dateOnly(birth);
     final last = DateUtils.dateOnly(DateTime.now());
-    if (first.isAfter(last)) return;
+    if (first.isAfter(last)) {
+      setState(() => _error = _invalidMeasurementDate);
+      return;
+    }
     final chosen = await pickTrackingDate(
       context,
       initialDate: _day.isBefore(first)
@@ -884,6 +905,14 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
 
   Future<void> _save() async {
     if (_busy || !_form.currentState!.validate()) return;
+    final dateError = _measurementDateError(
+      _day,
+      widget.repository.dateOfBirth,
+    );
+    if (dateError != null) {
+      setState(() => _error = dateError);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -1099,6 +1128,7 @@ class TrackingHistoryScreen extends StatefulWidget {
 }
 
 class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
+  bool _chartPinching = false;
   late Future<List<GrowthMeasurementDraft>> _data = _load();
   Future<List<GrowthMeasurementDraft>> _load() async {
     await widget.repository.refreshMeasurements();
@@ -1129,184 +1159,231 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(
+  Widget build(BuildContext context) => DefaultTabController(
+    length: 2,
+    child: Scaffold(
       backgroundColor: AppColors.background,
-      scrolledUnderElevation: 0,
-      title: Text(widget.metric.title),
-      actions: [
-        if (widget.repository.canEdit)
-          IconButton(
-            tooltip: 'Ghi số đo',
-            onPressed: _edit,
-            icon: const Icon(Icons.add),
-          ),
-      ],
-    ),
-    body: FutureBuilder<List<GrowthMeasurementDraft>>(
-      future: _data,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: TextButton(
-              onPressed: _reload,
-              child: const Text('Chưa tải được. Thử lại'),
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        scrolledUnderElevation: 0,
+        title: Text(widget.metric.title),
+        bottom: const TabBar(
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.primary,
+          tabs: [
+            Tab(text: 'Biểu đồ'),
+            Tab(text: 'Lịch sử'),
+          ],
+        ),
+        actions: [
+          if (widget.repository.canEdit)
+            IconButton(
+              tooltip: 'Ghi số đo',
+              onPressed: _edit,
+              icon: const Icon(Icons.add),
             ),
-          );
-        }
-        final rows = snapshot.data!;
-        if (rows.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Card(
-                elevation: 0,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  side: const BorderSide(color: AppColors.border),
+        ],
+      ),
+      body: FutureBuilder<List<GrowthMeasurementDraft>>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: TextButton(
+                onPressed: _reload,
+                child: const Text('Chưa tải được. Thử lại'),
+              ),
+            );
+          }
+          final rows = snapshot.data!;
+          return TabBarView(
+            physics: _chartPinching
+                ? const NeverScrollableScrollPhysics()
+                : null,
+            children: [
+              RefreshIndicator(
+                onRefresh: () async {
+                  _reload();
+                  await _data;
+                },
+                child: SingleChildScrollView(
+                  key: const PageStorageKey('metric-chart'),
+                  physics: _chartPinching
+                      ? const NeverScrollableScrollPhysics()
+                      : const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 24),
+                  child: GrowthMeasurementChart(
+                    rows: rows,
+                    birth: widget.repository.dateOfBirth,
+                    metric: widget.metric,
+                    onPinchingChanged: (active) {
+                      if (mounted && _chartPinching != active) {
+                        setState(() => _chartPinching = active);
+                      }
+                    },
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
+              ),
+              _history(rows),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _history(List<GrowthMeasurementDraft> rows) {
+    if (rows.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    trackingMetricIcon(widget.metric),
+                    size: 48,
+                    color: trackingMetricColor(widget.metric),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Chưa có số đo',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Thêm số đo đầu tiên để theo dõi sự phát triển của bé.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  if (widget.repository.canEdit) ...[
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () => _edit(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Thêm số đo'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () async {
+        _reload();
+        await _data;
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: rows.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          return Card(
+            elevation: 0,
+            color: Colors.white,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: widget.repository.canEdit ? () => _edit(row) : null,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: trackingMetricColor(widget.metric).withAlpha(25),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
                         trackingMetricIcon(widget.metric),
-                        size: 48,
                         color: trackingMetricColor(widget.metric),
                       ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'Chưa có số đo',
-                        style: TextStyle(
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            trackingDate(row.measuredAt),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (widget.metric == GrowthMetric.lengthHeight)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                row.method == GrowthMeasurementMethod.recumbent
+                                    ? 'Đo nằm'
+                                    : 'Đo đứng',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: Text(
+                        '${trackingValue(row.value)} ${widget.metric.unit}',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Thêm số đo đầu tiên để theo dõi sự phát triển của bé.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                      if (widget.repository.canEdit) ...[
-                        const SizedBox(height: 18),
-                        FilledButton.icon(
-                          onPressed: () => _edit(),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Thêm số đo'),
+                    ),
+                    if (widget.repository.canEdit)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.primary,
                         ),
-                      ],
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
           );
-        }
-        return RefreshIndicator(
-          onRefresh: () async {
-            _reload();
-            await _data;
-          },
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: rows.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final row = rows[index];
-              return Card(
-                elevation: 0,
-                color: Colors.white,
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  side: const BorderSide(color: AppColors.border),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: widget.repository.canEdit ? () => _edit(row) : null,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: trackingMetricColor(widget.metric)
-                                .withAlpha(25),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            trackingMetricIcon(widget.metric),
-                            color: trackingMetricColor(widget.metric),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                trackingDate(row.measuredAt),
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              if (widget.metric == GrowthMetric.lengthHeight)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    row.method ==
-                                            GrowthMeasurementMethod.recumbent
-                                        ? 'Đo nằm'
-                                        : 'Đo đứng',
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          '${trackingValue(row.value)} ${widget.metric.unit}',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        if (widget.repository.canEdit)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 4),
-                            child: Icon(
-                              Icons.chevron_right_rounded,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
+  }
 }
 
 class TrackingHeadQuickEditor extends StatefulWidget {
@@ -1351,10 +1428,17 @@ class _TrackingHeadQuickEditorState extends State<TrackingHeadQuickEditor> {
   }
 
   Future<void> _pickDate() async {
-    final first = DateUtils.dateOnly(
-      widget.repository.dateOfBirth ?? DateTime(1900),
-    );
+    final birth = widget.repository.dateOfBirth;
+    if (birth == null) {
+      setState(() => _error = _missingMeasurementBirth);
+      return;
+    }
+    final first = DateUtils.dateOnly(birth);
     final last = DateUtils.dateOnly(DateTime.now());
+    if (first.isAfter(last)) {
+      setState(() => _error = _invalidMeasurementDate);
+      return;
+    }
     final chosen = await pickTrackingDate(
       context,
       initialDate: _day.isBefore(first)
@@ -1371,6 +1455,14 @@ class _TrackingHeadQuickEditorState extends State<TrackingHeadQuickEditor> {
 
   Future<void> _save() async {
     if (_busy || !_form.currentState!.validate()) return;
+    final dateError = _measurementDateError(
+      _day,
+      widget.repository.dateOfBirth,
+    );
+    if (dateError != null) {
+      setState(() => _error = dateError);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;

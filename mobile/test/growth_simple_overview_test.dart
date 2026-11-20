@@ -9,9 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:track_children/features/growth/growth_overview.dart';
 
 void main() {
-  testWidgets('overview switches one chart and opens metric history', (
-    tester,
-  ) async {
+  testWidgets('overview opens metric chart and history tabs', (tester) async {
     await tester.runAsync(() async {
       final font = await File('assets/fonts/nunito/Nunito-Variable.ttf')
           .readAsBytes();
@@ -50,12 +48,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Tình trạng cân nặng'), findsOneWidget);
-    expect(find.byType(ChoiceChip), findsNWidgets(3));
-    expect(find.text('Dựa trên BMI'), findsNothing);
-    expect(find.text('Xu hướng gần đây'), findsNothing);
-    expect(find.text('Xem lịch sử'), findsNothing);
-    expect(find.textContaining('Trục cân nặng:'), findsNothing);
+    expect(find.text('Đánh giá BMI'), findsOneWidget);
+    expect(find.text('Đánh giá vòng đầu'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNothing);
+    await tester.tap(find.text('Cân nặng').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Biểu đồ'), findsOneWidget);
+    expect(find.text('Lịch sử'), findsOneWidget);
     final chart = find.byWidgetPredicate(
       (w) =>
           w is Semantics &&
@@ -63,7 +62,8 @@ void main() {
     );
     expect(chart, findsOneWidget);
     final size = tester.getSize(chart);
-    expect((size.width - size.height).abs(), lessThanOrEqualTo(10));
+    expect(size.height, greaterThanOrEqualTo(380));
+    expect(size.height, greaterThan(size.width));
     Future<void> capture(String name) async {
       await tester.runAsync(() async {
         final boundary =
@@ -81,26 +81,11 @@ void main() {
     await tester.ensureVisible(chart);
     await tester.pumpAndSettle();
     await capture('growth-overview-preview');
-    await tester.ensureVisible(find.byTooltip('Phóng to'));
-    await tester.tap(find.byTooltip('Phóng to'));
+    expect(find.byTooltip('Phóng to'), findsNothing);
+    expect(find.text('8,5 kg'), findsWidgets);
+    await tester.tap(find.text('Lịch sử'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Đang phóng to:'), findsNothing);
-    expect(find.textContaining('8,5 kg'), findsWidgets);
-    await capture('growth-weight-zoom-preview');
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Vòng đầu'));
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Vòng đầu'));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
-    await tester.pumpAndSettle();
-    expect(find.text('Tình trạng vòng đầu'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, 500));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cân nặng').first);
-    await tester.pumpAndSettle();
-    expect(find.byType(GrowthOverview), findsNothing);
-    expect(find.text('Cân nặng'), findsWidgets);
+    expect(find.byType(ListView), findsOneWidget);
     expect(tester.takeException(), isNull);
     await capture('growth-history-preview');
     await tester.tap(find.byTooltip('Ghi số đo'));

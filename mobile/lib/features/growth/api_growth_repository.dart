@@ -7,7 +7,10 @@ class ApiGrowthRepository extends GrowthRepository {
     : remote =
           remote ??
           RemoteGrowthRepository(
-            DemoStore.instance.child?['id'] as String? ?? '',
+            DemoStore.instance.serverChildId(
+                  DemoStore.instance.child?['id'] as String? ?? '',
+                ) ??
+                '',
           ),
       _birth = DateTime.tryParse(
         DemoStore.instance.child?['date_of_birth']?.toString() ?? '',
