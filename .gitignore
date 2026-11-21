@@ -77,7 +77,12 @@ node_modules/
 .auth-test-logs/
 .test-deps/
 backend/.env
+backend/firebase-service-account.json
+mobile/firebase-config.local.json
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
 backend/.runtime/
+backend/be-lon-khon-firebase-service-account.json
 
 # Biến môi trường cục bộ (mẫu nằm ở .env.example)
 .env

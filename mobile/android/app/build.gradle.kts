@@ -7,6 +7,10 @@ plugins {
 }
 
 val releasePropertiesFile = rootProject.file("key.properties")
+// Keep builds usable before a Firebase project is registered.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
 val releaseProperties = Properties().apply {
     if (releasePropertiesFile.isFile) releasePropertiesFile.inputStream().use { load(it) }
 }

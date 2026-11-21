@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:track_children/services/demo_store.dart';
 import 'package:track_children/services/app_notifications.dart';
 import 'package:track_children/features/notifications/notifications_screen.dart';
+import 'package:track_children/features/notifications/notification_settings_screen.dart';
+import 'package:track_children/features/notifications/growth_reminder_settings_screen.dart';
+import 'package:track_children/features/assessment/assessment_reminders.dart';
 
 void main() {
   setUp(() async {
@@ -84,5 +87,90 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Không có thông báo chưa đọc'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  test(
+    'assessment remains visible after thirty days and stops after completion',
+    () {
+      final store = DemoStore.instance;
+      final opened = DateTime(2026, 9, 1);
+      final state = <String, dynamic>{
+        'age_months': 9,
+        'set': {'count': 10},
+        'completed_milestones': [],
+        'milestones': [
+          {'age_months': 9, 'opens_on': opened.toIso8601String()},
+        ],
+      };
+      AssessmentReminders.instance.put('child_an', state);
+      final notices = careNotifications(store, now: DateTime(2026, 11, 20));
+      expect(
+        notices.any((n) => n.kind == 'assessment' && n.childId == 'child_an'),
+        isTrue,
+      );
+      AssessmentReminders.instance.put('child_an', {
+        ...state,
+        'completed_milestones': [9],
+      });
+      expect(
+        careNotifications(
+          store,
+          now: DateTime(2026, 11, 20),
+        ).any((n) => n.kind == 'assessment' && n.childId == 'child_an'),
+        isFalse,
+      );
+    },
+  );
+
+  testWidgets('NotificationSettingsScreen and GrowthReminderSettingsScreen load children without empty error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: NotificationSettingsScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Cài đặt thông báo'), findsOneWidget);
+
+    // Verify section heading and children list directly on NotificationSettingsScreen
+    expect(find.text('Nhắc cập nhật số đo chỉ số'), findsOneWidget);
+    expect(find.text('Chưa có hồ sơ trẻ'), findsNothing);
+    expect(find.text('Chưa có hồ sơ trẻ.'), findsNothing);
+    expect(find.text('Bảo An'), findsOneWidget);
+
+    // Test wheel picker for Giờ - Phút works just like TeethingDatePicker
+    expect(find.byKey(const Key('notification-time-picker')), findsOneWidget);
+    expect(find.byKey(const Key('notification-time-Giờ')), findsOneWidget);
+    expect(find.byKey(const Key('notification-time-Phút')), findsOneWidget);
+    await tester.drag(
+      find.byKey(const Key('notification-time-Phút')),
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // Test turning OFF notifications dims & disables lower sections
+    await tester.tap(find.text('Thông báo trên thiết bị'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bảo An'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    // Should NOT navigate to GrowthReminderSettingsScreen when notifications are OFF
+    expect(find.text('Nhắc số đo: Bảo An'), findsNothing);
+
+    // Turn notifications back ON and tap on child "Bảo An"
+    await tester.tap(find.text('Thông báo trên thiết bị'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bảo An'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // Verify per-metric growth reminder screen renders cleanly
+    expect(find.text('Nhắc số đo: Bảo An'), findsOneWidget);
+    expect(find.text('Cân nặng'), findsOneWidget);
+    expect(find.text('Chiều dài / Chiều cao'), findsOneWidget);
+    expect(find.text('Vòng đầu'), findsOneWidget);
+    expect(find.text('Theo độ tuổi'), findsWidgets);
+    expect(find.text('Lưu cài đặt'), findsOneWidget);
   });
 }

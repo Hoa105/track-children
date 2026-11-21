@@ -13,3 +13,4 @@ regex>=2024.11
 PyYAML>=6,<7
 python-multipart>=0.0.9
 minio>=7.2,<8
+firebase-admin>=6.6,<8

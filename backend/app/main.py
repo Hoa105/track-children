@@ -46,6 +46,8 @@ app.include_router(diary_ai_router)
 app.include_router(dev_router)
 app.include_router(growth_router)
 app.include_router(children_router)
+from app.features.notifications.router import router as notifications_router
+app.include_router(notifications_router)
 app.include_router(assessment_admin_router)
 from app.features.assessment.router import router as assessment_router
 app.include_router(assessment_router)
@@ -70,6 +72,8 @@ async def growth_error(request, exc):
 @app.middleware('http')
 async def growth_private_response(request, call_next):
     response = await call_next(request)
+    if request.url.path.startswith('/api/v1/notifications'):
+        response.headers['Cache-Control']='no-store'
     if request.url.path.startswith('/api/v1/children/') and '/growth' in request.url.path:
         response.headers['Cache-Control']='no-store'
     return response

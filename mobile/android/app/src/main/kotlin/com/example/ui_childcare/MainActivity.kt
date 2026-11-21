@@ -52,6 +52,17 @@ class MainActivity : FragmentActivity(), FlutterEngineConfigurator, FlutterUiDis
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.NormalTheme)
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                getSystemService(android.app.NotificationManager::class.java)?.createNotificationChannel(
+                    android.app.NotificationChannel(
+                        "care_reminders",
+                        "Nhắc chăm sóc bé",
+                        android.app.NotificationManager.IMPORTANCE_DEFAULT
+                    )
+                )
+            } catch (_: Exception) {}
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.statusBarColor = NativeStartView.BACKGROUND
         window.navigationBarColor = NativeStartView.BACKGROUND

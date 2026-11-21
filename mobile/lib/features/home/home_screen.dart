@@ -3,6 +3,8 @@ import '../notifications/notifications_screen.dart';
 import '../activities/activities_screen.dart';
 import '../explore/explore_screen.dart';
 import '../../services/demo_store.dart';
+import '../../services/notification_inbox.dart';
+import '../../services/push_notifications.dart';
 
 import 'package:flutter/material.dart';
 
@@ -44,7 +46,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
   final _scrollController = ScrollController();
   @override
+  void initState() {
+    super.initState();
+    NotificationInbox.instance.addListener(_inboxChanged);
+    NotificationInbox.instance.refresh();
+    PushNotifications.instance.sync();
+  }
+
+  void _inboxChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    NotificationInbox.instance.removeListener(_inboxChanged);
     _scrollController.dispose();
     super.dispose();
   }

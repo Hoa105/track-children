@@ -26,6 +26,9 @@ class ApiGrowthRepository extends GrowthRepository {
   bool get canEdit => _canEdit;
 
   @override
+  String? get childId => remote.childId.isEmpty ? null : remote.childId;
+
+  @override
   String? get childLabel => _childLabel;
 
   @override

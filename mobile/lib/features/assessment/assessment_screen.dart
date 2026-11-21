@@ -15,10 +15,12 @@ class AssessmentScreen extends StatefulWidget {
     super.key,
     required this.childId,
     this.initialHistory = false,
+    this.initialAge,
     this.repository,
   });
   final String childId;
   final bool initialHistory;
+  final int? initialAge;
   final AssessmentRepository? repository;
   @override
   State<AssessmentScreen> createState() => _AssessmentScreenState();
@@ -30,7 +32,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   Map<String, dynamic>? state;
   List<Map<String, dynamic>> records = [];
   String? error;
-  int? filter;
+  late int? filter = widget.initialAge;
   bool busy = true, more = false, loadingMore = false, guidance = false;
   int generation = 0;
   @override
@@ -217,40 +219,41 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     body: !DemoStore.instance.canViewChild(widget.childId, 'assessment')
         ? const NoAccessView(section: 'kết quả đánh giá')
         : SafeArea(
-      top: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            top: false,
             child: Column(
               children: [
-                if (repo.isDemo) const AssessmentDemoNote(),
-                AssessmentTabs(
-                  history: historyTab,
-                  onChanged: (value) => setState(() => historyTab = value),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: Column(
+                    children: [
+                      if (repo.isDemo) const AssessmentDemoNote(),
+                      AssessmentTabs(
+                        history: historyTab,
+                        onChanged: (value) =>
+                            setState(() => historyTab = value),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: busy
+                      ? const Center(child: CircularProgressIndicator())
+                      : error != null
+                      ? SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: AssessmentError(message: error!, retry: _load),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: AssessmentReveal(
+                            key: ValueKey(historyTab),
+                            child: historyTab ? _history() : _overview(),
+                          ),
+                        ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: busy
-                ? const Center(child: CircularProgressIndicator())
-                : error != null
-                ? SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: AssessmentError(message: error!, retry: _load),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: AssessmentReveal(
-                      key: ValueKey(historyTab),
-                      child: historyTab ? _history() : _overview(),
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    ),
   );
   Widget _overview() {
     final data = state!, a = data['age_months'], draft = data['draft'];
@@ -304,7 +307,10 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                           : 'Chưa làm',
                     ),
                     if (!unavailable)
-                      AssessmentPill('${data['set']['count']} câu hỏi', neutral: true),
+                      AssessmentPill(
+                        '${data['set']['count']} câu hỏi',
+                        neutral: true,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -396,10 +402,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Chọn mốc để xem thông tin.',
-          style: assessmentMuted,
-        ),
+        const Text('Chọn mốc để xem thông tin.', style: assessmentMuted),
         const SizedBox(height: 12),
         AssessmentMilestones(
           milestones: (data['milestones'] as List).map(assessmentMap).toList(),

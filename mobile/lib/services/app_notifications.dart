@@ -3,6 +3,7 @@ import 'demo_store.dart';
 import 'sharing_api.dart';
 import 'sharing_invitations.dart';
 import 'vaccination_schedule.dart';
+import 'notification_inbox.dart';
 
 class CareNotification {
   const CareNotification({
@@ -12,14 +13,22 @@ class CareNotification {
     required this.message,
     required this.date,
     this.kind = 'vaccination',
+    this.metric,
+    this.resolved = false,
+    this.ageMonths,
   });
   final String id, childId, title, message, kind;
   final DateTime date;
+  final String? metric;
+  final bool resolved;
+  final int? ageMonths;
 }
 
 /// In-app reminders derived from the same local records as the vaccination book.
 List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
-  if (!store.signedIn || store.parent['notifications'] == false) return [];
+  if (!store.signedIn) return [];
+  final inbox = NotificationInbox.instance;
+  if (!inbox.available && store.parent['notifications'] == false) return [];
   final clock = now ?? DateTime.now();
   final today = DateTime(clock.year, clock.month, clock.day);
   final result = <CareNotification>[];
@@ -27,7 +36,10 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
     final childId = child['id'] as String;
     final dob = DateTime.tryParse(child['date_of_birth'] as String? ?? '');
     if (dob == null) continue;
-    final assessment = store.canViewChild(childId, 'assessment')
+    final assessment =
+        !inbox.available &&
+            store.parent['notifications'] != false &&
+            store.canViewChild(childId, 'assessment')
         ? AssessmentReminders.instance.state(childId)
         : null;
     if (assessment != null && assessment['set'] != null) {
@@ -43,7 +55,7 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
         final days = today
             .difference(DateTime(date.year, date.month, date.day))
             .inDays;
-        if (days >= 0 && days <= 30) {
+        if (days >= 0) {
           final repeated = days >= 7;
           result.add(
             CareNotification(
@@ -113,7 +125,22 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
   // Lời mời chia sẻ cần trả lời: luôn ở đầu danh sách, mới nhất trước.
   final invitations = [...SharingInvitations.instance.invitations]
     ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-  return [for (final i in invitations) sharingNotification(i), ...result];
+  return [
+    for (final i in invitations) sharingNotification(i),
+    for (final n in inbox.items)
+      CareNotification(
+        id: n['id'].toString(),
+        childId: n['child_id']?.toString() ?? '',
+        title: n['title'].toString(),
+        message: n['body'].toString(),
+        date: DateTime.parse(n['created_at'].toString()),
+        kind: n['scope']?.toString() ?? 'system',
+        metric: (n['data'] as Map?)?['metric']?.toString(),
+        resolved: n['resolved_at'] != null,
+        ageMonths: (n['data'] as Map?)?['age_months'] as int?,
+      ),
+    ...result,
+  ];
 }
 
 /// Thông báo cho một lời mời chia sẻ hồ sơ bé (kind 'sharing').
@@ -133,9 +160,16 @@ CareNotification sharingNotification(IncomingInvitation invitation) {
   );
 }
 
-Set<String> readNotificationIds(DemoStore store) =>
-    Set<String>.from(store.parent['readNotifications'] as List? ?? []);
+Set<String> readNotificationIds(DemoStore store) => {
+  ...Set<String>.from(store.parent['readNotifications'] as List? ?? []),
+  ...NotificationInbox.instance.readIds,
+};
 int unreadNotificationCount(DemoStore store) {
   final read = readNotificationIds(store);
-  return careNotifications(store).where((n) => !read.contains(n.id)).length;
+  final remote = NotificationInbox.instance;
+  final remoteIds = remote.items.map((n) => n['id']).toSet();
+  return remote.unreadCount +
+      careNotifications(store)
+          .where((n) => !remoteIds.contains(n.id) && !read.contains(n.id))
+          .length;
 }

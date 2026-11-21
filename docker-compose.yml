@@ -120,6 +120,25 @@ services:
       minio:
         condition: service_healthy
 
+  notification-worker:
+    profiles: ["notifications"]
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "scripts.notification_worker"]
+    environment:
+      DATABASE_URL: postgresql://track_children:track_children_dev@db:5432/track_children
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase.json
+    volumes:
+      - type: bind
+        source: ${FIREBASE_SERVICE_ACCOUNT_FILE:-./backend/firebase-service-account.json}
+        target: /run/secrets/firebase.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      db:
+        condition: service_healthy
+
   auth-worker:
     profiles: ["auth-v2"]
     build: ./backend

@@ -27,13 +27,24 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận yêu cầu xóa tài khoản'),
+        backgroundColor: SettingsColors.surface,
+        title: const Text(
+          'Xác nhận yêu cầu xóa tài khoản',
+          style: TextStyle(
+            color: SettingsColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         content: const Text(
           'Bạn đã chọn cách xử lý các hồ sơ trẻ. Tiếp tục sẽ gửi yêu cầu xóa tài khoản.',
+          style: TextStyle(color: SettingsColors.textPrimary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: SettingsColors.textSecondary,
+            ),
             child: const Text('Quay lại'),
           ),
           FilledButton(
@@ -57,10 +68,18 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SettingsColors.background,
     appBar: AppBar(
-      backgroundColor: AppColors.background,
-      title: const Text('Xóa tài khoản và dữ liệu'),
+      backgroundColor: SettingsColors.background,
+      surfaceTintColor: Colors.transparent,
+      iconTheme: const IconThemeData(color: SettingsColors.textPrimary),
+      title: const Text(
+        'Xóa tài khoản và dữ liệu',
+        style: TextStyle(
+          color: SettingsColors.textPrimary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     ),
     body: SafeArea(
       top: false,
@@ -90,7 +109,10 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                         Expanded(
                           child: Text(
                             'Trước khi gửi yêu cầu xóa tài khoản, hãy chọn cách xử lý quyền sở hữu từng hồ sơ trẻ.',
-                            style: TextStyle(height: 1.45),
+                            style: TextStyle(
+                              height: 1.45,
+                              color: SettingsColors.textPrimary,
+                            ),
                           ),
                         ),
                       ],
@@ -100,7 +122,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   Text(
                     'HỒ SƠ TRẺ ĐANG QUẢN LÝ',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: SettingsColors.textSecondary,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: .6,
                     ),
                   ),
@@ -137,7 +160,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   const Text(
                     'Bạn vẫn có thể quay lại nếu chưa muốn tiếp tục.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: SettingsColors.textSecondary),
                   ),
                 ],
               ),
@@ -164,9 +187,9 @@ class _OwnershipCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: SettingsColors.surface,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: SettingsColors.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,11 +197,20 @@ class _OwnershipCard extends StatelessWidget {
         Row(
           children: [
             const CircleAvatar(
-              backgroundColor: AppColors.primarySoft,
-              child: Icon(Icons.child_care_rounded, color: AppColors.primary),
+              backgroundColor: SettingsColors.iconBackground,
+              child: Icon(
+                Icons.child_care_rounded,
+                color: SettingsColors.textPrimary,
+              ),
             ),
             const SizedBox(width: 10),
-            Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: SettingsColors.textPrimary,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -189,11 +221,31 @@ class _OwnershipCard extends StatelessWidget {
             ChoiceChip(
               label: const Text('Chuyển quyền quản lý'),
               selected: choice == _OwnershipChoice.transfer,
+              selectedColor: SettingsColors.accent,
+              backgroundColor: SettingsColors.surface,
+              labelStyle: TextStyle(
+                color: SettingsColors.textPrimary,
+                fontWeight: choice == _OwnershipChoice.transfer
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
+              side: const BorderSide(color: SettingsColors.border),
+              showCheckmark: false,
               onSelected: (_) => onChanged(_OwnershipChoice.transfer),
             ),
             ChoiceChip(
               label: const Text('Xóa hồ sơ cùng tài khoản'),
               selected: choice == _OwnershipChoice.deleteWithAccount,
+              selectedColor: SettingsColors.accent,
+              backgroundColor: SettingsColors.surface,
+              labelStyle: TextStyle(
+                color: SettingsColors.textPrimary,
+                fontWeight: choice == _OwnershipChoice.deleteWithAccount
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
+              side: const BorderSide(color: SettingsColors.border),
+              showCheckmark: false,
               onSelected: (_) => onChanged(_OwnershipChoice.deleteWithAccount),
             ),
           ],

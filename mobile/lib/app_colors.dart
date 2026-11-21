@@ -83,3 +83,33 @@ abstract final class ChildProfileSelectionColors {
   static const border = HomeColors.iconBackground;
   static const pressed = HomeColors.reminderBackground;
 }
+
+/// Green Sprout palette scoped to notifications and reminder settings.
+abstract final class NotificationColors {
+  static const background = HomeColors.background;
+  static const surface = HomeColors.surface;
+  static const primary = HomeColors.primary;
+  static const ink = HomeColors.ink;
+  static const reminderCta = HomeColors.reminderCta;
+  static const iconBackground = HomeColors.iconBackground;
+  static const accent = HomeColors.milestoneAccent;
+  static const reminderBackground = HomeColors.reminderBackground;
+  static const border = HomeColors.iconBackground;
+  static const unreadIndicator = HomeColors.primary;
+  static const cardUnread = HomeColors.surface;
+  static const cardRead = Color(0xFFF7FAF2);
+}
+
+/// Green Sprout palette scoped to Settings & Privacy.
+abstract final class SettingsColors {
+  static const background = HomeColors.background;
+  static const surface = HomeColors.surface;
+  static const primary = HomeColors.primary;
+  static const primaryDark = HomeColors.ink;
+  static const primarySoft = HomeColors.reminderBackground;
+  static const textPrimary = HomeColors.ink;
+  static const textSecondary = HomeColors.reminderCta;
+  static const border = HomeColors.iconBackground;
+  static const accent = HomeColors.milestoneAccent;
+  static const iconBackground = HomeColors.iconBackground;
+}

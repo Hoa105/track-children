@@ -10,6 +10,8 @@ import 'services/journal_api.dart';
 import 'services/teething_api.dart';
 import 'services/progress_review_api.dart';
 import 'services/auth_service.dart';
+import 'services/push_notifications.dart';
+import 'features/notifications/notifications_screen.dart';
 import 'services/auth_entry_preferences.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
@@ -51,6 +53,7 @@ Future<void> initializeApplication() async {
     await DemoStore.instance.logout();
   }
   if (!kIsWeb) {
+    PushNotifications.instance.initialize().catchError((_) {});
     try {
       final picker = BackgroundPickerService();
       await picker.recoverInterrupted();
@@ -101,6 +104,85 @@ class TrackChildrenApp extends StatefulWidget {
 
 class _TrackChildrenAppState extends State<TrackChildrenApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  @override
+  void initState() {
+    super.initState();
+    PushNotifications.instance.onOpen = (id) async {
+      if (!AuthService.instance.signedIn) return;
+      await _navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (_) => NotificationsScreen(initialNotificationId: id),
+        ),
+      );
+    };
+    PushNotifications.instance.onForegroundMessage = (message) {
+      final context = _navigatorKey.currentContext;
+      if (context == null || !mounted) return;
+      final title = message.notification?.title ??
+          message.data['title'] as String? ??
+          'Thông báo mới';
+      final body = message.notification?.body ??
+          message.data['body'] as String? ??
+          '';
+      final notificationId = message.data['notification_id'] as String?;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: AppColors.textPrimary,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.notifications_active_rounded,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (body.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ],
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'Xem',
+            textColor: AppColors.primary,
+            onPressed: () {
+              if (!AuthService.instance.signedIn) return;
+              _navigatorKey.currentState?.push(
+                MaterialPageRoute<void>(
+                  builder: (_) => NotificationsScreen(
+                    initialNotificationId: notificationId,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    };
+  }
+
   GrowthRepository get _growthRepository =>
       AuthService.instance.signedIn && !AuthService.instance.demoMode
       ? ApiGrowthRepository()

@@ -81,3 +81,73 @@ c?a ch?nh ph? huynh trong request; endpoint n?y kh?ng t?o t?i kho?n.
 
 [Setup and API](../docs/api/admin-auth.md), [OpenAPI YAML](../docs/api/admin-auth.openapi.yaml).
 Implementation: `app/features/auth/admin/`. Requires migrations through 011.
+
+## Notifications
+
+Apply migration `027_notification_delivery.sql` using the existing migration runner.
+The inbox API is `/api/v1/notifications`, with `/read`, `/preferences`, `/device`
+and `/growth/{child_id}/{metric}` endpoints. Reading the inbox reconciles reminders;
+run `python -m scripts.notification_worker` for reminders while the app is closed.
+Alternatively run `python -m scripts.deliver_notifications` every minute.
+
+Use Application Default Credentials for a Firebase service account authorized to send
+FCM messages. Set `GOOGLE_APPLICATION_CREDENTIALS` to its local JSON path; never commit
+the key. Docker: set `FIREBASE_SERVICE_ACCOUNT_FILE`, then run
+`docker compose --profile notifications up -d --build notification-worker`.
+Without credentials, the durable inbox still works and push stays queued.
+
+Mobile Firebase options can be provided through `--dart-define-from-file` with keys
+`FIREBASE_APP_ID`, `FIREBASE_API_KEY`, `FIREBASE_SENDER_ID`, `FIREBASE_PROJECT_ID`,
+and `FIREBASE_IOS_BUNDLE_ID` (iOS). Use app IDs matching the Android applicationId
+and iOS bundle identifier. For iOS, enable Push Notifications in Xcode/signing and
+upload the APNs authentication key in Firebase. These project/signing resources
+must be provided by the application owner. Enable push in the notification settings
+screen to request device permission. Android foreground messages refresh the inbox;
+iOS additionally uses the native foreground presentation.
+
+Default: 08:00 in the saved timezone, one assessment notice on milestone opening
+and one follow-up after seven days; late discovery produces only the applicable
+stage. Measurement reminders use a configurable 30-day personal interval, one
+follow-up after seven days, and per-metric snooze/disable. A new measurement changes
+the due date. The inbox retains resolved notices. Turning off push preserves history.
+Existing vaccination and sharing notices remain available from their current sources.
+
+The worker retries transient sends up to five attempts and disables unregistered
+tokens. An interrupted send can be retried after a provider acceptance; FCM does not
+provide exactly-once delivery. Android notification tags reuse the same notification ID.
+Validate background, terminated, permission-denied, account-switch, and APNs behavior
+on registered physical devices before enabling the worker in production.
+
+### Thiết lập Firebase lần đầu (ưu tiên Android)
+
+1. Mở [Firebase Console](https://console.firebase.google.com/), tạo project và ghi lại Project ID.
+   Không cần bật Analytics để triển khai luồng nhắc này.
+2. Trong Project settings → General → Your apps, thêm ứng dụng Android.
+   Package mặc định hiện tại là `com.example.track_children`; nếu đã cấu hình
+   `applicationId` riêng trong `android/key.properties` thì dùng đúng giá trị đó.
+3. Tải `google-services.json`, đặt tại `mobile/android/app/google-services.json`.
+   Gradle sẽ tự áp dụng Google Services khi có file. File này cần cho Firebase khởi tạo
+   ở tiến trình Android khi ứng dụng đóng. Hướng dẫn chính thức:
+   [Firebase Android setup](https://firebase.google.com/docs/android/setup).
+4. Với cấu hình native Android trên, không cần truyền thêm Dart defines.
+   Nếu dùng options cho iOS, sao chép `mobile/firebase-config.example.json` thành
+   `mobile/firebase-config.local.json` và điền thông tin của ứng dụng iOS tương ứng.
+   `FIREBASE_APP_ID` là App ID của từng nền tảng, không phải Project ID.
+   Chạy trong thư mục mobile: `flutter run --dart-define-from-file=firebase-config.local.json`.
+5. Trong Project settings → Service accounts → Firebase Admin SDK, tạo private key
+   và lưu trên máy backend, ví dụ `backend/firebase-service-account.json`.
+   Thiết lập `GOOGLE_APPLICATION_CREDENTIALS` trỏ tới đường dẫn tuyệt đối của file.
+   Chỉ dùng khóa này ở backend. Không chép vào assets/mobile. Tham khảo
+   [Admin SDK setup](https://firebase.google.com/docs/admin/setup).
+6. Cài `backend/requirements.txt`, áp dụng migration 027 rồi chạy worker như hướng dẫn trên.
+   Đăng nhập app, mở Thông báo → Cài đặt → bật nhận thông báo và bấm Lưu.
+   Để kiểm tra nhanh có thể đặt giờ nhắc về một giờ đã qua trong ngày.
+7. Kiểm tra lần lượt khi app mở, chuyển xuống nền và đóng app thông thường.
+   Hoàn thành bài đánh giá hoặc ghi số đo mới rồi xác nhận các lần nhắc cũ dừng lại.
+
+Với iOS: đăng ký thêm app có bundle ID khớp Xcode (hiện là `com.example.uiChildcare`),
+thêm `GoogleService-Info.plist` vào target Runner trong Xcode, bật capability
+Push Notifications và Background Modes → Remote notifications, cấu hình signing,
+rồi tải khóa APNs lên Firebase Cloud Messaging. Thực hiện trên macOS với tài khoản
+Apple Developer và kiểm tra trên thiết bị được ký hợp lệ.
+[Hướng dẫn FCM Flutter](https://firebase.google.com/docs/cloud-messaging/flutter/client).

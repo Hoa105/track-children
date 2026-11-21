@@ -1,5 +1,6 @@
 import '../../services/demo_store.dart';
 import '../../services/auth_service.dart';
+import '../notifications/notification_settings_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -27,9 +28,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
-  bool _notificationsEnabled = true;
-  bool _biometricEnabled = false;
-
   void _toast(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -68,19 +66,41 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ngôn ngữ'),
+        backgroundColor: SettingsColors.surface,
+        title: const Text(
+          'Ngôn ngữ',
+          style: TextStyle(
+            color: SettingsColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         content: const Material(
           color: Colors.transparent,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.check_circle_rounded, color: AppColors.primary),
-            title: Text('Tiếng Việt'),
-            subtitle: Text('Ngôn ngữ đang sử dụng'),
+            leading: Icon(
+              Icons.check_circle_rounded,
+              color: SettingsColors.primary,
+            ),
+            title: Text(
+              'Tiếng Việt',
+              style: TextStyle(
+                color: SettingsColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              'Ngôn ngữ đang sử dụng',
+              style: TextStyle(color: SettingsColors.textSecondary),
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: SettingsColors.primary,
+            ),
             child: const Text('Đóng'),
           ),
         ],
@@ -91,18 +111,26 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
   Future<void> _showPrivacyPolicy() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Chính sách quyền riêng tư'),
+      backgroundColor: SettingsColors.surface,
+      title: const Text(
+        'Chính sách quyền riêng tư',
+        style: TextStyle(
+          color: SettingsColors.textPrimary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
       content: const SingleChildScrollView(
         child: Text(
           'Bé Lớn Khôn hỗ trợ phụ huynh ghi lại thông tin chăm sóc và phát triển của trẻ. '
           'Thông tin hồ sơ chỉ nên được chia sẻ với người chăm sóc mà phụ huynh tin cậy. '
           'Bản xem trước này chưa kết nối hệ thống lưu trữ hoặc xử lý dữ liệu tài khoản.',
-          style: TextStyle(height: 1.5),
+          style: TextStyle(height: 1.5, color: SettingsColors.textPrimary),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(foregroundColor: SettingsColors.primary),
           child: const Text('Đóng'),
         ),
       ],
@@ -113,15 +141,32 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Đăng xuất?'),
-        content: const Text('Bạn có muốn đăng xuất khỏi tài khoản này không?'),
+        backgroundColor: SettingsColors.surface,
+        title: const Text(
+          'Đăng xuất?',
+          style: TextStyle(
+            color: SettingsColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: const Text(
+          'Bạn có muốn đăng xuất khỏi tài khoản này không?',
+          style: TextStyle(color: SettingsColors.textPrimary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: SettingsColors.textSecondary,
+            ),
             child: const Text('Ở lại'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: SettingsColors.primary,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Đăng xuất'),
           ),
         ],
@@ -185,11 +230,19 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SettingsColors.background,
     appBar: AppBar(
-      backgroundColor: AppColors.background,
+      backgroundColor: SettingsColors.background,
       surfaceTintColor: Colors.transparent,
-      title: const Text('Cài đặt & Quyền riêng tư'),
+      iconTheme: const IconThemeData(color: SettingsColors.textPrimary),
+      title: const Text(
+        'Cài đặt & Quyền riêng tư',
+        style: TextStyle(
+          color: SettingsColors.textPrimary,
+          fontWeight: FontWeight.w800,
+          fontSize: 20,
+        ),
+      ),
       centerTitle: true,
     ),
     body: SafeArea(
@@ -288,30 +341,48 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                         children: [
                           Material(
                             color: Colors.transparent,
-                            child: SwitchListTile.adaptive(
-                              value: DemoStore.instance.signedIn
-                                  ? DemoStore.instance.parent['notifications']
-                                        as bool
-                                  : _notificationsEnabled,
-                              onChanged: (value) => DemoStore.instance.signedIn
-                                  ? DemoStore.instance.saveParent({
-                                      'notifications': value,
-                                    })
-                                  : setState(
-                                      () => _notificationsEnabled = value,
-                                    ),
-                              activeThumbColor: AppColors.primary,
-                              secondary: const Icon(
-                                Icons.notifications_outlined,
-                                color: AppColors.primary,
+                            child: ListTile(
+                              leading: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: SettingsColors.iconBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: SettingsColors.textPrimary,
+                                  size: 20,
+                                ),
                               ),
-                              title: const Text('Thông báo & nhắc nhở'),
+                              title: const Text(
+                                'Thông báo & nhắc nhở',
+                                style: TextStyle(
+                                  color: SettingsColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                               subtitle: const Text(
-                                'Mốc đánh giá, tăng trưởng và tiêm chủng',
+                                'Giờ nhắc hằng ngày và chu kỳ cập nhật số đo',
+                                style: TextStyle(
+                                  color: SettingsColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right_rounded,
+                                color: SettingsColors.textSecondary,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 4,
+                                vertical: 6,
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const NotificationSettingsScreen(),
+                                ),
                               ),
                             ),
                           ),
@@ -321,32 +392,6 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                       const _SectionHeading('QUYỀN RIÊNG TƯ & BẢO MẬT'),
                       _SettingsGroup(
                         children: [
-                          Material(
-                            color: Colors.transparent,
-                            child: SwitchListTile.adaptive(
-                              value: DemoStore.instance.signedIn
-                                  ? DemoStore.instance.parent['biometric']
-                                        as bool
-                                  : _biometricEnabled,
-                              onChanged: (value) => DemoStore.instance.signedIn
-                                  ? DemoStore.instance.saveParent({
-                                      'biometric': value,
-                                    })
-                                  : setState(() => _biometricEnabled = value),
-                              activeThumbColor: AppColors.primary,
-                              secondary: const Icon(
-                                Icons.fingerprint_rounded,
-                                color: AppColors.primary,
-                              ),
-                              title: const Text('Khóa ứng dụng bằng sinh trắc'),
-                              subtitle: const Text('Vân tay hoặc Face ID'),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
-                              ),
-                            ),
-                          ),
-                          const _SettingsDivider(),
                           _SettingsActionTile(
                             icon: Icons.delete_outline_rounded,
                             title: 'Xóa tài khoản và dữ liệu',
@@ -369,11 +414,14 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                         child: OutlinedButton.icon(
                           onPressed: _logout,
                           icon: const Icon(Icons.logout_rounded),
-                          label: const Text('Đăng xuất'),
+                          label: const Text(
+                            'Đăng xuất',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFB44545),
                             side: const BorderSide(color: Color(0xFFD57C7C)),
-                            backgroundColor: AppColors.surface,
+                            backgroundColor: SettingsColors.surface,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -388,6 +436,9 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                                 DemoDataScreen(onReset: widget.onLogout),
                           ),
                         ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: SettingsColors.primary,
+                        ),
                         icon: const Icon(Icons.science_outlined),
                         label: const Text(
                           'Dữ liệu kiểm thử · chỉ lưu trên thiết bị',
@@ -396,8 +447,9 @@ class _SettingsScreenState extends State<SettingsScreen> with DemoStoreBinding {
                       Text(
                         'Bé Lớn Khôn · phiên bản 1.0.0',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SettingsColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -421,58 +473,75 @@ class _ParentSummaryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
-    borderRadius: BorderRadius.circular(22),
-    child: InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) {
+    final fullName = DemoStore.instance.parent['fullName'] as String;
+    final initial = fullName.isEmpty ? '?' : fullName.substring(0, 1);
+    return Material(
+      color: SettingsColors.surface,
       borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A23332E),
-              blurRadius: 14,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            EmptyAvatar(
-              initial: (DemoStore.instance.parent['fullName'] as String)
-                  .substring(0, 1),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    DemoStore.instance.parent['fullName'] as String,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: SettingsColors.border),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: SettingsColors.iconBackground,
+                  border: Border.all(color: SettingsColors.surface, width: 2),
+                ),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: SettingsColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    DemoStore.instance.parent['email'] as String,
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName,
+                      style: const TextStyle(
+                        color: SettingsColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      DemoStore.instance.parent['email'] as String,
+                      style: const TextStyle(
+                        color: SettingsColors.textSecondary,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: SettingsColors.primary,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SectionHeading extends StatelessWidget {
@@ -486,8 +555,8 @@ class _SectionHeading extends StatelessWidget {
     child: Text(
       title,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: AppColors.textSecondary,
-        fontWeight: FontWeight.w700,
+        color: SettingsColors.textSecondary,
+        fontWeight: FontWeight.w800,
         letterSpacing: .7,
       ),
     ),
@@ -501,9 +570,9 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: SettingsColors.surface,
     shape: RoundedRectangleBorder(
-      side: const BorderSide(color: AppColors.border),
+      side: const BorderSide(color: SettingsColors.border),
       borderRadius: BorderRadius.circular(20),
     ),
     clipBehavior: Clip.antiAlias,
@@ -517,9 +586,9 @@ class _SettingsDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Divider(
     height: 1,
-    indent: 56,
+    indent: 66,
     endIndent: 16,
-    color: AppColors.border,
+    color: SettingsColors.border,
   );
 }
 
@@ -540,19 +609,35 @@ class _SettingsActionTile extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: Colors.transparent,
     child: ListTile(
-      leading: Icon(
-        icon,
-        color: destructive ? const Color(0xFFB44545) : AppColors.primary,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: destructive
+              ? const Color(0xFFFDE8E8)
+              : SettingsColors.iconBackground,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: destructive
+              ? const Color(0xFFB44545)
+              : SettingsColors.textPrimary,
+        ),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: destructive ? const Color(0xFFB44545) : AppColors.textPrimary,
+          color: destructive
+              ? const Color(0xFFB44545)
+              : SettingsColors.textPrimary,
+          fontWeight: FontWeight.w700,
         ),
       ),
       trailing: const Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.textSecondary,
+        color: SettingsColors.textSecondary,
       ),
       onTap: onTap,
       minVerticalPadding: 12,
@@ -601,7 +686,14 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Đổi mật khẩu'),
+    backgroundColor: SettingsColors.surface,
+    title: const Text(
+      'Đổi mật khẩu',
+      style: TextStyle(
+        color: SettingsColors.textPrimary,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
     content: Form(
       key: _formKey,
       child: SingleChildScrollView(
@@ -637,6 +729,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
+        style: TextButton.styleFrom(
+          foregroundColor: SettingsColors.textSecondary,
+        ),
         child: const Text('Hủy'),
       ),
       FilledButton(
@@ -645,6 +740,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             Navigator.of(context).pop(_newController.text);
           }
         },
+        style: FilledButton.styleFrom(
+          backgroundColor: SettingsColors.primary,
+          foregroundColor: Colors.white,
+        ),
         child: const Text('Xác nhận'),
       ),
     ],
@@ -674,14 +773,25 @@ class _PasswordFieldState extends State<_PasswordField> {
     controller: widget.controller,
     obscureText: _obscure,
     validator: widget.validator,
+    style: const TextStyle(color: SettingsColors.textPrimary),
     decoration: InputDecoration(
       labelText: widget.label,
+      labelStyle: const TextStyle(color: SettingsColors.textSecondary),
       suffixIcon: IconButton(
         tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
         onPressed: () => setState(() => _obscure = !_obscure),
         icon: Icon(
           _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          color: SettingsColors.textSecondary,
         ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SettingsColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SettingsColors.primary, width: 1.5),
       ),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
     ),
@@ -699,10 +809,18 @@ class _ChildProfilesSettingsScreen extends StatelessWidget {
     builder: (context, _) => _content(context),
   );
   Widget _content(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SettingsColors.background,
     appBar: AppBar(
-      backgroundColor: AppColors.background,
-      title: const Text('Quản lý hồ sơ trẻ'),
+      backgroundColor: SettingsColors.background,
+      surfaceTintColor: Colors.transparent,
+      iconTheme: const IconThemeData(color: SettingsColors.textPrimary),
+      title: const Text(
+        'Quản lý hồ sơ trẻ',
+        style: TextStyle(
+          color: SettingsColors.textPrimary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     ),
     body: ListView(
       padding: const EdgeInsets.all(16),
@@ -710,31 +828,65 @@ class _ChildProfilesSettingsScreen extends StatelessWidget {
         if (!DemoStore.instance.signedIn)
           const _ChildProfileSettingsTile(name: 'Bé An', age: '24 tháng'),
         for (final child in DemoStore.instance.children)
-          ListTile(
-            leading: const Icon(Icons.child_care_rounded),
-            title: Text(child['full_name'] as String),
-            subtitle: Text(DemoStore.instance.ageLabel(child)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ChildProfileScreen(
-                  initialFields: child,
-                  onSave: (fields, avatar) => DemoStore.instance
-                      .saveChild(child['id'] as String, fields)
-                      .then((_) {}),
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: SettingsColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: SettingsColors.border),
+            ),
+            child: ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: SettingsColors.iconBackground,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.child_care_rounded,
+                  color: SettingsColors.textPrimary,
+                ),
+              ),
+              title: Text(
+                child['full_name'] as String,
+                style: const TextStyle(
+                  color: SettingsColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: Text(
+                DemoStore.instance.ageLabel(child),
+                style: const TextStyle(color: SettingsColors.textSecondary),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                color: SettingsColors.textSecondary,
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ChildProfileScreen(
+                    initialFields: child,
+                    onSave: (fields, avatar) => DemoStore.instance
+                        .saveChild(child['id'] as String, fields)
+                        .then((_) {}),
+                  ),
                 ),
               ),
             ),
           ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
+        FilledButton.icon(
           onPressed: onAddChild,
           icon: const Icon(Icons.add_rounded),
-          label: const Text('Thêm bé mới'),
-          style: OutlinedButton.styleFrom(
+          label: const Text(
+            'Thêm bé mới',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
-            foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.border),
+            backgroundColor: SettingsColors.primary,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -755,28 +907,43 @@ class _ChildProfileSettingsTile extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: SettingsColors.surface,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: SettingsColors.border),
     ),
     child: Row(
       children: [
         const CircleAvatar(
-          backgroundColor: AppColors.primarySoft,
-          child: Icon(Icons.child_care_rounded, color: AppColors.primary),
+          backgroundColor: SettingsColors.iconBackground,
+          child: Icon(
+            Icons.child_care_rounded,
+            color: SettingsColors.textPrimary,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: SettingsColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 3),
-              Text(age, style: const TextStyle(color: AppColors.textSecondary)),
+              Text(
+                age,
+                style: const TextStyle(color: SettingsColors.textSecondary),
+              ),
             ],
           ),
         ),
-        const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+        const Icon(
+          Icons.chevron_right_rounded,
+          color: SettingsColors.textSecondary,
+        ),
       ],
     ),
   );

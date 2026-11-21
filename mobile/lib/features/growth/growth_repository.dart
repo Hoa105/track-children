@@ -6,6 +6,7 @@ export 'growth_models.dart';
 abstract class GrowthRepository {
   bool get canEdit => true;
   String? get childLabel => null;
+  String? get childId => null;
   Map<String, dynamic>? get pairingInfo => null;
   DateTime? get dateOfBirth => null;
 
