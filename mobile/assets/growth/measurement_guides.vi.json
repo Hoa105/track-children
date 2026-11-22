@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "locale": "vi-VN",
+  "app": "Bé lớn khôn",
+  "audience": "Phụ huynh chăm sóc trẻ 0–60 tháng",
+  "review_status": "Biên soạn dựa trên nguồn chuyên môn; cần chuyên gia nhi khoa duyệt trước khi phát hành",
+  "global_note": "Số đo tại nhà có thể sai lệch. Nếu kết quả thay đổi bất thường hoặc bạn lo lắng về sự phát triển của bé, hãy trao đổi với nhân viên y tế.",
+  "guides": [
+    {
+      "id": "weight_infant",
+      "indicator": "weight_kg",
+      "title": "Cân bé khi chưa đứng vững",
+      "age_hint": "Dành cho bé chưa đứng vững",
+      "image_asset": "measure_weight_infant.webp",
+      "short_hint": "Nếu có cân em bé, hãy cho bé nằm giữa cân.",
+      "preparation": "Cân em bé đặt chắc chắn, khăn mỏng nếu cần.",
+      "steps": ["Đặt cân ở chỗ chắc chắn và chờ cân hiện số 0.", "Cởi bớt quần áo dày của bé. Nếu dùng khăn, hãy trừ trọng lượng khăn trước khi cân.", "Nhẹ nhàng đặt bé nằm giữa cân, luôn ở bên cạnh bé.", "Chờ số cân ổn định rồi ghi kết quả (kg)."],
+      "tip": "Không để bé nằm một mình trên cân. Nếu bé quẫy nhiều, hãy thử lại khi bé bình tĩnh.",
+      "fallback": "Nếu không có cân em bé, bạn có thể cân mình rồi cân khi bế bé, lấy số sau trừ số trước. Cách này chỉ cho kết quả ước tính, đặc biệt khi bé còn rất nhỏ.",
+      "source_ids": ["AAP_2026", "SICKKIDS_2021"]
+    },
+    {
+      "id": "weight_standing",
+      "indicator": "weight_kg",
+      "title": "Cân bé khi đã đứng vững",
+      "age_hint": "Dành cho bé có thể tự đứng yên",
+      "image_asset": "measure_weight_standing.webp",
+      "short_hint": "Cho bé đứng yên giữa cân, không mang giày.",
+      "preparation": "Cân điện tử và nền nhà phẳng, cứng.",
+      "steps": ["Đặt cân trên nền cứng, không đặt trên thảm. Chờ cân hiện số 0.", "Cho bé bỏ giày dép và áo khoác dày.", "Cho bé đứng giữa cân, hai chân đặt vững và giữ yên.", "Khi số cân ổn định, ghi kết quả (kg)."],
+      "tip": "Nên cân lại một lần. Nếu hai lần khác nhau rõ rệt, kiểm tra cân rồi thử lại.",
+      "source_ids": ["CDC_2024", "SICKKIDS_2021", "AAP_2026"]
+    },
+    {
+      "id": "length_lying",
+      "indicator": "length_cm",
+      "title": "Đo chiều dài khi bé nằm",
+      "age_hint": "Ưu tiên cho bé dưới 24 tháng",
+      "image_asset": "measure_length_lying.webp",
+      "short_hint": "Bé dưới 2 tuổi nên đo khi nằm, có hai người hỗ trợ.",
+      "preparation": "Tốt nhất là thước đo chiều dài cho trẻ có chặn đầu và chặn chân; cần hai người hỗ trợ.",
+      "steps": ["Đặt bé nằm ngửa, bỏ mũ, giày và tất.", "Một người giữ nhẹ đầu bé thẳng, áp sát đầu thước.", "Người còn lại nhẹ nhàng duỗi chân bé, giữ bàn chân hướng lên.", "Đưa tấm chặn chân chạm vào lòng bàn chân rồi đọc kết quả (cm)."],
+      "tip": "Không kéo mạnh chân bé. Nếu chưa có thước đo chuyên dụng, phép đo tại nhà chỉ mang tính tham khảo; bạn có thể nhờ nhân viên y tế đo lại.",
+      "source_ids": ["WHO_2008", "AAP_2026", "SICKKIDS_2021"]
+    },
+    {
+      "id": "height_standing",
+      "indicator": "height_cm",
+      "title": "Đo chiều cao khi bé đứng",
+      "age_hint": "Ưu tiên từ 24 tháng nếu bé đứng vững",
+      "image_asset": "measure_height_standing.webp",
+      "short_hint": "Bé đứng thẳng sát tường, chân đặt phẳng trên sàn.",
+      "preparation": "Tường phẳng, sàn cứng, quyển sách hoặc thước cứng và thước dây.",
+      "steps": ["Cho bé bỏ giày, mũ và phụ kiện tóc.", "Cho bé đứng thẳng sát tường trên nền cứng, mắt nhìn trước, không nhón chân.", "Đặt một quyển sách phẳng lên đỉnh đầu sao cho vuông góc với tường, rồi đánh dấu mép dưới của sách.", "Đo từ sàn đến dấu vừa đánh và ghi kết quả (cm)."],
+      "tip": "Nên đo hai lần để kiểm tra. Nếu bé chưa thể đứng thẳng, hãy nhờ nhân viên y tế hướng dẫn cách đo phù hợp.",
+      "source_ids": ["CDC_2024", "SICKKIDS_2021", "AAP_2026"]
+    },
+    {
+      "id": "head_circumference",
+      "indicator": "head_circum_cm",
+      "title": "Đo vòng đầu cho bé",
+      "age_hint": "Đặc biệt quan trọng cho bé dưới 36 tháng",
+      "image_asset": "measure_head_circumference.webp",
+      "short_hint": "Quấn thước quanh trán và phần nhô nhất phía sau đầu.",
+      "preparation": "Thước dây mềm, không co giãn.",
+      "steps": ["Tháo mũ, băng đô và phụ kiện tóc của bé.", "Quấn thước quanh đầu, ở phía trước ngay trên lông mày và phía trên tai.", "Đưa thước vòng qua phần nhô nhất ở phía sau đầu. Dịch nhẹ để tìm vòng lớn nhất.", "Giữ thước ôm sát nhưng không siết chặt, rồi ghi kết quả (cm)."],
+      "tip": "Đo lại hai lần để kiểm tra. Nếu khó giữ thước đúng vị trí, hãy nhờ nhân viên y tế hỗ trợ.",
+      "source_ids": ["AAP_2026"]
+    }
+  ],
+  "sources": {
+    "WHO_2008": {"organization": "World Health Organization", "title": "WHO Child Growth Standards: Training Course on Child Growth Assessment (Module B; Photo Booklet)", "url": "https://www.who.int/publications/i/item/9789241595070/", "license_note": "Trang khóa học ghi CC BY-NC-SA 3.0 IGO; kiểm tra giấy phép riêng cho ảnh/tệp trước khi tái sử dụng."},
+    "AAP_2026": {"organization": "American Academy of Pediatrics", "title": "Anthropometric Measurements", "url": "https://www.aap.org/en/patient-care/newborn-infant-and-early-childhood-nutrition/newborn-and-infant-nutrition-assessment-tools/anthropometric-measurements/"},
+    "CDC_2024": {"organization": "Centers for Disease Control and Prevention", "title": "Measuring Children's Height and Weight", "url": "https://www.cdc.gov/bmi/child-teen-calculator/measure-child-height-weight.html"},
+    "SICKKIDS_2021": {"organization": "The Hospital for Sick Children (SickKids)", "title": "Virtual care: How to accurately measure your child's height and weight at home", "url": "https://assets.aboutkidshealth.ca/healthaz/na/virtual-care-how-to-accurately-measure-your-childs-height-and-weight-at-home/"}
+  }
+}

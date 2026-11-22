@@ -33,7 +33,7 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
   int _gesturePointers = 0;
 
   double _fraction(Offset focalPoint, double width) =>
-      ((focalPoint.dx - 56) / (width - 76)).clamp(0.0, 1.0);
+      ((focalPoint.dx - 38) / (width - 46)).clamp(0.0, 1.0);
 
   void _startGesture(ScaleStartDetails details, double width) {
     _gestureWindow = _window;
@@ -134,11 +134,9 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
               margin: const EdgeInsets.symmetric(horizontal: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.primarySoft,
+                color: GrowthColors.primarySoft,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: .2),
-                ),
+                border: Border.all(color: GrowthColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +144,7 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
                   const Text(
                     'Lần đo đang xem',
                     style: TextStyle(
-                      color: AppColors.primaryDark,
+                      color: GrowthColors.primaryDark,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -156,7 +154,7 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
                     '${formatGrowthValue(selected.value)} ${widget.metric.unit}',
                     key: const Key('selected-growth-value'),
                     style: const TextStyle(
-                      color: AppColors.textPrimary,
+                      color: GrowthColors.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       height: 1.2,
@@ -167,7 +165,7 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
                     'Ngày đo: ${selected.measuredAt.day.toString().padLeft(2, '0')}/${selected.measuredAt.month.toString().padLeft(2, '0')}/${selected.measuredAt.year}',
                     key: const Key('selected-growth-date'),
                     style: const TextStyle(
-                      color: AppColors.primaryDark,
+                      color: GrowthColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -180,66 +178,66 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
           padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
           child: Text(
             'Chụm/tách hai ngón để thu/phóng. Chạm hai lần để đặt lại.',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: GrowthColors.textSecondary),
           ),
         ),
         LayoutBuilder(
-          builder: (context, c) => SizedBox(
-            width: c.maxWidth,
-            height: (c.maxWidth * 1.15).clamp(380.0, 600.0),
-            child: MouseRegion(
-              onHover: (event) {
-                if (painter == null) return;
-                final nearest = _nearestRow(
-                  rows,
-                  painter,
-                  Size(c.maxWidth, (c.maxWidth * 1.15).clamp(380.0, 600.0)),
-                  event.localPosition,
-                );
-                if (nearest != null && nearest != _selected) {
-                  setState(() {
-                    _selected = nearest;
-                  });
-                }
-              },
-              child: GrowthChartGestures(
-                onPinchingChanged: widget.onPinchingChanged,
-                onReset: () => _setWindow(0, 60),
-                panEnabled: _window.end - _window.start < 60 - 1e-9,
-                onStart: (details) => _startGesture(details, c.maxWidth),
-                onUpdate: (details) => _updateGesture(details, c.maxWidth),
-                onTap: (event) {
+          builder: (context, c) {
+            final chartHeight = (c.maxWidth * 1.24).clamp(400.0, 640.0);
+            return SizedBox(
+              width: c.maxWidth,
+              height: chartHeight,
+              child: MouseRegion(
+                onHover: (event) {
                   if (painter == null) return;
-                  final size = Size(
-                    c.maxWidth,
-                    (c.maxWidth * 1.15).clamp(380.0, 600.0),
-                  );
                   final nearest = _nearestRow(
                     rows,
                     painter,
-                    size,
+                    Size(c.maxWidth, chartHeight),
                     event.localPosition,
                   );
-                  if (nearest != null) setState(() => _selected = nearest);
+                  if (nearest != null && nearest != _selected) {
+                    setState(() {
+                      _selected = nearest;
+                    });
+                  }
                 },
-                child: Semantics(
-                  label:
-                      '${widget.metric.title}. ${rows.length} lần đo trong khoảng đang xem. Chạm để chọn số đo.',
-                  child: painter == null
-                      ? const Center(
-                          child: Text(
-                            'Chưa có số đo trong khoảng đang xem.',
-                            textAlign: TextAlign.center,
+                child: GrowthChartGestures(
+                  onPinchingChanged: widget.onPinchingChanged,
+                  onReset: () => _setWindow(0, 60),
+                  panEnabled: _window.end - _window.start < 60 - 1e-9,
+                  onStart: (details) => _startGesture(details, c.maxWidth),
+                  onUpdate: (details) => _updateGesture(details, c.maxWidth),
+                  onTap: (event) {
+                    if (painter == null) return;
+                    final size = Size(c.maxWidth, chartHeight);
+                    final nearest = _nearestRow(
+                      rows,
+                      painter,
+                      size,
+                      event.localPosition,
+                    );
+                    if (nearest != null) setState(() => _selected = nearest);
+                  },
+                  child: Semantics(
+                    label:
+                        '${widget.metric.title}. ${rows.length} lần đo trong khoảng đang xem. Chạm để chọn số đo.',
+                    child: painter == null
+                        ? const Center(
+                            child: Text(
+                              'Chưa có số đo trong khoảng đang xem.',
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : CustomPaint(
+                            key: const Key('growth-plot'),
+                            painter: painter,
                           ),
-                        )
-                      : CustomPaint(
-                          key: const Key('growth-plot'),
-                          painter: painter,
-                        ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
@@ -279,7 +277,7 @@ class _MeasurementPainter extends CustomPainter {
   final GrowthMetric metric;
   final GrowthMeasurementDraft selected;
   final double minAge, maxAge;
-  static const color = AppColors.primary;
+  static const color = GrowthColors.primary;
   late final GrowthChartValueScale valueScale = GrowthChartValueScale.forRows(
     rows,
     metric,
@@ -290,7 +288,7 @@ class _MeasurementPainter extends CustomPainter {
   DateTime get stop => end;
 
   Rect plot(Size size) =>
-      Rect.fromLTRB(56, 26, size.width - 20, size.height - 58);
+      Rect.fromLTRB(38, 18, size.width - 8, size.height - 38);
 
   double xForDate(DateTime date, Size size) {
     final r = plot(size);
@@ -312,14 +310,15 @@ class _MeasurementPainter extends CustomPainter {
     Offset at, {
     bool center = false,
     bool right = false,
+    double fontSize = 11,
   }) {
     final text = TextPainter(
       text: TextSpan(
         text: value,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Nunito',
-          color: AppColors.textPrimary,
-          fontSize: 15,
+          color: GrowthColors.textPrimary,
+          fontSize: fontSize,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -353,7 +352,7 @@ class _MeasurementPainter extends CustomPainter {
       label(
         canvas,
         naturalLabel(low + valueScale.step * i),
-        Offset(r.left - 10, y - 9),
+        Offset(r.left - 6, y - 7),
         right: true,
       );
     }
@@ -387,7 +386,7 @@ class _MeasurementPainter extends CustomPainter {
       age < maxAge - 1e-9;
       age += step
     ) {
-      if (xFor(age) - xFor(ticks.last) > 44 && r.right - xFor(age) > 44) {
+      if (xFor(age) - xFor(ticks.last) > 34 && r.right - xFor(age) > 34) {
         ticks.add(age);
       }
     }
@@ -396,12 +395,18 @@ class _MeasurementPainter extends CustomPainter {
       label(
         canvas,
         formatGrowthValue((age * 100).round() / 100),
-        Offset(xFor(age), r.bottom + 10),
+        Offset(xFor(age), r.bottom + 6),
         center: true,
       );
     }
-    label(canvas, metric.unit, Offset(r.left, 0));
-    label(canvas, 'Tháng', Offset(r.center.dx, r.bottom + 28), center: true);
+    label(canvas, metric.unit, Offset(r.left, 0), fontSize: 10.5);
+    label(
+      canvas,
+      'Tháng',
+      Offset(r.center.dx, r.bottom + 21),
+      center: true,
+      fontSize: 10.5,
+    );
     final axis = Paint()
       ..color = const Color(0xFF526B68)
       ..strokeWidth = 1.5;

@@ -20,6 +20,7 @@ void main() {
 
   setUp(() async {
     requests.clear();
+    ApiGrowthRepository.clearSharedCache();
     SharedPreferences.setMockInitialValues({});
     DemoStore.resetInstanceForTesting();
     final store = DemoStore.instance;
@@ -87,6 +88,7 @@ void main() {
         hasLength(2),
       );
       expect(find.text('Chưa có số đo'), findsNWidgets(3));
+      expect(find.text('Bé gái'), findsOneWidget);
       expect(find.text('Chưa tải được số đo.'), findsNothing);
       expect(repository.canEdit, isTrue);
       expect(tester.takeException(), isNull);
@@ -131,4 +133,22 @@ void main() {
     expect(store.serverChildId(serverId), serverId);
     expect(ApiGrowthRepository().remote.childId, serverId);
   });
+
+  testWidgets(
+    'switching tabs reuses cached measurements and assessments without refetching',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: GrowthOverview(repository: ApiGrowthRepository())),
+      );
+      await tester.pumpAndSettle();
+      expect(requests, hasLength(3));
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        MaterialApp(home: GrowthOverview(repository: ApiGrowthRepository())),
+      );
+      await tester.pumpAndSettle();
+      expect(requests, hasLength(3));
+    },
+  );
 }

@@ -5,12 +5,14 @@ export 'growth_models.dart';
 
 abstract class GrowthRepository {
   bool get canEdit => true;
+  bool get hasCachedData => false;
   String? get childLabel => null;
   String? get childId => null;
+  String? get childGender => null;
   Map<String, dynamic>? get pairingInfo => null;
   DateTime? get dateOfBirth => null;
 
-  Future<void> refreshMeasurements() async {}
+  Future<void> refreshMeasurements({bool force = false}) async {}
 
   Future<List<GrowthMeasurementDraft>> measurements(GrowthMetric metric) =>
       Future.value(const []);
@@ -34,6 +36,7 @@ abstract class GrowthRepository {
   Future<Map<String, dynamic>> parentAssessment(
     String kind, {
     String? selectedId,
+    bool force = false,
   }) async => {'current': null, 'previous': null, 'preview': true};
 
   Future<void> saveMeasurement(
@@ -109,6 +112,9 @@ class MockGrowthRepository extends GrowthRepository {
 
   @override
   DateTime get dateOfBirth => DateTime(2024, 5, 15);
+
+  @override
+  String get childGender => 'male';
 
   List<GrowthMeasurementDraft> _entries(GrowthMetric metric) =>
       switch (metric) {

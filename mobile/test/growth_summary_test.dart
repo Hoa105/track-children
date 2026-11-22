@@ -19,6 +19,7 @@ class SummaryRepository extends MockGrowthRepository {
   Future<Map<String, dynamic>> parentAssessment(
     String kind, {
     String? selectedId,
+    bool force = false,
   }) async {
     calls.add(kind);
     if (kind == 'head' && failHead) throw StateError('offline');
@@ -48,6 +49,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nhận xét cân nặng từ máy chủ'), findsOneWidget);
     expect(find.text('Nhận xét vòng đầu từ máy chủ'), findsOneWidget);
+    expect(find.text('Bé trai'), findsOneWidget);
     expect(repository.calls, ['bmi', 'head']);
     await tester.ensureVisible(find.text('Nhận xét vòng đầu từ máy chủ'));
     await tester.tap(find.text('Nhận xét vòng đầu từ máy chủ'));

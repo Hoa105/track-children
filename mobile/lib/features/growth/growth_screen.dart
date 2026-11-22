@@ -53,6 +53,7 @@ class GrowthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GrowthOverview(
+    initialMetric: initialMetric,
     openEditorOnStart: openMeasurement,
     repository: AuthService.instance.demoMode || !AuthService.instance.signedIn
         ? null

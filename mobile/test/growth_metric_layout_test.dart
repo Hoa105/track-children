@@ -22,7 +22,7 @@ void main() {
       MaterialApp(home: GrowthOverview(repository: MockGrowthRepository())),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(GrowthMeasurementChart), findsNothing);
+    expect(find.byType(GrowthMeasurementChart), findsOneWidget);
     for (final (title, kind) in [
       ('Đánh giá BMI', 'bmi'),
       ('Đánh giá vòng đầu', 'head'),

@@ -5,11 +5,129 @@ import '../../app_colors.dart';
 import '../../services/auth_service.dart';
 import 'growth_repository.dart';
 import 'growth_measurement_chart.dart';
+import 'growth_measurement_guides.dart';
+export 'growth_measurement_guides.dart';
+
+/// Applies the Green Sprout theme across all growth routes, dialogs and bottom sheets.
+class GrowthTheme extends StatelessWidget {
+  const GrowthTheme({required this.child, super.key});
+
+  final Widget child;
+
+  static ThemeData of(BuildContext context) {
+    final base = Theme.of(context);
+    return base.copyWith(
+      scaffoldBackgroundColor: GrowthColors.background,
+      colorScheme: base.colorScheme.copyWith(
+        primary: GrowthColors.primary,
+        onPrimary: GrowthColors.surface,
+        primaryContainer: GrowthColors.primarySoft,
+        onPrimaryContainer: GrowthColors.textPrimary,
+        secondary: GrowthColors.primary,
+        onSecondary: GrowthColors.surface,
+        secondaryContainer: GrowthColors.iconBackground,
+        onSecondaryContainer: GrowthColors.textPrimary,
+        surface: GrowthColors.surface,
+        onSurface: GrowthColors.textPrimary,
+        onSurfaceVariant: GrowthColors.textSecondary,
+        outline: GrowthColors.border,
+        outlineVariant: GrowthColors.border,
+        surfaceTint: Colors.transparent,
+      ),
+      textTheme: base.textTheme.apply(
+        fontFamily: 'Nunito',
+        bodyColor: GrowthColors.textPrimary,
+        displayColor: GrowthColors.textPrimary,
+      ),
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: GrowthColors.background,
+        foregroundColor: GrowthColors.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: GrowthColors.surface,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Nunito',
+          color: GrowthColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: 'Nunito',
+          color: GrowthColors.textSecondary,
+          fontSize: 15,
+          height: 1.4,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(28)),
+          side: BorderSide(color: GrowthColors.border),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: GrowthColors.background,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: GrowthColors.background,
+        dragHandleColor: GrowthColors.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: GrowthColors.primaryDark,
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Nunito',
+          color: GrowthColors.surface,
+          fontWeight: FontWeight.w700,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        behavior: SnackBarBehavior.floating,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: GrowthColors.primary,
+          foregroundColor: GrowthColors.surface,
+          textStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: GrowthColors.primary,
+          textStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: GrowthColors.border,
+        thickness: 1,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: GrowthColors.primary,
+        linearTrackColor: GrowthColors.primarySoft,
+      ),
+      splashColor: GrowthColors.primarySoft,
+      highlightColor: GrowthColors.primarySoft,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Theme(data: of(context), child: child);
+}
 
 Color trackingMetricColor(GrowthMetric metric) => switch (metric) {
   GrowthMetric.weight => const Color(0xFFE58C45),
   GrowthMetric.lengthHeight => const Color(0xFF4B92C6),
-  GrowthMetric.headCircumference => const Color(0xFF9B78C6),
+  GrowthMetric.headCircumference => GrowthColors.primary,
 };
 
 IconData trackingMetricIcon(GrowthMetric metric) => switch (metric) {
@@ -72,63 +190,76 @@ Future<DateTime?> pickTrackingDate(
   lastDate: lastDate,
   helpText: helpText,
   builder: (context, child) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme.copyWith(
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
-      surface: AppColors.surface,
-      onSurface: AppColors.textPrimary,
-    );
+    final theme = GrowthTheme.of(context);
     return Theme(
       data: theme.copyWith(
-        colorScheme: colors,
-        dialogTheme: const DialogThemeData(
-          backgroundColor: AppColors.surface,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28)),
-          ),
-        ),
         datePickerTheme: DatePickerThemeData(
-          backgroundColor: AppColors.surface,
+          backgroundColor: GrowthColors.surface,
           surfaceTintColor: Colors.transparent,
-          headerBackgroundColor: AppColors.primary,
-          headerForegroundColor: Colors.white,
-          headerHeadlineStyle: TextStyle(
-            color: Colors.white,
+          headerBackgroundColor: GrowthColors.primary,
+          headerForegroundColor: GrowthColors.surface,
+          headerHeadlineStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            color: GrowthColors.surface,
             fontSize: 26,
             fontWeight: FontWeight.w800,
           ),
-          headerHelpStyle: TextStyle(
-            color: Colors.white,
+          headerHelpStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            color: GrowthColors.surface,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
-          weekdayStyle: TextStyle(
-            color: AppColors.textSecondary,
+          weekdayStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            color: GrowthColors.textSecondary,
             fontWeight: FontWeight.w700,
           ),
-          dayStyle: TextStyle(
-            color: AppColors.textPrimary,
+          dayStyle: const TextStyle(
+            fontFamily: 'Nunito',
+            color: GrowthColors.textPrimary,
             fontWeight: FontWeight.w600,
           ),
-          todayForegroundColor: WidgetStatePropertyAll(AppColors.primary),
-          todayBackgroundColor: WidgetStatePropertyAll(Colors.transparent),
+          todayForegroundColor: const WidgetStatePropertyAll(
+            GrowthColors.primary,
+          ),
+          todayBackgroundColor: const WidgetStatePropertyAll(
+            Colors.transparent,
+          ),
           dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return Colors.white;
-            if (states.contains(WidgetState.disabled)) {
-              return AppColors.textSecondary.withAlpha(100);
+            if (states.contains(WidgetState.selected)) {
+              return GrowthColors.surface;
             }
-            return AppColors.textPrimary;
+            if (states.contains(WidgetState.disabled)) {
+              return GrowthColors.textSecondary.withAlpha(100);
+            }
+            return GrowthColors.textPrimary;
           }),
           dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return AppColors.primary;
+            if (states.contains(WidgetState.selected)) {
+              return GrowthColors.primary;
+            }
             return Colors.transparent;
           }),
-          todayBorder: BorderSide(color: AppColors.primary, width: 1.5),
-          rangeSelectionBackgroundColor: AppColors.primarySoft,
-          shape: RoundedRectangleBorder(
+          todayBorder: const BorderSide(color: GrowthColors.primary, width: 1.5),
+          rangeSelectionBackgroundColor: GrowthColors.primarySoft,
+          cancelButtonStyle: TextButton.styleFrom(
+            foregroundColor: GrowthColors.textSecondary,
+            textStyle: const TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          confirmButtonStyle: TextButton.styleFrom(
+            foregroundColor: GrowthColors.primary,
+            textStyle: const TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(28)),
+            side: BorderSide(color: GrowthColors.border),
           ),
         ),
       ),
@@ -150,37 +281,39 @@ Future<bool> openTrackingEditor(
       await showModalBottomSheet<GrowthMetric>(
         context: context,
         showDragHandle: true,
-        backgroundColor: AppColors.background,
+        backgroundColor: GrowthColors.background,
         useSafeArea: true,
-        builder: (sheet) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Thêm số đo mới',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+        builder: (sheet) => GrowthTheme(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Thêm số đo mới',
+                  style: TextStyle(
+                    color: GrowthColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Chọn thông tin bạn muốn cập nhật cho bé',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 18),
-              for (final item in GrowthMetric.values) ...[
-                _MetricChoiceTile(
-                  metric: item,
-                  onTap: () => Navigator.pop(sheet, item),
+                const SizedBox(height: 6),
+                const Text(
+                  'Chọn thông tin bạn muốn cập nhật cho bé',
+                  style: TextStyle(color: GrowthColors.textSecondary),
                 ),
-                if (item != GrowthMetric.values.last)
-                  const SizedBox(height: 10),
+                const SizedBox(height: 18),
+                for (final item in GrowthMetric.values) ...[
+                  _MetricChoiceTile(
+                    metric: item,
+                    onTap: () => Navigator.pop(sheet, item),
+                  ),
+                  if (item != GrowthMetric.values.last)
+                    const SizedBox(height: 10),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
@@ -205,13 +338,15 @@ class _MetricChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
+    color: GrowthColors.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: AppColors.border),
+      side: const BorderSide(color: GrowthColors.border),
     ),
     child: InkWell(
       borderRadius: BorderRadius.circular(20),
+      splashColor: GrowthColors.primarySoft,
+      highlightColor: GrowthColors.primarySoft,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -221,12 +356,12 @@ class _MetricChoiceTile extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: trackingMetricColor(metric).withAlpha(28),
+                color: GrowthColors.iconBackground,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Icon(
                 trackingMetricIcon(metric),
-                color: trackingMetricColor(metric),
+                color: GrowthColors.primary,
               ),
             ),
             const SizedBox(width: 14),
@@ -237,7 +372,7 @@ class _MetricChoiceTile extends StatelessWidget {
                   Text(
                     metric.title,
                     style: const TextStyle(
-                      color: AppColors.textPrimary,
+                      color: GrowthColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
@@ -246,14 +381,14 @@ class _MetricChoiceTile extends StatelessWidget {
                   Text(
                     'Đơn vị: ${metric.unit}',
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: GrowthColors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+            const Icon(Icons.chevron_right_rounded, color: GrowthColors.primary),
           ],
         ),
       ),
@@ -279,11 +414,11 @@ class _MeasureMethodTile extends StatelessWidget {
         ? 'Nằm đo chiều dài'
         : 'Đứng đo chiều cao';
     return Material(
-      color: selected ? AppColors.primarySoft : AppColors.background,
+      color: selected ? GrowthColors.primarySoft : GrowthColors.background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? GrowthColors.primary : GrowthColors.border,
         ),
       ),
       child: InkWell(
@@ -298,7 +433,9 @@ class _MeasureMethodTile extends StatelessWidget {
                     ? Icons.airline_seat_flat_outlined
                     : Icons.accessibility_new_outlined,
                 size: 20,
-                color: selected ? AppColors.primary : AppColors.textSecondary,
+                color: selected
+                    ? GrowthColors.primary
+                    : GrowthColors.textSecondary,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -306,8 +443,8 @@ class _MeasureMethodTile extends StatelessWidget {
                   title,
                   style: TextStyle(
                     color: selected
-                        ? AppColors.primaryDark
-                        : AppColors.textPrimary,
+                        ? GrowthColors.primaryDark
+                        : GrowthColors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -315,7 +452,7 @@ class _MeasureMethodTile extends StatelessWidget {
               if (selected)
                 const Icon(
                   Icons.check_circle,
-                  color: AppColors.primary,
+                  color: GrowthColors.primary,
                   size: 20,
                 ),
             ],
@@ -437,21 +574,71 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
         final existing = conflicts.first;
         final edit = await showDialog<bool>(
           context: context,
-          builder: (dialog) => AlertDialog(
-            title: const Text('Ngày này đã có số đo'),
-            content: Text(
-              '${trackingValue(existing.value)} ${widget.metric.unit} · ${trackingDate(existing.measuredAt)}',
+          builder: (dialog) => GrowthTheme(
+            child: AlertDialog(
+              backgroundColor: GrowthColors.surface,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: const BorderSide(color: GrowthColors.border),
+              ),
+              icon: Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: GrowthColors.iconBackground,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.event_note_rounded,
+                  color: GrowthColors.primary,
+                  size: 26,
+                ),
+              ),
+              title: const Text(
+                'Ngày này đã có số đo',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: GrowthColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              content: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: GrowthColors.primarySoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${trackingValue(existing.value)} ${widget.metric.unit} · ${trackingDate(existing.measuredAt)}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: GrowthColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialog, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: GrowthColors.textSecondary,
+                  ),
+                  child: const Text('Quay lại'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: GrowthColors.primary,
+                    foregroundColor: GrowthColors.surface,
+                  ),
+                  onPressed: () => Navigator.pop(dialog, true),
+                  child: const Text('Mở để sửa'),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialog, false),
-                child: const Text('Quay lại'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialog, true),
-                child: const Text('Mở để sửa'),
-              ),
-            ],
           ),
         );
         if (edit == true && mounted) {
@@ -487,34 +674,57 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
     if (_busy || original == null || !widget.repository.canEdit) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        icon: const Icon(
-          Icons.delete_outline_rounded,
-          color: Color(0xFFDC2626),
-          size: 32,
-        ),
-        title: const Text(
-          'Xóa số đo?',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'Lần đo ${trackingValue(original.value)} ${widget.metric.unit} ngày ${trackingDate(original.measuredAt)} sẽ bị xóa khỏi lịch sử.',
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Hủy'),
+      builder: (dialog) => GrowthTheme(
+        child: AlertDialog(
+          backgroundColor: GrowthColors.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: const BorderSide(color: GrowthColors.border),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+          icon: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: WeightChartColors.critical.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Xóa'),
+            child: const Icon(
+              Icons.delete_outline_rounded,
+              color: WeightChartColors.critical,
+              size: 28,
+            ),
           ),
-        ],
+          title: const Text(
+            'Xóa số đo?',
+            style: TextStyle(
+              color: GrowthColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: Text(
+            'Lần đo ${trackingValue(original.value)} ${widget.metric.unit} ngày ${trackingDate(original.measuredAt)} sẽ bị xóa khỏi lịch sử.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: GrowthColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              style: TextButton.styleFrom(
+                foregroundColor: GrowthColors.textSecondary,
+              ),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: WeightChartColors.critical,
+                foregroundColor: GrowthColors.surface,
+              ),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -533,48 +743,53 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_busy,
-    child: Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        scrolledUnderElevation: 0,
-        title: Text('${_original == null ? 'Thêm' : 'Sửa'} số đo'),
-        actions: [
-          if (_original != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Center(
-                child: Material(
-                  color: const Color(0xFFFEF2F2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Color(0xFFFECACA), width: 1),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: _busy ? null : _delete,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+  Widget build(BuildContext context) => GrowthTheme(
+    child: PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        backgroundColor: GrowthColors.background,
+        appBar: AppBar(
+          backgroundColor: GrowthColors.background,
+          scrolledUnderElevation: 0,
+          title: Text('${_original == null ? 'Thêm' : 'Sửa'} số đo'),
+          actions: [
+            if (_original != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Center(
+                  child: Material(
+                    color: WeightChartColors.critical.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: WeightChartColors.critical.withValues(
+                          alpha: 0.25,
+                        ),
                       ),
-                      child: Text(
-                        'Xóa',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFDC2626),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _busy ? null : _delete,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        child: Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: WeightChartColors.critical,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
+          ],
+        ),
       body: Form(
         key: _form,
         child: ListView(
@@ -583,11 +798,9 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: trackingMetricColor(widget.metric).withAlpha(28),
+                color: GrowthColors.primarySoft,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: trackingMetricColor(widget.metric).withAlpha(70),
-                ),
+                border: Border.all(color: GrowthColors.border),
               ),
               child: Row(
                 children: [
@@ -595,12 +808,12 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(210),
+                      color: GrowthColors.iconBackground,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       trackingMetricIcon(widget.metric),
-                      color: trackingMetricColor(widget.metric),
+                      color: GrowthColors.primary,
                       size: 28,
                     ),
                   ),
@@ -612,17 +825,24 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                         Text(
                           widget.metric.title,
                           style: const TextStyle(
-                            color: AppColors.textPrimary,
+                            color: GrowthColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          widget.metric.measurementTip,
+                          GrowthMeasurementGuides.byId(
+                            GrowthMeasurementGuides.initialGuideId(
+                              metric: widget.metric,
+                              birth: widget.repository.dateOfBirth,
+                              measuredAt: _day,
+                              method: _method,
+                            ),
+                          ).shortHint,
                           style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
+                            color: GrowthColors.textSecondary,
+                            fontSize: 12.5,
                             height: 1.35,
                           ),
                         ),
@@ -635,16 +855,46 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
             const SizedBox(height: 16),
             Card(
               elevation: 0,
-              color: Colors.white,
+              color: GrowthColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
-                side: const BorderSide(color: AppColors.border),
+                side: const BorderSide(color: GrowthColors.border),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Số đo ${widget.metric.title.toLowerCase()}',
+                            style: const TextStyle(
+                              color: GrowthColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        MeasurementGuideLink(
+                          key: ValueKey('guide-link-${widget.metric.name}'),
+                          metric: widget.metric,
+                          birth: widget.repository.dateOfBirth,
+                          measuredAt: _day,
+                          method: _method,
+                          onMethodChanged:
+                              widget.metric == GrowthMetric.lengthHeight
+                              ? (next) {
+                                  if (mounted && !_busy) {
+                                    setState(() => _method = next);
+                                  }
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _value,
                       enabled: !_busy,
@@ -660,8 +910,11 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                         hintText: widget.metric.initialValue,
                         suffixText: widget.metric.unit,
                         filled: true,
-                        fillColor: AppColors.background,
-                        prefixIcon: const Icon(Icons.edit_outlined),
+                        fillColor: GrowthColors.background,
+                        prefixIcon: const Icon(
+                          Icons.edit_outlined,
+                          color: GrowthColors.primary,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -693,7 +946,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                           children: [
                             const Icon(
                               Icons.calendar_month_outlined,
-                              color: AppColors.primary,
+                              color: GrowthColors.primary,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -703,7 +956,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                                   const Text(
                                     'Ngày đo',
                                     style: TextStyle(
-                                      color: AppColors.textSecondary,
+                                      color: GrowthColors.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -711,7 +964,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                                   Text(
                                     '${DateUtils.isSameDay(_day, DateTime.now()) ? 'Hôm nay, ' : ''}${trackingDate(_day)}',
                                     style: const TextStyle(
-                                      color: AppColors.textPrimary,
+                                      color: GrowthColors.textPrimary,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -719,7 +972,10 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: GrowthColors.textSecondary,
+                            ),
                           ],
                         ),
                       ),
@@ -732,10 +988,10 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
               const SizedBox(height: 16),
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: GrowthColors.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(22),
-                  side: const BorderSide(color: AppColors.border),
+                  side: const BorderSide(color: GrowthColors.border),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -745,7 +1001,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                       const Text(
                         'Bé được đo thế nào?',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: GrowthColors.textPrimary,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -764,7 +1020,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                         'Dưới 2 tuổi: nên đo nằm. Từ 2 tuổi: nên đo đứng.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary,
+                          color: GrowthColors.textSecondary,
                         ),
                       ),
                     ],
@@ -784,7 +1040,8 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
             FilledButton(
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(54),
-                backgroundColor: AppColors.primary,
+                backgroundColor: GrowthColors.primary,
+                foregroundColor: GrowthColors.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -803,7 +1060,8 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
         ),
       ),
     ),
-  );
+  ),
+);
 }
 
 class TrackingBmiQuickEditor extends StatefulWidget {
@@ -934,15 +1192,16 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_busy,
-    child: Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        scrolledUnderElevation: 0,
-        title: const Text('Cập nhật BMI nhanh'),
-      ),
+  Widget build(BuildContext context) => GrowthTheme(
+    child: PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        backgroundColor: GrowthColors.background,
+        appBar: AppBar(
+          backgroundColor: GrowthColors.background,
+          scrolledUnderElevation: 0,
+          title: const Text('Cập nhật BMI nhanh'),
+        ),
       body: Form(
         key: _form,
         child: ListView(
@@ -951,18 +1210,19 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.primarySoft,
+                color: GrowthColors.primarySoft,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: Color(0xFF177565)),
+                  Icon(Icons.info_outline, color: GrowthColors.primary),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Nên đo cân nặng và chiều cao mới trong cùng một lần để kết quả BMI phản ánh đúng tình trạng hiện tại của bé.',
                       style: TextStyle(
+                        color: GrowthColors.textPrimary,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                       ),
@@ -974,10 +1234,10 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
             const SizedBox(height: 20),
             Card(
               elevation: 0,
-              color: Colors.white,
+              color: GrowthColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
-                side: const BorderSide(color: AppColors.border),
+                side: const BorderSide(color: GrowthColors.border),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -985,37 +1245,73 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: TextFormField(
-                        controller: _weight,
-                        enabled: !_busy,
-                        autofocus: true,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: 'Cân nặng',
-                          suffixText: 'kg',
-                          filled: true,
-                          fillColor: AppColors.background,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: MeasurementGuideLink(
+                              key: const ValueKey('bmi-guide-link-weight'),
+                              metric: GrowthMetric.weight,
+                              birth: widget.repository.dateOfBirth,
+                              measuredAt: _day,
+                            ),
                           ),
-                        ),
-                        validator: _validateNumber,
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _weight,
+                            enabled: !_busy,
+                            autofocus: true,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.,]'),
+                              ),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'Cân nặng',
+                              suffixText: 'kg',
+                              filled: true,
+                              fillColor: GrowthColors.background,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            validator: _validateNumber,
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: TextFormField(
-                        controller: _height,
-                        enabled: !_busy,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: MeasurementGuideLink(
+                              key: const ValueKey('bmi-guide-link-height'),
+                              metric: GrowthMetric.lengthHeight,
+                              birth: widget.repository.dateOfBirth,
+                              measuredAt: _day,
+                              method: _method,
+                              onMethodChanged: (next) {
+                                if (mounted && !_busy) {
+                                  setState(() => _method = next);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _height,
+                            enabled: !_busy,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                         ],
@@ -1023,13 +1319,15 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
                           labelText: 'Chiều cao',
                           suffixText: 'cm',
                           filled: true,
-                          fillColor: AppColors.background,
+                          fillColor: GrowthColors.background,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
                           ),
                         ),
-                        validator: _validateNumber,
+                            validator: _validateNumber,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1039,31 +1337,41 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
             const SizedBox(height: 12),
             Card(
               elevation: 0,
-              color: Colors.white,
+              color: GrowthColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.border),
+                side: const BorderSide(color: GrowthColors.border),
               ),
               child: ListTile(
                 leading: const Icon(
                   Icons.calendar_month_outlined,
-                  color: AppColors.primary,
+                  color: GrowthColors.primary,
                 ),
                 title: const Text(
                   'Ngày đo',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: GrowthColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 subtitle: Text(
                   '${DateUtils.isSameDay(_day, DateTime.now()) ? 'Hôm nay, ' : ''}${trackingDate(_day)}',
+                  style: const TextStyle(color: GrowthColors.textSecondary),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: GrowthColors.textSecondary,
+                ),
                 onTap: _busy ? null : _pickDate,
               ),
             ),
             const SizedBox(height: 12),
             const Text(
               'Cách đo chiều cao',
-              style: TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: GrowthColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -1077,6 +1385,12 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
                           : 'Đứng đo chiều cao',
                     ),
                     selected: _method == method,
+                    selectedColor: GrowthColors.accent,
+                    backgroundColor: GrowthColors.surface,
+                    labelStyle: const TextStyle(
+                      color: GrowthColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
                     onSelected: _busy
                         ? null
                         : (_) => setState(() => _method = method),
@@ -1086,7 +1400,7 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
             const SizedBox(height: 8),
             const Text(
               'Dưới 2 tuổi: nên đo nằm. Từ 2 tuổi: nên đo đứng.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF667085)),
+              style: TextStyle(fontSize: 13, color: GrowthColors.textSecondary),
             ),
             if (_error != null)
               Padding(
@@ -1100,7 +1414,8 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
             FilledButton(
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(54),
-                backgroundColor: AppColors.primary,
+                backgroundColor: GrowthColors.primary,
+                foregroundColor: GrowthColors.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -1112,7 +1427,8 @@ class _TrackingBmiQuickEditorState extends State<TrackingBmiQuickEditor> {
         ),
       ),
     ),
-  );
+  ),
+);
 }
 
 class TrackingHistoryScreen extends StatefulWidget {
@@ -1130,16 +1446,16 @@ class TrackingHistoryScreen extends StatefulWidget {
 class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
   bool _chartPinching = false;
   late Future<List<GrowthMeasurementDraft>> _data = _load();
-  Future<List<GrowthMeasurementDraft>> _load() async {
-    await widget.repository.refreshMeasurements();
+  Future<List<GrowthMeasurementDraft>> _load({bool force = false}) async {
+    await widget.repository.refreshMeasurements(force: force);
     final rows = [...await widget.repository.measurements(widget.metric)]
       ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
     return rows;
   }
 
-  void _reload() {
+  void _reload({bool force = false}) {
     setState(() {
-      _data = _load();
+      _data = _load(force: force);
       _data.ignore();
     });
   }
@@ -1159,18 +1475,26 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
-    child: Scaffold(
-      backgroundColor: AppColors.background,
+  Widget build(BuildContext context) => GrowthTheme(
+    child: DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: GrowthColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: GrowthColors.background,
+        foregroundColor: GrowthColors.textPrimary,
         scrolledUnderElevation: 0,
-        title: Text(widget.metric.title),
+        title: Text(
+          widget.metric.title,
+          style: const TextStyle(
+            color: GrowthColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         bottom: const TabBar(
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
+          labelColor: GrowthColors.primary,
+          unselectedLabelColor: GrowthColors.textSecondary,
+          indicatorColor: GrowthColors.primary,
           tabs: [
             Tab(text: 'Biểu đồ'),
             Tab(text: 'Lịch sử'),
@@ -1181,7 +1505,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
             IconButton(
               tooltip: 'Ghi số đo',
               onPressed: _edit,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add, color: GrowthColors.primary),
             ),
         ],
       ),
@@ -1189,12 +1513,14 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
         future: _data,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: GrowthColors.primary),
+            );
           }
           if (snapshot.hasError) {
             return Center(
               child: TextButton(
-                onPressed: _reload,
+                onPressed: () => _reload(force: true),
                 child: const Text('Chưa tải được. Thử lại'),
               ),
             );
@@ -1206,8 +1532,9 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                 : null,
             children: [
               RefreshIndicator(
+                color: GrowthColors.primary,
                 onRefresh: () async {
-                  _reload();
+                  _reload(force: true);
                   await _data;
                 },
                 child: SingleChildScrollView(
@@ -1234,7 +1561,8 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
         },
       ),
     ),
-  );
+  ),
+);
 
   Widget _history(List<GrowthMeasurementDraft> rows) {
     if (rows.isEmpty) {
@@ -1243,10 +1571,10 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
           padding: const EdgeInsets.all(28),
           child: Card(
             elevation: 0,
-            color: Colors.white,
+            color: GrowthColors.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(28),
-              side: const BorderSide(color: AppColors.border),
+              side: const BorderSide(color: GrowthColors.border),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -1256,13 +1584,13 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                   Icon(
                     trackingMetricIcon(widget.metric),
                     size: 48,
-                    color: trackingMetricColor(widget.metric),
+                    color: GrowthColors.primary,
                   ),
                   const SizedBox(height: 14),
                   const Text(
                     'Chưa có số đo',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: GrowthColors.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1271,11 +1599,15 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                   const Text(
                     'Thêm số đo đầu tiên để theo dõi sự phát triển của bé.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: GrowthColors.textSecondary),
                   ),
                   if (widget.repository.canEdit) ...[
                     const SizedBox(height: 18),
                     FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: GrowthColors.primary,
+                        foregroundColor: GrowthColors.surface,
+                      ),
                       onPressed: () => _edit(),
                       icon: const Icon(Icons.add),
                       label: const Text('Thêm số đo'),
@@ -1289,8 +1621,9 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
       );
     }
     return RefreshIndicator(
+      color: GrowthColors.primary,
       onRefresh: () async {
-        _reload();
+        _reload(force: true);
         await _data;
       },
       child: ListView.separated(
@@ -1301,14 +1634,16 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
           final row = rows[index];
           return Card(
             elevation: 0,
-            color: Colors.white,
+            color: GrowthColors.surface,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              side: const BorderSide(color: AppColors.border),
+              side: const BorderSide(color: GrowthColors.border),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(22),
+              splashColor: GrowthColors.primarySoft,
+              highlightColor: GrowthColors.primarySoft,
               onTap: widget.repository.canEdit ? () => _edit(row) : null,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
@@ -1318,12 +1653,12 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: trackingMetricColor(widget.metric).withAlpha(25),
+                        color: GrowthColors.iconBackground,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         trackingMetricIcon(widget.metric),
-                        color: trackingMetricColor(widget.metric),
+                        color: GrowthColors.primary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1334,7 +1669,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                           Text(
                             trackingDate(row.measuredAt),
                             style: const TextStyle(
-                              color: AppColors.textSecondary,
+                              color: GrowthColors.textSecondary,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1347,7 +1682,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                                     ? 'Đo nằm'
                                     : 'Đo đứng',
                                 style: const TextStyle(
-                                  color: AppColors.primary,
+                                  color: GrowthColors.primary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1361,7 +1696,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                         '${trackingValue(row.value)} ${widget.metric.unit}',
                         textAlign: TextAlign.end,
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: GrowthColors.textPrimary,
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                         ),
@@ -1372,7 +1707,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                         padding: EdgeInsets.only(left: 4),
                         child: Icon(
                           Icons.chevron_right_rounded,
-                          color: AppColors.primary,
+                          color: GrowthColors.primary,
                         ),
                       ),
                   ],
@@ -1488,15 +1823,16 @@ class _TrackingHeadQuickEditorState extends State<TrackingHeadQuickEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_busy,
-    child: Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        scrolledUnderElevation: 0,
-        title: const Text('Cập nhật vòng đầu nhanh'),
-      ),
+  Widget build(BuildContext context) => GrowthTheme(
+    child: PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        backgroundColor: GrowthColors.background,
+        appBar: AppBar(
+          backgroundColor: GrowthColors.background,
+          scrolledUnderElevation: 0,
+          title: const Text('Cập nhật vòng đầu nhanh'),
+        ),
       body: Form(
         key: _form,
         child: ListView(
@@ -1505,18 +1841,19 @@ class _TrackingHeadQuickEditorState extends State<TrackingHeadQuickEditor> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.primarySoft,
+                color: GrowthColors.primarySoft,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.primary),
+                  Icon(Icons.info_outline, color: GrowthColors.primary),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Nên đo vòng đầu nhẹ nhàng, đúng vị trí lớn nhất quanh đầu của bé để kết quả chính xác hơn.',
                       style: TextStyle(
+                        color: GrowthColors.textPrimary,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1528,90 +1865,127 @@ class _TrackingHeadQuickEditorState extends State<TrackingHeadQuickEditor> {
             const SizedBox(height: 14),
             Card(
               elevation: 0,
-              color: Colors.white,
+              color: GrowthColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
-                side: const BorderSide(color: AppColors.border),
+                side: const BorderSide(color: GrowthColors.border),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: TextFormField(
-                  controller: _value,
-                  enabled: !_busy,
-                  autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: 'Vòng đầu',
-                    suffixText: 'cm',
-                    filled: true,
-                    fillColor: AppColors.background,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Số đo vòng đầu',
+                            style: TextStyle(
+                              color: GrowthColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        MeasurementGuideLink(
+                          key: const ValueKey('head-quick-guide-link'),
+                          metric: GrowthMetric.headCircumference,
+                          birth: widget.repository.dateOfBirth,
+                          measuredAt: _day,
+                        ),
+                      ],
                     ),
-                  ),
-                  validator: _validateValue,
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _value,
+                      enabled: !_busy,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Vòng đầu',
+                        suffixText: 'cm',
+                        filled: true,
+                        fillColor: GrowthColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: _validateValue,
+                    ),
+                  ],
                 ),
               ),
             ),
             const SizedBox(height: 12),
             Card(
               elevation: 0,
-              color: Colors.white,
+              color: GrowthColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.border),
+                side: const BorderSide(color: GrowthColors.border),
               ),
               child: ListTile(
                 leading: const Icon(
                   Icons.calendar_month_outlined,
-                  color: AppColors.primary,
+                  color: GrowthColors.primary,
                 ),
                 title: const Text(
                   'Ngày đo',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: GrowthColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 subtitle: Text(
                   '${DateUtils.isSameDay(_day, DateTime.now()) ? 'Hôm nay, ' : ''}${trackingDate(_day)}',
+                  style: const TextStyle(color: GrowthColors.textSecondary),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: GrowthColors.textSecondary,
+                ),
                 onTap: _busy ? null : _pickDate,
               ),
             ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
-              ),
-            const SizedBox(height: 20),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(54),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: WeightChartColors.critical),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    backgroundColor: GrowthColors.primary,
+                    foregroundColor: GrowthColors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  onPressed: _busy ? null : _save,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Lưu và xem kết quả'),
                 ),
-              ),
-              onPressed: _busy ? null : _save,
-              child: _busy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Lưu và xem kết quả'),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
 }
 
 class TrackingAssessmentScreen extends StatefulWidget {
@@ -1632,10 +2006,10 @@ class TrackingAssessmentScreen extends StatefulWidget {
 class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
   late String? _selectedId = widget.selectedId;
   late Future<Map<String, dynamic>> _data = _load();
-  Future<Map<String, dynamic>> _load() =>
-      widget.repository.parentAssessment(widget.kind, selectedId: _selectedId);
-  void _reload() => setState(() {
-    _data = _load();
+  Future<Map<String, dynamic>> _load({bool force = false}) => widget.repository
+      .parentAssessment(widget.kind, selectedId: _selectedId, force: force);
+  void _reload({bool force = false}) => setState(() {
+    _data = _load(force: force);
     _data.ignore();
   });
   Future<void> _updateBmiMeasurements() async {
@@ -1704,47 +2078,75 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      backgroundColor: GrowthColors.background,
       useSafeArea: true,
-      builder: (sheet) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              switch (metric) {
-                GrowthMetric.weight => 'Chi tiết cân nặng',
-                GrowthMetric.lengthHeight => 'Chi tiết chiều cao',
-                GrowthMetric.headCircumference => 'Chi tiết vòng đầu',
-              },
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 20),
-            _measurementDetailRow(
-              'Số đo',
-              '${trackingValue(source['value'])} ${source['unit']}',
-            ),
-            const Divider(height: 24),
-            _measurementDetailRow('Ngày đo', trackingDate(measuredOn)),
-            if (method != null) ...[
-              const Divider(height: 24),
-              _measurementDetailRow(
-                'Cách đo',
-                method == GrowthMeasurementMethod.recumbent
-                    ? 'Đo nằm'
-                    : 'Đo đứng',
+      builder: (sheet) => GrowthTheme(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                switch (metric) {
+                  GrowthMetric.weight => 'Chi tiết cân nặng',
+                  GrowthMetric.lengthHeight => 'Chi tiết chiều cao',
+                  GrowthMetric.headCircumference => 'Chi tiết vòng đầu',
+                },
+                style: const TextStyle(
+                  color: GrowthColors.textPrimary,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: GrowthColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: GrowthColors.border),
+                ),
+                child: Column(
+                  children: [
+                    _measurementDetailRow(
+                      'Số đo',
+                      '${trackingValue(source['value'])} ${source['unit']}',
+                    ),
+                    const Divider(height: 22),
+                    _measurementDetailRow('Ngày đo', trackingDate(measuredOn)),
+                    if (method != null) ...[
+                      const Divider(height: 22),
+                      _measurementDetailRow(
+                        'Cách đo',
+                        method == GrowthMeasurementMethod.recumbent
+                            ? 'Đo nằm'
+                            : 'Đo đứng',
+                      ),
+                    ],
+                    if ((source['note']?.toString().trim() ?? '')
+                        .isNotEmpty) ...[
+                      const Divider(height: 22),
+                      _measurementDetailRow(
+                        'Ghi chú',
+                        source['note'].toString(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  backgroundColor: GrowthColors.primary,
+                  foregroundColor: GrowthColors.surface,
+                ),
+                onPressed: () => Navigator.pop(sheet),
+                child: const Text('Đóng'),
               ),
             ],
-            if ((source['note']?.toString().trim() ?? '').isNotEmpty) ...[
-              const Divider(height: 24),
-              _measurementDetailRow('Ghi chú', source['note'].toString()),
-            ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => Navigator.pop(sheet),
-              child: const Text('Đóng'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1755,20 +2157,32 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
     children: [
       SizedBox(
         width: 90,
-        child: Text(label, style: const TextStyle(color: Color(0xFF667085))),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: GrowthColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       Expanded(
-        child: Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        child: Text(
+          value,
+          style: const TextStyle(
+            color: GrowthColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     ],
   );
 
   Color _bmiColor(String? code) => switch (code) {
-    'WITHIN_RANGE' => AppColors.primary,
-    'RISK_OVERWEIGHT' => const Color(0xFF9A6700),
-    'THINNESS' || 'OVERWEIGHT' => const Color(0xFFB45309),
-    'SEVERE_THINNESS' || 'OBESITY' => const Color(0xFFB42318),
-    _ => const Color(0xFF475467),
+    'WITHIN_RANGE' => WeightChartColors.positive,
+    'RISK_OVERWEIGHT' => WeightChartColors.attention,
+    'THINNESS' || 'OVERWEIGHT' => WeightChartColors.attention,
+    'SEVERE_THINNESS' || 'OBESITY' => WeightChartColors.critical,
+    _ => WeightChartColors.unknown,
   };
 
   Color _rangeColor(Map range) {
@@ -1959,7 +2373,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     range['label']?.toString() ?? '',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: GrowthColors.textSecondary,
                       fontSize: 11,
                     ),
                   ),
@@ -2002,7 +2416,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     const Text(
                       'TÌNH TRẠNG HIỆN TẠI',
                       style: TextStyle(
-                        color: AppColors.primaryDark,
+                        color: GrowthColors.primaryDark,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.4,
@@ -2011,8 +2425,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     const SizedBox(height: 6),
                     Text(
                       result['summary']?.toString() ?? 'Chưa có nhận xét',
-                      style: TextStyle(
-                        color: AppColors.primaryDark,
+                      style: const TextStyle(
+                        color: GrowthColors.primaryDark,
                         fontSize: 25,
                         height: 1.15,
                         fontWeight: FontWeight.w900,
@@ -2028,8 +2442,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
+            color: GrowthColors.surface,
+            border: Border.all(color: GrowthColors.border),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -2038,7 +2452,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               const Text(
                 'CHỈ SỐ BMI',
                 style: TextStyle(
-                  color: AppColors.primaryDark,
+                  color: GrowthColors.primaryDark,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.4,
@@ -2050,8 +2464,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                   children: [
                     TextSpan(
                       text: trackingValue(bmi),
-                      style: TextStyle(
-                        color: AppColors.primaryDark,
+                      style: const TextStyle(
+                        color: GrowthColors.primaryDark,
                         fontSize: 30,
                         fontWeight: FontWeight.w900,
                       ),
@@ -2059,7 +2473,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     const TextSpan(
                       text: ' kg/m²',
                       style: TextStyle(
-                        color: AppColors.primaryDark,
+                        color: GrowthColors.primaryDark,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -2075,7 +2489,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                 const Text(
                   'Số đo dùng để tính',
                   style: TextStyle(
-                    color: AppColors.primaryDark,
+                    color: GrowthColors.primaryDark,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -2087,7 +2501,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                   children: [
                     for (final source in sources)
                       Material(
-                        color: const Color(0xFFF5F7F6),
+                        color: GrowthColors.primarySoft,
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
@@ -2103,6 +2517,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                                 Text(
                                   '${source['metric'] == 'weight' ? 'Cân nặng' : 'Chiều cao'}: ${trackingValue(source['value'])} ${source['unit']}',
                                   style: const TextStyle(
+                                    color: GrowthColors.textPrimary,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -2110,7 +2525,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                                 const Icon(
                                   Icons.chevron_right,
                                   size: 18,
-                                  color: Color(0xFF667085),
+                                  color: GrowthColors.textSecondary,
                                 ),
                               ],
                             ),
@@ -2127,7 +2542,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.primarySoft,
+            color: GrowthColors.primarySoft,
             borderRadius: BorderRadius.circular(22),
           ),
           child: Column(
@@ -2140,7 +2555,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                   const Text(
                     'BỐ MẸ NÊN LÀM',
                     style: TextStyle(
-                      color: Color(0xFF475467),
+                      color: GrowthColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.3,
@@ -2152,6 +2567,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               Text(
                 result['action']?.toString() ?? '',
                 style: const TextStyle(
+                  color: GrowthColors.textPrimary,
                   fontSize: 16,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
@@ -2167,8 +2583,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
   Widget _quickBmiActions() => Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: AppColors.primarySoft,
-      border: Border.all(color: AppColors.border),
+      color: GrowthColors.primarySoft,
+      border: Border.all(color: GrowthColors.border),
       borderRadius: BorderRadius.circular(22),
     ),
     child: Column(
@@ -2177,7 +2593,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         const Text(
           'CẬP NHẬT SỐ ĐO',
           style: TextStyle(
-            color: Color(0xFF667085),
+            color: GrowthColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.4,
@@ -2186,19 +2602,23 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         const SizedBox(height: 8),
         const Text(
           'Đo lại cân nặng và chiều cao',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: GrowthColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 5),
         const Text(
           'Nên đo cả hai trong cùng một lần để cập nhật BMI.',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+          style: TextStyle(color: GrowthColors.textSecondary, height: 1.35),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: _updateBmiMeasurements,
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            backgroundColor: GrowthColors.primary,
+            foregroundColor: GrowthColors.surface,
             minimumSize: const Size.fromHeight(50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -2287,7 +2707,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.primarySoft,
+            color: GrowthColors.primarySoft,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -2295,12 +2715,12 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: const BoxDecoration(
-                  color: AppColors.primarySoft,
+                  color: GrowthColors.iconBackground,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.monitor_weight_outlined,
-                  color: AppColors.primary,
+                  color: GrowthColors.primary,
                   size: 28,
                 ),
               ),
@@ -2309,6 +2729,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                 title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
+                  color: GrowthColors.textPrimary,
                   fontSize: 21,
                   fontWeight: FontWeight.w900,
                 ),
@@ -2317,13 +2738,17 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               const Text(
                 'Cần cân nặng và chiều cao đo trong vòng 1 ngày để xem kết quả.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF667085), height: 1.35),
+                style: TextStyle(
+                  color: GrowthColors.textSecondary,
+                  height: 1.35,
+                ),
               ),
               if (anchorDate != null) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Số đo gần nhất: ${trackingDate(anchorDate)}',
                   style: const TextStyle(
+                    color: GrowthColors.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -2350,10 +2775,10 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
   };
 
   Color _headColor(String? code) => switch (code) {
-    'WITHIN_RANGE' => const Color(0xFF177565),
-    'LOW_HC' || 'HIGH_HC' => const Color(0xFFB45309),
-    'VERY_LOW_HC' || 'VERY_HIGH_HC' => const Color(0xFFB42318),
-    _ => const Color(0xFF475467),
+    'WITHIN_RANGE' => WeightChartColors.positive,
+    'LOW_HC' || 'HIGH_HC' => WeightChartColors.attention,
+    'VERY_LOW_HC' || 'VERY_HIGH_HC' => WeightChartColors.critical,
+    _ => WeightChartColors.unknown,
   };
 
   Widget _headScale(Map result) => _growthScale(
@@ -2542,7 +2967,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     const Text(
                       'TÌNH TRẠNG HIỆN TẠI',
                       style: TextStyle(
-                        color: Color(0xFF667085),
+                        color: GrowthColors.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.4,
@@ -2552,7 +2977,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                     Text(
                       result['summary']?.toString() ?? _headLabel(code),
                       style: const TextStyle(
-                        color: AppColors.primaryDark,
+                        color: GrowthColors.primaryDark,
                         fontSize: 22,
                         height: 1.15,
                         fontWeight: FontWeight.w900,
@@ -2568,8 +2993,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
+            color: GrowthColors.surface,
+            border: Border.all(color: GrowthColors.border),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -2578,7 +3003,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               const Text(
                 'CHỈ SỐ VÒNG ĐẦU',
                 style: TextStyle(
-                  color: AppColors.primaryDark,
+                  color: GrowthColors.primaryDark,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.4,
@@ -2592,7 +3017,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                       TextSpan(
                         text: trackingValue(sources.first['value']),
                         style: const TextStyle(
-                          color: AppColors.primaryDark,
+                          color: GrowthColors.primaryDark,
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
                         ),
@@ -2600,7 +3025,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                       const TextSpan(
                         text: ' cm',
                         style: TextStyle(
-                          color: AppColors.primaryDark,
+                          color: GrowthColors.primaryDark,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2643,7 +3068,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.purpleSurfaceLight,
+            color: GrowthColors.primarySoft,
             borderRadius: BorderRadius.circular(22),
           ),
           child: Column(
@@ -2656,7 +3081,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
                   const Text(
                     'BỐ MẸ NÊN LÀM',
                     style: TextStyle(
-                      color: Color(0xFF475467),
+                      color: GrowthColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.3,
@@ -2668,6 +3093,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
               Text(
                 result['action']?.toString() ?? '',
                 style: const TextStyle(
+                  color: GrowthColors.textPrimary,
                   fontSize: 16,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
@@ -2681,8 +3107,8 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
           FilledButton.icon(
             onPressed: _updateHeadMeasurement,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              backgroundColor: GrowthColors.primary,
+              foregroundColor: GrowthColors.surface,
               minimumSize: const Size.fromHeight(50),
             ),
             icon: const Icon(Icons.add),
@@ -2753,93 +3179,100 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      surfaceTintColor: Colors.transparent,
-      scrolledUnderElevation: 0,
-      title: Text(
-        widget.kind == 'bmi' ? 'Tình trạng cân nặng' : 'Tình trạng vòng đầu',
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => GrowthTheme(
+    child: Scaffold(
+      backgroundColor: GrowthColors.background,
+      appBar: AppBar(
+        backgroundColor: GrowthColors.background,
+        foregroundColor: GrowthColors.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        title: Text(
+          widget.kind == 'bmi' ? 'Tình trạng cân nặng' : 'Tình trạng vòng đầu',
+          style: const TextStyle(
+            color: GrowthColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
-    ),
-    body: FutureBuilder<Map<String, dynamic>>(
-      future: _data,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: TextButton(
-              onPressed: _reload,
-              child: const Text('Chưa tải được tình trạng. Thử lại'),
-            ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: CircularProgressIndicator(color: GrowthColors.primary),
+            );
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: TextButton(
+                onPressed: () => _reload(force: true),
+                child: const Text('Chưa tải được tình trạng. Thử lại'),
+              ),
+            );
+          }
+          final data = snapshot.data!;
+          if (data['preview'] == true) {
+            return const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Đây là dữ liệu minh họa. Đăng nhập và chọn hồ sơ trẻ để xem tình trạng từ số đo đã lưu.',
+              ),
+            );
+          }
+          final current = data['current'] as Map?;
+          final previous = data['previous'] as Map?;
+          final anchor = data['anchor'] as Map?;
+          final anchorDate = DateTime.tryParse(
+            anchor?['measuredOn']?.toString() ?? '',
           );
-        }
-        final data = snapshot.data!;
-        if (data['preview'] == true) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Đây là dữ liệu minh họa. Đăng nhập và chọn hồ sơ trẻ để xem tình trạng từ số đo đã lưu.',
-            ),
-          );
-        }
-        final current = data['current'] as Map?;
-        final previous = data['previous'] as Map?;
-        final anchor = data['anchor'] as Map?;
-        final anchorDate = DateTime.tryParse(
-          anchor?['measuredOn']?.toString() ?? '',
-        );
-        final recent =
-            anchorDate == null ||
-            DateUtils.dateOnly(DateTime.now()).difference(anchorDate).inDays <=
-                1;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-          children: [
-            if (current != null)
-              _result(current)
-            else if (widget.kind == 'bmi')
-              _missingBmi(data, anchorDate, recent)
-            else ...[
-              Text(
-                'Chưa có số đo vòng đầu',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+          final recent =
+              anchorDate == null ||
+              DateUtils.dateOnly(
+                    DateTime.now(),
+                  ).difference(anchorDate).inDays <=
+                  1;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              if (current != null)
+                _result(current)
+              else if (widget.kind == 'bmi')
+                _missingBmi(data, anchorDate, recent)
+              else ...[
+                const Text(
+                  'Chưa có số đo vòng đầu',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Ghi vòng đầu để xem nhận xét theo tuổi và giới tính.',
-              ),
-              if (anchor != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    '${_selectedId == null ? 'Số đo gần nhất' : 'Lần đo đang xem'}: ${trackingDate(anchorDate!)}',
+                const SizedBox(height: 12),
+                const Text(
+                  'Ghi vòng đầu để xem nhận xét theo tuổi và giới tính.',
+                ),
+                if (anchor != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      '${_selectedId == null ? 'Số đo gần nhất' : 'Lần đo đang xem'}: ${trackingDate(anchorDate!)}',
+                    ),
                   ),
+                const SizedBox(height: 20),
+                if (widget.repository.canEdit)
+                  FilledButton(
+                    onPressed: _updateHeadMeasurement,
+                    child: Text(recent ? 'Bổ sung số đo' : 'Ghi số đo mới'),
+                  ),
+              ],
+              if (current != null && current['status'] != 'READY')
+                TextButton(
+                  onPressed: () => _reload(force: true),
+                  child: const Text('Thử tính lại'),
                 ),
-              const SizedBox(height: 20),
-              if (widget.repository.canEdit)
-                FilledButton(
-                  onPressed: _updateHeadMeasurement,
-                  child: Text(recent ? 'Bổ sung số đo' : 'Ghi số đo mới'),
-                ),
+              if (previous != null && widget.kind != 'bmi')
+                _result(previous, previous: true),
             ],
-            if (current != null && current['status'] != 'READY')
-              TextButton(onPressed: _reload, child: const Text('Thử tính lại')),
-            if (previous != null && widget.kind != 'bmi')
-              _result(previous, previous: true),
-          ],
-        );
-      },
+          );
+        },
+      ),
     ),
   );
 }

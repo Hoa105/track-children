@@ -23,18 +23,14 @@ class GrowthAssessmentCard extends StatelessWidget {
       final current = data?['current'] is Map ? data!['current'] as Map : null;
       final code = current?['classificationCode'];
       final ready = current?['status'] == 'READY';
-      final ranges = current?['visualRanges'];
-      final range = ranges is List
-          ? ranges.whereType<Map>().where((r) => r['code'] == code).firstOrNull
-          : null;
-      final labels = current?['classificationLabels'];
-      final label = range?['label'] ?? (labels is Map ? labels[code] : null);
+      final hasSummary =
+          current?['summary'] is String &&
+          (current!['summary'] as String).trim().isNotEmpty;
       final classified =
           snapshot.connectionState == ConnectionState.done &&
           !snapshot.hasError &&
           ready &&
-          label is String &&
-          label.isNotEmpty;
+          hasSummary;
       final color = classified
           ? switch (code) {
               'WITHIN_RANGE' => WeightChartColors.positive,
@@ -50,30 +46,16 @@ class GrowthAssessmentCard extends StatelessWidget {
               _ => WeightChartColors.unknown,
             }
           : WeightChartColors.unknown;
-      final String status;
       final String summary;
       if (snapshot.connectionState != ConnectionState.done) {
-        status = 'Đang tải nhận xét';
         summary = 'Đang tải nhận xét…';
       } else if (snapshot.hasError) {
-        status = 'Chưa tải được';
         summary = 'Chưa tải được nhận xét. Nhấn để thử lại.';
-      } else if (current?['summary'] is String &&
-          (current!['summary'] as String).trim().isNotEmpty) {
-        status = ready && label is String && label.isNotEmpty
-            ? label
-            : switch (current['reason']) {
-                'WHO_FLAGGED' ||
-                'WHO_OUT_OF_RANGE' ||
-                'INVALID_MEASURE_POSITION' => 'Cần kiểm tra lại',
-                _ => 'Chưa thể đánh giá',
-              };
-        summary = current['summary'] as String;
+      } else if (hasSummary) {
+        summary = (current['summary'] as String).trim();
       } else if (data?['preview'] == true) {
-        status = 'Chưa có đánh giá';
         summary = 'Đăng nhập và chọn hồ sơ bé để xem nhận xét.';
       } else {
-        status = 'Chưa đủ số đo';
         summary = kind == 'head'
             ? 'Cần thêm số đo vòng đầu để có nhận xét.'
             : switch (data?['missingMetric']) {
@@ -82,89 +64,92 @@ class GrowthAssessmentCard extends StatelessWidget {
                 _ => 'Cần thêm cân nặng và chiều dài/cao để có nhận xét.',
               };
       }
-      final action =
-          !snapshot.hasError && snapshot.connectionState == ConnectionState.done
-          ? (current?['action'])
-          : null;
       return Material(
-        color: AppColors.surface,
+        color: GrowthColors.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: GrowthColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          splashColor: GrowthColors.primarySoft,
+          highlightColor: GrowthColors.primarySoft,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        kind == 'bmi' ? 'Đánh giá BMI' : 'Đánh giá vòng đầu',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.textSecondary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final icon = kind == 'bmi'
+                    ? Icons.insights_rounded
+                    : Icons.face_retouching_natural_outlined;
+                final badge = Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: .08),
-                    borderRadius: BorderRadius.circular(16),
+                    color: GrowthColors.iconBackground,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                      color: color,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  summary,
+                  child: Icon(icon, size: 19, color: GrowthColors.primary),
+                );
+                final title = Text(
+                  kind == 'bmi' ? 'Đánh giá BMI' : 'Đánh giá vòng đầu',
                   style: const TextStyle(
                     fontSize: 15,
-                    color: AppColors.textPrimary,
-                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                    color: GrowthColors.textPrimary,
                   ),
-                ),
-                if (action is String && action.trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Nên làm gì?',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
+                );
+                final comment = Text(
+                  summary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: constraints.maxWidth < 330
+                      ? TextAlign.start
+                      : TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    height: 1.3,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    action,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ],
+                );
+                const chevron = Icon(
+                  Icons.chevron_right_rounded,
+                  color: GrowthColors.textSecondary,
+                );
+                if (constraints.maxWidth < 330 ||
+                    MediaQuery.textScalerOf(context).scale(14) > 21) {
+                  return Row(
+                    children: [
+                      badge,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            title,
+                            const SizedBox(height: 3),
+                            comment,
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      chevron,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    badge,
+                    const SizedBox(width: 12),
+                    title,
+                    const SizedBox(width: 12),
+                    Expanded(child: comment),
+                    const SizedBox(width: 6),
+                    chevron,
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -172,3 +157,4 @@ class GrowthAssessmentCard extends StatelessWidget {
     },
   );
 }
+

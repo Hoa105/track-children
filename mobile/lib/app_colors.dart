@@ -113,3 +113,17 @@ abstract final class SettingsColors {
   static const accent = HomeColors.milestoneAccent;
   static const iconBackground = HomeColors.iconBackground;
 }
+
+/// Green Sprout palette scoped to Growth Tracking.
+abstract final class GrowthColors {
+  static const background = HomeColors.background;
+  static const surface = HomeColors.surface;
+  static const primary = HomeColors.primary;
+  static const primaryDark = HomeColors.ink;
+  static const primarySoft = HomeColors.reminderBackground;
+  static const textPrimary = HomeColors.ink;
+  static const textSecondary = HomeColors.reminderCta;
+  static const border = HomeColors.iconBackground;
+  static const accent = HomeColors.milestoneAccent;
+  static const iconBackground = HomeColors.iconBackground;
+}

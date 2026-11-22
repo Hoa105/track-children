@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:track_children/features/growth/growth_repository.dart';
 import 'package:track_children/features/growth/growth_tracking_flow.dart';
 import 'package:track_children/features/growth/growth_overview.dart';
 
@@ -19,7 +18,8 @@ class ReadOnly extends MockGrowthRepository {
 
 class FailedRead extends MockGrowthRepository {
   @override
-  Future<void> refreshMeasurements() async => throw StateError('offline');
+  Future<void> refreshMeasurements({bool force = false}) async =>
+      throw StateError('offline');
 }
 
 class ReviewRepository extends MockGrowthRepository {
@@ -27,6 +27,7 @@ class ReviewRepository extends MockGrowthRepository {
   Future<Map<String, dynamic>> parentAssessment(
     String kind, {
     String? selectedId,
+    bool force = false,
   }) async => {
     'current': {
       'status': 'READY',

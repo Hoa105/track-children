@@ -18,7 +18,7 @@ void main() {
     ('head', 'VERY_HIGH_HC', 'Rất lớn', WeightChartColors.critical),
   ]) {
     testWidgets(
-      '$kind $code shows server label and advice without extra metadata',
+      '$kind $code shows inline summary without status badge or advice',
       (tester) async {
         var tapped = false;
         await tester.pumpWidget(
@@ -46,17 +46,22 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(tester.widget<Text>(find.text(label)).style!.color, color);
-        expect(find.text('Server advice'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('Server assessment')).style!.color,
+          color,
+        );
+        expect(find.text(label), findsNothing);
+        expect(find.text('Server advice'), findsNothing);
+        expect(find.text('Nên làm gì?'), findsNothing);
         expect(find.textContaining('Lần đo:'), findsNothing);
         expect(find.text('Xem chi tiết'), findsNothing);
-        expect(find.byType(Icon), findsOneWidget);
+        expect(find.byType(Icon), findsNWidgets(2));
         expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
         expect(
           find.text(kind == 'bmi' ? 'Đánh giá BMI' : 'Đánh giá vòng đầu'),
           findsOneWidget,
         );
-        await tester.tap(find.text(label));
+        await tester.tap(find.text('Server assessment'));
         expect(tapped, isTrue);
         expect(tester.takeException(), isNull);
       },
@@ -90,16 +95,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Phù hợp'), findsNothing);
     expect(
-      tester.widget<Text>(find.text('Cần kiểm tra lại')).style!.color,
+      tester.widget<Text>(find.text('Kiểm tra lại số đo')).style!.color,
       WeightChartColors.unknown,
     );
   });
 
-  testWidgets('long advice fits narrow screen with large text', (tester) async {
+  testWidgets('long summary fits narrow screen with large text', (tester) async {
     tester.view.physicalSize = const Size(320, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    const summaryText =
+        'Nhận xét từ hệ thống để phụ huynh theo dõi tình trạng của bé.';
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
@@ -115,7 +122,7 @@ void main() {
                     'classificationLabels': {
                       'RISK_OVERWEIGHT': 'Nguy cơ thừa cân',
                     },
-                    'summary': 'Nhận xét từ hệ thống để phụ huynh theo dõi tình trạng của bé.',
+                    'summary': summaryText,
                     'action': 'Hướng dẫn chăm sóc từ hệ thống. ' * 8,
                   },
                 }),
@@ -127,7 +134,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Nguy cơ thừa cân'), findsOneWidget);
+    expect(find.text(summaryText), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
+
