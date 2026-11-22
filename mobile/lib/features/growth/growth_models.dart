@@ -51,7 +51,7 @@ double? growthChartAgeMonths(DateTime birth, DateTime measuredAt) {
   }
 
   final date = DateTime.utc(measuredAt.year, measuredAt.month, measuredAt.day);
-  if (date.isBefore(anchor(0)) || date.isAfter(anchor(60))) return null;
+  if (date.isBefore(anchor(0)) || date.isAfter(anchor(72))) return null;
   var months =
       (measuredAt.year - birth.year) * 12 + measuredAt.month - birth.month;
   if (date.isBefore(anchor(months))) months--;

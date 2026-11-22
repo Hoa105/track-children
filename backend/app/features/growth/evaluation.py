@@ -79,8 +79,11 @@ def score_pair(profile: dict, values: dict, indicator: str) -> dict:
     birth = profile["date_of_birth"]
     age = (day - birth).days
 
-    if day < birth or day >= add_months(birth, 60):
+    if day < birth or day >= add_months(birth, 72):
         return {"status": "NOT_APPLICABLE", "reason": "OUT_OF_SCOPE_AGE"}
+
+    if indicator == "hcfa" and day >= add_months(birth, 60):
+        return {"status": "NOT_APPLICABLE", "reason": "WHO_OUT_OF_RANGE"}
 
     norm = None
     if indicator == "bmifa":
@@ -146,10 +149,11 @@ def score_pair(profile: dict, values: dict, indicator: str) -> dict:
         return {"status": "RECHECK_DATA", "reason": "WHO_FLAGGED", "zScore": z}
 
     classification = classify(indicator, z)
+    source_standard = "WHO-2007" if (indicator == "hcfa" or age > 1856) else "WHO-2006"
     return {
         "status": "READY",
         "reason": None,
         "zScore": z,
         "classificationCode": classification,
-        "sourceStandard": "WHO-2007" if indicator == "hcfa" else "WHO-2006",
+        "sourceStandard": source_standard,
     }

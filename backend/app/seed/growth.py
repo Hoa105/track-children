@@ -26,12 +26,13 @@ SAMPLES = (
     (36, "14.50", "96.00", "49.50"),
     (48, "16.50", "103.00", "50.50"),
     (59, "18.20", "110.00", "51.00"),
+    (66, "20.20", "116.50", "51.50"),
 )
 LOCAL_TIMEZONE = dt.timezone(dt.timedelta(hours=7))
 
 
 def sample_rows(child_id: UUID, born: dt.date, today: dt.date):
-    """Calendar-month milestones, excluding future dates and age >= 60 months."""
+    """Calendar-month milestones, excluding future dates and age >= 72 months."""
     for month, weight, height, head in SAMPLES:
         year, zero_month = divmod(born.year * 12 + born.month - 1 + month, 12)
         month_number = zero_month + 1

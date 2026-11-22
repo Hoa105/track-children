@@ -476,7 +476,9 @@ int get _currentAgeMilestoneIndex {
       ? 3
       : months < 48
       ? 4
-      : 5;
+      : months < 60
+      ? 5
+      : 6;
 }
 
 class _TimelineCard extends StatefulWidget {
@@ -530,7 +532,7 @@ class _TimelineCardState extends State<_TimelineCard> {
   }
 
   // Visible widths on the shared 512 px canvas; keep the original image scale.
-  static const _iconWidths = [120.0, 178.0, 202.0, 216.0, 238.0, 278.0];
+  static const _iconWidths = [120.0, 178.0, 202.0, 216.0, 238.0, 278.0, 312.0];
 
   double _milestoneWidth(int index, double itemWidth) {
     final average = _iconWidths.reduce((a, b) => a + b) / _iconWidths.length;
@@ -545,6 +547,14 @@ class _TimelineCardState extends State<_TimelineCard> {
     return left + _milestoneWidth(index, itemWidth) / 2;
   }
 
+  double _totalMilestonesWidth(double itemWidth) {
+    var total = 0.0;
+    for (var i = 0; i < ages.length; i++) {
+      total += _milestoneWidth(i, itemWidth);
+    }
+    return total;
+  }
+
   static const ages = [
     '0–3 th',
     '4–6 th',
@@ -552,6 +562,7 @@ class _TimelineCardState extends State<_TimelineCard> {
     '10–11 th',
     '1–3 tuổi',
     '4–5 tuổi',
+    '5–6 tuổi',
   ];
   @override
   Widget build(BuildContext context) => Padding(
@@ -568,17 +579,15 @@ class _TimelineCardState extends State<_TimelineCard> {
           controller: _milestoneScrollController,
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            width: _milestoneCenter(ages.length - 1, itemWidth) + itemWidth,
+            width: _totalMilestonesWidth(itemWidth),
             child: Stack(
               children: [
-                for (var i = 0; i < ages.length; i++)
+                for (var i = 0; i < ages.length - 1; i++)
                   Positioned(
                     left: _milestoneCenter(i, itemWidth),
                     top: 62,
-                    width: i < ages.length - 1
-                        ? _milestoneCenter(i + 1, itemWidth) -
-                              _milestoneCenter(i, itemWidth)
-                        : itemWidth,
+                    width: _milestoneCenter(i + 1, itemWidth) -
+                        _milestoneCenter(i, itemWidth),
                     height: 24,
                     child: Image.asset(
                       'assets/images/scenery/icons/age-milestones/timeline/'
@@ -678,5 +687,9 @@ const _ageMilestoneAssets = <List<String>>[
   [
     'assets/images/scenery/icons/age-milestones/inactive/stage_06_4_5_years_inactive.png',
     'assets/images/scenery/icons/age-milestones/active/stage_06_4_5_years_active.png',
+  ],
+  [
+    'assets/images/scenery/icons/age-milestones/inactive/stage_07_5_6_years_inactive.png',
+    'assets/images/scenery/icons/age-milestones/active/stage_07_5_6_years_active.png',
   ],
 ];

@@ -131,3 +131,40 @@ def test_pairing_nearest_calendar_day():
     assert pairing.nearest(w, [h_adjacent, h_far]) == h_adjacent
     # Far day rejected
     assert pairing.nearest(w, [h_far]) is None
+
+
+def test_score_pair_five_to_six_years():
+    profile = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "date_of_birth": date(2020, 1, 1),
+        "gender": "female",
+        "gestational_weeks": 40,
+    }
+    # 65 months old (5 years 5 months)
+    day = date(2025, 6, 1)
+    values = {
+        "weight": {"value": 19.5, "measured_on": day},
+        "height": {"value": 113.0, "measured_on": day, "measure_position": "standing"},
+        "head_circumference": {"value": 51.5, "measured_on": day},
+    }
+    # BMI assessment succeeds with WHO-2007 (anthroplus)
+    res_bmi = evaluation.score_pair(profile, values, "bmifa")
+    assert res_bmi["status"] == "READY"
+    assert res_bmi["sourceStandard"] == "WHO-2007"
+    assert res_bmi["zScore"] is not None
+    assert res_bmi["classificationCode"] is not None
+
+    # Head circumference at 65 months is out of WHO range (> 60 months)
+    res_hc = evaluation.score_pair(profile, values, "hcfa")
+    assert res_hc["status"] == "NOT_APPLICABLE"
+    assert res_hc["reason"] == "WHO_OUT_OF_RANGE"
+
+    # Beyond 72 months (>= 6 years) is out of scope age
+    day_73m = date(2026, 2, 1)
+    values_old = {
+        "weight": {"value": 22.0, "measured_on": day_73m},
+        "height": {"value": 120.0, "measured_on": day_73m, "measure_position": "standing"},
+    }
+    res_overage = evaluation.score_pair(profile, values_old, "bmifa")
+    assert res_overage["status"] == "NOT_APPLICABLE"
+    assert res_overage["reason"] == "OUT_OF_SCOPE_AGE"

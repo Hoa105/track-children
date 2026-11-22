@@ -25,10 +25,10 @@ class GrowthMeasurementChart extends StatefulWidget {
 
 class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
   GrowthMeasurementDraft? _selected;
-  RangeValues _window = const RangeValues(0, 60);
+  RangeValues _window = const RangeValues(0, 72);
   @visibleForTesting
   RangeValues get visibleRange => _window;
-  RangeValues _gestureWindow = const RangeValues(0, 60);
+  RangeValues _gestureWindow = const RangeValues(0, 72);
   double _anchorAge = 0, _initialGestureScale = 1;
   int _gesturePointers = 0;
 
@@ -62,15 +62,15 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
     if (!scale.isFinite || scale <= 0) return;
     final span = ((_gestureWindow.end - _gestureWindow.start) / scale).clamp(
       1 / 30,
-      60.0,
+      72.0,
     );
     final first = _anchorAge - _fraction(details.localFocalPoint, width) * span;
     _setWindow(first, first + span);
   }
 
   void _setWindow(double start, double end) {
-    final span = (end - start).clamp(1 / 30, 60.0);
-    final first = start.clamp(0.0, 60 - span);
+    final span = (end - start).clamp(1 / 30, 72.0);
+    final first = start.clamp(0.0, 72 - span);
     setState(() => _window = RangeValues(first, first + span));
   }
 
@@ -87,9 +87,9 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
       );
     }
     final end = DateTime(
-      birth.year + 5,
+      birth.year + 6,
       birth.month,
-      birth.day.clamp(1, DateUtils.getDaysInMonth(birth.year + 5, birth.month)),
+      birth.day.clamp(1, DateUtils.getDaysInMonth(birth.year + 6, birth.month)),
     );
     final validRows = widget.rows
         .where(
@@ -204,8 +204,8 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
                 },
                 child: GrowthChartGestures(
                   onPinchingChanged: widget.onPinchingChanged,
-                  onReset: () => _setWindow(0, 60),
-                  panEnabled: _window.end - _window.start < 60 - 1e-9,
+                  onReset: () => _setWindow(0, 72),
+                  panEnabled: _window.end - _window.start < 72 - 1e-9,
                   onStart: (details) => _startGesture(details, c.maxWidth),
                   onUpdate: (details) => _updateGesture(details, c.maxWidth),
                   onTap: (event) {
@@ -270,7 +270,7 @@ class _MeasurementPainter extends CustomPainter {
     this.metric,
     this.selected, {
     this.minAge = 0,
-    this.maxAge = 60,
+    this.maxAge = 72,
   });
   final List<GrowthMeasurementDraft> rows;
   final DateTime birth, end;

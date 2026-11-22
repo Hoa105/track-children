@@ -104,7 +104,7 @@ void main() {
         );
         expect(
           find.descendant(of: care, matching: find.byType(Image)),
-          findsNWidgets(17),
+          findsNWidgets(18),
         );
         expect(
           find.descendant(of: care, matching: find.byType(SvgPicture)),

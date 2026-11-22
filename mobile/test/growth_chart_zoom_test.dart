@@ -106,7 +106,7 @@ void main() {
             find.byType(GrowthMeasurementChart),
           )
           .visibleRange;
-      expect(range.end - range.start, lessThan(60));
+      expect(range.end - range.start, lessThan(72));
       expect(
         DefaultTabController.of(tester.element(find.byType(TabBarView))).index,
         0,
@@ -187,7 +187,7 @@ void main() {
         .painter;
     await pinch(tester, area);
     final zoomed = painter().maxAge - painter().minAge as double;
-    expect(zoomed, lessThan(60));
+    expect(zoomed, lessThan(72));
     expect(controller.offset, 0);
     await pinch(tester, area, expand: false);
     expect(painter().maxAge - painter().minAge, greaterThan(zoomed));
@@ -276,7 +276,7 @@ void main() {
         expect(find.byIcon(Icons.zoom_in), findsNothing);
         expect(find.byType(RangeSlider), findsNothing);
         await pinch(tester, find.byType(GrowthChartGestures));
-        expect(painter().maxAge - painter().minAge, lessThan(60));
+        expect(painter().maxAge - painter().minAge, lessThan(72));
         Future<void> range(double start, double end) async {
           await reset(tester);
           await tester.pumpAndSettle();
@@ -284,7 +284,7 @@ void main() {
             find.byType(GrowthChartGestures),
           );
           final width = tester.getSize(find.byType(GrowthChartGestures)).width;
-          final anchor = 38 + (width - 46) * ((start + end) / 2 / 60);
+          final anchor = 38 + (width - 46) * ((start + end) / 2 / 72);
           gestures.onStart(
             ScaleStartDetails(
               localFocalPoint: Offset(anchor, 100),
@@ -295,7 +295,7 @@ void main() {
             ScaleUpdateDetails(
               localFocalPoint: Offset(38 + (width - 46) / 2, 100),
               pointerCount: 2,
-              scale: 60 / (end - start),
+              scale: 72 / (end - start),
             ),
           );
           await tester.pumpAndSettle();
@@ -340,7 +340,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(painter().rows, hasLength(1000));
         expect(painter().minAge, 0);
-        expect(painter().maxAge, 60);
+        expect(painter().maxAge, 72);
         expect(tester.takeException(), isNull);
       },
     );

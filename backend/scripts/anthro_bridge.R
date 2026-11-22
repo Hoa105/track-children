@@ -33,10 +33,36 @@ tryCatch({
   stopifnot(all(is.na(lengths) | (!is.na(positions) & lengths>0)))
   allowed <- c("row_id","sex","age_days","weight_kg","lenhei_cm","measure","headc_cm")
   stopifnot(all(vapply(rows,function(r) all(names(r) %in% allowed),TRUE)))
+  weights <- vapply(rows,num,0.0,key="weight_kg")
+  headcs <- vapply(rows,num,0.0,key="headc_cm")
   output <- anthro::anthro_zscores(sex=sexes, age=ages, is_age_in_month=FALSE,
-    weight=vapply(rows,num,0.0,key="weight_kg"), lenhei=lengths, measure=positions,
-    headc=vapply(rows,num,0.0,key="headc_cm"))
+    weight=weights, lenhei=lengths, measure=positions,
+    headc=headcs)
   stopifnot(nrow(output)==length(ids))
+
+  older_indices <- which(ages > 1856)
+  if (length(older_indices) > 0 && requireNamespace("anthroplus", quietly = TRUE)) {
+    for (i in older_indices) {
+      plus_res <- anthroplus::anthroplus_zscores(
+        sex = sexes[i],
+        age_in_months = ages[i] / 30.4375,
+        height_in_cm = lengths[i],
+        weight_in_kg = weights[i]
+      )
+      if (nrow(plus_res) == 1) {
+        output[["zbmi"]][i] <- as.numeric(plus_res[["zbfa"]][1])
+        output[["fbmi"]][i] <- as.integer(plus_res[["fbfa"]][1])
+        output[["zwei"]][i] <- as.numeric(plus_res[["zwfa"]][1])
+        output[["fwei"]][i] <- as.integer(plus_res[["fwfa"]][1])
+        output[["zlen"]][i] <- as.numeric(plus_res[["zhfa"]][1])
+        output[["flen"]][i] <- as.integer(plus_res[["fhfa"]][1])
+        if (!is.na(plus_res[["cbmi"]][1])) {
+          output[["cbmi"]][i] <- as.numeric(plus_res[["cbmi"]][1])
+        }
+      }
+    }
+  }
+
   numeric_columns <- vapply(output,is.numeric,TRUE)
   stopifnot(all(vapply(output[numeric_columns],function(x) all(is.na(x)|is.finite(x)),TRUE)))
   output$row_id <- ids
