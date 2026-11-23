@@ -537,7 +537,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isUnread
-                              ? NotificationColors.primary.withOpacity(0.35)
+                              ? NotificationColors.primary.withValues(alpha: 0.35)
                               : NotificationColors.border,
                           width: isUnread ? 1.5 : 1,
                         ),

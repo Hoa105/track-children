@@ -6,17 +6,17 @@ import '../../models/video_insight.dart';
 const _title = TextStyle(
   fontSize: 16,
   fontWeight: FontWeight.w600,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _body = TextStyle(
   fontSize: 14,
   height: 1.5,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _caption = TextStyle(
   fontSize: 12,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: JournalColors.textSecondary,
 );
 const _warningSurface = Color(0xFFFFF4E0);
 const _warningText = Color(0xFF7A4B00);
@@ -189,7 +189,7 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.primary),
+              Icon(icon, size: 20, color: JournalColors.primary),
               const SizedBox(width: 8),
               Expanded(child: Text(title, style: _title)),
             ],

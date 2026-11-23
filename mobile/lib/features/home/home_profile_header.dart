@@ -33,7 +33,14 @@ class HomeProfileHeader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) {
+    final rawName = name.trim();
+    final displayName = rawName.isEmpty
+        ? 'Bé'
+        : (rawName.toLowerCase().startsWith('bé ')
+            ? rawName
+            : 'Bé $rawName');
+    return Row(
     key: const ValueKey('home-profile-header'),
     children: [
       Container(
@@ -77,7 +84,7 @@ class HomeProfileHeader extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      name,
+                      displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -141,7 +148,7 @@ class HomeProfileHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           _RoundAction(
-            asset: 'assets/images/scenery/icons/ui/settings_sliders.svg',
+            icon: Icons.settings_outlined,
             label: 'Cài đặt',
             onTap: onSettingsTap,
           ),
@@ -149,47 +156,63 @@ class HomeProfileHeader extends StatelessWidget {
       ),
     ],
   );
+  }
 }
 
 class _RoundAction extends StatelessWidget {
   const _RoundAction({
-    required this.asset,
+    this.asset,
+    this.icon,
     required this.label,
     required this.onTap,
     this.showBadge = false,
-  });
-  final String asset;
+  }) : assert(asset != null || icon != null, 'Either asset or icon must be provided');
+
+  final String? asset;
+  final IconData? icon;
   final String label;
   final bool showBadge;
   final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    shape: const CircleBorder(),
-    child: InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: Badge.count(
-            count: unreadNotificationCount(DemoStore.instance),
-            isLabelVisible:
-                showBadge && unreadNotificationCount(DemoStore.instance) > 0,
-            child: SvgPicture.asset(
-              asset,
-              width: 24,
-              height: 24,
-              semanticsLabel: label,
-              colorFilter: const ColorFilter.mode(
-                HomeColors.primary,
-                BlendMode.srcIn,
-              ),
+  Widget build(BuildContext context) {
+    final Widget iconWidget = icon != null
+        ? Icon(
+            icon,
+            size: 24,
+            color: HomeColors.primary,
+            semanticLabel: label,
+          )
+        : SvgPicture.asset(
+            asset!,
+            width: 24,
+            height: 24,
+            semanticsLabel: label,
+            colorFilter: const ColorFilter.mode(
+              HomeColors.primary,
+              BlendMode.srcIn,
+            ),
+          );
+
+    final unread = showBadge ? unreadNotificationCount(DemoStore.instance) : 0;
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Badge.count(
+              count: unread,
+              isLabelVisible: showBadge && unread > 0,
+              child: iconWidget,
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

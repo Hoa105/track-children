@@ -359,7 +359,7 @@ void main() {
       const MaterialApp(home: HomeScreen(childName: 'An')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('An'), findsOneWidget);
+    expect(find.text('Bé An'), findsOneWidget);
     for (final label in [
       'Lượng sữa',
       'Tiêm chủng',

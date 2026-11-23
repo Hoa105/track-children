@@ -13,55 +13,57 @@ class AssessmentTabs extends StatelessWidget {
   final bool history;
   final ValueChanged<bool> onChanged;
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.primarySoft,
-    borderRadius: BorderRadius.circular(16),
-    child: Padding(
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          for (final (value, label) in [(false, 'Đánh giá'), (true, 'Lịch sử')])
-            Expanded(
-              child: Semantics(
-                selected: history == value,
-                button: true,
-                child: Material(
-                  animationDuration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : const Duration(milliseconds: 180),
-                  color: history == value
-                      ? AppColors.primary
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () => onChanged(value),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 48),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          label,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: history == value
-                                    ? Colors.white
-                                    : AppColors.primaryDark,
-                              ),
-                        ),
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: AssessmentColors.primarySoft,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AssessmentColors.border.withValues(alpha: .6)),
+    ),
+    padding: const EdgeInsets.all(4),
+    child: Row(
+      children: [
+        for (final (value, label) in [(false, 'Đánh giá'), (true, 'Lịch sử')])
+          Expanded(
+            child: Semantics(
+              selected: history == value,
+              button: true,
+              child: Material(
+                animationDuration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 180),
+                color: history == value
+                    ? AssessmentColors.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => onChanged(value),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
+                              color: history == value
+                                  ? Colors.white
+                                  : AssessmentColors.primaryDark,
+                            ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     ),
   );
 }
@@ -133,8 +135,8 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               for (final m in widget.milestones)
                 Semantics(
@@ -145,16 +147,19 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
                   child: AssessmentPress(
                     child: Material(
                       color: selected == m['age_months']
-                          ? AppColors.primary
-                          : AppColors.background,
+                          ? AssessmentColors.primary
+                          : widget.completed.contains(m['age_months'])
+                          ? AssessmentColors.primarySoft.withValues(alpha: .5)
+                          : AssessmentColors.surface,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         side: BorderSide(
                           color: selected == m['age_months']
-                              ? AppColors.primary
+                              ? AssessmentColors.primary
                               : m['age_months'] == widget.currentAge
-                              ? AppColors.primary.withValues(alpha: .5)
-                              : AppColors.border,
+                              ? AssessmentColors.primary
+                              : AssessmentColors.cardBorder,
+                          width: selected == m['age_months'] || m['age_months'] == widget.currentAge ? 1.5 : 1,
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -163,8 +168,8 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
                             setState(() => selected = m['age_months'] as int),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
+                            horizontal: 14,
+                            vertical: 13,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -173,22 +178,24 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
                                 m['age_months'],
                               )) ...[
                                 Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  size: 17,
+                                  Icons.check_circle_rounded,
+                                  size: 16,
                                   color: selected == m['age_months']
                                       ? Colors.white
-                                      : AppColors.primary,
+                                      : AssessmentColors.achieved,
                                 ),
-                                const SizedBox(width: 5),
+                                const SizedBox(width: 6),
                               ],
                               Text(
                                 '${m['age_months']} tháng',
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14.5,
+                                  fontWeight: selected == m['age_months']
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
                                   color: selected == m['age_months']
                                       ? Colors.white
-                                      : AppColors.textPrimary,
+                                      : AssessmentColors.textPrimary,
                                 ),
                               ),
                             ],
@@ -202,7 +209,7 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
           ),
           if (detail != null) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: AppColors.border),
+            const Divider(height: 1, color: AssessmentColors.cardBorder),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -212,9 +219,9 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
                 Text(
                   'Mốc $selected tháng',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.5,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: AssessmentColors.textPrimary,
                   ),
                 ),
                 if (selected == widget.currentAge) const AssessmentPill('Hiện tại'),
@@ -233,6 +240,10 @@ class _AssessmentMilestonesState extends State<AssessmentMilestones> {
                   onPressed: () => widget.onHistory(selected!),
                   icon: const Icon(Icons.history_rounded, size: 18),
                   label: const Text('Xem lịch sử'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AssessmentColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
               ),
             ],
@@ -257,7 +268,7 @@ class AssessmentAgeFilter extends StatelessWidget {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AssessmentColors.surface,
       constraints: const BoxConstraints(maxWidth: 640),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -280,7 +291,7 @@ class AssessmentAgeFilter extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                          color: AssessmentColors.textPrimary,
                         ),
                       ),
                     ),
@@ -304,19 +315,22 @@ class AssessmentAgeFilter extends StatelessWidget {
                     final selected = value == age;
                     return Material(
                       color: selected
-                          ? AppColors.primarySoft
-                          : AppColors.surface,
+                          ? AssessmentColors.primarySoft
+                          : AssessmentColors.surface,
                       borderRadius: BorderRadius.circular(14),
                       clipBehavior: Clip.antiAlias,
                       child: ListTile(
                         selected: selected,
-                        selectedColor: AppColors.primaryDark,
+                        selectedColor: AssessmentColors.primaryDark,
                         title: Text(
                           value == null ? 'Tất cả mốc tuổi' : '$value tháng',
                           style: TextStyle(
                             fontWeight: selected
                                 ? FontWeight.w800
                                 : FontWeight.w600,
+                            color: selected
+                                ? AssessmentColors.primaryDark
+                                : AssessmentColors.textPrimary,
                           ),
                         ),
                         trailing: Icon(
@@ -324,8 +338,8 @@ class AssessmentAgeFilter extends StatelessWidget {
                               ? Icons.check_circle_rounded
                               : Icons.circle_outlined,
                           color: selected
-                              ? AppColors.primary
-                              : AppColors.border,
+                              ? AssessmentColors.primary
+                              : AssessmentColors.border,
                         ),
                         onTap: () => Navigator.pop(ctx, (age: value)),
                       ),
@@ -345,10 +359,10 @@ class AssessmentAgeFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: AssessmentColors.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: AppColors.border),
+      side: const BorderSide(color: AssessmentColors.cardBorder),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -368,15 +382,15 @@ class AssessmentAgeFilter extends StatelessWidget {
                   Text(
                     age == null ? 'Tất cả mốc tuổi' : '$age tháng',
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AssessmentColors.textPrimary,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.expand_more_rounded, color: AppColors.primary),
+            const Icon(Icons.expand_more_rounded, color: AssessmentColors.primary),
           ],
         ),
       ),

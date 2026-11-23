@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../app_colors.dart';
 import '../../app_layout.dart';
 import '../../models/progress_review.dart';
+import 'journal_theme.dart';
 import 'progress_review_view.dart';
 
 const _heading = TextStyle(
   fontSize: 20,
   fontWeight: FontWeight.w700,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 
 /// Ngày quay video đầu / cuối của một lần đánh giá.
@@ -25,33 +26,40 @@ class ReviewHistoryScreen extends StatelessWidget {
   final ReviewPeriod period;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      title: Text('Lịch sử đánh giá (${reviews.length})', style: _heading),
-    ),
-    body: ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        AppLayout.pagePadding,
-        8,
-        AppLayout.pagePadding,
-        32,
+  Widget build(BuildContext context) => JournalTheme(
+    builder: (context) => Scaffold(
+      backgroundColor: JournalColors.background,
+      appBar: AppBar(
+        backgroundColor: JournalColors.background,
+        foregroundColor: JournalColors.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: JournalColors.textPrimary),
+        title: Text('Lịch sử đánh giá (${reviews.length})', style: _heading),
       ),
-      itemCount: reviews.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final review = reviews[i];
-        return ProgressReviewTile(
-          review: review,
-          period: period(review),
-          onTap: () => Navigator.of(context).push<void>(
-            MaterialPageRoute(
-              builder: (_) =>
-                  ReviewDetailScreen(review: review, period: period(review)),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(
+          AppLayout.pagePadding,
+          8,
+          AppLayout.pagePadding,
+          32,
+        ),
+        itemCount: reviews.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final review = reviews[i];
+          return ProgressReviewTile(
+            review: review,
+            period: period(review),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ReviewDetailScreen(review: review, period: period(review)),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     ),
   );
 }
@@ -67,22 +75,29 @@ class ReviewDetailScreen extends StatelessWidget {
   final (DateTime, DateTime) period;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      title: Text(
-        'Đánh giá ngày ${dateLabel(review.createdAt)}',
-        style: _heading,
+  Widget build(BuildContext context) => JournalTheme(
+    builder: (context) => Scaffold(
+      backgroundColor: JournalColors.background,
+      appBar: AppBar(
+        backgroundColor: JournalColors.background,
+        foregroundColor: JournalColors.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: JournalColors.textPrimary),
+        title: Text(
+          'Đánh giá ngày ${dateLabel(review.createdAt)}',
+          style: _heading,
+        ),
       ),
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppLayout.pagePadding,
-        8,
-        AppLayout.pagePadding,
-        32,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppLayout.pagePadding,
+          8,
+          AppLayout.pagePadding,
+          32,
+        ),
+        children: [ProgressReviewView(review: review, period: period)],
       ),
-      children: [ProgressReviewView(review: review, period: period)],
     ),
   );
 }

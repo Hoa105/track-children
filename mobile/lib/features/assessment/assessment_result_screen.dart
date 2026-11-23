@@ -32,7 +32,7 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
         shown = expanded ? all : all.take(3).toList();
     final plan = assessmentMap(next['action_plan']);
     return AssessmentScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AssessmentColors.background,
       appBar: assessmentAppBar('Kết quả đánh giá'),
       body: SafeArea(
         top: false,
@@ -70,7 +70,7 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
             AssessmentCard(
               title: 'Kỹ năng cần chú ý',
               icon: Icons.visibility_outlined,
-              accent: const Color(0xFF91621F),
+              accent: AssessmentColors.notYet,
               child: all.isEmpty
                   ? const Text(
                       'Không có kỹ năng chưa làm được hoặc chưa quan sát trong bài này.',
@@ -83,9 +83,11 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                           if (shown.any((x) => x['status'] == status)) ...[
                             Text(
                               assessmentAnswers[status]!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
+                                color: status == 'not_yet'
+                                    ? AssessmentColors.notYet
+                                    : AssessmentColors.notObserved,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -126,8 +128,8 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
             AssessmentCard(
               title: 'Nhận xét chung',
               icon: Icons.notes_rounded,
-              accent: const Color(0xFF655080),
-              tint: const Color(0xFFFAF7FD),
+              accent: AssessmentColors.fineMotor,
+              tint: AssessmentColors.surface,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -143,8 +145,8 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
             AssessmentCard(
               title: 'Hướng dẫn tiếp theo',
               icon: Icons.route_outlined,
-              accent: const Color(0xFF326D9B),
-              tint: const Color(0xFFF4F8FB),
+              accent: AssessmentColors.language,
+              tint: AssessmentColors.surface,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -189,7 +191,7 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
                   title: const Text('Nguồn tham khảo', style: assessmentBody),
                   leading: const Icon(
                     Icons.menu_book_outlined,
-                    color: AppColors.primary,
+                    color: AssessmentColors.primary,
                   ),
                   children: [
                     for (final s in comment['sources'])
@@ -223,7 +225,7 @@ class _AssessmentResultScreenState extends State<AssessmentResultScreen> {
               ),
               child: const Text('Xem lại đáp án'),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             FilledButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Về đánh giá'),
@@ -245,7 +247,7 @@ class AssessmentAnswersScreen extends StatelessWidget {
   final bool isDemo;
   @override
   Widget build(BuildContext context) => AssessmentScaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: AssessmentColors.background,
     appBar: assessmentAppBar('Đáp án · ${attempt.age} tháng'),
     body: SafeArea(
       top: false,

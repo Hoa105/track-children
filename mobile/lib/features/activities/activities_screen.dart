@@ -12,22 +12,23 @@ part 'activities_discovery.dart';
 const _heading = TextStyle(
   fontSize: 20,
   fontWeight: FontWeight.w700,
-  color: AppColors.textPrimary,
+  color: ActivitiesColors.textPrimary,
+  letterSpacing: -0.3,
 );
 const _title = TextStyle(
   fontSize: 16,
   fontWeight: FontWeight.w700,
-  color: AppColors.textPrimary,
+  color: ActivitiesColors.textPrimary,
 );
 const _secondary = TextStyle(
   fontSize: 13,
-  color: AppColors.textSecondary,
-  height: 1.5,
+  color: ActivitiesColors.textSecondary,
+  height: 1.45,
 );
 const _body = TextStyle(
   fontSize: 15,
   height: 1.6,
-  color: AppColors.textPrimary,
+  color: ActivitiesColors.textPrimary,
 );
 
 class ActivityListScreen extends StatefulWidget {
@@ -50,7 +51,13 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
     for (final r in _ranges) '${r.$1}–${r.$2} tháng',
   ];
   int get _childAge => _childMonths == null ? 0 : 1;
-  bool get _filtered => _status != 0 || _age != 0 || _duration != 0;
+  bool get _filtered => _status != 0 || _age != 0 || _duration != 0 || _sort != 0;
+  int get _filterCount =>
+      (_status != 0 ? 1 : 0) +
+      (_age != 0 ? 1 : 0) +
+      (_duration != 0 ? 1 : 0) +
+      (_sort != 0 ? 1 : 0);
+
   void _reset() => setState(() {
     _status = _age = _duration = _sort = 0;
   });
@@ -67,7 +74,6 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
       return a.minMonths <= _childMonths! && _childMonths <= a.maxMonths;
     }
     final (lo, hi) = _ranges[_age - _childAge - 1];
-    // So sánh chặt để hoạt động chỉ chạm biên (vd. 6–12 với khoảng 12–18) không lọt vào.
     return a.minMonths < hi && a.maxMonths > lo;
   }
 
@@ -84,7 +90,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: ActivitiesColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -92,36 +98,41 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
         builder: (context, update) => SafeArea(
           top: false,
           child: SizedBox(
-            height: MediaQuery.sizeOf(context).height * .8,
+            height: MediaQuery.sizeOf(context).height * .78,
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: Row(
                     children: [
                       const Expanded(
                         child: Text('Bộ lọc hoạt động', style: _heading),
                       ),
-                      IconButton(
-                        tooltip: 'Đóng bộ lọc',
+                      IconButton.filledTonal(
+                        tooltip: 'Đóng',
+                        style: IconButton.styleFrom(
+                          backgroundColor: ActivitiesColors.primarySoft,
+                          minimumSize: const Size(36, 36),
+                        ),
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Icons.close_rounded, size: 18),
                       ),
                     ],
                   ),
                 ),
+                const Divider(height: 1, color: ActivitiesColors.border),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                     children: [
                       _choices(
-                        'Trạng thái',
+                        'Trạng thái thực hiện',
                         ['Tất cả', 'Chưa thực hiện', 'Đã thực hiện'],
                         status,
                         (v) => update(() => status = v),
                       ),
                       _choices(
-                        'Độ tuổi',
+                        'Độ tuổi phù hợp',
                         _ageLabels,
                         age,
                         (v) => update(() => age = v),
@@ -133,7 +144,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                         (v) => update(() => duration = v),
                       ),
                       _choices(
-                        'Sắp xếp',
+                        'Sắp xếp danh sách',
                         ['Phù hợp tuổi bé', 'Chưa thực hiện trước'],
                         sort,
                         (v) => update(() => sort = v),
@@ -141,8 +152,16 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(
+                        color: ActivitiesColors.border.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       TextButton(
@@ -150,13 +169,27 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                           status = duration = sort = 0;
                           age = _childAge;
                         }),
+                        style: TextButton.styleFrom(
+                          foregroundColor: ActivitiesColors.textSecondary,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
                         child: const Text('Đặt lại'),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: ActivitiesColors.primary,
+                            minimumSize: const Size(0, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Áp dụng'),
+                          child: const Text(
+                            'Áp dụng bộ lọc',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
                     ],
@@ -224,10 +257,13 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
             : distance(a).compareTo(distance(b));
         return order != 0 ? order : a.minMonths.compareTo(b.minMonths);
       });
+
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: ActivitiesColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: ActivitiesColors.background,
+          elevation: 0,
+          scrolledUnderElevation: 0,
           title: Text(
             widget.group?.name ?? 'Hoạt động yêu thích',
             style: _heading,
@@ -235,29 +271,148 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
         ),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            // Quick one-handed filter chips bar
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${items.length} hoạt động${_filtered ? ' · Đang lọc' : ''}',
-                      style: _secondary,
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: Icon(
+                      Icons.tune_rounded,
+                      size: 16,
+                      color: _filtered ? Colors.white : ActivitiesColors.primary,
                     ),
+                    label: Text(
+                      _filtered ? 'Lọc ($_filterCount)' : 'Bộ lọc',
+                    ),
+                    selected: _filtered,
+                    selectedColor: ActivitiesColors.primary,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: _filtered
+                            ? ActivitiesColors.primary
+                            : ActivitiesColors.border,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _filtered ? Colors.white : ActivitiesColors.textPrimary,
+                    ),
+                    onSelected: (_) => _filters(),
                   ),
-                  IconButton(
-                    tooltip: 'Bộ lọc',
-                    onPressed: _filters,
-                    icon: Icon(
-                      Icons.filter_list_rounded,
-                      color: _filtered
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    showCheckmark: false,
+                    label: const Text('Chưa làm'),
+                    selected: _status == 1,
+                    selectedColor: ActivitiesColors.primarySoft,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: _status == 1
+                            ? ActivitiesColors.primary
+                            : ActivitiesColors.border,
+                      ),
                     ),
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _status == 1
+                          ? ActivitiesColors.primary
+                          : ActivitiesColors.textSecondary,
+                    ),
+                    onSelected: (val) => setState(() => _status = val ? 1 : 0),
+                  ),
+                  if (_childMonths != null) ...[
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      showCheckmark: false,
+                      label: Text('Đúng tuổi bé ($_childMonths th)'),
+                      selected: _age == _childAge,
+                      selectedColor: ActivitiesColors.primarySoft,
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: _age == _childAge
+                              ? ActivitiesColors.primary
+                              : ActivitiesColors.border,
+                        ),
+                      ),
+                      labelStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _age == _childAge
+                            ? ActivitiesColors.primary
+                            : ActivitiesColors.textSecondary,
+                      ),
+                      onSelected: (val) =>
+                          setState(() => _age = val ? _childAge : 0),
+                    ),
+                  ],
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    showCheckmark: false,
+                    label: const Text('≤ 5 phút'),
+                    selected: _duration == 1,
+                    selectedColor: ActivitiesColors.primarySoft,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: _duration == 1
+                            ? ActivitiesColors.primary
+                            : ActivitiesColors.border,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _duration == 1
+                          ? ActivitiesColors.primary
+                          : ActivitiesColors.textSecondary,
+                    ),
+                    onSelected: (val) => setState(() => _duration = val ? 1 : 0),
+                  ),
+                  if (_filtered) ...[
+                    const SizedBox(width: 8),
+                    ActionChip(
+                      label: const Text('Xóa lọc'),
+                      avatar: const Icon(Icons.close_rounded, size: 14),
+                      backgroundColor: ActivitiesColors.primarySoft,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: ActivitiesColors.border),
+                      ),
+                      labelStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: ActivitiesColors.primary,
+                      ),
+                      onPressed: _reset,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    '${items.length} hoạt động phù hợp',
+                    style: _secondary.copyWith(fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 4),
             Expanded(
               child: items.isEmpty
                   ? Center(
@@ -266,24 +421,47 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: ActivitiesColors.primarySoft,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _filtered
+                                    ? Icons.filter_alt_off_outlined
+                                    : Icons.favorite_border_rounded,
+                                size: 36,
+                                color: ActivitiesColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
                             Text(
-                              _filtered ? 'Không có hoạt động phù hợp bộ lọc.' : 'Chưa có hoạt động yêu thích.\nChạm trái tim trong chi tiết để lưu lại.',
+                              _filtered
+                                  ? 'Không tìm thấy hoạt động phù hợp bộ lọc.'
+                                  : 'Chưa có hoạt động yêu thích.\nChạm biểu tượng trái tim để lưu lại những trò bé thích!',
                               textAlign: TextAlign.center,
                               style: _secondary,
                             ),
-                            if (_filtered)
-                              TextButton(
+                            if (_filtered) ...[
+                              const SizedBox(height: 16),
+                              FilledButton.tonal(
                                 onPressed: _reset,
-                                child: const Text('Xóa bộ lọc'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: ActivitiesColors.primarySoft,
+                                  foregroundColor: ActivitiesColors.primary,
+                                ),
+                                child: const Text('Đặt lại bộ lọc'),
                               ),
+                            ],
                           ],
                         ),
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                       itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final a = items[i];
                         final group = activityGroups.firstWhere(
@@ -305,34 +483,80 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                 groupId: group.id,
                                 imageUrl: a.thumbnailUrl,
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(a.name, style: _title),
-                                    const SizedBox(height: 6),
                                     Text(
-                                      '${a.ageLabel} · ${a.durationLabel}',
-                                      style: _secondary,
+                                      a.name,
+                                      style: _title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    if (done.contains(a.id))
-                                      const Text(
-                                        'Đã thực hiện',
-                                        style: TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w600,
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.schedule_rounded,
+                                          size: 13,
+                                          color: ActivitiesColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(a.durationLabel, style: _secondary),
+                                        const SizedBox(width: 6),
+                                        const Text('·', style: _secondary),
+                                        const SizedBox(width: 6),
+                                        Text(a.ageLabel, style: _secondary),
+                                      ],
+                                    ),
+                                    if (done.contains(a.id)) ...[
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: ActivitiesColors.primarySoft,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle_rounded,
+                                              size: 13,
+                                              color: ActivitiesColors.primary,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Đã chơi',
+                                              style: TextStyle(
+                                                color: ActivitiesColors.primary,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
+                                    ],
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Icon(
-                                done.contains(a.id)
-                                    ? Icons.check_circle_rounded
-                                    : Icons.chevron_right_rounded,
-                                color: AppColors.primary,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: ActivitiesColors.background,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: ActivitiesColors.primary,
+                                  size: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -353,26 +577,38 @@ Widget _choices(
   int selected,
   ValueChanged<int> onSelect,
 ) => Padding(
-  padding: const EdgeInsets.only(bottom: 24),
+  padding: const EdgeInsets.only(bottom: 20),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(title, style: _title),
-      const SizedBox(height: 8),
+      Text(title, style: _title.copyWith(fontSize: 15)),
+      const SizedBox(height: 10),
       Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
           for (var i = 0; i < labels.length; i++)
             ChoiceChip(
+              showCheckmark: false,
               label: Text(labels[i]),
               selected: i == selected,
-              selectedColor: AppColors.primarySoft,
+              selectedColor: ActivitiesColors.primarySoft,
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: i == selected
+                      ? ActivitiesColors.primary
+                      : ActivitiesColors.border,
+                  width: 1,
+                ),
+              ),
               labelStyle: TextStyle(
                 color: i == selected
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+                    ? ActivitiesColors.primary
+                    : ActivitiesColors.textPrimary,
+                fontWeight: i == selected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 13,
               ),
               onSelected: (_) => onSelect(i),
             ),
@@ -440,10 +676,17 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            backgroundColor: ActivitiesColors.primaryDark,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
               favorite
-                  ? 'Đã cập nhật yêu thích'
-                  : 'Đã cập nhật hoạt động của bé',
+                  ? (store.favoriteActivities.contains(widget.activity.id)
+                      ? 'Đã thêm vào yêu thích'
+                      : 'Đã bỏ yêu thích')
+                  : (store.completedActivities(widget.childId).contains(widget.activity.id)
+                      ? 'Đã ghi nhận hoàn thành cùng bé'
+                      : 'Đã hủy đánh dấu hoàn thành'),
             ),
           ),
         );
@@ -451,8 +694,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Chưa lưu được thay đổi. Vui lòng thử lại.'),
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: const Text('Chưa lưu được thay đổi. Vui lòng thử lại.'),
           ),
         );
       }
@@ -470,14 +716,22 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       final group = activityGroups.firstWhere((g) => g.id == a.groupId);
       final done = store.completedActivities(widget.childId).contains(a.id);
       final favorite = store.favoriteActivities.contains(a.id);
+
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: ActivitiesColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: ActivitiesColors.background,
+          elevation: 0,
+          scrolledUnderElevation: 0,
           title: const Text('Chi tiết hoạt động', style: _heading),
           actions: [
-            IconButton(
-              tooltip: favorite ? 'Bỏ yêu thích' : 'Yêu thích',
+            IconButton.filledTonal(
+              tooltip: favorite ? 'Bỏ yêu thích' : 'Lưu yêu thích',
+              style: IconButton.styleFrom(
+                backgroundColor: favorite
+                    ? ActivitiesColors.primarySoft
+                    : Colors.white,
+              ),
               onPressed: _saving ? null : () => _save(true),
               icon: AnimatedSwitcher(
                 duration: MediaQuery.disableAnimationsOf(context)
@@ -490,15 +744,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                       ? Icons.favorite_rounded
                       : Icons.favorite_border_rounded,
                   key: ValueKey(favorite),
-                  color: AppColors.primary,
+                  color: favorite ? Colors.red.shade400 : ActivitiesColors.primary,
+                  size: 22,
                 ),
               ),
             ),
+            const SizedBox(width: 14),
           ],
         ),
         body: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
           children: [
+            // Hero card
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,50 +764,96 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     tag: 'activity-art-${a.id}',
                     child: a.thumbnailUrl == null
                         ? Center(
-                            child: _PlayArt(groupId: group.id, large: true),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: _PlayArt(groupId: group.id, large: true),
+                            ),
                           )
                         : _Photo(a.thumbnailUrl!, groupId: group.id),
                   ),
-                  const SizedBox(height: 16),
-                  Text(a.name, style: _heading),
-                  const SizedBox(height: 8),
-                  Text('${a.ageLabel} · ${a.durationLabel}', style: _secondary),
-                  const SizedBox(height: 8),
-                  Text(group.name, style: _secondary),
+                  const SizedBox(height: 18),
+                  Text(
+                    a.name,
+                    style: _heading.copyWith(fontSize: 22, height: 1.25),
+                  ),
                   const SizedBox(height: 12),
+                  // Attributes row
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _MetaPill(
+                        icon: Icons.child_care_rounded,
+                        label: a.ageLabel,
+                        color: ActivitiesColors.textSecondary,
+                        bgColor: ActivitiesColors.background,
+                      ),
+                      _MetaPill(
+                        icon: Icons.schedule_rounded,
+                        label: a.durationLabel,
+                        color: ActivitiesColors.textSecondary,
+                        bgColor: ActivitiesColors.background,
+                      ),
+                      _MetaPill(
+                        icon: group.icon,
+                        label: group.name,
+                        color: ActivitiesColors.primary,
+                        bgColor: ActivitiesColors.primarySoft,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Status highlight banner
                   AnimatedSwitcher(
                     duration: MediaQuery.disableAnimationsOf(context)
                         ? Duration.zero
                         : const Duration(milliseconds: 280),
-                    child: Row(
+                    child: Container(
                       key: ValueKey(done),
-                      children: [
-                        Icon(
-                          done
-                              ? Icons.verified_rounded
-                              : Icons.auto_awesome_rounded,
-                          color: AppColors.primary,
-                          size: 22,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: done
+                            ? ActivitiesColors.primarySoft
+                            : ActivitiesColors.background,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: done
+                              ? ActivitiesColors.primary.withValues(alpha: 0.3)
+                              : ActivitiesColors.border,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
                             done
-                                ? 'Đã chơi cùng bé'
-                                : 'Sẵn sàng cùng bé khám phá',
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                                ? Icons.verified_rounded
+                                : Icons.auto_awesome_rounded,
+                            color: ActivitiesColors.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              done
+                                  ? 'Bé đã hoàn thành hoạt động này'
+                                  : 'Sẵn sàng cùng bé khám phá và học hỏi',
+                              style: const TextStyle(
+                                color: ActivitiesColors.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
+
+            // Remote guide loader
             if (a.remote && _detail == null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -559,113 +862,211 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                         child: Column(
                           children: [
                             const Text(
-                              'Chưa tải được hướng dẫn. Kiểm tra kết nối rồi thử lại.',
+                              'Chưa tải được hướng dẫn chi tiết từ máy chủ.',
                               textAlign: TextAlign.center,
                               style: _secondary,
                             ),
-                            TextButton(
+                            const SizedBox(height: 8),
+                            FilledButton.tonal(
                               onPressed: _load,
                               child: const Text('Thử lại'),
                             ),
                           ],
                         ),
                       )
-                    : const Center(child: CircularProgressIndicator()),
+                    : const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(
+                            color: ActivitiesColors.primary,
+                          ),
+                        ),
+                      ),
               ),
+
+            // Content sections
             if (_detail != null) ...[
-              for (final section in [
-                if (_detail!.goal != null) ('Mục tiêu', _detail!.goal!),
-                ..._detail!.sections,
-              ])
+              if (_detail!.goal != null)
+                _GoalCard(goal: _detail!.goal!),
+              if (_detail!.materialItems.isNotEmpty)
+                _MaterialsCard(items: _detail!.materialItems),
+              for (final section in _detail!.sections)
                 _GuideCard(section.$1, section.$2),
               if (_detail!.steps.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 14),
                   child: _Card(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Các bước thực hiện', style: _title),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.format_list_numbered_rounded,
+                              color: ActivitiesColors.primary,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Các bước thực hiện', style: _title),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
                         for (final step in _detail!.steps) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            '${step.number}. ${step.instruction}',
-                            style: _body,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: ActivitiesColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '${step.number}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  step.instruction,
+                                  style: _body,
+                                ),
+                              ),
+                            ],
                           ),
                           if (step.imageUrl != null) ...[
-                            const SizedBox(height: 8),
-                            _Photo(step.imageUrl!, groupId: group.id),
+                            const SizedBox(height: 10),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 38),
+                              child: _Photo(step.imageUrl!, groupId: group.id),
+                            ),
                           ],
+                          const SizedBox(height: 12),
                         ],
                       ],
                     ),
                   ),
                 ),
               if (_detail!.lyrics != null)
-                _GuideCard('Lời bài hát', _detail!.lyrics!),
+                _LyricsCard(lyrics: _detail!.lyrics!),
             ],
             if (!a.remote)
               for (final section in activitySections(a))
-                _GuideCard(section.$1, section.$2),
+                if (section.$1 == 'Mục tiêu')
+                  _GoalCard(goal: section.$2)
+                else
+                  _GuideCard(section.$1, section.$2),
           ],
         ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    // Ghi nhật ký cần quyền sửa "Nhật ký"
-                    onPressed:
-                        store.childById(widget.childId) == null ||
-                            !store.canEditChild(widget.childId, 'diary')
-                        ? null
-                        : () => Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => ActivityJournalScreen(
-                                childId: widget.childId,
-                                activity: a,
-                                guide: _guide,
+
+        // Thumb-friendly sticky bottom action bar
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              top: BorderSide(
+                color: ActivitiesColors.border.withValues(alpha: 0.8),
+                width: 1,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: ActivitiesColors.primaryDark.withValues(alpha: .06),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ActivitiesColors.primaryDark,
+                        side: const BorderSide(
+                          color: ActivitiesColors.primary,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        minimumSize: const Size(0, 52),
+                      ),
+                      onPressed:
+                          store.childById(widget.childId) == null ||
+                              !store.canEditChild(widget.childId, 'diary')
+                          ? null
+                          : () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => ActivityJournalScreen(
+                                  childId: widget.childId,
+                                  activity: a,
+                                  guide: _guide,
+                                ),
                               ),
                             ),
-                          ),
-                    icon: const Icon(Icons.edit_note_rounded),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('Thêm nhật ký', textAlign: TextAlign.center),
+                      icon: const Icon(Icons.edit_note_rounded, size: 20),
+                      label: const Text(
+                        'Nhật ký',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    // Người được chia sẻ cần quyền sửa "Hoạt động" để đánh dấu (F23)
-                    onPressed:
-                        _saving ||
-                            store.childById(widget.childId) == null ||
-                            !store.canEditChild(widget.childId, 'activities')
-                        ? null
-                        : () => _save(false),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: done
+                            ? ActivitiesColors.primaryDark
+                            : ActivitiesColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        minimumSize: const Size(0, 52),
+                        elevation: 1,
+                      ),
+                      onPressed:
+                          _saving ||
+                              store.childById(widget.childId) == null ||
+                              !store.canEditChild(widget.childId, 'activities')
+                          ? null
+                          : () => _save(false),
+                      icon: Icon(
+                        done
+                            ? Icons.replay_rounded
+                            : Icons.check_circle_rounded,
+                        size: 20,
+                      ),
+                      label: Text(
                         _saving
                             ? 'Đang lưu…'
                             : store.childById(widget.childId) != null &&
                                   !store.canEditChild(widget.childId, 'activities')
-                            ? 'Bạn chỉ có quyền xem hoạt động của bé'
+                            ? 'Chỉ có quyền xem'
                             : done
                             ? 'Bỏ đánh dấu'
-                            : 'Đánh dấu đã thực hiện',
-                        textAlign: TextAlign.center,
+                            : 'Đánh dấu đã chơi',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -675,7 +1076,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 }
 
 List<(String, String)> activitySections(ChildActivity a) {
-  // Content is selected per activity, rather than reusing unrelated prototype instructions.
   return activityInstructions[a.id] ??
       [
         (
@@ -731,18 +1131,182 @@ const activityInstructions = <String, List<(String, String)>>{
   ],
 };
 
-class _GuideCard extends StatelessWidget {
-  const _GuideCard(this.title, this.body);
-  final String title, body;
+class _GoalCard extends StatelessWidget {
+  const _GoalCard({required this.goal});
+  final String goal;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Container(
+      decoration: BoxDecoration(
+        color: ActivitiesColors.primarySoft,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ActivitiesColors.primary.withValues(alpha: 0.25),
+        ),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.track_changes_rounded,
+                color: ActivitiesColors.primary,
+                size: 20,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Mục tiêu hoạt động',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: ActivitiesColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(goal, style: _body),
+        ],
+      ),
+    ),
+  );
+}
+
+class _MaterialsCard extends StatelessWidget {
+  const _MaterialsCard({required this.items});
+  final List<String> items;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
     child: _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: _title),
+          const Row(
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                color: ActivitiesColors.primary,
+                size: 20,
+              ),
+              SizedBox(width: 8),
+              Text('Cần chuẩn bị', style: _title),
+            ],
+          ),
           const SizedBox(height: 12),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(
+                      Icons.circle,
+                      size: 6,
+                      color: ActivitiesColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(item, style: _body)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _LyricsCard extends StatelessWidget {
+  const _LyricsCard({required this.lyrics});
+  final String lyrics;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF7EE),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEADBBE)),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.music_note_rounded,
+                color: Color(0xFF9E651D),
+                size: 20,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Lời bài hát / Thơ ca',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF9E651D),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            lyrics,
+            style: _body.copyWith(
+              fontStyle: FontStyle.italic,
+              height: 1.7,
+              color: const Color(0xFF3B2F23),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _GuideCard extends StatelessWidget {
+  const _GuideCard(this.title, this.body);
+  final String title, body;
+
+  IconData _iconFor(String title) {
+    if (title.contains('Lưu ý') || title.contains('an toàn')) {
+      return Icons.shield_outlined;
+    }
+    if (title.contains('Chuẩn bị')) {
+      return Icons.inventory_2_outlined;
+    }
+    if (title.contains('Hỏi') || title.contains('kể')) {
+      return Icons.chat_outlined;
+    }
+    return Icons.lightbulb_outline_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _iconFor(title),
+                color: ActivitiesColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(title, style: _title),
+            ],
+          ),
+          const SizedBox(height: 10),
           Text(body, style: _body),
         ],
       ),
@@ -765,7 +1329,15 @@ class _Photo extends StatelessWidget {
         semanticLabel: 'Ảnh minh họa hoạt động',
         loadingBuilder: (context, child, progress) => progress == null
             ? child
-            : const ColoredBox(color: AppColors.primarySoft),
+            : Container(
+                color: ActivitiesColors.primarySoft,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: ActivitiesColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
         errorBuilder: (_, _, _) =>
             Center(child: _PlayArt(groupId: groupId, large: true)),
       ),
@@ -779,8 +1351,14 @@ class _Card extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
-    borderRadius: BorderRadius.circular(24),
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: BorderSide(
+        color: ActivitiesColors.border.withValues(alpha: 0.7),
+        width: 1.2,
+      ),
+    ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,

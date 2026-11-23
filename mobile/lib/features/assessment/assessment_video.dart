@@ -166,7 +166,7 @@ class _AssessmentVideoFrameState extends State<AssessmentVideoFrame> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: AssessmentColors.textPrimary,
           ),
         ),
       ),
@@ -207,7 +207,7 @@ class _AssessmentVideoFrameState extends State<AssessmentVideoFrame> {
             style: TextStyle(
               fontSize: 12,
               height: 1.5,
-              color: AppColors.textSecondary,
+              color: AssessmentColors.muted,
             ),
           ),
         ),
@@ -219,7 +219,7 @@ class _AssessmentVideoFrameState extends State<AssessmentVideoFrame> {
             style: const TextStyle(
               fontSize: 12,
               height: 1.5,
-              color: AppColors.textSecondary,
+              color: AssessmentColors.muted,
             ),
           ),
         ),

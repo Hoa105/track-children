@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
+import '../../services/demo_store.dart';
 import 'growth_repository.dart';
 export 'growth_repository.dart';
 import 'growth_tracking_flow.dart';
 import 'growth_assessment_card.dart';
 import 'growth_measurement_chart.dart';
+import '../journal/journal_screen.dart';
 import '../navigation/app_bottom_navigation_bar.dart';
 
 class GrowthOverview extends StatefulWidget {
@@ -141,6 +145,59 @@ class _GrowthOverviewState extends State<GrowthOverview> {
     final rawName = (_repository.childLabel ?? 'của bạn').trim();
     final displayName =
         rawName.toLowerCase().startsWith('bé ') ? rawName : 'Bé $rawName';
+    final child = _repository.childId != null
+        ? (DemoStore.instance.childById(_repository.childId!) ??
+            DemoStore.instance.child)
+        : DemoStore.instance.child;
+    final avatarBase64 = child?['avatar_base64'] as String?;
+    final avatarUrl = child?['avatar_url'] as String?;
+
+    Widget avatarWidget;
+    if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+      try {
+        final bytes = base64Decode(avatarBase64);
+        avatarWidget = ClipOval(
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            width: 52,
+            height: 52,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.child_care_rounded,
+              color: GrowthColors.primary,
+              size: 28,
+            ),
+          ),
+        );
+      } catch (_) {
+        avatarWidget = const Icon(
+          Icons.child_care_rounded,
+          color: GrowthColors.primary,
+          size: 28,
+        );
+      }
+    } else if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      avatarWidget = ClipOval(
+        child: Image.network(
+          avatarUrl,
+          fit: BoxFit.cover,
+          width: 52,
+          height: 52,
+          errorBuilder: (_, _, _) => const Icon(
+            Icons.child_care_rounded,
+            color: GrowthColors.primary,
+            size: 28,
+          ),
+        ),
+      );
+    } else {
+      avatarWidget = const Icon(
+        Icons.child_care_rounded,
+        color: GrowthColors.primary,
+        size: 28,
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
@@ -154,15 +211,16 @@ class _GrowthOverviewState extends State<GrowthOverview> {
           Container(
             width: 52,
             height: 52,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: GrowthColors.iconBackground,
               shape: BoxShape.circle,
+              border: Border.all(
+                color: GrowthColors.border,
+                width: 1.5,
+              ),
             ),
-            child: const Icon(
-              Icons.child_care_rounded,
-              color: GrowthColors.primary,
-              size: 28,
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: Center(child: avatarWidget),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -219,16 +277,17 @@ class _GrowthOverviewState extends State<GrowthOverview> {
       color: selected ? GrowthColors.accent : GrowthColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: BorderSide(
-          color: selected ? GrowthColors.primary : GrowthColors.border,
-          width: selected ? 1.5 : 1,
-        ),
+        side: selected
+            ? BorderSide.none
+            : const BorderSide(color: GrowthColors.border),
       ),
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        splashColor: GrowthColors.primarySoft,
-        highlightColor: GrowthColors.primarySoft,
+        splashFactory: NoSplash.splashFactory,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
         onTap: () {
           if (_selectedMetric != metric) {
             setState(() => _selectedMetric = metric);
@@ -251,15 +310,13 @@ class _GrowthOverviewState extends State<GrowthOverview> {
                     decoration: BoxDecoration(
                       color: selected
                           ? GrowthColors.surface
-                          : GrowthColors.iconBackground,
+                          : trackingMetricSoftColor(metric),
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Icon(
                       icon,
                       size: 19,
-                      color: selected
-                          ? GrowthColors.primaryDark
-                          : GrowthColors.primary,
+                      color: trackingMetricColor(metric),
                     ),
                   ),
                   const Spacer(),
@@ -387,132 +444,142 @@ class _GrowthOverviewState extends State<GrowthOverview> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final titleWidget = Row(
                   children: [
                     Container(
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: GrowthColors.iconBackground,
+                        color: trackingMetricSoftColor(metric),
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Icon(
                         trackingMetricIcon(metric),
                         size: 18,
-                        color: GrowthColors.primary,
+                        color: trackingMetricColor(metric),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Biểu đồ ${metric.title.toLowerCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: GrowthColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            '${metricRows.length} lần ghi nhận',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: GrowthColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+
+                final historyButton = Material(
+                  color: GrowthColors.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _open(
+                      TrackingHistoryScreen(
+                        repository: _repository,
+                        metric: metric,
+                      ),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 16,
+                            color: GrowthColors.primary,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Lịch sử',
+                            style: TextStyle(
+                              color: GrowthColors.primaryDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+
+                final addMeasureButton = Material(
+                  color: GrowthColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _add(metric),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add_rounded,
+                            size: 17,
+                            color: GrowthColors.surface,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Ghi đo',
+                            style: TextStyle(
+                              color: GrowthColors.surface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Biểu đồ ${metric.title.toLowerCase()}',
-                          style: const TextStyle(
-                            color: GrowthColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          '${metricRows.length} lần ghi nhận',
-                          style: const TextStyle(
-                            color: GrowthColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        historyButton,
+                        if (_repository.canEdit) addMeasureButton,
                       ],
                     ),
                   ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Material(
-                      color: GrowthColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _open(
-                          TrackingHistoryScreen(
-                            repository: _repository,
-                            metric: metric,
-                          ),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.history_rounded,
-                                size: 15,
-                                color: GrowthColors.primary,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Lịch sử',
-                                style: TextStyle(
-                                  color: GrowthColors.primaryDark,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_repository.canEdit) ...[
-                      const SizedBox(width: 6),
-                      Material(
-                        color: GrowthColors.primary,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _add(metric),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 7,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add_rounded,
-                                  size: 16,
-                                  color: GrowthColors.surface,
-                                ),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Ghi đo',
-                                  style: TextStyle(
-                                    color: GrowthColors.surface,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           const SizedBox(height: 12),
@@ -599,8 +666,8 @@ class _GrowthOverviewState extends State<GrowthOverview> {
         selected: 'Theo dõi',
         onTap: (destination) {
           if (destination == 'Theo dõi') return;
-          if (destination == 'Tạo ghi chép') {
-            _add();
+          if (destination == 'Tạo ghi chép' || destination == 'Thêm nhật ký') {
+            openAddJournal(context);
             return;
           }
           if (widget.onNavigation != null) {

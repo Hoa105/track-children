@@ -266,8 +266,8 @@ class _NotificationSettingsScreenState
                               decoration: BoxDecoration(
                                 color: pushEnabled
                                     ? NotificationColors.iconBackground
-                                    : NotificationColors.border.withOpacity(
-                                        0.35,
+                                    : NotificationColors.border.withValues(
+                                        alpha: 0.35,
                                       ),
                                 borderRadius: BorderRadius.circular(13),
                               ),
@@ -291,7 +291,7 @@ class _NotificationSettingsScreenState
                               ),
                             ),
                             Switch.adaptive(
-                              activeColor: NotificationColors.primary,
+                              activeTrackColor: NotificationColors.primary,
                               value: pushEnabled,
                               onChanged: _saving
                                   ? null

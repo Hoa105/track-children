@@ -7,14 +7,14 @@ import 'assessment_models.dart';
 import 'assessment_video.dart';
 
 const assessmentBody = TextStyle(
-  fontSize: 14,
-  height: 1.6,
-  color: AppColors.textPrimary,
+  fontSize: 14.5,
+  height: 1.55,
+  color: AssessmentColors.textPrimary,
 );
 const assessmentMuted = TextStyle(
   fontSize: 13,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: AssessmentColors.muted,
 );
 
 /// Local styling keeps the assessment consistent without changing other flows.
@@ -24,10 +24,12 @@ class AssessmentScaffold extends StatelessWidget {
     this.backgroundColor,
     this.appBar,
     required this.body,
+    this.bottomNavigationBar,
   });
   final Color? backgroundColor;
   final PreferredSizeWidget? appBar;
   final Widget body;
+  final Widget? bottomNavigationBar;
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -38,25 +40,31 @@ class AssessmentScaffold extends StatelessWidget {
       data: base.copyWith(
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AssessmentColors.primary,
             foregroundColor: Colors.white,
-            minimumSize: const Size(48, 52),
+            minimumSize: const Size(48, 54),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             textStyle: const TextStyle(
               fontFamily: 'Nunito',
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w800,
             ),
             shape: shape,
+            elevation: 0,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            minimumSize: const Size(48, 52),
-            side: const BorderSide(color: AppColors.border),
+            foregroundColor: AssessmentColors.primaryDark,
+            minimumSize: const Size(48, 54),
+            side: const BorderSide(color: AssessmentColors.border, width: 1.2),
             shape: shape,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            textStyle: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         expansionTileTheme: const ExpansionTileThemeData(
@@ -67,16 +75,16 @@ class AssessmentScaffold extends StatelessWidget {
           style: ButtonStyle(
             backgroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
-                  ? AppColors.primary
-                  : AppColors.surface,
+                  ? AssessmentColors.primary
+                  : AssessmentColors.surface,
             ),
             foregroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
                   ? Colors.white
-                  : AppColors.textSecondary,
+                  : AssessmentColors.muted,
             ),
             side: const WidgetStatePropertyAll(
-              BorderSide(color: AppColors.border),
+              BorderSide(color: AssessmentColors.border),
             ),
             padding: const WidgetStatePropertyAll(
               EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -95,9 +103,10 @@ class AssessmentScaffold extends StatelessWidget {
         ),
       ),
       child: Scaffold(
-        backgroundColor: backgroundColor ?? AppColors.background,
+        backgroundColor: backgroundColor ?? AssessmentColors.background,
         appBar: appBar,
         body: body,
+        bottomNavigationBar: bottomNavigationBar,
       ),
     );
   }
@@ -112,18 +121,18 @@ IconData assessmentDomainIcon(String? domain) => switch (domain) {
   _ => Icons.spa_outlined,
 };
 Color assessmentDomainColor(String? domain) => switch (domain) {
-  'fine_motor' => const Color(0xFF805696),
-  'language_communication' => const Color(0xFF326D9B),
-  'cognitive' => const Color(0xFF91621F),
-  'social_emotional' => const Color(0xFFA34D66),
-  _ => AppColors.primary,
+  'fine_motor' => AssessmentColors.fineMotor,
+  'language_communication' => AssessmentColors.language,
+  'cognitive' => AssessmentColors.cognitive,
+  'social_emotional' => AssessmentColors.socialEmotional,
+  _ => AssessmentColors.grossMotor,
 };
 
 class AssessmentIconBadge extends StatelessWidget {
   const AssessmentIconBadge(
     this.icon, {
     super.key,
-    this.color = AppColors.primary,
+    this.color = AssessmentColors.primary,
     this.size = 44,
   });
   final IconData icon;
@@ -142,7 +151,7 @@ class AssessmentIconBadge extends StatelessWidget {
             width: size * .9,
             height: size * .9,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: .07),
+              color: color.withValues(alpha: .08),
               borderRadius: BorderRadius.circular(size * .28),
             ),
           ),
@@ -154,15 +163,15 @@ class AssessmentIconBadge extends StatelessWidget {
             height: size * .86,
             decoration: BoxDecoration(
               color: Color.alphaBlend(
-                color.withValues(alpha: .14),
+                color.withValues(alpha: .15),
                 Colors.white,
               ),
               borderRadius: BorderRadius.circular(size * .25),
               boxShadow: [
                 BoxShadow(
-                  color: color.withValues(alpha: .08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: color.withValues(alpha: .1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -220,15 +229,15 @@ class AssessmentDomainTrail extends StatelessWidget {
       const Text(
         '5 lĩnh vực phát triển',
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
-          color: AppColors.primaryDark,
+          color: AssessmentColors.textPrimary,
         ),
       ),
       const SizedBox(height: 10),
       Wrap(
-        spacing: 14,
-        runSpacing: 12,
+        spacing: 12,
+        runSpacing: 10,
         children: [
           for (final domain in assessmentDomains.entries)
             Tooltip(
@@ -239,7 +248,7 @@ class AssessmentDomainTrail extends StatelessWidget {
                   child: AssessmentIconBadge(
                     assessmentDomainIcon(domain.key),
                     color: assessmentDomainColor(domain.key),
-                    size: 42,
+                    size: 40,
                   ),
                 ),
               ),
@@ -254,34 +263,46 @@ class AssessmentObservation extends StatelessWidget {
   const AssessmentObservation({super.key, required this.text});
   final String text;
   @override
-  Widget build(BuildContext context) => Material(
-    color: const Color(0xFFF3F5EC),
-    borderRadius: BorderRadius.circular(18),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: 19,
-                color: AppColors.primary,
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F9F1),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AssessmentColors.cardBorder),
+    ),
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AssessmentColors.iconBackground,
+                borderRadius: BorderRadius.circular(8),
               ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Cách quan sát',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              child: const Icon(
+                Icons.visibility_outlined,
+                size: 16,
+                color: AssessmentColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Cách quan sát',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AssessmentColors.textPrimary,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(text, style: assessmentBody),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(text, style: assessmentBody),
+      ],
     ),
   );
 }
@@ -290,27 +311,31 @@ class AssessmentDomainLabel extends StatelessWidget {
   const AssessmentDomainLabel(this.domain, {super.key});
   final String? domain;
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      AssessmentIconBadge(
-        assessmentDomainIcon(domain),
-        color: assessmentDomainColor(domain),
-        size: 36,
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(
-          assessmentDomains[domain] ?? '',
-          style: TextStyle(
-            color: assessmentDomainColor(domain),
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-            height: 1.4,
+  Widget build(BuildContext context) {
+    final color = assessmentDomainColor(domain);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AssessmentIconBadge(
+          assessmentDomainIcon(domain),
+          color: color,
+          size: 34,
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            assessmentDomains[domain] ?? '',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              height: 1.35,
+            ),
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// Entrance-only motion. Rebuilds while saving do not replay the transition.
@@ -329,7 +354,7 @@ class AssessmentReveal extends StatelessWidget {
     builder: (context, value, child) => Opacity(
       opacity: value,
       child: Transform.translate(
-        offset: Offset(0, 12 * (1 - value)),
+        offset: Offset(0, 10 * (1 - value)),
         child: child,
       ),
     ),
@@ -346,25 +371,32 @@ class AssessmentProgress extends StatelessWidget {
       milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 380,
     ),
     curve: Curves.easeOutCubic,
-    builder: (context, animated, _) => LinearProgressIndicator(
-      value: animated,
-      minHeight: 8,
+    builder: (context, animated, _) => ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      backgroundColor: AppColors.primarySoft,
-      color: AppColors.primary,
+      child: LinearProgressIndicator(
+        value: animated,
+        minHeight: 8,
+        backgroundColor: AssessmentColors.iconBackground.withValues(alpha: .5),
+        color: AssessmentColors.primary,
+      ),
     ),
   );
 }
 
 AppBar assessmentAppBar(String title, {VoidCallback? back, List<Widget>? actions}) =>
     AppBar(
-      backgroundColor: AppColors.background,
+      backgroundColor: AssessmentColors.background,
+      surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
-      toolbarHeight: 64,
+      toolbarHeight: 60,
       leading: Builder(
         builder: (context) => IconButton(
           tooltip: 'Quay lại',
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(
+            Icons.chevron_left_rounded,
+            size: 28,
+            color: AssessmentColors.primaryDark,
+          ),
           onPressed: back ?? () => Navigator.pop(context),
         ),
       ),
@@ -373,8 +405,9 @@ AppBar assessmentAppBar(String title, {VoidCallback? back, List<Widget>? actions
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-          fontSize: 19,
+          fontSize: 19.5,
           fontWeight: FontWeight.w800,
+          color: AssessmentColors.textPrimary,
           letterSpacing: -.4,
         ),
       ),
@@ -391,13 +424,14 @@ class AssessmentChildHeader extends StatelessWidget {
     return Row(
       children: [
         CircleAvatar(
-          radius: 25,
-          backgroundColor: AppColors.primarySoft,
+          radius: 24,
+          backgroundColor: AssessmentColors.primarySoft,
           child: Text(
             name.isEmpty ? 'B' : name.substring(0, 1),
             style: const TextStyle(
-              color: AppColors.primary,
+              color: AssessmentColors.primary,
               fontWeight: FontWeight.w800,
+              fontSize: 17,
             ),
           ),
         ),
@@ -411,7 +445,7 @@ class AssessmentChildHeader extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: AssessmentColors.textPrimary,
                 ),
               ),
               if (child != null)
@@ -430,8 +464,8 @@ class AssessmentCard extends StatelessWidget {
     this.title,
     this.icon,
     this.featured = false,
-    this.accent = AppColors.primary,
-    this.tint = AppColors.surface,
+    this.accent = AssessmentColors.primary,
+    this.tint = AssessmentColors.surface,
     required this.child,
   });
   final String? title;
@@ -440,31 +474,36 @@ class AssessmentCard extends StatelessWidget {
   final bool featured;
   final Color accent, tint;
   @override
-  Widget build(BuildContext context) => Material(
-    color: tint,
-    shadowColor: AppColors.primaryDark.withValues(alpha: .08),
-    elevation: featured ? 2 : 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(featured ? 30 : 24),
-      side: BorderSide(
-        color: featured ? const Color(0xFFCEE0D2) : AppColors.border,
-      ),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Ink(
-      decoration: featured
-          ? const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFE1EDD6),
-                  Color(0xFFF1E9D4),
-                  Color(0xFFFAF7F0),
-                ],
-              ),
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: tint,
+      gradient: featured
+          ? const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AssessmentColors.heroGradientStart,
+                AssessmentColors.heroGradientEnd,
+                AssessmentColors.surface,
+              ],
             )
           : null,
+      borderRadius: BorderRadius.circular(featured ? 26 : 22),
+      border: Border.all(
+        color: featured ? AssessmentColors.border : AssessmentColors.cardBorder,
+        width: featured ? 1.2 : 1,
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: AssessmentColors.cardShadow,
+          blurRadius: 12,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Material(
+      color: Colors.transparent,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -485,9 +524,9 @@ class AssessmentCard extends StatelessWidget {
                         child: Text(
                           title!,
                           style: TextStyle(
-                            fontSize: featured ? 23 : 18,
+                            fontSize: featured ? 22 : 17.5,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: AssessmentColors.textPrimary,
                             height: 1.35,
                             letterSpacing: -.4,
                           ),
@@ -515,9 +554,9 @@ class AssessmentPill extends StatelessWidget {
     widthFactor: 1,
     alignment: Alignment.centerLeft,
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: neutral ? AppColors.background : AppColors.primarySoft,
+        color: neutral ? const Color(0xFFE4EDE0) : AssessmentColors.primarySoft,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -525,7 +564,7 @@ class AssessmentPill extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: neutral ? AppColors.textSecondary : AppColors.primaryDark,
+          color: neutral ? AssessmentColors.muted : AssessmentColors.textSecondary,
         ),
       ),
     ),
@@ -544,7 +583,7 @@ class AssessmentChoice extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.only(bottom: 12),
     child: Semantics(
       selected: selected,
       button: true,
@@ -552,7 +591,7 @@ class AssessmentChoice extends StatelessWidget {
         enabled: onTap != null,
         child: AnimatedScale(
           scale: selected && !MediaQuery.disableAnimationsOf(context)
-              ? 1.015
+              ? 1.012
               : 1,
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
@@ -560,53 +599,85 @@ class AssessmentChoice extends StatelessWidget {
             animationDuration: Duration(
               milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 200,
             ),
-            color: selected ? AppColors.primarySoft : AppColors.surface,
+            color: selected ? AssessmentColors.primarySoft : AssessmentColors.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: selected ? AppColors.primary : AppColors.border,
-                width: selected ? 1.5 : 1,
+                color: selected ? AssessmentColors.primary : AssessmentColors.cardBorder,
+                width: selected ? 1.8 : 1.2,
               ),
             ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(
                   children: [
-                    Icon(
-                      selected
-                          ? Icons.check_circle_rounded
-                          : switch (label) {
-                              'Đã làm được' => Icons.task_alt_rounded,
-                              'Chưa làm được' => Icons.more_time_rounded,
-                              'Chưa quan sát' => Icons.visibility_outlined,
-                              _ => Icons.circle_outlined,
-                            },
-                      color: selected
-                          ? AppColors.primary
-                          : switch (label) {
-                              'Đã làm được' => AppColors.primary,
-                              'Chưa làm được' => const Color(0xFF91621F),
-                              'Chưa quan sát' => const Color(0xFF326D9B),
-                              _ => AppColors.textSecondary,
-                            },
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected
+                            ? AssessmentColors.primary
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: selected
+                              ? AssessmentColors.primary
+                              : switch (label) {
+                                  'Đã làm được' => AssessmentColors.achieved,
+                                  'Chưa làm được' => AssessmentColors.notYet,
+                                  'Chưa quan sát' => AssessmentColors.notObserved,
+                                  _ => AssessmentColors.muted,
+                                },
+                          width: selected ? 0 : 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          selected
+                              ? Icons.check_rounded
+                              : switch (label) {
+                                  'Đã làm được' => Icons.check_rounded,
+                                  'Chưa làm được' => Icons.hourglass_empty_rounded,
+                                  'Chưa quan sát' => Icons.visibility_outlined,
+                                  _ => Icons.circle,
+                                },
+                          size: 15,
+                          color: selected
+                              ? Colors.white
+                              : switch (label) {
+                                  'Đã làm được' => AssessmentColors.achieved,
+                                  'Chưa làm được' => AssessmentColors.notYet,
+                                  'Chưa quan sát' => AssessmentColors.notObserved,
+                                  _ => Colors.transparent,
+                                },
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 15.5,
                           height: 1.4,
                           fontWeight: selected
                               ? FontWeight.w800
-                              : FontWeight.w500,
-                          color: AppColors.textPrimary,
+                              : FontWeight.w600,
+                          color: selected
+                              ? AssessmentColors.primaryDark
+                              : AssessmentColors.textPrimary,
                         ),
                       ),
                     ),
+                    if (selected)
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 20,
+                        color: AssessmentColors.primary,
+                      ),
                   ],
                 ),
               ),
@@ -631,7 +702,7 @@ class AssessmentCounts extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: SizedBox(
-              height: 7,
+              height: 8,
               child: Row(
                 children: [
                   for (final key in assessmentAnswers.keys)
@@ -640,9 +711,9 @@ class AssessmentCounts extends StatelessWidget {
                         flex: (summary[key] as num).toInt(),
                         child: ColoredBox(
                           color: switch (key) {
-                            'achieved' => AppColors.primary,
-                            'not_yet' => const Color(0xFFB88535),
-                            _ => const Color(0xFF6592B5),
+                            'achieved' => AssessmentColors.achieved,
+                            'not_yet' => AssessmentColors.notYet,
+                            _ => AssessmentColors.notObserved,
                           },
                           child: const SizedBox.expand(),
                         ),
@@ -652,57 +723,56 @@ class AssessmentCounts extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
       ],
       for (final v in assessmentAnswers.entries)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 5, right: 10),
-                child: Icon(
-                  switch (v.key) {
-                    'achieved' => Icons.check_circle_outline_rounded,
-                    'not_yet' => Icons.more_time_rounded,
-                    _ => Icons.visibility_outlined,
-                  },
-                  color: switch (v.key) {
-                    'achieved' => AppColors.primary,
-                    'not_yet' => const Color(0xFF91621F),
-                    _ => const Color(0xFF326D9B),
-                  },
-                  size: 21,
-                ),
+              Icon(
+                switch (v.key) {
+                  'achieved' => Icons.check_circle_rounded,
+                  'not_yet' => Icons.more_time_rounded,
+                  _ => Icons.visibility_outlined,
+                },
+                color: switch (v.key) {
+                  'achieved' => AssessmentColors.achieved,
+                  'not_yet' => AssessmentColors.notYet,
+                  _ => AssessmentColors.notObserved,
+                },
+                size: 20,
               ),
+              const SizedBox(width: 10),
               Container(
                 width: MediaQuery.textScalerOf(context).scale(34),
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 3),
                 decoration: BoxDecoration(
                   color: switch (v.key) {
-                    'achieved' => AppColors.primarySoft,
-                    'not_yet' => const Color(0xFFFFF3DB),
-                    _ => const Color(0xFFEAF1F9),
+                    'achieved' => AssessmentColors.achievedSoft,
+                    'not_yet' => AssessmentColors.notYetSoft,
+                    _ => AssessmentColors.notObservedSoft,
                   },
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${summary[v.key] ?? 0}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 17,
+                  style: TextStyle(
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryDark,
+                    color: switch (v.key) {
+                      'achieved' => AssessmentColors.primaryDark,
+                      'not_yet' => AssessmentColors.notYet,
+                      _ => AssessmentColors.notObserved,
+                    },
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(v.value, style: assessmentBody),
-                ),
+                child: Text(v.value, style: assessmentBody),
               ),
             ],
           ),

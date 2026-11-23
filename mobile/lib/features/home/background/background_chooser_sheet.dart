@@ -56,25 +56,44 @@ class _BackgroundChooserSheetState extends State<BackgroundChooserSheet> {
   Widget build(BuildContext context) => SafeArea(
     top: false,
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(8, 4, 8, 16),
-            child: Text(
-              'Đổi ảnh nền',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryDark,
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 2, 4, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Đổi ảnh nền',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: HomeColors.ink,
+                  ),
+                ),
+                Semantics(
+                  button: true,
+                  label: 'Đóng',
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Đóng',
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: HomeColors.ink,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
             ),
           ),
           if (errorMessage != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
               child: Semantics(
                 liveRegion: true,
                 child: DecoratedBox(
@@ -82,26 +101,65 @@ class _BackgroundChooserSheetState extends State<BackgroundChooserSheet> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.25),
+                    ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color:
+                              Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            errorMessage!,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           if (widget.onOpenSettings != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _openingSettings ? null : _openSettings,
-                child: Text(
-                  _openingSettings ? 'Đang mở Cài đặt…' : 'Mở Cài đặt',
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _openingSettings ? null : _openSettings,
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    size: 18,
+                    color: HomeColors.primary,
+                  ),
+                  label: Text(
+                    _openingSettings ? 'Đang mở Cài đặt…' : 'Mở Cài đặt',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: HomeColors.primary,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -128,29 +186,19 @@ class _BackgroundChooserSheetState extends State<BackgroundChooserSheet> {
                       'Chụp Photobooth',
                       'Chụp nhiều ảnh, tạo ảnh ghép.',
                     ),
-                  ])
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
-                      ),
-                      minLeadingWidth: 24,
-                      leading: HomeUiIcon(option.$2),
-                      title: Text(
-                        option.$3,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Text(option.$4),
-                      trailing: widget.currentSource == option.$1
-                          ? const HomeUiIcon(
-                              HomeUiIconName.check,
-                              semanticLabel: 'Đang áp dụng',
-                            )
-                          : null,
+                  ]) ...[
+                    _buildOptionTile(
+                      source: option.$1,
+                      icon: option.$2,
+                      title: option.$3,
+                      description: option.$4,
+                      isSelected: widget.currentSource == option.$1,
                       onTap: _openingSettings
                           ? null
                           : () => widget.onSelected(option.$1),
                     ),
+                    const SizedBox(height: 8),
+                  ],
                 ],
               ),
             ),
@@ -158,5 +206,70 @@ class _BackgroundChooserSheetState extends State<BackgroundChooserSheet> {
         ],
       ),
     ),
+  );
+
+  Widget _buildOptionTile({
+    required BackgroundSource source,
+    required HomeUiIconName icon,
+    required String title,
+    required String description,
+    required bool isSelected,
+    required VoidCallback? onTap,
+  }) => ListTile(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: BorderSide(
+        color: isSelected ? HomeColors.primary : const Color(0xFFE2EBE0),
+        width: isSelected ? 1.8 : 1,
+      ),
+    ),
+    tileColor: isSelected
+        ? HomeColors.reminderBackground.withValues(alpha: 0.65)
+        : Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    minLeadingWidth: 28,
+    leading: Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: isSelected ? HomeColors.primary : HomeColors.iconBackground,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: HomeUiIcon(
+          icon,
+          size: 20,
+          color: isSelected ? Colors.white : HomeColors.primary,
+        ),
+      ),
+    ),
+    title: Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 14.5,
+        color: HomeColors.ink,
+      ),
+    ),
+    subtitle: Text(
+      description,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: HomeColors.reminderCta,
+      ),
+    ),
+    trailing: isSelected
+        ? const HomeUiIcon(
+            HomeUiIconName.check,
+            color: HomeColors.primary,
+            semanticLabel: 'Đang áp dụng',
+          )
+        : const Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 13,
+            color: Color(0xFFA0B29E),
+          ),
+    onTap: onTap,
   );
 }

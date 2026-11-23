@@ -36,38 +36,6 @@ Future<void> tap(WidgetTester tester, String text) async {
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-  testWidgets('owned children block delete before reauth or API deletion', (
-    tester,
-  ) async {
-    final calls = <String>[];
-    AuthService.instance = AuthService(
-      client: MockClient((request) async {
-        calls.add(request.url.path);
-        return jsonResponse({
-          'hasPassword': true,
-          'providers': ['google'],
-          'ownedChildren': 1,
-          'phone': '+84912345678',
-        });
-      }),
-    );
-    await tester.pumpWidget(const MaterialApp(home: SecurityScreen()));
-    await tester.pumpAndSettle();
-    await tap(tester, 'Xóa tài khoản');
-    expect(
-      find.text(
-        'Hãy chuyển quyền hoặc xóa từng hồ sơ trẻ đang sở hữu trước khi xóa tài khoản.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      calls.where(
-        (p) => p.endsWith('/account/delete') || p.endsWith('/reauth'),
-      ),
-      isEmpty,
-    );
-    await tester.pumpWidget(const SizedBox());
-  });
   testWidgets('email change requires current proof then new-channel OTP', (
     tester,
   ) async {

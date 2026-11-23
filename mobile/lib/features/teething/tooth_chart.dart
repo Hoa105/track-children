@@ -249,10 +249,10 @@ class ToothIllustration extends StatelessWidget {
         ? const _ToothColors(Colors.white, Colors.white, Color(0xFFE58FA3))
         : erupted
         ? const _ToothColors(Colors.white, Color(0xFFFFF0F3), Color(0xFFE58FA3))
-        : _ToothColors(
-            const Color(0xFFFFFEFB),
-            const Color(0xFFF0E9E2),
-            const Color(0xFFCAB8B5),
+        : const _ToothColors(
+            Color(0xFFFFFEFB),
+            Color(0xFFF0E9E2),
+            Color(0xFFCAB8B5),
           );
     return TweenAnimationBuilder<_ToothColors>(
       tween: _ToothColorsTween(begin: colors, end: colors),
@@ -260,18 +260,16 @@ class ToothIllustration extends StatelessWidget {
           ? Duration.zero
           : const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
-      builder: (context, value, _) => RepaintBoundary(
-        child: CustomPaint(
-          size: const Size(40, 40),
-          painter: _ToothPainter(
-            type,
-            erupted,
-            expected,
-            reference,
-            selectedReference,
-            value,
-            faceRotation,
-          ),
+      builder: (context, value, _) => CustomPaint(
+        size: const Size(40, 40),
+        painter: _ToothPainter(
+          type,
+          erupted,
+          expected,
+          reference,
+          selectedReference,
+          value,
+          faceRotation,
         ),
       ),
     );
@@ -444,22 +442,8 @@ class _MouthPainter extends CustomPainter {
       Paint()..color = const Color(0x66FFF7F8),
     );
 
-    for (final upper in [true, false]) {
-      final arch = Path();
-      for (var i = 0; i <= 60; i++) {
-        final theta = math.pi - i * math.pi / 60;
-        final x =
-            size.width / 2 +
-            (size.width / 2 - (size.width * .08 + 6)) * math.cos(theta);
-        final y =
-            size.height / 2 +
-            (upper ? -1 : 1) * (20 + (size.height / 2 - 50) * math.sin(theta));
-        if (i == 0) {
-          arch.moveTo(x, y);
-        } else {
-          arch.lineTo(x, y);
-        }
-      }
+    final arches = _cachedArches(size);
+    for (final arch in arches) {
       canvas.drawPath(
         arch,
         Paint()
@@ -477,6 +461,36 @@ class _MouthPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round,
       );
     }
+  }
+
+  static final _archCache = <(double, double), List<Path>>{};
+
+  static List<Path> _cachedArches(Size size) {
+    final key = (size.width, size.height);
+    final existing = _archCache[key];
+    if (existing != null) return existing;
+    final result = <Path>[];
+    for (final upper in [true, false]) {
+      final arch = Path();
+      for (var i = 0; i <= 60; i++) {
+        final theta = math.pi - i * math.pi / 60;
+        final x =
+            size.width / 2 +
+            (size.width / 2 - (size.width * .08 + 6)) * math.cos(theta);
+        final y =
+            size.height / 2 +
+            (upper ? -1 : 1) * (20 + (size.height / 2 - 50) * math.sin(theta));
+        if (i == 0) {
+          arch.moveTo(x, y);
+        } else {
+          arch.lineTo(x, y);
+        }
+      }
+      result.add(arch);
+    }
+    if (_archCache.length >= 4) _archCache.remove(_archCache.keys.first);
+    _archCache[key] = result;
+    return result;
   }
 
   @override
@@ -500,6 +514,44 @@ class _ToothPainter extends CustomPainter {
   final bool expected;
   final bool reference;
   final bool selectedReference;
+  static final _molarPath = Path()
+    ..moveTo(7, 5)
+    ..cubicTo(11, 1, 16, 2, 20, 5)
+    ..cubicTo(25, 1, 32, 1, 35, 7)
+    ..cubicTo(39, 15, 35, 25, 33, 30)
+    ..cubicTo(31, 37, 27, 39, 24, 34)
+    ..quadraticBezierTo(20, 31, 16, 34)
+    ..cubicTo(12, 40, 8, 36, 7, 30)
+    ..cubicTo(4, 23, 1, 12, 7, 5)
+    ..close();
+
+  static final _caninePath = Path()
+    ..moveTo(9, 5)
+    ..cubicTo(14, 2, 17, 4, 20, 5)
+    ..cubicTo(24, 3, 29, 2, 32, 7)
+    ..cubicTo(36, 14, 32, 25, 29, 31)
+    ..quadraticBezierTo(20, 43, 11, 31)
+    ..cubicTo(6, 23, 3, 11, 9, 5)
+    ..close();
+
+  static final _incisorPath = Path()
+    ..moveTo(9, 5)
+    ..cubicTo(14, 2, 17, 4, 20, 5)
+    ..cubicTo(24, 3, 29, 2, 32, 7)
+    ..cubicTo(36, 14, 32, 25, 29, 31)
+    ..cubicTo(27, 37, 23, 38, 20, 33)
+    ..cubicTo(16, 38, 12, 36, 10, 31)
+    ..cubicTo(6, 23, 3, 11, 9, 5)
+    ..close();
+
+  static final _sheenPath = Path()
+    ..moveTo(9, 14)
+    ..quadraticBezierTo(8, 8, 14, 7);
+
+  static final _smilePath = Path()
+    ..moveTo(-3.2, 2)
+    ..quadraticBezierTo(0, 6.5, 3.2, 2);
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -509,31 +561,7 @@ class _ToothPainter extends CustomPainter {
     canvas.scale(side / 40, side / 40);
     final molar = type == ToothType.firstMolar || type == ToothType.secondMolar;
     final canine = type == ToothType.canine;
-    final path = Path();
-    if (molar) {
-      // Plump crown and two soft lobes give the milk tooth a friendly shape.
-      path.moveTo(7, 5);
-      path.cubicTo(11, 1, 16, 2, 20, 5);
-      path.cubicTo(25, 1, 32, 1, 35, 7);
-      path.cubicTo(39, 15, 35, 25, 33, 30);
-      path.cubicTo(31, 37, 27, 39, 24, 34);
-      path.quadraticBezierTo(20, 31, 16, 34);
-      path.cubicTo(12, 40, 8, 36, 7, 30);
-      path.cubicTo(4, 23, 1, 12, 7, 5);
-    } else {
-      path.moveTo(9, 5);
-      path.cubicTo(14, 2, 17, 4, 20, 5);
-      path.cubicTo(24, 3, 29, 2, 32, 7);
-      path.cubicTo(36, 14, 32, 25, 29, 31);
-      if (canine) {
-        path.quadraticBezierTo(20, 43, 11, 31);
-      } else {
-        path.cubicTo(27, 37, 23, 38, 20, 33);
-        path.cubicTo(16, 38, 12, 36, 10, 31);
-      }
-      path.cubicTo(6, 23, 3, 11, 9, 5);
-    }
-    path.close();
+    final path = molar ? _molarPath : (canine ? _caninePath : _incisorPath);
     canvas.drawShadow(path, const Color(0x33714B52), 2, false);
     canvas.drawPath(
       path,
@@ -556,9 +584,7 @@ class _ToothPainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(path);
     canvas.drawPath(
-      Path()
-        ..moveTo(9, 14)
-        ..quadraticBezierTo(8, 8, 14, 7),
+      _sheenPath,
       Paint()
         ..color = Colors.white.withValues(alpha: .9)
         ..style = PaintingStyle.stroke
@@ -591,9 +617,7 @@ class _ToothPainter extends CustomPainter {
       );
     }
     canvas.drawPath(
-      Path()
-        ..moveTo(-3.2, 2)
-        ..quadraticBezierTo(0, 6.5, 3.2, 2),
+      _smilePath,
       Paint()
         ..color = const Color(0xFF3D5550)
         ..style = PaintingStyle.stroke

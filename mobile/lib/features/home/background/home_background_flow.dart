@@ -114,18 +114,31 @@ class HomeBackgroundFlow {
       builder: (_) => PopScope(
         canPop: false,
         child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: HomeColors.surface,
           content: Row(
             children: [
               const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: HomeColors.primary,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Semantics(
                   liveRegion: true,
-                  child: const Text('Đang mở ảnh…'),
+                  child: const Text(
+                    'Đang mở ảnh…',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: HomeColors.ink,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -153,11 +166,35 @@ class HomeBackgroundFlow {
       builder: (page) => _track(
         page,
         AlertDialog(
-          title: const Text('Chưa đổi được ảnh nền'),
-          content: Text(message),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: HomeColors.surface,
+          title: const Text(
+            'Chưa đổi được ảnh nền',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              color: HomeColors.ink,
+            ),
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(
+              fontSize: 14,
+              color: HomeColors.reminderCta,
+            ),
+          ),
           actions: [
-            TextButton(
+            FilledButton(
               onPressed: () => Navigator.pop(page),
+              style: FilledButton.styleFrom(
+                backgroundColor: HomeColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
               child: const Text('Đóng'),
             ),
           ],
@@ -178,13 +215,28 @@ class HomeBackgroundFlow {
           builder: (dialogContext, setDialogState) => PopScope(
             canPop: !busy,
             child: AlertDialog(
-              title: const Text('Dùng ảnh mặc định?'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              backgroundColor: HomeColors.surface,
+              title: const Text(
+                'Dùng ảnh mặc định?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                  color: HomeColors.ink,
+                ),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Ảnh nền sẽ được chọn theo vai trò người chăm sóc.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: HomeColors.reminderCta,
+                    ),
                   ),
                   if (error != null)
                     Padding(
@@ -195,6 +247,8 @@ class HomeBackgroundFlow {
                           error!,
                           style: TextStyle(
                             color: Theme.of(dialogContext).colorScheme.error,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -204,6 +258,9 @@ class HomeBackgroundFlow {
               actions: [
                 TextButton(
                   onPressed: busy ? null : () => Navigator.pop(dialogContext),
+                  style: TextButton.styleFrom(
+                    foregroundColor: HomeColors.ink,
+                  ),
                   child: const Text('Hủy'),
                 ),
                 FilledButton(
@@ -244,6 +301,13 @@ class HomeBackgroundFlow {
                             }
                           }
                         },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: HomeColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                   child: const Text('Áp dụng'),
                 ),
               ],
@@ -335,15 +399,42 @@ class HomeBackgroundFlow {
               builder: (page) => _track(
                 page,
                 AlertDialog(
-                  title: const Text('Tiếp tục chỉnh ảnh?'),
-                  content: const Text('Bạn còn một ảnh nền chưa hoàn tất.'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  backgroundColor: HomeColors.surface,
+                  title: const Text(
+                    'Tiếp tục chỉnh ảnh?',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      color: HomeColors.ink,
+                    ),
+                  ),
+                  content: const Text(
+                    'Bạn còn một ảnh nền chưa hoàn tất.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: HomeColors.reminderCta,
+                    ),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(page, false),
+                      style: TextButton.styleFrom(
+                        foregroundColor: HomeColors.ink,
+                      ),
                       child: const Text('Chọn ảnh khác'),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.pop(page, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: HomeColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       child: const Text('Tiếp tục'),
                     ),
                   ],
@@ -367,7 +458,10 @@ class HomeBackgroundFlow {
           useSafeArea: true,
           isScrollControlled: true,
           showDragHandle: true,
-          backgroundColor: AppColors.background,
+          backgroundColor: HomeColors.background,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
           builder: (sheet) => _track(
             sheet,
             BackgroundChooserSheet(

@@ -10,7 +10,7 @@ import '../../services/demo_store.dart';
 const _caption = TextStyle(
   fontSize: 12,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: JournalColors.textSecondary,
 );
 
 bool _hasLocalFile(Map media) =>
@@ -68,12 +68,12 @@ class _JournalMediaTileState extends State<JournalMediaTile> {
   Widget _message(String text, [IconData icon = Icons.image_outlined]) =>
       Container(
         height: widget.height,
-        color: AppColors.primarySoft.withValues(alpha: .6),
+        color: JournalColors.primarySoft.withValues(alpha: .6),
         alignment: Alignment.center,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.primary),
+            Icon(icon, color: JournalColors.primary),
             const SizedBox(height: 4),
             Text(text, style: _caption, textAlign: TextAlign.center),
           ],

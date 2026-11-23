@@ -16,7 +16,9 @@ import 'services/auth_entry_preferences.dart';
 import 'services/vaccination_api.dart';
 import 'services/vaccination_schedule.dart';
 import 'services/video_insight_api.dart';
+import 'services/biometric_service.dart';
 import 'features/auth/auth_screen.dart';
+import 'features/auth/biometric_lock_screen.dart';
 import 'features/child/add_child_profile_screen.dart';
 import 'features/child/child_profile_selection_screen.dart';
 import 'features/home/home_screen.dart';
@@ -49,6 +51,7 @@ Future<void> main(List<String> arguments) async {
 Future<void> initializeApplication() async {
   await DemoStore.instance.initialize();
   await AuthService.instance.restore();
+  await BiometricService.instance.initialize();
   if (!AuthService.instance.signedIn) {
     await DemoStore.instance.logout();
   }
@@ -102,11 +105,18 @@ class TrackChildrenApp extends StatefulWidget {
   State<TrackChildrenApp> createState() => _TrackChildrenAppState();
 }
 
-class _TrackChildrenAppState extends State<TrackChildrenApp> {
+class _TrackChildrenAppState extends State<TrackChildrenApp>
+    with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  bool _isBiometricLocked = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (BiometricService.instance.isEnabled && AuthService.instance.signedIn) {
+      _isBiometricLocked = true;
+    }
     PushNotifications.instance.onOpen = (id) async {
       if (!AuthService.instance.signedIn) return;
       await _navigatorKey.currentState?.push(
@@ -183,12 +193,33 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
     };
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      BiometricService.instance.onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      if (AuthService.instance.signedIn &&
+          BiometricService.instance.onAppResumed()) {
+        if (mounted && !_isBiometricLocked) {
+          setState(() => _isBiometricLocked = true);
+        }
+      }
+    }
+  }
+
   GrowthRepository get _growthRepository =>
       AuthService.instance.signedIn && !AuthService.instance.demoMode
       ? ApiGrowthRepository()
       : MockGrowthRepository();
 
   Future<void> _logout() async {
+    _isBiometricLocked = false;
     final revocation = AuthService.instance.logout();
     SharingInvitations.instance.clear();
     await DemoStore.instance.clearAuthenticatedCache();
@@ -362,11 +393,19 @@ class _TrackChildrenAppState extends State<TrackChildrenApp> {
       },
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
+        final content = _isBiometricLocked && AuthService.instance.signedIn
+            ? BiometricLockScreen(
+                onUnlocked: () {
+                  BiometricService.instance.markUnlocked();
+                  if (mounted) setState(() => _isBiometricLocked = false);
+                },
+              )
+            : child!;
         return MediaQuery(
           data: mediaQuery.copyWith(
             textScaler: _AppTextScaler(mediaQuery.textScaler, 1.15),
           ),
-          child: child!,
+          child: content,
         );
       },
       theme: ThemeData(

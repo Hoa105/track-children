@@ -16,6 +16,8 @@
 	<string>Chọn ảnh đại diện cho hồ sơ bé, ảnh nền trang chủ và ảnh nhật ký từ thư viện.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Lưu ảnh Photobooth đã hoàn tất vào thư viện khi bạn chọn Lưu về máy.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Sử dụng Face ID hoặc Vân tay để mở khóa ứng dụng Bé Lớn Khôn</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

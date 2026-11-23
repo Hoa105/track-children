@@ -55,7 +55,7 @@ List<CareNotification> careNotifications(DemoStore store, {DateTime? now}) {
         final days = today
             .difference(DateTime(date.year, date.month, date.day))
             .inDays;
-        if (days >= 0) {
+        if (days >= 0 && days <= 30) {
           final repeated = days >= 7;
           result.add(
             CareNotification(

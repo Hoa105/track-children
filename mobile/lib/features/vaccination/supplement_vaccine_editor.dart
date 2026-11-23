@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../../services/demo_store.dart';
-import 'vaccination_style.dart';
 
 DateTime get _today => DateUtils.dateOnly(DateTime.now());
 String _date(DateTime d) => '${d.day}/${d.month}/${d.year}';
@@ -73,7 +72,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
         title: const Text(
           'Bỏ thay đổi chưa lưu?',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: VaccinationColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -168,18 +167,29 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
       maxLength: multiline ? 500 : null,
       keyboardType: multiline ? TextInputType.multiline : TextInputType.text,
       onChanged: (_) => setState(() {}),
-      style: const TextStyle(color: AppColors.primaryDark),
+      style: const TextStyle(color: VaccinationColors.primaryDark),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        labelStyle: const TextStyle(color: VaccinationColors.textSecondary),
         alignLabelWithHint: multiline,
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: VaccinationColors.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: VaccinationColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: VaccinationColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: VaccinationColors.primary, width: 2),
+        ),
       ),
     ),
   );
@@ -191,7 +201,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
       if (!didPop) _close();
     },
     child: Material(
-      color: AppColors.background,
+      color: VaccinationColors.background,
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -214,7 +224,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.textSecondary,
+                    color: VaccinationColors.border,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -228,7 +238,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: VaccinationColors.textPrimary,
                           ),
                         ),
                       ),
@@ -256,8 +266,9 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: VaccinationColors.surface,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: VaccinationColors.border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -266,7 +277,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                           'Thông tin vắc-xin',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: VaccinationColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -309,10 +320,10 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                           TextSpan(text: 'Mũi ${i + 1}'),
                                           if (!d.expanded)
                                             TextSpan(
-                                              text: ' · ${_date(d.date)}',
+                                              text: ' - ${_date(d.date)}',
                                               style: TextStyle(
                                                 color: d.given
-                                                    ? AppColors.primaryDark
+                                                    ? VaccinationColors.primaryDark
                                                     : VaccinationColors.planned,
                                               ),
                                             ),
@@ -320,7 +331,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                       ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
+                                        color: VaccinationColors.textPrimary,
                                       ),
                                     ),
                                   ),
@@ -363,12 +374,21 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                   children: [
                                     ChoiceChip(
                                       label: const Text('Đã tiêm'),
-                                      labelStyle: const TextStyle(
-                                        color: VaccinationColors.recorded,
+                                      labelStyle: TextStyle(
+                                        color: d.given
+                                            ? VaccinationColors.recorded
+                                            : VaccinationColors.ink,
                                         fontWeight: FontWeight.w600,
                                       ),
                                       checkmarkColor:
                                           VaccinationColors.recorded,
+                                      selectedColor:
+                                          VaccinationColors.recordedSoft,
+                                      side: BorderSide(
+                                        color: d.given
+                                            ? VaccinationColors.recorded
+                                            : VaccinationColors.border,
+                                      ),
                                       selected: d.given,
                                       onSelected: _saving
                                           ? null
@@ -382,16 +402,20 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                     ChoiceChip(
                                       label: const Text('Dự kiến'),
                                       selected: !d.given,
-                                      selectedColor: const Color(0xFFD8C6EE),
-                                      labelStyle: const TextStyle(
-                                        color: AppColors.purpleText,
+                                      selectedColor:
+                                          VaccinationColors.plannedSoft,
+                                      labelStyle: TextStyle(
+                                        color: !d.given
+                                            ? VaccinationColors.planned
+                                            : VaccinationColors.ink,
                                         fontWeight: FontWeight.w600,
                                       ),
-                                      checkmarkColor: AppColors.purpleText,
+                                      checkmarkColor:
+                                          VaccinationColors.planned,
                                       side: BorderSide(
-                                        color: d.given
-                                            ? AppColors.border
-                                            : AppColors.purpleText,
+                                        color: !d.given
+                                            ? VaccinationColors.planned
+                                            : VaccinationColors.border,
                                       ),
                                       onSelected: _saving
                                           ? null
@@ -406,7 +430,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                     d.given ? 'Ngày tiêm' : 'Ngày dự kiến',
                                     style: const TextStyle(
                                       fontSize: 13,
-                                      color: AppColors.primaryDark,
+                                      color: VaccinationColors.primaryDark,
                                     ),
                                   ),
                                   subtitle: Text(
@@ -416,12 +440,12 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                       fontWeight: FontWeight.w700,
                                       color: d.given
                                           ? VaccinationColors.recorded
-                                          : AppColors.purpleText,
+                                          : VaccinationColors.planned,
                                     ),
                                   ),
                                   trailing: const Icon(
                                     Icons.calendar_month_outlined,
-                                    color: AppColors.primary,
+                                    color: VaccinationColors.primary,
                                   ),
                                   onTap: _saving ? null : () => _pick(d),
                                 ),
@@ -436,7 +460,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                                     'Thêm thông tin',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: AppColors.textPrimary,
+                                      color: VaccinationColors.textPrimary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -485,7 +509,7 @@ class _SupplementVaccineEditorState extends State<SupplementVaccineEditor> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: VaccinationColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(0, 52),
                   ),

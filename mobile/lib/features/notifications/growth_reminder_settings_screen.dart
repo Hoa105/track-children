@@ -199,7 +199,7 @@ class _GrowthReminderSettingsScreenState
         border: Border.all(
           color: isEnabled
               ? NotificationColors.border
-              : NotificationColors.border.withOpacity(0.5),
+              : NotificationColors.border.withValues(alpha: 0.5),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -221,7 +221,7 @@ class _GrowthReminderSettingsScreenState
                     decoration: BoxDecoration(
                       color: isEnabled
                           ? NotificationColors.iconBackground
-                          : NotificationColors.border.withOpacity(0.3),
+                          : NotificationColors.border.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: Icon(
@@ -247,7 +247,7 @@ class _GrowthReminderSettingsScreenState
                   ),
                   Switch.adaptive(
                     value: isEnabled,
-                    activeColor: NotificationColors.primary,
+                    activeTrackColor: NotificationColors.primary,
                     onChanged: _saving
                         ? null
                         : (v) => setState(() => _enabled[metric] = v),

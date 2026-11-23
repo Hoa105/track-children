@@ -45,6 +45,7 @@ class SharingMember {
   final String contact;
   final String avatar;
   final Map<String, AccessLevel> permissions;
+  bool get isOwner => role == 'Chủ sở hữu';
 
   static Map<String, AccessLevel> _defaultPermissions() => {
     for (final module in _modules) module: AccessLevel.none,
@@ -354,7 +355,7 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
       : _ownerView(context);
 
   Widget _ownerView(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(
       context,
       _childId == null
@@ -379,9 +380,15 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           if (_loading) ...[
-            const LinearProgressIndicator(),
+            const LinearProgressIndicator(color: SharingColors.primary),
             const SizedBox(height: 12),
           ],
+          _SharingHeroCard(
+            childId: _childId,
+            usedSlots: _members.length + _pending.length,
+            totalSlots: 3,
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -389,13 +396,25 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
                   onPressed: _invite,
                   style: _primaryButtonStyle(),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
-                  label: const Text('Mời cùng chăm bé'),
+                  label: const Text(
+                    'Mời cùng chăm bé',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               IconButton.outlined(
                 tooltip: 'Mã mời',
-                style: IconButton.styleFrom(minimumSize: const Size(56, 56)),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(56, 56),
+                  side: const BorderSide(color: SharingColors.border),
+                  backgroundColor: SharingColors.surface,
+                  foregroundColor: SharingColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
                 onPressed: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(
                     builder: (_) => InviteMemberScreen(
@@ -409,18 +428,10 @@ class _ChildSharingScreenState extends State<ChildSharingScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Còn ${(3 - _members.length - _pending.length).clamp(0, 3)} vị trí chia sẻ',
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-          ),
           const SizedBox(height: 22),
           _SectionHeading(
             title: 'Người đang cùng chăm bé',
-            trailing: '${_members.length}',
+            trailing: '${_members.length}/3',
           ),
           const SizedBox(height: 10),
           if (_members.isEmpty)
@@ -501,22 +512,29 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(revoke ? 'Thu hồi quyền truy cập?' : 'Rời khỏi hồ sơ bé?'),
+        backgroundColor: SharingColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          revoke ? 'Thu hồi quyền truy cập?' : 'Rời khỏi hồ sơ bé?',
+          style: const TextStyle(fontWeight: FontWeight.w800, color: SharingColors.textPrimary),
+        ),
         content: Text(
           revoke
               ? '${widget.member.name} sẽ không còn xem được thông tin của bé.'
               : 'Bạn sẽ không còn xem được thông tin của bé An.',
+          style: const TextStyle(color: SharingColors.textPrimary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Để sau'),
+            child: const Text('Để sau', style: TextStyle(color: SharingColors.muted)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB84C4C),
+              backgroundColor: SharingColors.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(revoke ? 'Thu hồi' : 'Rời hồ sơ'),
           ),
@@ -532,9 +550,119 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
     }
   }
 
+  void _setAll(AccessLevel level) => setState(() {
+    for (final module in _modules) {
+      _permissions[module] = level;
+    }
+  });
+
+  void _showQuickPermissionSheet(BuildContext context, String module) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: SharingColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: SharingColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(_moduleIcon(module), color: SharingColors.primary, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Quyền truy cập: $module',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: SharingColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Chọn cấp độ quyền cho thành viên với mục này:',
+                  style: TextStyle(fontSize: 13, color: SharingColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                for (final lvl in AccessLevel.values) ...[
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: _permissions[module] == lvl
+                        ? SharingColors.primarySoft
+                        : Colors.transparent,
+                    leading: Icon(
+                      switch (lvl) {
+                        AccessLevel.none => Icons.lock_outline_rounded,
+                        AccessLevel.view => Icons.visibility_outlined,
+                        AccessLevel.edit => Icons.edit_note_rounded,
+                      },
+                      color: _permissions[module] == lvl
+                          ? SharingColors.primary
+                          : SharingColors.muted,
+                    ),
+                    title: Text(
+                      switch (lvl) {
+                        AccessLevel.none => 'Chưa cấp quyền (Khóa)',
+                        AccessLevel.view => 'Chỉ xem',
+                        AccessLevel.edit => 'Xem & sửa',
+                      },
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: _permissions[module] == lvl
+                            ? SharingColors.primaryDark
+                            : SharingColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      switch (lvl) {
+                        AccessLevel.none => 'Không thể xem hoặc tương tác với mục này',
+                        AccessLevel.view => 'Chỉ xem dữ liệu, không thể chỉnh sửa',
+                        AccessLevel.edit => 'Có thể xem, thêm và sửa dữ liệu',
+                      },
+                      style: const TextStyle(fontSize: 11, color: SharingColors.textSecondary),
+                    ),
+                    trailing: _permissions[module] == lvl
+                        ? const Icon(Icons.check_circle_rounded, color: SharingColors.primary)
+                        : null,
+                    onTap: () {
+                      setState(() => _permissions[module] = lvl);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(context, 'Quyền truy cập'),
     bottomNavigationBar: _SharingBottomBar(
       child: FilledButton(
@@ -560,15 +688,40 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: SharingColors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Nhấn giữ một mục rồi kéo vào vùng Xem hoặc Xem & sửa. Kéo về Chưa cấp quyền để thu hồi.',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: SharingColors.textSecondary),
           ),
           const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _ContactChip(
+                  label: 'Chỉ xem tất cả',
+                  selected: _permissions.values.every((l) => l == AccessLevel.view),
+                  onTap: () => _setAll(AccessLevel.view),
+                ),
+                const SizedBox(width: 8),
+                _ContactChip(
+                  label: 'Xem & sửa tất cả',
+                  selected: _permissions.values.every((l) => l == AccessLevel.edit),
+                  onTap: () => _setAll(AccessLevel.edit),
+                ),
+                const SizedBox(width: 8),
+                _ContactChip(
+                  label: 'Thu hồi tất cả',
+                  selected: _permissions.values.every((l) => l == AccessLevel.none),
+                  onTap: () => _setAll(AccessLevel.none),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           for (final level in AccessLevel.values)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -584,28 +737,38 @@ class _SharingPermissionsScreenState extends State<SharingPermissionsScreen> {
                     setState(() => _permissions[module] = level),
                 onDragUpdate: _scrollWhileDragging,
                 onDragEnd: _stopDragScroll,
+                onTapModule: (module) =>
+                    _showQuickPermissionSheet(context, module),
               ),
             ),
           const _OwnerPrivacyNote(),
           if (widget.onRevoke != null) ...[
-            const SizedBox(height: 10),
-            TextButton.icon(
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
               onPressed: () => _confirmAction(revoke: true),
-              icon: const Icon(Icons.person_remove_alt_1_rounded),
+              icon: const Icon(Icons.person_remove_alt_1_rounded, size: 18),
               label: const Text('Thu hồi quyền thành viên'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFB84C4C),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: SharingColors.danger,
+                side: const BorderSide(color: SharingColors.dangerSoft),
+                backgroundColor: SharingColors.dangerSoft,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ],
           if (widget.onLeave != null) ...[
-            const SizedBox(height: 10),
-            TextButton.icon(
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
               onPressed: () => _confirmAction(revoke: false),
-              icon: const Icon(Icons.logout_rounded),
+              icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Rời khỏi hồ sơ bé'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFB84C4C),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: SharingColors.danger,
+                side: const BorderSide(color: SharingColors.dangerSoft),
+                backgroundColor: SharingColors.dangerSoft,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ],
@@ -694,7 +857,7 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(context, 'Mời người thân'),
     body: SafeArea(
       top: false,
@@ -706,8 +869,8 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: const Color(0xFFEDEDE5),
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFFE6EBE0),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
@@ -738,6 +901,7 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                       content: Text(
                         'Đã sao chép mã test: ${_demoSharingCode(widget.childId)}',
                       ),
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -752,8 +916,8 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                     'Thông tin người nhận',
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      color: SharingColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -784,16 +948,16 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                       hint: _usePhone ? '09xx xxx xxx' : 'ten@example.com',
                       icon: _usePhone
                           ? Icons.phone_outlined
-                          : Icons.mail_outline,
+                          : Icons.mail_outline_rounded,
                     ),
                   ),
                   const SizedBox(height: 14),
                   const Text(
                     'Mối quan hệ với bé',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: SharingColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -806,6 +970,7 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                       hint: 'Vd. Bà ngoại',
                       icon: Icons.family_restroom_rounded,
                     ),
+                    dropdownColor: SharingColors.surface,
                     items: [
                       for (final entry in sharingRelationships.entries)
                         DropdownMenuItem(
@@ -818,7 +983,7 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _SurfaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -827,37 +992,40 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                     'Quyền xem các mục',
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      color: SharingColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Chọn những mục người này được xem hoặc ghi. Bạn có thể đổi lại sau.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: SharingColors.textSecondary),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Wrap(
-                    spacing: 4,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      TextButton(
-                        onPressed: () => _setAll('view'),
-                        child: const Text('Chỉ xem tất cả'),
+                      _ContactChip(
+                        label: 'Chỉ xem tất cả',
+                        selected: _permissions.values.every((l) => l == 'view'),
+                        onTap: () => _setAll('view'),
                       ),
-                      TextButton(
-                        onPressed: () => _setAll('edit'),
-                        child: const Text('Xem & sửa tất cả'),
+                      _ContactChip(
+                        label: 'Xem & sửa tất cả',
+                        selected: _permissions.values.every((l) => l == 'edit'),
+                        onTap: () => _setAll('edit'),
                       ),
                     ],
                   ),
                   for (final scope in sharingScopes) ...[
-                    const Divider(height: 16, color: AppColors.border),
+                    const Divider(height: 18, color: SharingColors.border),
                     Text(
                       sharingScopeLabels[scope]!,
                       style: const TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        color: SharingColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -879,8 +1047,8 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            _InfoBanner(
+            const SizedBox(height: 14),
+            const _InfoBanner(
               icon: Icons.schedule_rounded,
               text: 'Lời mời có hiệu lực trong 7 ngày. Bạn có thể hủy bất cứ lúc nào.',
             ),
@@ -909,11 +1077,12 @@ class _InviteMemberScreenState extends State<InviteMemberScreen> {
             icon: const Icon(Icons.mark_email_unread_outlined),
             label: const Text('Xem thử giao diện nhận lời mời'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.border),
-              minimumSize: const Size.fromHeight(46),
+              foregroundColor: SharingColors.primary,
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: SharingColors.border),
+              minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
@@ -938,7 +1107,7 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(context, 'Lời mời tham gia'),
     body: SafeArea(
       top: false,
@@ -946,35 +1115,37 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 28),
         children: [
           const SizedBox(height: 12),
-          Container(
-            width: 88,
-            height: 88,
-            decoration: const BoxDecoration(
-              color: AppColors.primarySoft,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.family_restroom_rounded,
-              color: AppColors.primary,
-              size: 44,
+          Center(
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: const BoxDecoration(
+                color: SharingColors.primarySoft,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.family_restroom_rounded,
+                color: SharingColors.primary,
+                size: 44,
+              ),
             ),
           ),
           const SizedBox(height: 18),
           Text(
             'Bạn được mời cùng chăm sóc ${_demoSharingChild(widget.childId)?['full_name'] ?? 'bé An'}',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 21,
               height: 1.25,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              color: SharingColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '${DemoStore.instance.signedIn ? DemoStore.instance.parent['fullName'] : 'Nguyễn Minh Anh'} · lời mời mô phỏng cục bộ.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            style: const TextStyle(fontSize: 13, color: SharingColors.textSecondary),
           ),
           const SizedBox(height: 20),
           _InviteDetailsCard(childId: widget.childId),
@@ -992,6 +1163,7 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
                   content: Text(
                     'Đã xem thử trạng thái chấp nhận lời mời. Chưa cấp quyền qua dịch vụ.',
                   ),
+                  behavior: SnackBarBehavior.floating,
                 ),
               );
             },
@@ -999,7 +1171,7 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
             child: Text(_accepted ? 'Đã tham gia hồ sơ' : 'Chấp nhận lời mời'),
           ),
           if (_accepted) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push<void>(
                 MaterialPageRoute(
@@ -1009,16 +1181,17 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
               icon: const Icon(Icons.swap_horiz_rounded),
               label: const Text('Chuyển hồ sơ bé'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.border),
-                minimumSize: const Size.fromHeight(46),
+                foregroundColor: SharingColors.primary,
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: SharingColors.border),
+                minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           TextButton(
             onPressed: () async {
               if (!_accepted) {
@@ -1028,15 +1201,30 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
               final leave = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Rời khỏi hồ sơ bé?'),
-                  content: const Text('Bạn có thể được mời tham gia lại sau.'),
+                  backgroundColor: SharingColors.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    'Rời khỏi hồ sơ bé?',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: SharingColors.textPrimary),
+                  ),
+                  content: const Text(
+                    'Bạn có thể được mời tham gia lại sau.',
+                    style: TextStyle(color: SharingColors.textPrimary),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Ở lại'),
+                      child: const Text('Ở lại', style: TextStyle(color: SharingColors.muted)),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.pop(context, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: SharingColors.danger,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       child: const Text('Rời hồ sơ'),
                     ),
                   ],
@@ -1046,12 +1234,16 @@ class _AcceptInvitationScreenState extends State<AcceptInvitationScreen> {
                 Navigator.of(context).pop();
               }
             },
-            child: Text(_accepted ? 'Rời khỏi hồ sơ bé' : 'Từ chối lời mời'),
+            child: Text(
+              _accepted ? 'Rời khỏi hồ sơ bé' : 'Từ chối lời mời',
+              style: const TextStyle(color: SharingColors.muted),
+            ),
           ),
+          const SizedBox(height: 6),
           const Center(
             child: Text(
               'Mã mời hết hạn sau 7 ngày',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: SharingColors.muted),
             ),
           ),
         ],
@@ -1074,7 +1266,7 @@ class _SharedProfileSwitcherScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(context, 'Chuyển hồ sơ bé'),
     body: SafeArea(
       top: false,
@@ -1086,86 +1278,92 @@ class _SharedProfileSwitcherScreenState
             text: 'Chọn hồ sơ bé bạn muốn mở. Quyền truy cập sẽ theo hồ sơ được chọn.',
           ),
           const SizedBox(height: 16),
-          for (
-            var i = 0;
-            i <
-                (DemoStore.instance.signedIn
-                    ? DemoStore.instance.children.length
-                    : 2);
-            i++
-          )
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                onTap: () => setState(() => _selected = i),
-                borderRadius: BorderRadius.circular(20),
-                child: _SurfaceCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: i == 1
-                              ? const Color(0xFFFFE9D8)
-                              : AppColors.primarySoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.child_care_rounded,
-                          color: i == 1
-                              ? const Color(0xFFB66B4F)
-                              : AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          RadioGroup<int>(
+            groupValue: _selected,
+            onChanged: (value) =>
+                setState(() => _selected = value ?? _selected),
+            child: Column(
+              children: [
+                for (
+                  var i = 0;
+                  i <
+                      (DemoStore.instance.signedIn
+                          ? DemoStore.instance.children.length
+                          : 2);
+                  i++
+                )
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      onTap: () => setState(() => _selected = i),
+                      borderRadius: BorderRadius.circular(22),
+                      child: _SurfaceCard(
+                        child: Row(
                           children: [
-                            Text(
-                              DemoStore.instance.signedIn
-                                  ? DemoStore.instance.children[i]['full_name']
-                                        as String
-                                  : i == 1
-                                  ? 'Bé An'
-                                  : 'Bé Na',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                color: i == 1
+                                    ? SharingColors.attentionSoft
+                                    : SharingColors.primarySoft,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.child_care_rounded,
+                                color: i == 1
+                                    ? SharingColors.attention
+                                    : SharingColors.primary,
                               ),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              DemoStore.instance.signedIn
-                                  ? DemoStore.instance.ageLabel(
-                                      DemoStore.instance.children[i],
-                                    )
-                                  : i == 1
-                                  ? 'Được chia sẻ với bạn · 24 tháng'
-                                  : 'Hồ sơ của bạn · 3 tuổi',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    DemoStore.instance.signedIn
+                                        ? DemoStore.instance.children[i]['full_name']
+                                              as String
+                                        : i == 1
+                                        ? 'Bé An'
+                                        : 'Bé Na',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: SharingColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    DemoStore.instance.signedIn
+                                        ? DemoStore.instance.ageLabel(
+                                            DemoStore.instance.children[i],
+                                          )
+                                        : i == 1
+                                        ? 'Được chia sẻ với bạn · 24 tháng'
+                                        : 'Hồ sơ của bạn · 3 tuổi',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: SharingColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            Radio<int>(
+                              value: i,
+                              activeColor: SharingColors.primary,
                             ),
                           ],
                         ),
                       ),
-                      Radio<int>(
-                        value: i,
-                        groupValue: _selected,
-                        activeColor: AppColors.primary,
-                        onChanged: (value) =>
-                            setState(() => _selected = value!),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+              ],
             ),
-          const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 14),
           FilledButton(
             onPressed: () async {
               if (DemoStore.instance.signedIn &&
@@ -1212,7 +1410,7 @@ class _OwnershipTransferScreenState extends State<OwnershipTransferScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: SharingColors.background,
     appBar: _sharingAppBar(context, 'Chuyển quyền sở hữu'),
     body: SafeArea(
       top: false,
@@ -1229,75 +1427,94 @@ class _OwnershipTransferScreenState extends State<OwnershipTransferScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: SharingColors.textPrimary,
             ),
           ),
           const SizedBox(height: 10),
-          ...List.generate(widget.members.length, (index) {
-            final member = widget.members[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                onTap: () => setState(() => _selected = index),
-                borderRadius: BorderRadius.circular(20),
-                child: _SurfaceCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      _AvatarBadge(initial: member.avatar),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          RadioGroup<int>(
+            groupValue: _selected,
+            onChanged: (value) =>
+                setState(() => _selected = value ?? _selected),
+            child: Column(
+              children: [
+                for (var index = 0; index < widget.members.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      onTap: () => setState(() => _selected = index),
+                      borderRadius: BorderRadius.circular(22),
+                      child: _SurfaceCard(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
                           children: [
-                            Text(
-                              member.name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                            _AvatarBadge(
+                              initial: widget.members[index].avatar,
+                              owner: widget.members[index].isOwner,
+                              size: 44,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.members[index].name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: SharingColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    widget.members[index].role,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: SharingColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Text(
-                              member.role,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
+                            Radio<int>(
+                              value: index,
+                              activeColor: SharingColors.primary,
                             ),
                           ],
                         ),
                       ),
-                      Radio<int>(
-                        value: index,
-                        groupValue: _selected,
-                        activeColor: AppColors.primary,
-                        onChanged: (value) =>
-                            setState(() => _selected = value!),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: () async {
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Xác nhận bàn giao?'),
+                  backgroundColor: SharingColors.surface,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: const Text(
+                    'Xác nhận bàn giao?',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: SharingColors.textPrimary),
+                  ),
                   content: Text(
                     'Bạn sẽ chuyển quyền sở hữu cho ${widget.members[_selected].name}.',
+                    style: const TextStyle(color: SharingColors.textPrimary),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Quay lại'),
+                      child: const Text('Quay lại', style: TextStyle(color: SharingColors.muted)),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.pop(context, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: SharingColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       child: const Text('Gửi yêu cầu'),
                     ),
                   ],
@@ -1314,7 +1531,7 @@ class _OwnershipTransferScreenState extends State<OwnershipTransferScreen> {
           const Text(
             'Việc bàn giao cần được xác nhận để đảm bảo an toàn hồ sơ.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: SharingColors.muted),
           ),
         ],
       ),
@@ -1327,20 +1544,21 @@ PreferredSizeWidget _sharingAppBar(
   String title, {
   List<Widget>? actions,
 }) => AppBar(
-  backgroundColor: AppColors.background,
+  backgroundColor: SharingColors.background,
   surfaceTintColor: Colors.transparent,
   elevation: 0,
   leading: IconButton(
     onPressed: () => Navigator.of(context).maybePop(),
     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
-    color: AppColors.textPrimary,
+    color: SharingColors.textPrimary,
   ),
   title: Text(
     title,
     style: const TextStyle(
-      fontSize: 20,
-      fontWeight: FontWeight.w700,
-      color: AppColors.textPrimary,
+      fontSize: 19,
+      fontWeight: FontWeight.w800,
+      color: SharingColors.textPrimary,
+      letterSpacing: -0.3,
     ),
   ),
   actions: actions,
@@ -1348,11 +1566,14 @@ PreferredSizeWidget _sharingAppBar(
 );
 
 ButtonStyle _primaryButtonStyle() => FilledButton.styleFrom(
-  backgroundColor: AppColors.primary,
+  backgroundColor: SharingColors.primary,
   foregroundColor: Colors.white,
   minimumSize: const Size.fromHeight(56),
-  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  padding: const EdgeInsets.symmetric(horizontal: 10),
+  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+  elevation: 2,
+  shadowColor: SharingColors.primary.withValues(alpha: 0.35),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
 );
 
 InputDecoration _inputDecoration({
@@ -1362,28 +1583,30 @@ InputDecoration _inputDecoration({
 }) => InputDecoration(
   labelText: label,
   hintText: hint,
-  prefixIcon: Icon(icon, color: AppColors.primary),
+  labelStyle: const TextStyle(color: SharingColors.textSecondary, fontSize: 14),
+  hintStyle: const TextStyle(color: SharingColors.muted, fontSize: 14),
+  prefixIcon: Icon(icon, color: SharingColors.primary),
   filled: true,
-  fillColor: const Color(0xFFFCFBF8),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+  fillColor: SharingColors.surface,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
   border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
-    borderSide: const BorderSide(color: AppColors.border),
+    borderRadius: BorderRadius.circular(16),
+    borderSide: const BorderSide(color: SharingColors.border),
   ),
   enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
-    borderSide: const BorderSide(color: AppColors.border),
+    borderRadius: BorderRadius.circular(16),
+    borderSide: const BorderSide(color: SharingColors.border),
   ),
   focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
-    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+    borderRadius: BorderRadius.circular(16),
+    borderSide: const BorderSide(color: SharingColors.primary, width: 2),
   ),
 );
 
 class _SurfaceCard extends StatelessWidget {
   const _SurfaceCard({
     required this.child,
-    this.padding = const EdgeInsets.all(14),
+    this.padding = const EdgeInsets.all(16),
     this.attention = false,
   });
 
@@ -1395,12 +1618,17 @@ class _SurfaceCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: attention ? AppColors.purpleSurfaceLight : AppColors.surface,
+      color: attention ? SharingColors.attentionSoft : SharingColors.surface,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: const Color(0xFFF1EFE8)),
+      border: Border.all(
+        color: attention
+            ? SharingColors.attention.withValues(alpha: 0.3)
+            : SharingColors.cardBorder,
+        width: 1.2,
+      ),
       boxShadow: const [
         BoxShadow(
-          color: Color(0x08194C3C),
+          color: SharingColors.cardShadow,
           blurRadius: 14,
           offset: Offset(0, 4),
         ),
@@ -1422,16 +1650,27 @@ class _SectionHeading extends StatelessWidget {
         child: Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+            color: SharingColors.textPrimary,
+            letterSpacing: -0.2,
           ),
         ),
       ),
       if (trailing != null)
-        Text(
-          trailing!,
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          decoration: BoxDecoration(
+            color: SharingColors.primarySoft,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            trailing!,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: SharingColors.primaryDark,
+            ),
+          ),
         ),
     ],
   );
@@ -1445,37 +1684,47 @@ class _PendingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _SurfaceCard(
     attention: true,
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     child: Column(
       children: [
         for (var i = 0; i < entries.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: AppColors.border),
+          if (i > 0)
+            const Divider(height: 1, color: SharingColors.border),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               children: [
-                const Icon(
-                  Icons.mark_email_unread_outlined,
-                  color: Color(0xFFB38B4A),
-                  size: 20,
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: SharingColors.attention.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.mark_email_unread_outlined,
+                    color: SharingColors.attention,
+                    size: 20,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         entries[i],
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: SharingColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         'Đang chờ phản hồi',
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SharingColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -1483,7 +1732,16 @@ class _PendingCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   onSelected: (_) => onCancel(entries[i]),
                   itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'cancel', child: Text('Hủy lời mời')),
+                    PopupMenuItem(
+                      value: 'cancel',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded, size: 18, color: SharingColors.danger),
+                          SizedBox(width: 8),
+                          Text('Hủy lời mời', style: TextStyle(color: SharingColors.danger)),
+                        ],
+                      ),
+                    ),
                   ],
                   tooltip: 'Tùy chọn lời mời',
                 ),
@@ -1506,13 +1764,13 @@ class _MemberCard extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(21),
+      borderRadius: BorderRadius.circular(22),
       child: _SurfaceCard(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            _AvatarBadge(initial: member.avatar),
-            const SizedBox(width: 11),
+            _AvatarBadge(initial: member.avatar, owner: member.isOwner, size: 44),
+            const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1520,22 +1778,24 @@ class _MemberCard extends StatelessWidget {
                   Text(
                     member.name,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      color: SharingColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${member.role} · ${member.contact}',
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SharingColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
+              color: SharingColors.muted,
+              size: 22,
             ),
           ],
         ),
@@ -1545,25 +1805,41 @@ class _MemberCard extends StatelessWidget {
 }
 
 class _AvatarBadge extends StatelessWidget {
-  const _AvatarBadge({required this.initial, this.owner = false});
+  const _AvatarBadge({
+    required this.initial,
+    this.owner = false,
+    this.size = 42,
+  });
   final String initial;
   final bool owner;
+  final double size;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 42,
-    height: 42,
+    width: size,
+    height: size,
     decoration: BoxDecoration(
-      color: owner ? const Color(0xFFFFE9D8) : AppColors.primarySoft,
+      color: owner ? SharingColors.attentionSoft : SharingColors.primarySoft,
       shape: BoxShape.circle,
-      border: Border.all(color: Colors.white, width: 2),
+      border: Border.all(
+        color: owner ? SharingColors.attention : SharingColors.primary.withValues(alpha: 0.3),
+        width: 1.5,
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: SharingColors.cardShadow,
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
+      ],
     ),
     alignment: Alignment.center,
     child: Text(
       initial,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: owner ? const Color(0xFFB66B4F) : AppColors.primaryDark,
+      style: TextStyle(
+        fontSize: size * 0.42,
+        fontWeight: FontWeight.w800,
+        color: owner ? SharingColors.attention : SharingColors.primaryDark,
       ),
     ),
   );
@@ -1574,21 +1850,25 @@ class _OwnerPrivacyNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     decoration: BoxDecoration(
-      color: const Color(0xFFF0F5E9),
+      color: SharingColors.primarySoft,
       borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: SharingColors.primary.withValues(alpha: 0.15)),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.lock_outline_rounded, size: 17, color: AppColors.primary),
-        SizedBox(width: 8),
+        const Icon(Icons.lock_outline_rounded, size: 18, color: SharingColors.primary),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             'Thông tin cốt lõi và quyền mời, xóa hồ sơ chỉ dành cho chủ sở hữu.',
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(height: 1.45, color: AppColors.primaryDark),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              height: 1.45,
+              color: SharingColors.primaryDark,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -1601,10 +1881,43 @@ class _EmptyMembersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SurfaceCard(
-    child: Text(
-      'Chưa có thành viên nào được mời.',
-      style: Theme.of(context).textTheme.bodyMedium
-          ?.copyWith(color: AppColors.textSecondary),
+    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+    child: Center(
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              color: SharingColors.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.group_add_outlined,
+              size: 28,
+              color: SharingColors.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Chưa có thành viên nào được mời.',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: SharingColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Mời người thân cùng theo dõi các chỉ số và nhật ký của bé.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: SharingColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1617,8 +1930,8 @@ class _PersonSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) => _SurfaceCard(
     child: Row(
       children: [
-        _AvatarBadge(initial: member.avatar),
-        const SizedBox(width: 11),
+        _AvatarBadge(initial: member.avatar, owner: member.isOwner, size: 48),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1626,9 +1939,9 @@ class _PersonSummaryCard extends StatelessWidget {
               Text(
                 member.name,
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: SharingColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 3),
@@ -1636,16 +1949,23 @@ class _PersonSummaryCard extends StatelessWidget {
                 '${member.role} · ${member.contact}',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: SharingColors.textSecondary,
                 ),
               ),
             ],
           ),
         ),
-        const Icon(
-          Icons.verified_user_outlined,
-          color: AppColors.primary,
-          size: 20,
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: const BoxDecoration(
+            color: SharingColors.primarySoft,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.verified_user_outlined,
+            color: SharingColors.primary,
+            size: 20,
+          ),
         ),
       ],
     ),
@@ -1658,13 +1978,8 @@ IconData _moduleIcon(String module) => switch (module) {
   'Tiêm chủng' => Icons.vaccines_outlined,
   'Mọc răng' => Icons.sentiment_satisfied_alt_rounded,
   'Nhật ký' => Icons.menu_book_outlined,
+  'Hoạt động' => Icons.directions_run_rounded,
   _ => Icons.extension_outlined,
-};
-
-String _accessLabel(AccessLevel level) => switch (level) {
-  AccessLevel.none => 'Không xem',
-  AccessLevel.view => 'Xem',
-  AccessLevel.edit => 'Xem & sửa',
 };
 
 class _InviteHeaderCard extends StatelessWidget {
@@ -1672,27 +1987,41 @@ class _InviteHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(17),
+    padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: const Color(0xFFE9F2E6),
+      gradient: const LinearGradient(
+        colors: [
+          SharingColors.heroStart,
+          SharingColors.heroEnd,
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       borderRadius: BorderRadius.circular(22),
+      boxShadow: const [
+        BoxShadow(
+          color: SharingColors.cardShadow,
+          blurRadius: 14,
+          offset: Offset(0, 4),
+        ),
+      ],
     ),
     child: const Row(
       children: [
         Icon(
           Icons.volunteer_activism_outlined,
-          size: 28,
-          color: AppColors.primary,
+          size: 30,
+          color: SharingColors.primary,
         ),
-        SizedBox(width: 12),
+        SizedBox(width: 14),
         Expanded(
           child: Text(
-            'Mời người thân cùng đồng hành trong hành trình của bé.',
+            'Mời người thân cùng đồng hành trong hành trình phát triển của bé.',
             style: TextStyle(
               fontSize: 13,
-              height: 1.4,
-              color: AppColors.primaryDark,
-              fontWeight: FontWeight.w600,
+              height: 1.45,
+              color: SharingColors.primaryDark,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -1715,20 +2044,29 @@ class _ModeButton extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: SharingColors.cardShadow,
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.primaryDark : AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? SharingColors.primaryDark : SharingColors.textSecondary,
           ),
         ),
       ),
@@ -1750,22 +2088,25 @@ class _ContactChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(16),
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      constraints: const BoxConstraints(minHeight: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: selected ? AppColors.primarySoft : const Color(0xFFF8F7F2),
-        borderRadius: BorderRadius.circular(18),
+        color: selected ? SharingColors.primarySoft : SharingColors.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? SharingColors.primary : SharingColors.border,
+          width: selected ? 1.5 : 1.0,
         ),
       ),
+      alignment: Alignment.center,
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: selected ? AppColors.primaryDark : AppColors.textSecondary,
+          fontSize: 13,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          color: selected ? SharingColors.primaryDark : SharingColors.textSecondary,
         ),
       ),
     ),
@@ -1779,50 +2120,73 @@ class _InviteCodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SurfaceCard(
+    padding: const EdgeInsets.all(20),
     child: Column(
       children: [
-        const Icon(
-          Icons.qr_code_2_rounded,
-          size: 76,
-          color: AppColors.primaryDark,
+        Container(
+          width: 72,
+          height: 72,
+          decoration: const BoxDecoration(
+            color: SharingColors.primarySoft,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.qr_code_2_rounded,
+            size: 40,
+            color: SharingColors.primary,
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           'Mã mời test · ${_demoSharingChild(childId)?['full_name'] ?? 'Bé An'}',
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: SharingColors.textSecondary,
+          ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F7EF),
-            borderRadius: BorderRadius.circular(14),
+            color: SharingColors.primarySoft,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SharingColors.primary.withValues(alpha: 0.2)),
           ),
           child: Text(
             _demoSharingCode(childId),
-            style: TextStyle(
-              fontSize: 22,
-              letterSpacing: 2,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primaryDark,
+            style: const TextStyle(
+              fontSize: 24,
+              letterSpacing: 2.5,
+              fontWeight: FontWeight.w900,
+              color: SharingColors.primaryDark,
             ),
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Mã bảo mật · Tự hết hạn sau 7 ngày',
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_clock_outlined, size: 14, color: SharingColors.muted),
+            SizedBox(width: 4),
+            Text(
+              'Mã bảo mật · Tự hết hạn sau 7 ngày',
+              style: TextStyle(fontSize: 12, color: SharingColors.muted),
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: onCopy,
-          icon: const Icon(Icons.copy_rounded, size: 17),
+          icon: const Icon(Icons.copy_rounded, size: 18),
           label: const Text('Sao chép mã mời'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.border),
+            foregroundColor: SharingColors.primary,
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: SharingColors.border),
+            minimumSize: const Size.fromHeight(48),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
         ),
@@ -1838,23 +2202,25 @@ class _InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: const Color(0xFFF0F5E9),
-      borderRadius: BorderRadius.circular(15),
+      color: SharingColors.primarySoft,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: SharingColors.primary.withValues(alpha: 0.15)),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(width: 8),
+        Icon(icon, color: SharingColors.primary, size: 20),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
             style: const TextStyle(
               fontSize: 12,
               height: 1.45,
-              color: AppColors.primaryDark,
+              color: SharingColors.primaryDark,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -1869,6 +2235,7 @@ class _InviteDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SurfaceCard(
+    padding: const EdgeInsets.all(16),
     child: Column(
       children: [
         _DetailLine(
@@ -1878,7 +2245,7 @@ class _InviteDetailsCard extends StatelessWidget {
               ? 'Bé An · 24 tháng'
               : '${_demoSharingChild(childId)!['full_name']} · ${DemoStore.instance.ageLabel(_demoSharingChild(childId)!)}',
         ),
-        Divider(height: 20, color: AppColors.border),
+        const Divider(height: 22, color: SharingColors.border),
         _DetailLine(
           icon: Icons.person_outline_rounded,
           label: 'Người mời',
@@ -1886,8 +2253,8 @@ class _InviteDetailsCard extends StatelessWidget {
               ? DemoStore.instance.parent['fullName'] as String
               : 'Nguyễn Minh Anh',
         ),
-        Divider(height: 20, color: AppColors.border),
-        _DetailLine(
+        const Divider(height: 22, color: SharingColors.border),
+        const _DetailLine(
           icon: Icons.visibility_outlined,
           label: 'Quyền ban đầu',
           value: 'Xem và ghi nhật ký',
@@ -1910,20 +2277,20 @@ class _DetailLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, size: 18, color: AppColors.primary),
-      const SizedBox(width: 9),
+      Icon(icon, size: 20, color: SharingColors.primary),
+      const SizedBox(width: 10),
       Expanded(
         child: Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: const TextStyle(fontSize: 13, color: SharingColors.textSecondary),
         ),
       ),
       Text(
         value,
         style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: SharingColors.textPrimary,
         ),
       ),
     ],
@@ -1936,20 +2303,20 @@ class _SharingBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: AppColors.background,
-      border: const Border(top: BorderSide(color: AppColors.border)),
-      boxShadow: [
+      color: SharingColors.surface,
+      border: const Border(top: BorderSide(color: SharingColors.border)),
+      boxShadow: const [
         BoxShadow(
-          color: AppColors.primary.withValues(alpha: .06),
-          blurRadius: 20,
-          offset: const Offset(0, -4),
+          color: SharingColors.cardShadow,
+          blurRadius: 16,
+          offset: Offset(0, -4),
         ),
       ],
     ),
     child: SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
         child: child,
       ),
     ),
@@ -1963,12 +2330,14 @@ class _PermissionZone extends StatelessWidget {
     required this.onDrop,
     required this.onDragUpdate,
     required this.onDragEnd,
+    this.onTapModule,
   });
   final AccessLevel level;
   final List<String> modules;
   final ValueChanged<String> onDrop;
   final void Function(BuildContext, DragUpdateDetails) onDragUpdate;
   final VoidCallback onDragEnd;
+  final ValueChanged<String>? onTapModule;
 
   @override
   Widget build(BuildContext context) => DragTarget<String>(
@@ -1978,12 +2347,27 @@ class _PermissionZone extends StatelessWidget {
     onAcceptWithDetails: (details) => onDrop(details.data),
     builder: (context, candidates, rejected) {
       final hovering = candidates.isNotEmpty;
-      final color = level == AccessLevel.edit
-          ? AppColors.purpleText
-          : AppColors.primary;
-      final title = level == AccessLevel.none
-          ? 'Chưa cấp quyền'
-          : _accessLabel(level);
+      final (title, icon, color, bgColor) = switch (level) {
+        AccessLevel.none => (
+          'Chưa cấp quyền',
+          Icons.lock_outline_rounded,
+          SharingColors.muted,
+          const Color(0xFFF7F8F5),
+        ),
+        AccessLevel.view => (
+          'Chỉ xem',
+          Icons.visibility_outlined,
+          SharingColors.primary,
+          SharingColors.primarySoft,
+        ),
+        AccessLevel.edit => (
+          'Xem & sửa',
+          Icons.edit_note_rounded,
+          SharingColors.primaryDark,
+          const Color(0xFFE4F0D3),
+        ),
+      };
+
       return AnimatedContainer(
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
@@ -1991,43 +2375,57 @@ class _PermissionZone extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: hovering ? color.withValues(alpha: .12) : AppColors.surface,
+          color: hovering ? color.withValues(alpha: 0.15) : SharingColors.surface,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: hovering ? color : AppColors.border,
-            width: 1.5,
+            color: hovering ? color : SharingColors.cardBorder,
+            width: hovering ? 2.0 : 1.2,
           ),
+          boxShadow: const [
+            BoxShadow(
+              color: SharingColors.cardShadow,
+              blurRadius: 10,
+              offset: Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  switch (level) {
-                    AccessLevel.none => Icons.lock_outline_rounded,
-                    AccessLevel.view => Icons.visibility_outlined,
-                    AccessLevel.edit => Icons.edit_note_rounded,
-                  },
-                  color: color,
-                  size: 22,
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                       color: color,
                     ),
                   ),
                 ),
-                Text(
-                  '${modules.length}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${modules.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
@@ -2036,11 +2434,13 @@ class _PermissionZone extends StatelessWidget {
             if (modules.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  hovering ? 'Thả để chọn quyền' : 'Kéo mục vào đây',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                child: Center(
+                  child: Text(
+                    hovering ? 'Thả để chuyển vào vùng này' : 'Chưa có mục nào trong vùng này',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SharingColors.muted,
+                    ),
                   ),
                 ),
               )
@@ -2062,17 +2462,33 @@ class _PermissionZone extends StatelessWidget {
                           constraints: BoxConstraints(
                             maxWidth: MediaQuery.sizeOf(context).width - 48,
                           ),
-                          child: _PermissionItem(module: module, color: color),
+                          child: _PermissionItem(
+                            module: module,
+                            color: color,
+                            bgColor: bgColor,
+                          ),
                         ),
                       ),
                       childWhenDragging: Opacity(
-                        opacity: .3,
-                        child: _PermissionItem(module: module, color: color),
+                        opacity: 0.3,
+                        child: _PermissionItem(
+                          module: module,
+                          color: color,
+                          bgColor: bgColor,
+                        ),
                       ),
                       child: Semantics(
                         label:
-                            '$module, $title. Nhấn giữ để kéo sang vùng quyền khác.',
-                        child: _PermissionItem(module: module, color: color),
+                            '$module, $title. Chạm để chọn quyền, hoặc nhấn giữ để kéo.',
+                        child: InkWell(
+                          onTap: () => onTapModule?.call(module),
+                          borderRadius: BorderRadius.circular(14),
+                          child: _PermissionItem(
+                            module: module,
+                            color: color,
+                            bgColor: bgColor,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -2085,36 +2501,235 @@ class _PermissionZone extends StatelessWidget {
 }
 
 class _PermissionItem extends StatelessWidget {
-  const _PermissionItem({required this.module, required this.color});
+  const _PermissionItem({
+    required this.module,
+    required this.color,
+    required this.bgColor,
+  });
   final String module;
   final Color color;
+  final Color bgColor;
+
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 48),
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    constraints: const BoxConstraints(minHeight: 46),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .08),
+      color: bgColor,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: color.withValues(alpha: .2)),
+      border: Border.all(color: color.withValues(alpha: 0.25)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(_moduleIcon(module), size: 18, color: color),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            module,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        const SizedBox(width: 7),
+        Text(
+          module,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: color == SharingColors.muted
+                ? SharingColors.textPrimary
+                : color,
           ),
         ),
-        const SizedBox(width: 4),
-        const Icon(
+        const SizedBox(width: 6),
+        Icon(
           Icons.drag_indicator_rounded,
-          size: 18,
-          color: AppColors.textSecondary,
+          size: 16,
+          color: color.withValues(alpha: 0.5),
         ),
       ],
     ),
   );
+}
+
+class _SharingHeroCard extends StatelessWidget {
+  const _SharingHeroCard({
+    this.childId,
+    required this.usedSlots,
+    this.totalSlots = 3,
+  });
+
+  final String? childId;
+  final int usedSlots;
+  final int totalSlots;
+
+  @override
+  Widget build(BuildContext context) {
+    final childData = _demoSharingChild(childId);
+    final childName = childData?['full_name'] as String? ?? 'Bé An';
+    final remaining = (totalSlots - usedSlots).clamp(0, totalSlots);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            SharingColors.heroStart,
+            SharingColors.heroEnd,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: SharingColors.cardShadow,
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: SharingColors.primary.withValues(alpha: 0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.child_care_rounded,
+                  color: SharingColors.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      childName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: SharingColors.primaryDark,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      childData != null
+                          ? DemoStore.instance.ageLabel(childData)
+                          : 'Đang theo dõi phát triển',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: SharingColors.primaryDark.withValues(alpha: 0.75),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: SharingColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 13,
+                      color: SharingColors.primary,
+                    ),
+                    SizedBox(width: 3),
+                    Text(
+                      'Bảo mật',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: SharingColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Còn $remaining vị trí chia sẻ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: remaining > 0
+                          ? SharingColors.primary
+                          : SharingColors.danger,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(totalSlots, (index) {
+                    final isFilled = index < usedSlots;
+                    return Container(
+                      margin: const EdgeInsets.only(left: 3),
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: isFilled
+                            ? SharingColors.primary
+                            : Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isFilled
+                              ? SharingColors.primary
+                              : SharingColors.border,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        isFilled
+                            ? Icons.check_rounded
+                            : Icons.person_add_alt_outlined,
+                        size: 11,
+                        color: isFilled ? Colors.white : SharingColors.muted,
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

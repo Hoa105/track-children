@@ -2,7 +2,6 @@ import 'vaccination_style.dart';
 
 import 'package:flutter/material.dart';
 
-import '../../app_colors.dart';
 import '../../app_layout.dart';
 
 class VaccinationContent extends StatelessWidget {
@@ -10,7 +9,7 @@ class VaccinationContent extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: VaccinationColors.surface,
     borderRadius: BorderRadius.circular(24),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: const EdgeInsets.all(16), child: child),
@@ -25,47 +24,79 @@ class VaccinationTabs extends StatelessWidget {
   });
   final int index;
   final ValueChanged<int> onChanged;
+
+  static const _tabs = [
+    'Theo tuổi',
+    'Vắc-xin',
+    'Đã tiêm',
+  ];
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: AppLayout.pagePadding),
     child: Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.primarySoft,
+        color: VaccinationColors.primarySoft,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: VaccinationColors.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
-          for (final (i, text) in ['Theo tuổi', 'Vắc-xin', 'Đã tiêm'].indexed)
+          for (final (i, text) in _tabs.indexed)
             Expanded(
-              child: Material(
-                color: index == i ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => onChanged(i),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppLayout.minimumTouchTarget,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 12,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: index == i ? VaccinationColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: index == i
+                      ? [
+                          BoxShadow(
+                            color: VaccinationColors.primary.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => onChanged(i),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: AppLayout.minimumTouchTarget,
                       ),
-                      child: Center(
-                        child: Semantics(
-                          selected: index == i,
-                          child: Text(
-                            text,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: index == i
-                                      ? Colors.white
-                                      : AppColors.primaryDark,
-                                ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 10,
+                        ),
+                        child: Center(
+                          child: Semantics(
+                            selected: index == i,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                text,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: index == i
+                                          ? Colors.white
+                                          : VaccinationColors.primaryDark,
+                                    ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -108,7 +139,7 @@ class VaccinationSection extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: VaccinationColors.textPrimary,
           ),
         ),
         if (subtitle != null)
@@ -121,7 +152,7 @@ class VaccinationSection extends StatelessWidget {
             ),
           ),
         const SizedBox(height: AppLayout.mediumGap),
-        const Divider(height: 1, color: AppColors.border),
+        const Divider(height: 1, color: VaccinationColors.border),
         ...children,
       ],
     ),

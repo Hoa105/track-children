@@ -5,6 +5,7 @@ import '../../app_layout.dart';
 import '../../models/video_insight.dart';
 import '../../services/demo_store.dart';
 import 'journal_screen.dart';
+import 'journal_theme.dart';
 import '../../models/progress_review.dart';
 import 'progress_review_view.dart';
 import 'review_history_screen.dart';
@@ -12,23 +13,23 @@ import 'review_history_screen.dart';
 const _heading = TextStyle(
   fontSize: 20,
   fontWeight: FontWeight.w700,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _title = TextStyle(
   fontSize: 16,
   fontWeight: FontWeight.w600,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _body = TextStyle(
   fontSize: 14,
   height: 1.5,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _errorText = Color(0xFF7A4B00);
 const _caption = TextStyle(
   fontSize: 12,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: JournalColors.textSecondary,
 );
 String _dateLabel(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -196,33 +197,39 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
       }
 
       final latest = _history.firstOrNull;
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Video đã phân tích AI', style: _heading),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppLayout.pagePadding,
-            8,
-            AppLayout.pagePadding,
-            32,
+      return JournalTheme(
+        builder: (context) => Scaffold(
+          backgroundColor: JournalColors.background,
+          appBar: AppBar(
+            backgroundColor: JournalColors.background,
+            foregroundColor: JournalColors.textPrimary,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            iconTheme: const IconThemeData(color: JournalColors.textPrimary),
+            title: const Text('Video đã phân tích AI', style: _heading),
           ),
-          children: [
-            if (all.isEmpty)
-              const _Panel(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.smart_display_outlined,
-                      size: 48,
-                      color: AppColors.primary,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Chưa có video nào được AI nhận xét',
-                      style: _title,
-                      textAlign: TextAlign.center,
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppLayout.pagePadding,
+              8,
+              AppLayout.pagePadding,
+              32,
+            ),
+            children: [
+              if (all.isEmpty)
+                const _Panel(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.smart_display_outlined,
+                        size: 48,
+                        color: JournalColors.primary,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Chưa có video nào được AI nhận xét',
+                        style: _title,
+                        textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 8),
                     Text(
@@ -298,7 +305,7 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
                           ? () => _review(reviewIds)
                           : null,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: JournalColors.primary,
                         minimumSize: const Size.fromHeight(48),
                       ),
                       icon: _reviewing
@@ -379,9 +386,10 @@ class _AiVideosScreenState extends State<AiVideosScreen> {
             ],
           ],
         ),
-      );
-    },
-  );
+      ),
+    );
+  },
+);
 }
 
 /// One activity's analysed journal entries, newest first.
@@ -479,19 +487,19 @@ class _VideoRow extends StatelessWidget {
     final (icon, color, text) = switch (insight) {
       _ when !insight.finished => (
         Icons.hourglass_top_rounded,
-        AppColors.textSecondary,
+        JournalColors.textSecondary,
         'AI đang xem video…',
       ),
       _ when usableInsight(insight) => (
         Icons.check_circle_outline_rounded,
-        AppColors.primary,
+        JournalColors.primary,
         insight.result!.comment.isNotEmpty
             ? insight.result!.comment
             : insight.result!.observations.firstOrNull ?? 'Đã có nhận xét',
       ),
       _ => (
         Icons.videocam_off_outlined,
-        AppColors.textSecondary,
+        JournalColors.textSecondary,
         insight.message ??
             (insight.result?.videoIssue.isNotEmpty ?? false
                 ? insight.result!.videoIssue
@@ -527,7 +535,7 @@ class _VideoRow extends StatelessWidget {
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
+              color: JournalColors.textSecondary,
             ),
           ],
         ),
@@ -543,9 +551,9 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: JournalColors.surface,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: JournalColors.border),
     ),
     child: child,
   );

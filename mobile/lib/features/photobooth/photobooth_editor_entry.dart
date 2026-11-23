@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:permission_handler/permission_handler.dart' as permissions;
 
+import '../../app_colors.dart';
 import '../home/background/background_draft.dart';
 import 'photobooth_catalog.dart';
 import 'photobooth_edit.dart';
@@ -890,17 +891,17 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
   Widget _statusMessage() {
     final colors = Theme.of(context).colorScheme;
     final failed = _error != null;
-    final ink = failed ? colors.onErrorContainer : colors.onPrimaryContainer;
+    final ink = failed ? colors.onErrorContainer : HomeColors.ink;
     return Semantics(
       liveRegion: true,
       child: Container(
         key: const ValueKey('photobooth-status-message'),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: failed ? colors.errorContainer : colors.primaryContainer,
+          color: failed ? colors.errorContainer : HomeColors.reminderBackground,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: (failed ? colors.error : colors.primary).withValues(
+            color: (failed ? colors.error : HomeColors.primary).withValues(
               alpha: .3,
             ),
           ),
@@ -910,7 +911,7 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
             Icon(
               failed ? Icons.error_rounded : Icons.check_circle_rounded,
               size: 28,
-              color: ink,
+              color: failed ? colors.error : HomeColors.primary,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -1002,11 +1003,13 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                             child: FilledButton(
                               onPressed: _busy ? null : _saveGallery,
                               style: FilledButton.styleFrom(
+                                backgroundColor: HomeColors.primary,
+                                foregroundColor: Colors.white,
                                 shape: shape,
                                 textStyle: textStyle,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
-                                  vertical: 8,
+                                  vertical: 10,
                                 ),
                               ),
                               child: _completionButtonContent(
@@ -1023,11 +1026,16 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                                   ? null
                                   : _useHome,
                               style: OutlinedButton.styleFrom(
+                                foregroundColor: HomeColors.ink,
+                                side: const BorderSide(
+                                  color: Color(0xFFD4E0D1),
+                                ),
+                                backgroundColor: Colors.white,
                                 shape: shape,
                                 textStyle: textStyle,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
-                                  vertical: 8,
+                                  vertical: 10,
                                 ),
                               ),
                               child: _completionButtonContent(
@@ -1158,13 +1166,13 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                     minimumSize: const Size(0, 48),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     foregroundColor: _tab == tab
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ? HomeColors.primary
+                        : HomeColors.reminderCta,
                     textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontSize: 12,
                       fontWeight: _tab == tab
                           ? FontWeight.w800
-                          : FontWeight.w500,
+                          : FontWeight.w600,
                     ),
                   ),
                   child: Text(const ['Khung', 'Sticker', 'Chữ'][tab]),
@@ -1175,8 +1183,13 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
           FilledButton(
             onPressed: _busy ? null : _finish,
             style: FilledButton.styleFrom(
+              backgroundColor: HomeColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               minimumSize: const Size(0, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               textStyle: Theme.of(context).textTheme.labelLarge
                   ?.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
             ),
@@ -1188,7 +1201,10 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                       child: SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   )
@@ -1637,9 +1653,29 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                   key: ValueKey('photobooth-home-layout-$count'),
                   label: Text(
                     count == 4 ? '4 ảnh lưới' : '2 ảnh nổi bật',
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected.length == count
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: selected.length == count
+                          ? Colors.white
+                          : HomeColors.ink,
+                    ),
                   ),
                   selected: selected.length == count,
+                  selectedColor: HomeColors.primary,
+                  backgroundColor: Colors.white,
+                  showCheckmark: false,
+                  side: BorderSide(
+                    color: selected.length == count
+                        ? HomeColors.primary
+                        : HomeColors.iconBackground,
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   onSelected: _busy ? null : (_) => editor.setHomeLayout(count),
                 ),
             ],
@@ -1653,9 +1689,29 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                   ChoiceChip(
                     label: Text(
                       'Ô ${slot + 1} • Ảnh ${selected[slot] + 1}',
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: _homeSlot == slot
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: _homeSlot == slot
+                            ? Colors.white
+                            : HomeColors.ink,
+                      ),
                     ),
                     selected: _homeSlot == slot,
+                    selectedColor: HomeColors.primary,
+                    backgroundColor: Colors.white,
+                    showCheckmark: false,
+                    side: BorderSide(
+                      color: _homeSlot == slot
+                          ? HomeColors.primary
+                          : HomeColors.iconBackground,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     onSelected: _busy
                         ? null
                         : (_) => setState(() => _homeSlot = slot),
@@ -1759,9 +1815,29 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                             ),
                             label: Text(
                               category.value,
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: activeCategory == category.key
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: activeCategory == category.key
+                                    ? Colors.white
+                                    : HomeColors.ink,
+                              ),
                             ),
                             selected: activeCategory == category.key,
+                            selectedColor: HomeColors.primary,
+                            backgroundColor: Colors.white,
+                            showCheckmark: false,
+                            side: BorderSide(
+                              color: activeCategory == category.key
+                                  ? HomeColors.primary
+                                  : HomeColors.iconBackground,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             onSelected: _busy
                                 ? null
                                 : (_) => setState(() {
@@ -1782,8 +1858,8 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                     icon: Icon(
                       Icons.filter_list_rounded,
                       color: activeShape == null
-                          ? null
-                          : Theme.of(context).colorScheme.primary,
+                          ? HomeColors.ink
+                          : HomeColors.primary,
                     ),
                     onSelected: (value) => setState(
                       () => _frameShape = value == 'all' ? null : value,
@@ -1837,7 +1913,6 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
 
   Widget _frameCard(PhotoBoothFrame frame) {
     final selected = editor.draft.frameKey == frame.key;
-    final colors = Theme.of(context).colorScheme;
     return Semantics(
       selected: selected,
       button: true,
@@ -1846,12 +1921,12 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
         message: '${frame.label} • ${frame.formatLabel}',
         child: Material(
           color: selected
-              ? colors.primaryContainer.withValues(alpha: .5)
-              : colors.surface,
+              ? HomeColors.reminderBackground
+              : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: selected ? colors.primary : colors.outlineVariant,
+              color: selected ? HomeColors.primary : Colors.black12,
               width: selected ? 2 : 1,
             ),
           ),
@@ -1889,12 +1964,12 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                           ),
                         ),
                         if (selected)
-                          Align(
+                          const Align(
                             alignment: Alignment.topRight,
                             child: Icon(
                               Icons.check_circle_rounded,
                               size: 18,
-                              color: colors.primary,
+                              color: HomeColors.primary,
                             ),
                           ),
                       ],
@@ -1905,9 +1980,10 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                     frame.label,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                      color: selected ? HomeColors.primary : HomeColors.ink,
                     ),
                   ),
                   Text(
@@ -1916,7 +1992,9 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: colors.onSurfaceVariant,
+                      color: selected
+                          ? HomeColors.reminderCta
+                          : HomeColors.ink.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -1951,8 +2029,31 @@ class PhotoBoothEditorEntryState extends State<PhotoBoothEditorEntry> {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(group.value),
+                  label: Text(
+                    group.value,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _group == group.key
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: _group == group.key
+                          ? Colors.white
+                          : HomeColors.ink,
+                    ),
+                  ),
                   selected: _group == group.key,
+                  selectedColor: HomeColors.primary,
+                  backgroundColor: Colors.white,
+                  showCheckmark: false,
+                  side: BorderSide(
+                    color: _group == group.key
+                        ? HomeColors.primary
+                        : HomeColors.iconBackground,
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   onSelected: _busy
                       ? null
                       : (_) => setState(() => _group = group.key),
@@ -2049,8 +2150,8 @@ class _SelectionPainter extends CustomPainter {
     canvas.clipRect(Offset.zero & frame.size);
     final pen = Paint()
       ..style = PaintingStyle.stroke
-      ..color = const Color(0xFF1D7057)
-      ..strokeWidth = 2 * frame.size.width / size.width;
+      ..color = HomeColors.primary
+      ..strokeWidth = 2.5 * frame.size.width / size.width;
     for (final slot in frame.slots.where((slot) => slot.photo == photo)) {
       canvas.drawRect(slot.rect.deflate(pen.strokeWidth / 2), pen);
     }

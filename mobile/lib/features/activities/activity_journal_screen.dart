@@ -14,22 +14,22 @@ import '../journal/video_insight_view.dart';
 const _heading = TextStyle(
   fontSize: 20,
   fontWeight: FontWeight.w700,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _title = TextStyle(
   fontSize: 16,
   fontWeight: FontWeight.w600,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _body = TextStyle(
   fontSize: 14,
   height: 1.5,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _caption = TextStyle(
   fontSize: 12,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: JournalColors.textSecondary,
 );
 
 /// Journal domains (journal_screen.dart) for each activity group.
@@ -242,9 +242,13 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
   Widget build(BuildContext context) {
     final insight = _insight;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: JournalColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: JournalColors.background,
+        foregroundColor: JournalColors.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: JournalColors.textPrimary),
         title: const Text('Thêm nhật ký', style: _heading),
       ),
       body: ListView(
@@ -291,7 +295,7 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(
                         Icons.movie_outlined,
-                        color: AppColors.primary,
+                        color: ActivitiesColors.primary,
                       ),
                       title: Text(
                         _video!.name,
@@ -311,23 +315,42 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
                         icon: const Icon(Icons.close_rounded),
                       ),
                     ),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
+                  Row(
                     children: [
-                      FilledButton.tonalIcon(
-                        onPressed: _busy
-                            ? null
-                            : () => _pick(ImageSource.camera),
-                        icon: const Icon(Icons.videocam_outlined),
-                        label: const Text('Quay video'),
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: ActivitiesColors.primarySoft,
+                            foregroundColor: ActivitiesColors.primary,
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: _busy
+                              ? null
+                              : () => _pick(ImageSource.camera),
+                          icon: const Icon(Icons.videocam_outlined),
+                          label: const Text('Quay video'),
+                        ),
                       ),
-                      OutlinedButton.icon(
-                        onPressed: _busy
-                            ? null
-                            : () => _pick(ImageSource.gallery),
-                        icon: const Icon(Icons.video_library_outlined),
-                        label: const Text('Chọn video'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ActivitiesColors.primaryDark,
+                            side: const BorderSide(color: ActivitiesColors.border),
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: _busy
+                              ? null
+                              : () => _pick(ImageSource.gallery),
+                          icon: const Icon(Icons.video_library_outlined),
+                          label: const Text('Chọn video'),
+                        ),
                       ),
                     ],
                   ),
@@ -348,14 +371,18 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
                     maxLines: null,
                     maxLength: 1000,
                     style: _body,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Bé làm thế nào? Có điều gì ba mẹ muốn AI chú ý không?',
                       hintStyle: _caption,
                       filled: true,
-                      fillColor: AppColors.background,
-                      border: OutlineInputBorder(
+                      fillColor: ActivitiesColors.background,
+                      border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(16)),
                         borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                        borderSide: BorderSide(color: ActivitiesColors.primary, width: 1.5),
                       ),
                     ),
                   ),
@@ -367,6 +394,7 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
               child: CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
+                activeColor: ActivitiesColors.primary,
                 value: _consent,
                 onChanged: _busy
                     ? null
@@ -398,13 +426,25 @@ class _ActivityJournalScreenState extends State<ActivityJournalScreen> {
                     )
                   : const Icon(Icons.auto_awesome_outlined),
               style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
+                backgroundColor: ActivitiesColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              label: Text(_busy ? 'Đang gửi video…' : 'Gửi cho AI nhận xét'),
+              label: Text(
+                _busy ? 'Đang gửi video…' : 'Gửi cho AI nhận xét',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             TextButton(
               onPressed: _busy ? null : _saveOnly,
+              style: TextButton.styleFrom(
+                foregroundColor: ActivitiesColors.textSecondary,
+                minimumSize: const Size.fromHeight(44),
+              ),
               child: const Text('Chỉ lưu nhật ký, không cần AI'),
             ),
           ],
@@ -421,10 +461,13 @@ class _Panel extends StatelessWidget {
   @override
   // Material (không phải Container có màu) để ListTile vẽ được hiệu ứng chạm
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: AppColors.border),
+      side: BorderSide(
+        color: ActivitiesColors.border.withValues(alpha: 0.8),
+        width: 1.2,
+      ),
     ),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: const EdgeInsets.all(16), child: child),

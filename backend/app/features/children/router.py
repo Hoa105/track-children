@@ -1,6 +1,7 @@
 """Authenticated child profile selection shared across mobile features."""
 
-from fastapi import APIRouter, Depends, Response
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.core.database import transaction
 from app.features.auth.dependencies import current_user_id
@@ -32,6 +33,50 @@ def list_children(response: Response, user=Depends(current_user_id)):
             (user, user, user),
         ).fetchall()
     return {"children": [_child(row) for row in rows]}
+
+
+@router.delete("/children/{child_id}", status_code=status.HTTP_200_OK)
+def delete_child(child_id: UUID, user=Depends(current_user_id)):
+    """Soft-delete a child profile owned by the authenticated user."""
+    with transaction() as db:
+        child = db.execute(
+            "SELECT id, owner_user_id FROM child.children WHERE id=%s AND deleted_at IS NULL FOR UPDATE",
+            (str(child_id),),
+        ).fetchone()
+        if not child:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CHILD_NOT_FOUND")
+        if str(child["owner_user_id"]) != str(user):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CHILD_NOT_OWNED")
+
+        # Soft delete child
+        db.execute(
+            "UPDATE child.children SET deleted_at=now(), updated_at=now() WHERE id=%s",
+            (str(child_id),),
+        )
+        # Cancel pending invitations and ownership transfers
+        db.execute(
+            "UPDATE child.child_invitations SET status='cancelled', responded_at=now() WHERE child_id=%s AND status='pending'",
+            (str(child_id),),
+        )
+        db.execute(
+            "UPDATE child.ownership_transfers SET status='cancelled', responded_at=now() WHERE child_id=%s AND status='pending'",
+            (str(child_id),),
+        )
+        # Remove active members
+        db.execute(
+            "DELETE FROM child.child_members WHERE child_id=%s",
+            (str(child_id),),
+        )
+        # Clean reminders & notifications
+        db.execute(
+            "DELETE FROM notification.reminders WHERE child_id=%s",
+            (str(child_id),),
+        )
+        db.execute(
+            "DELETE FROM notification.notifications WHERE child_id=%s",
+            (str(child_id),),
+        )
+    return {"deleted": True, "childId": str(child_id)}
 
 
 def _child(row) -> dict:

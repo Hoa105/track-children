@@ -1480,16 +1480,27 @@ class DemoStore extends ChangeNotifier {
         final missing = local.entries
             .where((entry) => !records.containsKey(entry.key))
             .toList();
-        for (final entry in missing) {
-          if (!readable() || !canEditTeething(childId) || _teething.revision(childId) != revision) return false;
-          await remote.save(
-            account,
-            entry.key,
-            entry.value,
-            note: toothNote(childId, entry.key),
+        if (missing.isNotEmpty) {
+          await Future.wait(
+            missing.map((entry) async {
+              if (!readable() ||
+                  !canEditTeething(childId) ||
+                  _teething.revision(childId) != revision) {
+                return;
+              }
+              await remote.save(
+                account,
+                entry.key,
+                entry.value,
+                note: toothNote(childId, entry.key),
+              );
+            }),
           );
+          if (!readable() || _teething.revision(childId) != revision) {
+            return false;
+          }
+          records = await remote.fetch(account);
         }
-        if (missing.isNotEmpty) records = await remote.fetch(account);
       }
       if (!readable()) return false;
       if (childById(childId) == null) return false;

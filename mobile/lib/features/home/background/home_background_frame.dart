@@ -26,12 +26,13 @@ class HomeBackgroundFrame extends StatelessWidget {
   final Widget? header;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final decodeWidth =
-          (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
-              .ceil()
-              .clamp(1, BackgroundFrameSpec.targetWidthPx);
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final decodeWidth =
+            (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                .ceil()
+                .clamp(1, BackgroundFrameSpec.targetWidthPx);
       Widget asset({String? status}) => Stack(
         fit: StackFit.expand,
         children: [
@@ -159,5 +160,6 @@ class HomeBackgroundFrame extends StatelessWidget {
         ],
       );
     },
-  );
+  ),
+);
 }

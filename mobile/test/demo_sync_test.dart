@@ -147,7 +147,7 @@ void main() {
         const MaterialApp(home: HomeScreen(childName: 'Bảo An')),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Bảo An'), findsOneWidget);
+      expect(find.text('Bé Bảo An'), findsOneWidget);
       expect(find.textContaining('8.4 kg'), findsWidgets);
       await tester.tap(find.byTooltip('Đổi hồ sơ bé'));
       await tester.pumpAndSettle();

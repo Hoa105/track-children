@@ -101,20 +101,27 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
     style: const TextStyle(
       fontSize: 17,
       fontWeight: FontWeight.w700,
-      color: AppColors.textPrimary,
+      color: FeedingColors.textPrimary,
     ),
   );
 
-  Widget _card(List<Widget> children, {Color color = AppColors.surface}) =>
+  Widget _card(List<Widget> children, {Color color = FeedingColors.surface}) =>
       Material(
         color: color,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: color == FeedingColors.surface
+                ? FeedingColors.border
+                : Colors.transparent,
+          ),
+        ),
         textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
           fontSize: 14,
           height: 1.5,
-          color: AppColors.textSecondary,
+          color: FeedingColors.textSecondary,
           decoration: TextDecoration.none,
         ),
-        borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -131,14 +138,25 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
         helperText: helper,
         helperMaxLines: 3,
         labelStyle: const TextStyle(
-          color: AppColors.primary,
+          color: FeedingColors.primary,
           fontWeight: FontWeight.w600,
         ),
+        helperStyle: const TextStyle(
+          color: FeedingColors.textSecondary,
+        ),
         filled: true,
-        fillColor: AppColors.background,
+        fillColor: FeedingColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: FeedingColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: FeedingColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: FeedingColors.primary, width: 2),
         ),
       );
 
@@ -156,7 +174,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
         title,
         style: const TextStyle(
           fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
+          color: FeedingColors.textPrimary,
         ),
       ),
       const SizedBox(height: 8),
@@ -168,11 +186,17 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
             ChoiceChip(
               label: Text(option ? yes : no),
               selected: value == option,
-              selectedColor: AppColors.primarySoft,
+              selectedColor: FeedingColors.iconBackground,
+              backgroundColor: FeedingColors.surface,
+              side: BorderSide(
+                color: value == option
+                    ? FeedingColors.primary
+                    : FeedingColors.border,
+              ),
               labelStyle: TextStyle(
                 color: value == option
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                    ? FeedingColors.primaryDark
+                    : FeedingColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
               onSelected: (_) {
@@ -197,10 +221,10 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
   );
 
   Widget _guidanceCard() => Material(
-    color: Colors.white,
+    color: FeedingColors.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(24),
-      side: const BorderSide(color: Color(0xFFDCE8DE)),
+      side: const BorderSide(color: FeedingColors.border),
     ),
     child: Padding(
       padding: const EdgeInsets.all(20),
@@ -213,17 +237,17 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
+                  color: FeedingColors.iconBackground,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.lightbulb_outline_rounded,
-                  color: AppColors.primary,
+                  color: FeedingColors.primaryDark,
                   size: 22,
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: _heading('Hướng dẫn và nguồn tham khảo')),
+              Expanded(child: _heading('Hướng dẫn tham khảo')),
             ],
           ),
           const SizedBox(height: 12),
@@ -232,7 +256,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
             style: TextStyle(
               fontSize: 14,
               height: 1.6,
-              color: AppColors.textSecondary,
+              color: FeedingColors.textSecondary,
               decoration: TextDecoration.none,
             ),
           ),
@@ -240,7 +264,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
           TextButton(
             onPressed: _showGuidance,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
+              foregroundColor: FeedingColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
             ),
             child: const Text(
@@ -258,7 +282,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    backgroundColor: AppColors.background,
+    backgroundColor: FeedingColors.background,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -276,7 +300,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
               child: IconButton(
                 tooltip: 'Đóng',
                 onPressed: () => Navigator.pop(sheetContext),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, color: FeedingColors.textPrimary),
               ),
             ),
             const Text(
@@ -284,13 +308,13 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: FeedingColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               'Thông tin tham khảo dành cho ba mẹ',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: FeedingColors.textSecondary),
             ),
             const SizedBox(height: 16),
             for (final item in const [
@@ -309,11 +333,14 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
             ])
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: FeedingColors.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: FeedingColors.border),
                 ),
                 child: ExpansionTile(
+                  iconColor: FeedingColors.primary,
+                  collapsedIconColor: FeedingColors.textSecondary,
                   shape: const Border(),
                   collapsedShape: const Border(),
                   title: Text(
@@ -321,7 +348,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: FeedingColors.textPrimary,
                     ),
                   ),
                   childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -330,54 +357,12 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                       item.$2,
                       style: const TextStyle(
                         height: 1.6,
-                        color: AppColors.textSecondary,
+                        color: FeedingColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 18),
-            const Text(
-              'Nguồn tham khảo',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'WHO (2021), Infant and young child feeding, trang 51: 150 mL/kg/ngày, chia 8 cữ cho trẻ từ 2,5 kg không thể bú mẹ. Số cữ khác trong công cụ chỉ là phép chia tổng lượng.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.6,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SelectableText(
-              'https://iris.who.int/handle/10665/346568',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.6,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Giới hạn tuổi 7 ngày đến dưới 6 tháng là phạm vi của công cụ, có tham khảo NHS; không phải mốc tuổi do WHO quy định.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.6,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SelectableText(
-              'https://derbyshirefamilyhealthservice.nhs.uk/our-services/0-5-years/infant-feeding-and-nutrition/formula-feeding',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.6,
-                color: AppColors.textSecondary,
-              ),
-            ),
           ],
         ),
       ),
@@ -388,17 +373,20 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
   Widget build(BuildContext context) {
     final child = DemoStore.instance.childById(widget.childId);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: FeedingColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: FeedingColors.background,
         surfaceTintColor: Colors.transparent,
         title: Text(
           widget._inputMode ? 'Tính theo cân nặng' : 'Lượng sữa',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: FeedingColors.textPrimary,
           ),
+        ),
+        iconTheme: const IconThemeData(
+          color: FeedingColors.textPrimary,
         ),
       ),
       body: child == null
@@ -411,7 +399,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                 fontSize: 14,
                 height: 1.5,
-                color: AppColors.textSecondary,
+                color: FeedingColors.textSecondary,
                 decoration: TextDecoration.none,
               ),
               child: Form(
@@ -434,10 +422,10 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                             _result == null
                                 ? '$_defaultPerFeedMl mL/cữ'
                                 : '${_result!.perFeedMl.toStringAsFixed(0)} mL/cữ',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.purpleText,
+                              color: FeedingColors.primary,
                             ),
                           ),
                         const SizedBox(height: 8),
@@ -446,28 +434,41 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                               (_result == null
                                   ? 'Mức đặt sẵn của ứng dụng, không phải khuyến nghị cho mọi bé. Đây là lượng sữa sau pha.'
                                   : '${_result!.dailyMl.toStringAsFixed(0)} mL/ngày · ${_result!.feeds} cữ/ngày. Thể tích sữa sau pha, không phải lượng nước. Không ép bé uống hết.'),
+                          style: TextStyle(
+                            color: _message != null
+                                ? Theme.of(context).colorScheme.error
+                                : FeedingColors.textSecondary,
+                            height: 1.5,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: FeedingColors.primary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                             icon: const Icon(Icons.calculate_outlined),
                             onPressed: _openCalculator,
-                            label: const Text('Tính theo cân nặng'),
+                            label: const Text(
+                              'Tính theo cân nặng',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                           ),
                         ),
-                      ], color: AppColors.purpleSurfaceLight),
+                      ], color: FeedingColors.primarySoft),
                     if (!widget._inputMode &&
                         (_result != null || _message != null))
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
+                            foregroundColor: FeedingColors.primary,
                           ),
                           onPressed: () {
                             FocusScope.of(context).unfocus();
@@ -486,7 +487,10 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                         const SizedBox(height: 4),
                         const Text(
                           'Bé đủ 7 ngày đến dưới 6 tháng · từ 2,5 kg',
-                          style: TextStyle(fontSize: 12),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: FeedingColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -495,7 +499,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                             decimal: true,
                           ),
                           style: const TextStyle(
-                            color: AppColors.primaryDark,
+                            color: FeedingColors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                           decoration: _input(
@@ -520,7 +524,7 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                           controller: _feeds,
                           keyboardType: TextInputType.number,
                           style: const TextStyle(
-                            color: AppColors.primaryDark,
+                            color: FeedingColors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                           decoration: _input('Số cữ mỗi ngày', 'cữ'),
@@ -555,8 +559,16 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                           width: double.infinity,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: FeedingColors.primary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             onPressed: _calculate,
                             child: const Text(
@@ -568,7 +580,10 @@ class _MilkCalculatorScreenState extends State<MilkCalculatorScreen> {
                         const SizedBox(height: 10),
                         const Text(
                           'Chỉ tính tham khảo, không lưu vào số đo.',
-                          style: TextStyle(fontSize: 12),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: FeedingColors.textSecondary,
+                          ),
                         ),
                       ]),
                     ],

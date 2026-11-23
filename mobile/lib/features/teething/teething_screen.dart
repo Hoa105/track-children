@@ -28,6 +28,7 @@ class _TeethingScreenState extends State<TeethingScreen> {
   final _referenceMonth = ValueNotifier<int?>(null);
   final _trackingMonth = ValueNotifier<int?>(null);
   final _mode = ValueNotifier<int>(0);
+  bool _trackingReady = false;
   late final _controls = Listenable.merge([
     _mode,
     _referenceMonth,
@@ -74,7 +75,26 @@ class _TeethingScreenState extends State<TeethingScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(DemoStore.instance.syncTeeth(childId));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_trackingReady) {
+        setState(() => _trackingReady = true);
+      }
+      final transition = ModalRoute.of(context)?.animation;
+      if (transition == null || transition.isCompleted) {
+        unawaited(DemoStore.instance.syncTeeth(childId));
+      } else {
+        void onAnimationComplete(AnimationStatus status) {
+          if (status == AnimationStatus.completed) {
+            transition.removeStatusListener(onAnimationComplete);
+            if (mounted) {
+              unawaited(DemoStore.instance.syncTeeth(childId));
+            }
+          }
+        }
+        transition.addStatusListener(onAnimationComplete);
+      }
+    });
   }
 
   @override
@@ -203,7 +223,12 @@ class _TeethingScreenState extends State<TeethingScreen> {
                   index: mode,
                   children: [
                     TickerMode(enabled: mode == 0, child: referenceTab),
-                    TickerMode(enabled: mode == 1, child: trackingTab),
+                    TickerMode(
+                      enabled: mode == 1,
+                      child: mode == 1 || _trackingReady
+                          ? trackingTab
+                          : const SizedBox.shrink(),
+                    ),
                   ],
                 ),
               ),

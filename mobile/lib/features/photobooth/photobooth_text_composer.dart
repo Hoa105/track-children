@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app_colors.dart';
 import 'photobooth_text.dart';
 
 class PhotoBoothTextInput {
@@ -106,10 +107,19 @@ class _PhotoBoothTextComposerState extends State<PhotoBoothTextComposer> {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: selected
-                      ? Theme.of(context).colorScheme.primary
+                      ? HomeColors.primary
                       : Theme.of(context).colorScheme.outlineVariant,
-                  width: selected ? 2 : 1,
+                  width: selected ? 2.5 : 1,
                 ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: HomeColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
               child: color == 0
                   ? const Icon(Icons.format_color_reset_rounded, size: 22)
@@ -160,60 +170,92 @@ class _PhotoBoothTextComposerState extends State<PhotoBoothTextComposer> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            for (final background in [false, true])
-              Expanded(
-                child: TextButton(
-                  key: ValueKey(
-                    background
-                        ? 'photobooth-text-background-tool'
-                        : 'photobooth-text-color-tool',
-                  ),
-                  onPressed: !widget.enabled
-                      ? null
-                      : () {
-                          setState(() => _background = background);
-                          if (_paletteScroll.hasClients) {
-                            _paletteScroll.jumpTo(0);
-                          }
-                        },
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    foregroundColor: _background == background
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  child: Text(
-                    background ? 'Màu nền' : 'Màu chữ',
-                    style: TextStyle(
-                      fontWeight: _background == background
-                          ? FontWeight.w800
-                          : FontWeight.w500,
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: HomeColors.reminderBackground.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            children: [
+              for (final background in [false, true])
+                Expanded(
+                  child: TextButton(
+                    key: ValueKey(
+                      background
+                          ? 'photobooth-text-background-tool'
+                          : 'photobooth-text-color-tool',
+                    ),
+                    onPressed: !widget.enabled
+                        ? null
+                        : () {
+                            setState(() => _background = background);
+                            if (_paletteScroll.hasClients) {
+                              _paletteScroll.jumpTo(0);
+                            }
+                          },
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 40),
+                      backgroundColor: _background == background
+                          ? Colors.white
+                          : Colors.transparent,
+                      elevation: _background == background ? 1 : 0,
+                      shadowColor: Colors.black12,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      foregroundColor: _background == background
+                          ? HomeColors.primary
+                          : HomeColors.ink.withValues(alpha: 0.7),
+                    ),
+                    child: Text(
+                      background ? 'Màu nền' : 'Màu chữ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: _background == background
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         _paletteWidget(),
+        const SizedBox(height: 4),
         Row(
           children: [
-            const Text('Cỡ chữ', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'Cỡ chữ',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: HomeColors.ink,
+              ),
+            ),
             Expanded(
-              child: Slider(
-                key: const ValueKey('photobooth-text-size'),
-                value: (widget.value?.fontSize ?? .07).clamp(.025, .16),
-                min: .025,
-                max: .16,
-                onChangeStart: !_enabled
-                    ? null
-                    : (_) => widget.onChangeStart?.call(),
-                onChangeEnd: !_enabled
-                    ? null
-                    : (_) => widget.onChangeEnd?.call(),
-                onChanged: !_enabled ? null : (value) => _change(size: value),
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: HomeColors.primary,
+                  inactiveTrackColor: HomeColors.reminderBackground,
+                  thumbColor: HomeColors.primary,
+                  overlayColor: HomeColors.primary.withValues(alpha: 0.15),
+                ),
+                child: Slider(
+                  key: const ValueKey('photobooth-text-size'),
+                  value: (widget.value?.fontSize ?? .07).clamp(.025, .16),
+                  min: .025,
+                  max: .16,
+                  onChangeStart: !_enabled
+                      ? null
+                      : (_) => widget.onChangeStart?.call(),
+                  onChangeEnd: !_enabled
+                      ? null
+                      : (_) => widget.onChangeEnd?.call(),
+                  onChanged: !_enabled ? null : (value) => _change(size: value),
+                ),
               ),
             ),
           ],
@@ -221,7 +263,9 @@ class _PhotoBoothTextComposerState extends State<PhotoBoothTextComposer> {
         if (widget.value == null)
           Text(
             'Chạm đúp vùng trống trên ảnh để nhập chữ.',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: HomeColors.ink.withValues(alpha: 0.7),
+                ),
           ),
       ],
     ),
@@ -329,8 +373,10 @@ class _PhotoBoothCaptionEditorState extends State<PhotoBoothCaptionEditor> {
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color: HomeColors.primary,
+                                  width: 1.5,
                                 ),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
                           ),
@@ -361,10 +407,8 @@ class _PhotoBoothCaptionEditorState extends State<PhotoBoothCaptionEditor> {
                                 height: 1.18,
                                 color: Colors.transparent,
                               ),
-                              cursorColor: Theme.of(context)
-                                  .colorScheme
-                                  .primary,
-                              cursorWidth: 1,
+                              cursorColor: HomeColors.primary,
+                              cursorWidth: 2,
                               scrollPadding: EdgeInsets.zero,
                               decoration: const InputDecoration(
                                 isCollapsed: true,
@@ -416,18 +460,35 @@ class _PhotoBoothCaptionEditorState extends State<PhotoBoothCaptionEditor> {
             TextButton(
               key: const ValueKey('photobooth-text-cancel'),
               onPressed: widget.onCancel,
+              style: TextButton.styleFrom(
+                foregroundColor: HomeColors.ink,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               child: const Text('Hủy'),
             ),
             Expanded(
               child: Text(
                 'Chỉnh nội dung trên ảnh',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: HomeColors.ink.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ),
             FilledButton(
               key: const ValueKey('photobooth-text-confirm'),
               onPressed: _confirm,
+              style: FilledButton.styleFrom(
+                backgroundColor: HomeColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
               child: const Text('Xong'),
             ),
           ],

@@ -1,4 +1,3 @@
-import 'vaccination_style.dart';
 
 import 'package:flutter/material.dart';
 
@@ -59,7 +58,7 @@ class VaccineDetailSheet extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: VaccinationColors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -74,14 +73,14 @@ class VaccineDetailSheet extends StatelessWidget {
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: record != null
-                                      ? AppColors.primary
+                                      ? VaccinationColors.primary
                                       : VaccinationColors.planned,
                                 ),
                               ),
                               _Status(vaccine: v),
                               if (!v.dose.isCustom)
                                 Text(
-                                  v.dose.isTcmr ? 'TCMR · miễn phí' : 'Dịch vụ',
+                                  v.dose.isTcmr ? 'TCMR - miễn phí' : 'Dịch vụ',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: VaccinationColors.secondary,
@@ -96,7 +95,7 @@ class VaccineDetailSheet extends StatelessWidget {
                                 Icons.calendar_month_outlined,
                                 size: 20,
                                 color: record != null
-                                    ? AppColors.primaryDark
+                                    ? VaccinationColors.primaryDark
                                     : VaccinationColors.planned,
                               ),
                               const SizedBox(width: 8),
@@ -106,12 +105,12 @@ class VaccineDetailSheet extends StatelessWidget {
                                       ? "Ngày tiêm"
                                       : v.hasAppointment
                                       ? "Ngày hẹn"
-                                      : "Dự kiến"} · ${_date(record?.date ?? v.dueDate)}',
+                                      : "Dự kiến"} - ${_date(record?.date ?? v.dueDate)}',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: record != null
-                                        ? AppColors.primaryDark
+                                        ? VaccinationColors.primaryDark
                                         : VaccinationColors.planned,
                                   ),
                                 ),
@@ -129,8 +128,8 @@ class VaccineDetailSheet extends StatelessWidget {
                           icon: Icons.event_outlined,
                           text: record != null
                               ? 'Ngày hẹn: ${_date(record.scheduledDate!)}'
-                                    '${record.appointmentPlace.isEmpty ? '' : ' · ${record.appointmentPlace}'}'
-                                    ' · ${late == 0
+                                    '${record.appointmentPlace.isEmpty ? '' : ' - ${record.appointmentPlace}'}'
+                                    ' - ${late == 0
                                         ? 'tiêm đúng hẹn'
                                         : late! > 0
                                         ? 'tiêm trễ $late ngày'
@@ -183,7 +182,7 @@ class VaccineDetailSheet extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
+                                    color: VaccinationColors.textPrimary,
                                   ),
                                 ),
                                 children: [
@@ -213,15 +212,15 @@ class VaccineDetailSheet extends StatelessWidget {
             if (!readOnly) Container(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
+                color: VaccinationColors.surface,
+                border: Border(top: BorderSide(color: VaccinationColors.border)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: VaccinationColors.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(0, 52),
                       shape: RoundedRectangleBorder(
@@ -239,20 +238,51 @@ class VaccineDetailSheet extends StatelessWidget {
                     ),
                     label: Text(
                       record == null ? 'Ghi nhận đã tiêm' : 'Sửa thông tin',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  if (record == null && v.dose.isCustom)
-                    TextButton(
+                  if (record == null && v.dose.isCustom) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: VaccinationColors.primary,
+                        side: const BorderSide(color: VaccinationColors.primary),
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                       onPressed: () => Navigator.pop(context, 'edit'),
-                      child: const Text('Sửa thông tin'),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      label: const Text(
+                        'Sửa thông tin mũi tiêm',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  if (record == null && !v.dose.isCustom)
-                    TextButton.icon(
+                  ],
+                  if (record == null && !v.dose.isCustom) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
                       key: const ValueKey('vaccine-appointment'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: VaccinationColors.primary,
+                        side: const BorderSide(color: VaccinationColors.primary),
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                       onPressed: () => Navigator.pop(context, 'appointment'),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Sửa thông tin'),
+                      icon: const Icon(Icons.calendar_month_outlined, size: 20),
+                      label: const Text(
+                        'Hẹn ngày tiêm / Đổi cơ sở',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -289,7 +319,7 @@ class VaccineDosesSheet extends StatelessWidget {
                 children: [
                   if (sameVaccine) ...[
                     _Card(
-                      color: AppColors.primarySoft,
+                      color: VaccinationColors.primarySoft,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -298,12 +328,12 @@ class VaccineDosesSheet extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark,
+                              color: VaccinationColors.primaryDark,
                             ),
                           ),
                           const Text(
                             'mũi đã ghi nhận',
-                            style: TextStyle(color: AppColors.primaryDark),
+                            style: TextStyle(color: VaccinationColors.primaryDark),
                           ),
                           const SizedBox(height: 12),
                           ClipRRect(
@@ -311,7 +341,7 @@ class VaccineDosesSheet extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: doses.isEmpty ? 0 : done / doses.length,
                               minHeight: 6,
-                              color: AppColors.primary,
+                              color: VaccinationColors.primary,
                               backgroundColor: Colors.white,
                             ),
                           ),
@@ -321,7 +351,7 @@ class VaccineDosesSheet extends StatelessWidget {
                               'Phòng bệnh: ${doses.first.dose.prevents}',
                               style: const TextStyle(
                                 height: 1.5,
-                                color: AppColors.primaryDark,
+                                color: VaccinationColors.primaryDark,
                               ),
                             ),
                           ],
@@ -339,7 +369,7 @@ class VaccineDosesSheet extends StatelessWidget {
                             : VaccinationColors.plannedSoft,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
-                          side: const BorderSide(color: AppColors.border),
+                          side: const BorderSide(color: VaccinationColors.border),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
@@ -369,7 +399,7 @@ class VaccineDosesSheet extends StatelessWidget {
                                           '${i + 1}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
+                                            color: VaccinationColors.textPrimary,
                                           ),
                                         ),
                                 ),
@@ -382,11 +412,11 @@ class VaccineDosesSheet extends StatelessWidget {
                                       Text(
                                         sameVaccine
                                             ? v.dose.doseLabel
-                                            : '${v.dose.name} · ${v.dose.doseLabel}',
+                                            : '${v.dose.name} - ${v.dose.doseLabel}',
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
+                                          color: VaccinationColors.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -397,11 +427,11 @@ class VaccineDosesSheet extends StatelessWidget {
                                             ? "Đã tiêm"
                                             : v.hasAppointment
                                             ? "Ngày hẹn"
-                                            : "Dự kiến"} · ${_date(v.record?.date ?? v.dueDate)}',
+                                            : "Dự kiến"} - ${_date(v.record?.date ?? v.dueDate)}',
                                         style: TextStyle(
                                           fontSize: 13,
                                           color: v.record != null
-                                              ? AppColors.primaryDark
+                                              ? VaccinationColors.primaryDark
                                               : VaccinationColors.planned,
                                         ),
                                       ),
@@ -419,7 +449,7 @@ class VaccineDosesSheet extends StatelessWidget {
                       ),
                     ),
                   const Text(
-                    'Theo lịch tham khảo · Đối chiếu với cơ sở tiêm',
+                    'Theo lịch tham khảo - Đối chiếu với cơ sở tiêm',
                     style: TextStyle(
                       fontSize: 12,
                       color: VaccinationColors.secondary,
@@ -449,7 +479,7 @@ class _SheetHeading extends StatelessWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: VaccinationColors.textPrimary,
             ),
           ),
         ),
@@ -464,7 +494,7 @@ class _SheetHeading extends StatelessWidget {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.child, this.color = AppColors.surface});
+  const _Card({required this.child, this.color = VaccinationColors.surface});
   final Widget child;
   final Color color;
   @override
@@ -486,7 +516,7 @@ class _Info extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 20, color: AppColors.primary),
+      Icon(icon, size: 20, color: VaccinationColors.primary),
       const SizedBox(width: 12),
       Expanded(
         child: Text(
@@ -513,7 +543,7 @@ class _Status extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: review ? const Color(0xFFFFF0D8) : Colors.white,
+        color: review ? VaccinationColors.attentionSoft : Colors.white,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

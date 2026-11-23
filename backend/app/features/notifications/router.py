@@ -8,7 +8,8 @@ from app.features.auth.dependencies import current_user_id, token_identity
 from app.core.config import settings
 from app.shared.access import require_child_access
 from . import service
-from .rules import age_based_interval, _age_months
+from .rules import age_based_interval
+from .service import _age_months
 from datetime import datetime, timezone
 
 router = APIRouter(prefix='/api/v1/notifications', tags=['mobile: notifications'])

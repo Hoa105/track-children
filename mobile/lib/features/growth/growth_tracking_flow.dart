@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app_colors.dart';
+import '../../app_date_picker.dart';
 import '../../services/auth_service.dart';
 import 'growth_repository.dart';
 import 'growth_measurement_chart.dart';
@@ -126,8 +127,14 @@ class GrowthTheme extends StatelessWidget {
 
 Color trackingMetricColor(GrowthMetric metric) => switch (metric) {
   GrowthMetric.weight => const Color(0xFFE58C45),
-  GrowthMetric.lengthHeight => const Color(0xFF4B92C6),
-  GrowthMetric.headCircumference => GrowthColors.primary,
+  GrowthMetric.lengthHeight => const Color(0xFF2B82BA),
+  GrowthMetric.headCircumference => const Color(0xFF8E59B7),
+};
+
+Color trackingMetricSoftColor(GrowthMetric metric) => switch (metric) {
+  GrowthMetric.weight => const Color(0xFFFFF2E7),
+  GrowthMetric.lengthHeight => const Color(0xFFEBF4FA),
+  GrowthMetric.headCircumference => const Color(0xFFF4EEF9),
 };
 
 IconData trackingMetricIcon(GrowthMetric metric) => switch (metric) {
@@ -183,89 +190,12 @@ Future<DateTime?> pickTrackingDate(
   required DateTime firstDate,
   required DateTime lastDate,
   required String helpText,
-}) => showDatePicker(
-  context: context,
+}) => showAppDatePicker(
+  context,
   initialDate: initialDate,
   firstDate: firstDate,
   lastDate: lastDate,
   helpText: helpText,
-  builder: (context, child) {
-    final theme = GrowthTheme.of(context);
-    return Theme(
-      data: theme.copyWith(
-        datePickerTheme: DatePickerThemeData(
-          backgroundColor: GrowthColors.surface,
-          surfaceTintColor: Colors.transparent,
-          headerBackgroundColor: GrowthColors.primary,
-          headerForegroundColor: GrowthColors.surface,
-          headerHeadlineStyle: const TextStyle(
-            fontFamily: 'Nunito',
-            color: GrowthColors.surface,
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-          ),
-          headerHelpStyle: const TextStyle(
-            fontFamily: 'Nunito',
-            color: GrowthColors.surface,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-          weekdayStyle: const TextStyle(
-            fontFamily: 'Nunito',
-            color: GrowthColors.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-          dayStyle: const TextStyle(
-            fontFamily: 'Nunito',
-            color: GrowthColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-          todayForegroundColor: const WidgetStatePropertyAll(
-            GrowthColors.primary,
-          ),
-          todayBackgroundColor: const WidgetStatePropertyAll(
-            Colors.transparent,
-          ),
-          dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return GrowthColors.surface;
-            }
-            if (states.contains(WidgetState.disabled)) {
-              return GrowthColors.textSecondary.withAlpha(100);
-            }
-            return GrowthColors.textPrimary;
-          }),
-          dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return GrowthColors.primary;
-            }
-            return Colors.transparent;
-          }),
-          todayBorder: const BorderSide(color: GrowthColors.primary, width: 1.5),
-          rangeSelectionBackgroundColor: GrowthColors.primarySoft,
-          cancelButtonStyle: TextButton.styleFrom(
-            foregroundColor: GrowthColors.textSecondary,
-            textStyle: const TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          confirmButtonStyle: TextButton.styleFrom(
-            foregroundColor: GrowthColors.primary,
-            textStyle: const TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28)),
-            side: BorderSide(color: GrowthColors.border),
-          ),
-        ),
-      ),
-      child: child!,
-    );
-  },
 );
 
 Future<bool> openTrackingEditor(
@@ -345,8 +275,9 @@ class _MetricChoiceTile extends StatelessWidget {
     ),
     child: InkWell(
       borderRadius: BorderRadius.circular(20),
-      splashColor: GrowthColors.primarySoft,
-      highlightColor: GrowthColors.primarySoft,
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -356,12 +287,12 @@ class _MetricChoiceTile extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: GrowthColors.iconBackground,
+                color: trackingMetricSoftColor(metric),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Icon(
                 trackingMetricIcon(metric),
-                color: GrowthColors.primary,
+                color: trackingMetricColor(metric),
               ),
             ),
             const SizedBox(width: 14),
@@ -613,7 +544,7 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  '${trackingValue(existing.value)} ${widget.metric.unit} · ${trackingDate(existing.measuredAt)}',
+                  '${trackingValue(existing.value)} ${widget.metric.unit} - ${trackingDate(existing.measuredAt)}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: GrowthColors.textPrimary,
@@ -808,12 +739,12 @@ class _TrackingMeasurementEditorState extends State<TrackingMeasurementEditor> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: GrowthColors.iconBackground,
+                      color: trackingMetricSoftColor(widget.metric),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       trackingMetricIcon(widget.metric),
-                      color: GrowthColors.primary,
+                      color: trackingMetricColor(widget.metric),
                       size: 28,
                     ),
                   ),
@@ -1480,89 +1411,237 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
       length: 2,
       child: Scaffold(
         backgroundColor: GrowthColors.background,
-      appBar: AppBar(
-        backgroundColor: GrowthColors.background,
-        foregroundColor: GrowthColors.textPrimary,
-        scrolledUnderElevation: 0,
-        title: Text(
-          widget.metric.title,
-          style: const TextStyle(
-            color: GrowthColors.textPrimary,
-            fontWeight: FontWeight.w800,
+        appBar: AppBar(
+          backgroundColor: GrowthColors.background,
+          foregroundColor: GrowthColors.textPrimary,
+          scrolledUnderElevation: 0,
+          title: Text(
+            widget.metric.title,
+            style: const TextStyle(
+              color: GrowthColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+            ),
           ),
-        ),
-        bottom: const TabBar(
-          labelColor: GrowthColors.primary,
-          unselectedLabelColor: GrowthColors.textSecondary,
-          indicatorColor: GrowthColors.primary,
-          tabs: [
-            Tab(text: 'Biểu đồ'),
-            Tab(text: 'Lịch sử'),
+          bottom: const TabBar(
+            labelColor: GrowthColors.primaryDark,
+            unselectedLabelColor: Color(0xFF5E7265),
+            indicatorColor: GrowthColors.primary,
+            indicatorWeight: 3.5,
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelStyle: TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+            ),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+            tabs: [
+              Tab(text: 'Biểu đồ'),
+              Tab(text: 'Lịch sử'),
+            ],
+          ),
+          actions: [
+            if (widget.repository.canEdit)
+              IconButton(
+                tooltip: 'Ghi số đo',
+                onPressed: _edit,
+                icon: const Icon(Icons.add, color: GrowthColors.primary),
+              ),
           ],
         ),
-        actions: [
-          if (widget.repository.canEdit)
-            IconButton(
-              tooltip: 'Ghi số đo',
-              onPressed: _edit,
-              icon: const Icon(Icons.add, color: GrowthColors.primary),
-            ),
-        ],
-      ),
-      body: FutureBuilder<List<GrowthMeasurementDraft>>(
-        future: _data,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(
-              child: CircularProgressIndicator(color: GrowthColors.primary),
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: TextButton(
-                onPressed: () => _reload(force: true),
-                child: const Text('Chưa tải được. Thử lại'),
-              ),
-            );
-          }
-          final rows = snapshot.data!;
-          return TabBarView(
-            physics: _chartPinching
-                ? const NeverScrollableScrollPhysics()
-                : null,
-            children: [
-              RefreshIndicator(
-                color: GrowthColors.primary,
-                onRefresh: () async {
-                  _reload(force: true);
-                  await _data;
-                },
-                child: SingleChildScrollView(
-                  key: const PageStorageKey('metric-chart'),
-                  physics: _chartPinching
-                      ? const NeverScrollableScrollPhysics()
-                      : const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(8, 16, 8, 24),
-                  child: GrowthMeasurementChart(
-                    rows: rows,
-                    birth: widget.repository.dateOfBirth,
-                    metric: widget.metric,
-                    onPinchingChanged: (active) {
-                      if (mounted && _chartPinching != active) {
-                        setState(() => _chartPinching = active);
-                      }
-                    },
+
+        body: FutureBuilder<List<GrowthMeasurementDraft>>(
+          future: _data,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(color: GrowthColors.primary),
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: TextButton(
+                  onPressed: () => _reload(force: true),
+                  child: const Text('Chưa tải được. Thử lại'),
+                ),
+              );
+            }
+            final rows = snapshot.data!;
+            return TabBarView(
+              physics: _chartPinching
+                  ? const NeverScrollableScrollPhysics()
+                  : null,
+              children: [
+                RefreshIndicator(
+                  color: GrowthColors.primary,
+                  onRefresh: () async {
+                    _reload(force: true);
+                    await _data;
+                  },
+                  child: SingleChildScrollView(
+                    key: const PageStorageKey('metric-chart'),
+                    physics: _chartPinching
+                        ? const NeverScrollableScrollPhysics()
+                        : const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(10, 14, 10, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (rows.isNotEmpty)
+                          _buildLatestMetricSummary(
+                            rows.first,
+                            rows.length > 1 ? rows[1] : null,
+                            widget.repository.dateOfBirth,
+                          ),
+                        GrowthMeasurementChart(
+                          rows: rows,
+                          birth: widget.repository.dateOfBirth,
+                          metric: widget.metric,
+                          onPinchingChanged: (active) {
+                            if (mounted && _chartPinching != active) {
+                              setState(() => _chartPinching = active);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              _history(rows),
-            ],
-          );
-        },
+                _history(rows),
+              ],
+            );
+          },
+        ),
       ),
     ),
-  ),
-);
+  );
+
+  Widget _buildLatestMetricSummary(
+    GrowthMeasurementDraft latest,
+    GrowthMeasurementDraft? previous,
+    DateTime? birth,
+  ) {
+    final diff = previous != null ? latest.value - previous.value : null;
+    final diffText = diff != null && diff != 0
+        ? '${diff > 0 ? '+' : ''}${formatGrowthValue(diff).replaceAll('.', ',')} ${widget.metric.unit}'
+        : null;
+
+    final ageMonths = birth != null
+        ? growthChartAgeMonths(birth, latest.measuredAt)
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: GrowthColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: GrowthColors.border, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0C29451E),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: trackingMetricSoftColor(widget.metric),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              trackingMetricIcon(widget.metric),
+              size: 24,
+              color: trackingMetricColor(widget.metric),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Số đo mới nhất',
+                  style: TextStyle(
+                    color: GrowthColors.textSecondary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      formatGrowthValue(latest.value).replaceAll('.', ','),
+                      style: const TextStyle(
+                        color: GrowthColors.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      widget.metric.unit,
+                      style: const TextStyle(
+                        color: GrowthColors.primaryDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (diffText != null) ...[
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (diff ?? 0) >= 0
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          diffText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: (diff ?? 0) >= 0
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFFC62828),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${trackingDate(latest.measuredAt)}${ageMonths != null ? ' - ${ageMonths.toStringAsFixed(1).replaceAll('.', ',')} tháng tuổi' : ''}',
+                  style: const TextStyle(
+                    color: GrowthColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _history(List<GrowthMeasurementDraft> rows) {
     if (rows.isEmpty) {
@@ -1584,7 +1663,7 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                   Icon(
                     trackingMetricIcon(widget.metric),
                     size: 48,
-                    color: GrowthColors.primary,
+                    color: trackingMetricColor(widget.metric),
                   ),
                   const SizedBox(height: 14),
                   const Text(
@@ -1653,12 +1732,12 @@ class _TrackingHistoryScreenState extends State<TrackingHistoryScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: GrowthColors.iconBackground,
+                        color: trackingMetricSoftColor(widget.metric),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         trackingMetricIcon(widget.metric),
-                        color: GrowthColors.primary,
+                        color: trackingMetricColor(widget.metric),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2650,7 +2729,7 @@ class _TrackingAssessmentScreenState extends State<TrackingAssessmentScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Lần trước${measuredOn == null ? '' : ' · ${trackingDate(measuredOn)}'}',
+                'Lần trước${measuredOn == null ? '' : ' - ${trackingDate(measuredOn)}'}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),

@@ -183,14 +183,6 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
     );
   }
 
-  Future<void> _openMeasurement() async {
-    await openMeasurementFromHome(
-      context,
-      childName:
-          DemoStore.instance.child?['full_name'] as String? ?? widget.childName,
-    );
-  }
-
   void _openSettings() {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -222,7 +214,8 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
   Widget build(BuildContext context) {
     final active = DemoStore.instance.child;
     final currentName = active?['full_name'] as String? ?? widget.childName;
-    final name = currentName.trim().isEmpty ? 'Bé An' : currentName.trim();
+    final rawName = currentName.trim().isEmpty ? 'An' : currentName.trim();
+    final name = rawName.toLowerCase().startsWith('bé ') ? rawName : 'Bé $rawName';
     final store = DemoStore.instance;
     final accountId = store.signedIn ? store.parent['id'] as String? : null;
     final childId = active?['id'] as String?;
@@ -248,59 +241,63 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
                     key: const ValueKey('home-hero'),
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      HomeBackgroundSection(
-                        header: SafeArea(
-                          bottom: false,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: HomeProfileHeader(
-                              name: name,
-                              onTap: () => Navigator.of(context).push<void>(
-                                MaterialPageRoute(
-                                  builder: (_) => ChildProfileScreen(
-                                    initialFields:
-                                        active ?? {'full_name': name},
-                                    onSave: active == null
-                                        ? null
-                                        : (fields, avatar) => store
-                                              .saveChild(
-                                                active['id'] as String,
-                                                fields,
-                                              )
-                                              .then((_) {}),
+                      RepaintBoundary(
+                        child: HomeBackgroundSection(
+                          header: SafeArea(
+                            bottom: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                              child: HomeProfileHeader(
+                                name: name,
+                                onTap: () => Navigator.of(context).push<void>(
+                                  MaterialPageRoute(
+                                    builder: (_) => ChildProfileScreen(
+                                      initialFields:
+                                          active ?? {'full_name': name},
+                                      onSave: active == null
+                                          ? null
+                                          : (fields, avatar) => store
+                                                .saveChild(
+                                                  active['id'] as String,
+                                                  fields,
+                                                )
+                                                .then((_) {}),
+                                    ),
                                   ),
                                 ),
+                                onSettingsTap: _openSettings,
+                                onNotificationsTap: () =>
+                                    _showOverview('Thông báo'),
                               ),
-                              onSettingsTap: _openSettings,
-                              onNotificationsTap: () =>
-                                  _showOverview('Thông báo'),
                             ),
                           ),
+                          key: ValueKey((
+                            accountId,
+                            childId,
+                            widget.backgroundRepository,
+                          )),
+                          accountId: accountId,
+                          childId: childId,
+                          role: role,
+                          repository: widget.backgroundRepository,
+                          profileChanges: store,
+                          photobooth: widget.photobooth,
+                          onChangeBackground: widget.onChangeBackground,
+                          isCurrentProfile: () =>
+                              store.signedIn &&
+                              store.parent['id'] == accountId &&
+                              store.child?['id'] == childId,
                         ),
-                        key: ValueKey((
-                          accountId,
-                          childId,
-                          widget.backgroundRepository,
-                        )),
-                        accountId: accountId,
-                        childId: childId,
-                        role: role,
-                        repository: widget.backgroundRepository,
-                        profileChanges: store,
-                        photobooth: widget.photobooth,
-                        onChangeBackground: widget.onChangeBackground,
-                        isCurrentProfile: () =>
-                            store.signedIn &&
-                            store.parent['id'] == accountId &&
-                            store.child?['id'] == childId,
                       ),
                     ],
                   ),
-                  Transform.translate(
-                    offset: const Offset(0, -AppLayout.homeHeroOverlap),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _CareCard(childName: name, onTap: _showOverview),
+                  RepaintBoundary(
+                    child: Transform.translate(
+                      offset: const Offset(0, -AppLayout.homeHeroOverlap),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _CareCard(childName: name, onTap: _showOverview),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -316,8 +313,8 @@ class _HomeScreenState extends State<HomeScreen> with DemoStoreBinding {
             _openSettings();
           } else if (label == 'Theo dõi') {
             _openGrowth();
-          } else if (label == 'Tạo ghi chép') {
-            _openMeasurement();
+          } else if (label == 'Tạo ghi chép' || label == 'Thêm nhật ký') {
+            openAddJournal(context);
           } else if (label == 'Khám phá') {
             Navigator.of(context).push<void>(
               MaterialPageRoute(
@@ -370,7 +367,11 @@ class _CareCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TimelineCard(),
+        RepaintBoundary(
+          child: _TimelineCard(
+            key: ValueKey(DemoStore.instance.child?['id']),
+          ),
+        ),
         if (DemoStore.instance.child != null)
           AssessmentHomeCard(
             childId: DemoStore.instance.child!['id'] as String,
@@ -417,45 +418,44 @@ class _CareItem extends StatelessWidget {
       label: item.label,
       button: true,
       excludeSemantics: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Material(
-              color: HomeColors.iconBackground,
-              borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-                splashColor: item.accentColor.withValues(alpha: .14),
-                highlightColor: item.accentColor.withValues(alpha: .08),
-                hoverColor: item.accentColor.withValues(alpha: .08),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset(
-                    'assets/images/scenery/icons/care/${item.iconAsset}',
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.contain,
-                    excludeFromSemantics: true,
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+          splashColor: item.accentColor.withValues(alpha: .14),
+          highlightColor: item.accentColor.withValues(alpha: .08),
+          hoverColor: item.accentColor.withValues(alpha: .08),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: HomeColors.iconBackground,
+                  borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  'assets/images/scenery/icons/care/${item.iconAsset}',
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: HomeColors.ink,
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: HomeColors.ink,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -482,7 +482,7 @@ int get _currentAgeMilestoneIndex {
 }
 
 class _TimelineCard extends StatefulWidget {
-  const _TimelineCard();
+  const _TimelineCard({super.key});
 
   @override
   State<_TimelineCard> createState() => _TimelineCardState();

@@ -25,15 +25,59 @@ class GrowthMeasurementChart extends StatefulWidget {
 
 class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
   GrowthMeasurementDraft? _selected;
-  RangeValues _window = const RangeValues(0, 72);
+  late RangeValues _window;
   @visibleForTesting
   RangeValues get visibleRange => _window;
-  RangeValues _gestureWindow = const RangeValues(0, 72);
+  late RangeValues _gestureWindow;
   double _anchorAge = 0, _initialGestureScale = 1;
   int _gesturePointers = 0;
 
+  static const double _leftMargin = 38.0;
+  static const double _rightMargin = 38.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _window = _calculateInitialWindow();
+    _gestureWindow = _window;
+  }
+
+  @override
+  void didUpdateWidget(covariant GrowthMeasurementChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.metric != widget.metric ||
+        oldWidget.rows.length != widget.rows.length ||
+        oldWidget.birth != widget.birth) {
+      _window = _calculateInitialWindow();
+      _gestureWindow = _window;
+    }
+  }
+
+  RangeValues _calculateInitialWindow() {
+    final birth = widget.birth;
+    if (birth == null || widget.rows.isEmpty) {
+      return const RangeValues(0, 24);
+    }
+    double maxAge = 0;
+    for (final r in widget.rows) {
+      final m = growthChartAgeMonths(birth, r.measuredAt);
+      if (m != null && m > maxAge) maxAge = m;
+    }
+    // Smart adaptation: match standard WHO infant/child growth phases
+    if (maxAge <= 12) {
+      return const RangeValues(0, 12);
+    } else if (maxAge <= 24) {
+      return const RangeValues(0, 24);
+    } else if (maxAge <= 36) {
+      return const RangeValues(0, 36);
+    } else {
+      return const RangeValues(0, 72);
+    }
+  }
+
   double _fraction(Offset focalPoint, double width) =>
-      ((focalPoint.dx - 38) / (width - 46)).clamp(0.0, 1.0);
+      ((focalPoint.dx - _leftMargin) / (width - (_leftMargin + _rightMargin)))
+          .clamp(0.0, 1.0);
 
   void _startGesture(ScaleStartDetails details, double width) {
     _gestureWindow = _window;
@@ -103,8 +147,13 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
     validRows.sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
     if (validRows.isEmpty) {
       return const AspectRatio(
-        aspectRatio: 1,
-        child: Center(child: Text('Chưa có số đo trong độ tuổi này.')),
+        aspectRatio: 1.3,
+        child: Center(
+          child: Text(
+            'Chưa có số đo trong độ tuổi này.',
+            style: TextStyle(color: GrowthColors.textSecondary),
+          ),
+        ),
       );
     }
     final rows = validRows.where((row) {
@@ -123,7 +172,9 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
             minAge: _window.start,
             maxAge: _window.end,
           );
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (selected != null)
           Semantics(
@@ -131,115 +182,239 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
             child: Container(
               key: const Key('selected-growth-measurement'),
               width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: GrowthColors.primarySoft,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: GrowthColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Lần đo đang xem',
-                    style: TextStyle(
-                      color: GrowthColors.primaryDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Lần đo đang chọn',
+                        style: TextStyle(
+                          color: GrowthColors.primaryDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${formatGrowthValue(selected.value)} ${widget.metric.unit}',
+                        key: const Key('selected-growth-value'),
+                        style: const TextStyle(
+                          color: GrowthColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${formatGrowthValue(selected.value)} ${widget.metric.unit}',
-                    key: const Key('selected-growth-value'),
-                    style: const TextStyle(
-                      color: GrowthColors.textPrimary,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Ngày đo: ${selected.measuredAt.day.toString().padLeft(2, '0')}/${selected.measuredAt.month.toString().padLeft(2, '0')}/${selected.measuredAt.year}',
-                    key: const Key('selected-growth-date'),
-                    style: const TextStyle(
-                      color: GrowthColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${selected.measuredAt.day.toString().padLeft(2, '0')}/${selected.measuredAt.month.toString().padLeft(2, '0')}/${selected.measuredAt.year}',
+                        key: const Key('selected-growth-date'),
+                        style: const TextStyle(
+                          color: GrowthColors.primaryDark,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Lúc ${(growthChartAgeMonths(birth, selected.measuredAt) ?? 0).toStringAsFixed(1).replaceAll('.', ',')} tháng tuổi',
+                        style: const TextStyle(
+                          color: GrowthColors.textSecondary,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
-          child: Text(
-            'Chụm/tách hai ngón để thu/phóng. Chạm hai lần để đặt lại.',
-            style: TextStyle(fontSize: 12, color: GrowthColors.textSecondary),
-          ),
-        ),
+
+        const SizedBox(height: 10),
+
+        // Quick Preset Range Chips
+        _buildRangePresets(),
+
+        const SizedBox(height: 10),
+
         LayoutBuilder(
           builder: (context, c) {
-            final chartHeight = (c.maxWidth * 1.24).clamp(400.0, 640.0);
-            return SizedBox(
-              width: c.maxWidth,
-              height: chartHeight,
-              child: MouseRegion(
-                onHover: (event) {
-                  if (painter == null) return;
-                  final nearest = _nearestRow(
-                    rows,
-                    painter,
-                    Size(c.maxWidth, chartHeight),
-                    event.localPosition,
-                  );
-                  if (nearest != null && nearest != _selected) {
-                    setState(() {
-                      _selected = nearest;
-                    });
-                  }
-                },
-                child: GrowthChartGestures(
-                  onPinchingChanged: widget.onPinchingChanged,
-                  onReset: () => _setWindow(0, 72),
-                  panEnabled: _window.end - _window.start < 72 - 1e-9,
-                  onStart: (details) => _startGesture(details, c.maxWidth),
-                  onUpdate: (details) => _updateGesture(details, c.maxWidth),
-                  onTap: (event) {
+            // Balanced golden-ratio height for mobile (proportional & readable)
+            final chartHeight = (c.maxWidth * 0.72).clamp(270.0, 340.0);
+            return Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFCFDFC),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE5EDE6), width: 1.1),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                width: c.maxWidth,
+                height: chartHeight,
+                child: MouseRegion(
+                  onHover: (event) {
                     if (painter == null) return;
-                    final size = Size(c.maxWidth, chartHeight);
                     final nearest = _nearestRow(
                       rows,
                       painter,
-                      size,
+                      Size(c.maxWidth, chartHeight),
                       event.localPosition,
                     );
-                    if (nearest != null) setState(() => _selected = nearest);
+                    if (nearest != null && nearest != _selected) {
+                      setState(() {
+                        _selected = nearest;
+                      });
+                    }
                   },
-                  child: Semantics(
-                    label:
-                        '${widget.metric.title}. ${rows.length} lần đo trong khoảng đang xem. Chạm để chọn số đo.',
-                    child: painter == null
-                        ? const Center(
-                            child: Text(
-                              'Chưa có số đo trong khoảng đang xem.',
-                              textAlign: TextAlign.center,
+                  child: GrowthChartGestures(
+                    onPinchingChanged: widget.onPinchingChanged,
+                    onReset: () => _setWindow(0, 72),
+                    panEnabled: _window.end - _window.start < 72 - 1e-9,
+                    onStart: (details) => _startGesture(details, c.maxWidth),
+                    onUpdate: (details) => _updateGesture(details, c.maxWidth),
+                    onTap: (event) {
+                      if (painter == null) return;
+                      final size = Size(c.maxWidth, chartHeight);
+                      final nearest = _nearestRow(
+                        rows,
+                        painter,
+                        size,
+                        event.localPosition,
+                      );
+                      if (nearest != null) setState(() => _selected = nearest);
+                    },
+                    child: Semantics(
+                      label:
+                          '${widget.metric.title}. ${rows.length} lần đo trong khoảng đang xem. Chạm để chọn số đo.',
+                      child: painter == null
+                          ? const Center(
+                              child: Text(
+                                'Chưa có số đo trong khoảng đang xem.',
+                                textAlign: TextAlign.center,
+                                style:
+                                    TextStyle(color: GrowthColors.textSecondary),
+                              ),
+                            )
+                          : CustomPaint(
+                              key: const Key('growth-plot'),
+                              painter: painter,
                             ),
-                          )
-                        : CustomPaint(
-                            key: const Key('growth-plot'),
-                            painter: painter,
-                          ),
+                    ),
                   ),
                 ),
               ),
             );
           },
         ),
+
+        const Padding(
+          padding: EdgeInsets.fromLTRB(8, 8, 8, 2),
+          child: Text(
+            'Chạm vào điểm tròn để xem số đo. Chụm/tách 2 ngón để phóng to/thu nhỏ.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: GrowthColors.textSecondary),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildRangePresets() {
+    final currentSpan = (_window.end - _window.start).round();
+    final isFullSpan = _window.start == 0 && currentSpan >= 70;
+    final presets = [
+      (12, '12 tháng'),
+      (24, '24 tháng'),
+      (36, '3 tuổi'),
+      (72, 'Toàn bộ'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: presets.map((preset) {
+            final isSelected =
+                (_window.start == 0 && currentSpan == preset.$1) ||
+                    (preset.$1 == 72 && isFullSpan);
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _setWindow(0, preset.$1.toDouble()),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? GrowthColors.primary
+                          : GrowthColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected
+                            ? GrowthColors.primary
+                            : GrowthColors.border,
+                        width: 1.4,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color:
+                                    GrowthColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : const [
+                              BoxShadow(
+                                color: Color(0x0A29451E),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                    ),
+                    child: Text(
+                      preset.$2,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight:
+                            isSelected ? FontWeight.w800 : FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : GrowthColors.primaryDark,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
@@ -287,8 +462,11 @@ class _MeasurementPainter extends CustomPainter {
   DateTime get start => birth;
   DateTime get stop => end;
 
+  static const double leftMargin = 38.0;
+  static const double rightMargin = 38.0;
+
   Rect plot(Size size) =>
-      Rect.fromLTRB(38, 18, size.width - 8, size.height - 38);
+      Rect.fromLTRB(leftMargin, 16, size.width - rightMargin, size.height - 34);
 
   double xForDate(DateTime date, Size size) {
     final r = plot(size);
@@ -310,7 +488,7 @@ class _MeasurementPainter extends CustomPainter {
     Offset at, {
     bool center = false,
     bool right = false,
-    double fontSize = 11,
+    double fontSize = 10.5,
   }) {
     final text = TextPainter(
       text: TextSpan(
@@ -330,8 +508,8 @@ class _MeasurementPainter extends CustomPainter {
         center
             ? at.dx - text.width / 2
             : right
-            ? at.dx - text.width
-            : at.dx,
+                ? at.dx - text.width
+                : at.dx,
         at.dy,
       ),
     );
@@ -342,8 +520,10 @@ class _MeasurementPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final r = plot(size);
+
+    // 1. Grid lines and Y-axis labels
     final grid = Paint()
-      ..color = const Color(0xFFD8E1DD)
+      ..color = const Color(0xFFE2EBE5)
       ..strokeWidth = 1;
     final intervals = ((high - low) / valueScale.step).round();
     for (var i = 0; i <= intervals; i++) {
@@ -352,10 +532,12 @@ class _MeasurementPainter extends CustomPainter {
       label(
         canvas,
         naturalLabel(low + valueScale.step * i),
-        Offset(r.left - 6, y - 7),
+        Offset(r.left - 5, y - 6.5),
         right: true,
       );
     }
+
+    // 2. X-axis tick intervals
     final span = maxAge - minAge;
     final rawStep = span / 5;
     final magnitude = math
@@ -373,12 +555,12 @@ class _MeasurementPainter extends CustomPainter {
     final step = span >= 48
         ? 12.0
         : span >= 24
-        ? 6.0
-        : span >= 12
-        ? 3.0
-        : span >= 6
-        ? 1.0
-        : niceStep;
+            ? 6.0
+            : span >= 12
+                ? 3.0
+                : span >= 6
+                    ? 1.0
+                    : niceStep;
     final ticks = <double>[minAge];
     double xFor(double age) => r.left + (age - minAge) / span * r.width;
     for (
@@ -386,7 +568,7 @@ class _MeasurementPainter extends CustomPainter {
       age < maxAge - 1e-9;
       age += step
     ) {
-      if (xFor(age) - xFor(ticks.last) > 34 && r.right - xFor(age) > 34) {
+      if (xFor(age) - xFor(ticks.last) > 30 && r.right - xFor(age) > 30) {
         ticks.add(age);
       }
     }
@@ -395,23 +577,59 @@ class _MeasurementPainter extends CustomPainter {
       label(
         canvas,
         formatGrowthValue((age * 100).round() / 100),
-        Offset(xFor(age), r.bottom + 6),
+        Offset(xFor(age), r.bottom + 5),
         center: true,
       );
     }
-    label(canvas, metric.unit, Offset(r.left, 0), fontSize: 10.5);
+
+    // 3. Units & Labels
+    label(canvas, metric.unit, Offset(r.left, 0), fontSize: 10);
     label(
       canvas,
       'Tháng',
-      Offset(r.center.dx, r.bottom + 21),
+      Offset(r.center.dx, r.bottom + 18),
       center: true,
-      fontSize: 10.5,
+      fontSize: 10,
     );
+
+    // 4. Main Axes Lines
     final axis = Paint()
-      ..color = const Color(0xFF526B68)
-      ..strokeWidth = 1.5;
+      ..color = const Color(0xFF5A7365)
+      ..strokeWidth = 1.4;
     canvas.drawLine(r.topLeft, r.bottomLeft, axis);
     canvas.drawLine(r.bottomLeft, r.bottomRight, axis);
+
+    // 5. Area Fill Gradient under the curve
+    if (rows.length >= 2) {
+      final areaPath = Path();
+      GrowthMeasurementDraft? prev;
+      for (final row in rows) {
+        final p = point(row, size);
+        if (prev == null ||
+            DateUtils.isSameDay(row.measuredAt, prev.measuredAt)) {
+          areaPath.moveTo(p.dx, p.dy);
+        } else {
+          areaPath.lineTo(p.dx, p.dy);
+        }
+        prev = row;
+      }
+      areaPath.lineTo(point(rows.last, size).dx, r.bottom);
+      areaPath.lineTo(point(rows.first, size).dx, r.bottom);
+      areaPath.close();
+
+      final areaPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            color.withValues(alpha: 0.16),
+            color.withValues(alpha: 0.01),
+          ],
+        ).createShader(r);
+      canvas.drawPath(areaPath, areaPaint);
+    }
+
+    // 6. Main Curve Line
     final path = Path();
     GrowthMeasurementDraft? previous;
     for (final row in rows) {
@@ -428,9 +646,13 @@ class _MeasurementPainter extends CustomPainter {
       path,
       Paint()
         ..color = color
-        ..strokeWidth = 3
+        ..strokeWidth = 2.8
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke,
     );
+
+    // 7. Measurement Dots & Selection Ring
     final markers = showMarkers(size);
     for (final row in rows) {
       if (!markers && !identical(row, selected)) {
@@ -438,22 +660,24 @@ class _MeasurementPainter extends CustomPainter {
       }
       final p = point(row, size);
       if (identical(row, selected)) {
-        canvas.drawCircle(p, 13, Paint()..color = color.withValues(alpha: .18));
-        canvas.drawCircle(p, 8, Paint()..color = AppColors.surface);
+        canvas.drawCircle(
+          p,
+          13,
+          Paint()..color = color.withValues(alpha: .22),
+        );
+        canvas.drawCircle(p, 7.5, Paint()..color = Colors.white);
+        canvas.drawCircle(p, 5.5, Paint()..color = color);
+      } else {
+        canvas.drawCircle(p, 5, Paint()..color = Colors.white);
+        canvas.drawCircle(p, 3.8, Paint()..color = color);
       }
-      canvas.drawCircle(
-        p,
-        identical(row, selected) ? 6 : 4.5,
-        Paint()..color = color,
-      );
     }
   }
 
   bool showMarkers(Size size) {
-    // A small history should expose every measurement, even on a wide time axis.
     if (rows.length <= 12) return true;
     for (var i = 1; i < rows.length; i++) {
-      if ((point(rows[i], size) - point(rows[i - 1], size)).distance < 20) {
+      if ((point(rows[i], size) - point(rows[i - 1], size)).distance < 18) {
         return false;
       }
     }

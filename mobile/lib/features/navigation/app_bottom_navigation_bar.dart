@@ -30,17 +30,34 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    shape: const Border(top: BorderSide(color: AppColors.border)),
-    child: SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 62),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppLayout.smallGap),
-          child: Row(
-            children: [
+  Widget build(BuildContext context) {
+    final isAddActive =
+        widget.selected == 'Tạo ghi chép' || widget.selected == 'Thêm nhật ký';
+
+    return RepaintBoundary(
+      child: Container(
+        decoration: const BoxDecoration(
+          color: NavBarColors.background,
+          border: Border(
+            top: BorderSide(color: NavBarColors.border, width: 1.0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: NavBarColors.shadow,
+              blurRadius: 16,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+      child: SafeArea(
+        top: false,
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.05,
+          child: SizedBox(
+            height: 66,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               _NavigationItem(
                 label: 'Trang chủ',
                 selected: widget.selected == 'Trang chủ',
@@ -60,16 +77,74 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
                 onTap: () => _onNavigationTap('Theo dõi'),
               ),
               Expanded(
-                child: Center(
-                  heightFactor: 1,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
+                child: Semantics(
+                  label: 'Tạo ghi chép',
+                  button: true,
+                  excludeSemantics: true,
+                  child: InkResponse(
                     onTap: _onAddTap,
-                    child: SvgPicture.asset(
-                      '${AppBottomNavigationBar._iconsPath}${widget.selected == 'Tạo ghi chép' ? 'nav-add-solid.svg' : 'nav-add-outline.svg'}',
-                      width: 54,
-                      height: 54,
-                      semanticsLabel: 'Tạo ghi chép',
+                    radius: 36,
+                    splashColor: HomeColors.primary.withValues(alpha: 0.15),
+                    highlightColor: Colors.transparent,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOutCubic,
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  NavBarColors.fabStart,
+                                  NavBarColors.fabEnd,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isAddActive
+                                      ? HomeColors.primary.withValues(alpha: 0.5)
+                                      : NavBarColors.fabGlow,
+                                  blurRadius: isAddActive ? 12 : 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                              border: isAddActive
+                                  ? Border.all(
+                                      color: HomeColors.milestoneAccent,
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.add_rounded,
+                                color: NavBarColors.fabIcon,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Ghi chép',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: HomeColors.reminderCta,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -97,7 +172,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar> {
         ),
       ),
     ),
-  );
+  ),
+);
+  }
 }
 
 class _NavigationItem extends StatelessWidget {
@@ -117,32 +194,67 @@ class _NavigationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-    child: InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: AppLayout.minimumTouchTarget,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              selected ? solidAsset : outlineAsset,
-              width: 24,
-              height: 24,
-              semanticsLabel: label,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: HomeColors.primary.withValues(alpha: 0.12),
+        highlightColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppLayout.minimumTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? NavBarColors.activeIndicator
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: SvgPicture.asset(
+                    selected ? solidAsset : outlineAsset,
+                    width: 22,
+                    height: 22,
+                    semanticsLabel: label,
+                    colorFilter: ColorFilter.mode(
+                      selected
+                          ? NavBarColors.activeIcon
+                          : NavBarColors.inactiveIcon,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: -0.2,
+                    color: selected
+                        ? NavBarColors.activeLabel
+                        : NavBarColors.inactiveLabel,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                color: selected ? AppColors.primary : const Color(0xFF59695F),
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     ),

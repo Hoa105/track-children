@@ -284,7 +284,7 @@ void main() {
             find.byType(GrowthChartGestures),
           );
           final width = tester.getSize(find.byType(GrowthChartGestures)).width;
-          final anchor = 38 + (width - 46) * ((start + end) / 2 / 72);
+          final anchor = 38 + (width - 76) * ((start + end) / 2 / 72);
           gestures.onStart(
             ScaleStartDetails(
               localFocalPoint: Offset(anchor, 100),
@@ -293,7 +293,7 @@ void main() {
           );
           gestures.onUpdate(
             ScaleUpdateDetails(
-              localFocalPoint: Offset(38 + (width - 46) / 2, 100),
+              localFocalPoint: Offset(38 + (width - 76) / 2, 100),
               pointerCount: 2,
               scale: 72 / (end - start),
             ),

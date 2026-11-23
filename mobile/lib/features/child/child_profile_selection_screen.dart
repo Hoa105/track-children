@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../services/demo_store.dart';
 
 import 'package:flutter/material.dart';
@@ -134,6 +136,8 @@ class _SelectionState extends State<ChildProfileSelectionScreen>
                               onTap: _busy
                                   ? null
                                   : () => widget.onSelectChild('Bé An'),
+                              avatarBase64: DemoStore.instance.child?['avatar_base64'] as String?,
+                              avatarUrl: DemoStore.instance.child?['avatar_url'] as String?,
                             ),
                           for (final child in DemoStore.instance.children)
                             Padding(
@@ -141,6 +145,8 @@ class _SelectionState extends State<ChildProfileSelectionScreen>
                               child: _ChildProfileCard(
                                 name: child['full_name'] as String,
                                 age: DemoStore.instance.ageLabel(child),
+                                avatarBase64: child['avatar_base64'] as String?,
+                                avatarUrl: child['avatar_url'] as String?,
                                 onTap: _busy ? null : () => _select(child),
                               ),
                             ),
@@ -191,67 +197,116 @@ class _ChildProfileCard extends StatelessWidget {
     required this.onTap,
     this.name = 'Bé An',
     this.age = '24 tháng',
+    this.avatarBase64,
+    this.avatarUrl,
   });
   final String name, age;
+  final String? avatarBase64;
+  final String? avatarUrl;
 
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: ChildProfileSelectionColors.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(22),
-      side: const BorderSide(color: ChildProfileSelectionColors.border),
-    ),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: ChildProfileSelectionColors.avatar,
-              ),
-              child: const Icon(
-                Icons.child_care_rounded,
-                color: ChildProfileSelectionColors.primary,
-                size: 36,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: ChildProfileSelectionColors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    age,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: ChildProfileSelectionColors.secondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
+  Widget build(BuildContext context) {
+    Widget avatarWidget;
+    if (avatarBase64 != null && avatarBase64!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(avatarBase64!);
+        avatarWidget = ClipOval(
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            width: 64,
+            height: 64,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.child_care_rounded,
               color: ChildProfileSelectionColors.primary,
+              size: 36,
             ),
-          ],
+          ),
+        );
+      } catch (_) {
+        avatarWidget = const Icon(
+          Icons.child_care_rounded,
+          color: ChildProfileSelectionColors.primary,
+          size: 36,
+        );
+      }
+    } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      avatarWidget = ClipOval(
+        child: Image.network(
+          avatarUrl!,
+          fit: BoxFit.cover,
+          width: 64,
+          height: 64,
+          errorBuilder: (_, _, _) => const Icon(
+            Icons.child_care_rounded,
+            color: ChildProfileSelectionColors.primary,
+            size: 36,
+          ),
+        ),
+      );
+    } else {
+      avatarWidget = const Icon(
+        Icons.child_care_rounded,
+        color: ChildProfileSelectionColors.primary,
+        size: 36,
+      );
+    }
+
+    return Material(
+      color: ChildProfileSelectionColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: ChildProfileSelectionColors.border),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ChildProfileSelectionColors.avatar,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Center(child: avatarWidget),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: ChildProfileSelectionColors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      age,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: ChildProfileSelectionColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: ChildProfileSelectionColors.primary,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

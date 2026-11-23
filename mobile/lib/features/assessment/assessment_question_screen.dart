@@ -218,21 +218,31 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
       context: context,
       showDragHandle: true,
       useSafeArea: true,
+      backgroundColor: AssessmentColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 16),
           children: [
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
               child: Text(
                 'Các câu trong bài',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18.5,
+                  color: AssessmentColors.textPrimary,
+                ),
               ),
             ),
             for (var i = 0; i < attempt.questions.length; i++)
               ListTile(
                 selected: i == index,
-                selectedTileColor: AppColors.primarySoft,
+                selectedTileColor: AssessmentColors.primarySoft,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                 leading: AssessmentIconBadge(
                   assessmentDomainIcon(
                     attempt.questions[i]['domain'] as String?,
@@ -240,20 +250,34 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
                   color: assessmentDomainColor(
                     attempt.questions[i]['domain'] as String?,
                   ),
+                  size: 38,
                 ),
                 title: Text(
                   'Câu ${i + 1} · ${assessmentDomains[attempt.questions[i]['domain']]}',
+                  style: TextStyle(
+                    fontWeight: i == index ? FontWeight.w800 : FontWeight.w600,
+                    color: AssessmentColors.textPrimary,
+                  ),
                 ),
                 subtitle: Text(
                   answers.containsKey(attempt.questions[i]['code'])
                       ? 'Đã trả lời'
                       : 'Chưa trả lời',
+                  style: TextStyle(
+                    color: answers.containsKey(attempt.questions[i]['code'])
+                        ? AssessmentColors.primary
+                        : AssessmentColors.muted,
+                    fontSize: 12.5,
+                  ),
                 ),
                 trailing: Icon(
                   answers.containsKey(attempt.questions[i]['code'])
-                      ? Icons.check_circle_outline
-                      : Icons.radio_button_unchecked,
-                  color: AppColors.primary,
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: answers.containsKey(attempt.questions[i]['code'])
+                      ? AssessmentColors.primary
+                      : AssessmentColors.border,
+                  size: 22,
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -262,11 +286,30 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
               ),
             ListTile(
               selected: index >= attempt.questions.length,
-              selectedTileColor: AppColors.primarySoft,
+              selectedTileColor: AssessmentColors.primarySoft,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               leading: const AssessmentIconBadge(
                 Icons.chat_bubble_outline_rounded,
+                size: 38,
               ),
-              title: const Text('Thông tin bổ sung'),
+              title: Text(
+                'Thông tin bổ sung',
+                style: TextStyle(
+                  fontWeight: index >= attempt.questions.length
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                  color: AssessmentColors.textPrimary,
+                ),
+              ),
+              trailing: Icon(
+                regression != null && concern != null
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: regression != null && concern != null
+                    ? AssessmentColors.primary
+                    : AssessmentColors.border,
+                size: 22,
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _go(attempt.questions.length);
@@ -398,7 +441,7 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
           if (!popped && !submitting && !videoFullscreen) _exit();
         },
         child: AssessmentScaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AssessmentColors.background,
           appBar: videoFullscreen
               ? null
               : assessmentAppBar(
@@ -513,14 +556,14 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AssessmentDomainLabel(q['domain'] as String?),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
           p['question_vi'] ?? p['prompt'] ?? '',
           style: const TextStyle(
             fontSize: 21,
             height: 1.45,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: AssessmentColors.textPrimary,
           ),
         ),
         const SizedBox(height: 16),
@@ -542,6 +585,7 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
                 : () => _changed(() => answers[q['code'] as String] = v.key),
           ),
         ),
+        const SizedBox(height: 4),
         const Text(
           'Chưa quan sát: chưa đủ thông tin để biết bé đã làm được hay chưa.',
           style: assessmentMuted,
@@ -641,7 +685,10 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
   Widget _footer(bool follow, bool allAnswered) {
     final previous = OutlinedButton(
       onPressed: index == 0 || submitting ? null : () => _go(index - 1),
-      child: const Text('Câu trước'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      child: const Text('Câu trước', maxLines: 1),
     );
     final next = FilledButton(
       onPressed: submitting
@@ -651,19 +698,30 @@ class _AssessmentQuestionScreenState extends State<AssessmentQuestionScreen> {
                 ? _complete
                 : null
           : () => _go(index + 1),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
       child: Text(
         submitting
             ? 'Đang xử lý…'
             : follow
             ? 'Xem kết quả'
             : 'Câu tiếp theo',
+        maxLines: 1,
       ),
     );
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.border)),
+        color: AssessmentColors.surface,
+        border: Border(top: BorderSide(color: AssessmentColors.cardBorder)),
+        boxShadow: [
+          BoxShadow(
+            color: AssessmentColors.cardShadow,
+            blurRadius: 10,
+            offset: Offset(0, -3),
+          ),
+        ],
       ),
       child: MediaQuery.textScalerOf(context).scale(14) > 22
           ? Column(

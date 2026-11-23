@@ -47,6 +47,58 @@ class _TeethingAgeSelectorState extends State<TeethingAgeSelector> {
     super.dispose();
   }
 
+  static final _styleSelectedCompact = FilledButton.styleFrom(
+    minimumSize: const Size(0, 32),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    backgroundColor: TeethingColors.accent,
+    foregroundColor: TeethingColors.textPrimary,
+  );
+
+  static final _styleUnselectedCompact = FilledButton.styleFrom(
+    minimumSize: const Size(0, 32),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    backgroundColor: TeethingColors.surface,
+    foregroundColor: TeethingColors.textPrimary,
+  );
+
+  static final _styleSelectedNormal = FilledButton.styleFrom(
+    minimumSize: const Size(0, 36),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    backgroundColor: TeethingColors.accent,
+    foregroundColor: TeethingColors.textPrimary,
+  );
+
+  static final _styleUnselectedNormal = FilledButton.styleFrom(
+    minimumSize: const Size(0, 36),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    backgroundColor: TeethingColors.surface,
+    foregroundColor: TeethingColors.textPrimary,
+  );
+
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
@@ -124,29 +176,21 @@ class _TeethingAgeSelectorState extends State<TeethingAgeSelector> {
               itemBuilder: (context, index) {
                 final choice = widget.choices?[index];
                 final age = choice?.month ?? index;
+                final isSelected = widget.month == age;
+                final compact = widget.choices != null;
+                final style = compact
+                    ? (isSelected ? _styleSelectedCompact : _styleUnselectedCompact)
+                    : (isSelected ? _styleSelectedNormal : _styleUnselectedNormal);
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: Semantics(
-                    selected: widget.month == age,
+                    selected: isSelected,
                     child: FilledButton(
                       key: Key(choice?.id ?? 'reference-age-$age'),
                       onPressed: age <= widget.maxMonth
                           ? () => widget.onChanged(age)
                           : null,
-                      style: FilledButton.styleFrom(
-                        minimumSize: Size(0, widget.choices == null ? 36 : 32),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                        textStyle: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        backgroundColor: widget.month == age
-                            ? TeethingColors.accent
-                            : TeethingColors.surface,
-                        foregroundColor: TeethingColors.textPrimary,
-                      ),
+                      style: style,
                       child: Text(choice?.label ?? '$age tháng'),
                     ),
                   ),

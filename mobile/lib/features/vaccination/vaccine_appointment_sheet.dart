@@ -113,8 +113,19 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
   InputDecoration _decoration(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppColors.surface,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+    fillColor: VaccinationColors.surface,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: VaccinationColors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: VaccinationColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: VaccinationColors.primary, width: 2),
+    ),
   );
 
   @override
@@ -136,24 +147,24 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: VaccinationColors.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            '${v.dose.name} · ${v.dose.doseLabel}',
-            style: const TextStyle(color: AppColors.textSecondary),
+            '${v.dose.name} - ${v.dose.doseLabel}',
+            style: const TextStyle(color: VaccinationColors.textSecondary),
           ),
           const SizedBox(height: 16),
           Material(
-            color: AppColors.primarySoft,
+            color: VaccinationColors.primarySoft,
             borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: ListTile(
               key: const ValueKey('appointment-date'),
               title: const Text(
                 'Ngày hẹn tiêm',
-                style: TextStyle(fontSize: 14, color: AppColors.primaryDark),
+                style: TextStyle(fontSize: 14, color: VaccinationColors.primaryDark),
               ),
               subtitle: Text(
                 _date(_date0),
@@ -165,7 +176,7 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
               ),
               trailing: const Icon(
                 Icons.calendar_month_outlined,
-                color: AppColors.primary,
+                color: VaccinationColors.primary,
               ),
               onTap: _saving ? null : _pick,
             ),
@@ -207,7 +218,7 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
                           p.name,
                           if (p.origin != null) p.origin!,
                           if (p.doseCount != null) '${p.doseCount} liều',
-                        ].join(' · '),
+                        ].join(' - '),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -220,7 +231,8 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
           FilledButton.icon(
             key: const ValueKey('appointment-save'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: VaccinationColors.primary,
+              foregroundColor: Colors.white,
               minimumSize: const Size(0, 52),
             ),
             onPressed: _saving ? null : _save,
@@ -230,7 +242,7 @@ class _VaccineAppointmentSheetState extends State<VaccineAppointmentSheet> {
           if (_existing)
             TextButton(
               onPressed: _saving ? null : _clear,
-              child: const Text('Xóa thông tin đã lưu · dùng ngày dự kiến'),
+              child: const Text('Xóa thông tin đã lưu - dùng ngày dự kiến'),
             ),
         ],
       ),

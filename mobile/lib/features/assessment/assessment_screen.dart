@@ -128,7 +128,10 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: AssessmentColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(
@@ -136,7 +139,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           children: [
             const Align(
               alignment: Alignment.centerLeft,
-              child: AssessmentIconBadge(Icons.play_lesson_outlined, size: 56),
+              child: AssessmentIconBadge(Icons.play_lesson_outlined, size: 52),
             ),
             const SizedBox(height: 16),
             Text(
@@ -144,10 +147,10 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primaryDark,
+                color: AssessmentColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               '${state!['set']['count']} câu hỏi · 5 lĩnh vực phát triển',
               style: assessmentMuted,
@@ -165,15 +168,23 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Chưa quan sát nghĩa là chưa có đủ thông tin để biết bé đã làm được hay chưa.',
-              style: assessmentMuted,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AssessmentColors.primarySoft.withValues(alpha: .5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Chưa quan sát nghĩa là chưa có đủ thông tin để biết bé đã làm được hay chưa.',
+                style: assessmentMuted,
+              ),
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Bắt đầu đánh giá'),
             ),
+            const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Để sau'),
@@ -214,7 +225,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
 
   @override
   Widget build(BuildContext context) => AssessmentScaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: AssessmentColors.background,
     appBar: assessmentAppBar('Đánh giá phát triển'),
     body: !DemoStore.instance.canViewChild(widget.childId, 'assessment')
         ? const NoAccessView(section: 'kết quả đánh giá')
@@ -257,11 +268,6 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
   );
   Widget _overview() {
     final data = state!, a = data['age_months'], draft = data['draft'];
-    final completed =
-        (data['completed_milestones'] as List? ??
-                records.map((r) => r['age_months']).toList())
-            .cast<int>()
-            .toSet();
     final latest = data['latest_completed'] as Map?;
     final isDone = latest != null || records.any((r) => r['age_months'] == a);
     final id =
@@ -269,6 +275,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         records.where((r) => r['age_months'] == a).firstOrNull?['id'];
     final edit = data['can_edit'] == true, unavailable = data['set'] == null;
     final now = DateTime.parse(data['today'].toString());
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       children: [
@@ -311,12 +318,32 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                         '${data['set']['count']} câu hỏi',
                         neutral: true,
                       ),
+                    const AssessmentPill(
+                      '5 lĩnh vực',
+                      neutral: true,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 const AssessmentDomainTrail(),
                 const SizedBox(height: 16),
                 if (draft != null) ...[
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Text('Tiến độ thực hiện', style: assessmentMuted),
+                      Text(
+                        '${(draft['answers'] as Map).length}/${(draft['questions'] as List).length} câu',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AssessmentColors.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   AssessmentProgress(
                     value:
                         (draft['answers'] as Map).length /
@@ -329,10 +356,10 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                       ? 'Đã trả lời ${(draft['answers'] as Map).length}/${(draft['questions'] as List).length} câu. Tiếp tục khi bạn sẵn sàng.'
                       : isDone
                       ? 'Kết quả gần nhất đã được lưu. Bạn có thể xem lại hoặc đánh giá lại trong mốc này.'
-                      : 'Cùng xem bé đang làm được những kỹ năng nào. Không cần làm bù các mốc đã qua.',
+                      : 'Cùng quan sát các kỹ năng vận động, ngôn ngữ và nhận thức của bé ở mốc này.',
                   style: assessmentBody,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 if (draft != null && edit)
                   FilledButton(
                     onPressed: () => _open(draft['id'] as String),
@@ -350,37 +377,58 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
                         : _start,
                     child: const Text('Bắt đầu đánh giá'),
                   ),
-                if (isDone && draft == null && edit && !unavailable)
-                  TextButton(
+                if (isDone && draft == null && edit && !unavailable) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton(
                     onPressed: data['guidance_required'] == true && !guidance
                         ? null
                         : _start,
                     child: const Text('Đánh giá lại'),
                   ),
-                if (unavailable && draft == null)
+                ],
+                if (unavailable && draft == null) ...[
+                  const SizedBox(height: 8),
                   const Text(
                     'Chưa có bộ câu hỏi đang xuất bản cho mốc này.',
                     style: assessmentMuted,
                   ),
-                if (!edit)
+                ],
+                if (!edit) ...[
+                  const SizedBox(height: 8),
                   const Text(
                     'Bạn có quyền xem. Người có quyền chỉnh sửa có thể bắt đầu bài.',
                     style: assessmentMuted,
                   ),
+                ],
                 if (data['guidance_required'] == true && draft == null) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Bé sinh non: hãy trao đổi với nhân viên y tế về cách dùng tuổi trước khi chọn bài. App không tự tính tuổi hiệu chỉnh.',
-                    style: assessmentBody,
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    value: guidance,
-                    onChanged: (v) => setState(() => guidance = v ?? false),
-                    title: const Text(
-                      'Đã được hướng dẫn dùng tuổi theo ngày sinh cho bài này.',
-                      style: assessmentMuted,
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AssessmentColors.notObservedSoft.withValues(alpha: .5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AssessmentColors.notObserved.withValues(alpha: .3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Bé sinh non: hãy trao đổi với nhân viên y tế về cách dùng tuổi trước khi chọn bài. App không tự tính tuổi hiệu chỉnh.',
+                          style: assessmentBody,
+                        ),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: guidance,
+                          onChanged: (v) => setState(() => guidance = v ?? false),
+                          title: const Text(
+                            'Đã được hướng dẫn dùng tuổi theo ngày sinh cho bài này.',
+                            style: assessmentMuted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -388,45 +436,45 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        const Row(
-          children: [
-            AssessmentIconBadge(Icons.route_outlined, size: 36),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Các mốc phát triển',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        const Text('Chọn mốc để xem thông tin.', style: assessmentMuted),
-        const SizedBox(height: 12),
-        AssessmentMilestones(
-          milestones: (data['milestones'] as List).map(assessmentMap).toList(),
-          today: now,
-          currentAge: a as int?,
-          completed: completed,
-          draftAge: draft?['age_months'] as int?,
-          onHistory: (age) {
-            setState(() {
-              historyTab = true;
-              filter = age;
-            });
-            _load();
-          },
-        ),
         const SizedBox(height: 16),
-        if ((data['past_drafts'] as List? ?? []).isNotEmpty)
+        AssessmentCard(
+          title: 'Lưu ý & hướng dẫn làm bài',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _tipRow(
+                Icons.mood_rounded,
+                'Quan sát tự nhiên, không ép buộc',
+                'Quan sát bé qua các hoạt động sinh hoạt, vui chơi hàng ngày. Chỉ thực hiện khi bé vui vẻ, thoải mái và hợp tác.',
+              ),
+              _tipRow(
+                Icons.fact_check_outlined,
+                'Cách lựa chọn câu trả lời',
+                '• Đã làm được: Bé làm thường xuyên, thuần thục.\n• Chưa làm được: Bé chưa thể thực hiện được.\n• Chưa quan sát: Chưa có dịp thử hoặc chưa quan sát thấy.',
+              ),
+              _tipRow(
+                Icons.play_circle_outline_rounded,
+                'Hướng dẫn & video minh họa',
+                'Mỗi kỹ năng đều kèm mô tả chi tiết, hình ảnh hoặc video minh họa để ba mẹ tham khảo và đối chiếu chính xác.',
+              ),
+              _tipRow(
+                Icons.save_as_rounded,
+                'Tự động lưu & linh hoạt thời gian',
+                'Mỗi câu trả lời được lưu lại ngay lập tức. Ba mẹ có thể tạm dừng bất kỳ lúc nào và tiếp tục hoàn thành sau.',
+                isLast: true,
+              ),
+            ],
+          ),
+        ),
+        if ((data['past_drafts'] as List? ?? []).isNotEmpty) ...[
+          const SizedBox(height: 16),
           AssessmentCard(
             child: ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: const Text('Bài dở ở mốc cũ', style: assessmentBody),
               leading: const Icon(
                 Icons.bookmark_border_rounded,
-                color: AppColors.primary,
+                color: AssessmentColors.primary,
               ),
               subtitle: const Text(
                 'Giữ để xem, không cần làm bù.',
@@ -443,9 +491,52 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
               ],
             ),
           ),
+        ],
       ],
     );
   }
+
+  Widget _tipRow(
+    IconData icon,
+    String title,
+    String description, {
+    bool isLast = false,
+  }) => Padding(
+    padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          margin: const EdgeInsets.only(top: 2),
+          decoration: BoxDecoration(
+            color: AssessmentColors.primarySoft,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: AssessmentColors.primaryDark),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AssessmentColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(description, style: assessmentMuted),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _history() => ListView(
     padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),

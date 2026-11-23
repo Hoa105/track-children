@@ -1,4 +1,3 @@
-import 'vaccination_style.dart';
 
 import 'package:flutter/material.dart';
 
@@ -12,6 +11,7 @@ import 'vaccination_details.dart';
 import 'vaccination_history.dart';
 import 'supplement_vaccine_editor.dart';
 import 'vaccine_appointment_sheet.dart';
+import 'vaccination_style.dart' show VaccinationTheme;
 
 String _date(DateTime d) => '${d.day}/${d.month}/${d.year}';
 DateTime get _today {
@@ -51,30 +51,12 @@ class _VaccinationScreenState extends State<VaccinationScreen>
   String get _childId => widget.childId;
   int _view = 0;
   int? _selectedAge;
-  bool _compactAdd = false;
-  double _scrollTravel = 0;
 
   @override
   void initState() {
     super.initState();
     // Lấy sổ tiêm mới nhất từ backend (người chăm sóc khác có thể đã cập nhật).
     DemoStore.instance.syncVaccinations(_childId);
-  }
-
-  bool _onScroll(ScrollNotification notification) {
-    if (notification.depth != 0 || notification is! ScrollUpdateNotification) {
-      return false;
-    }
-    final delta = notification.scrollDelta ?? 0;
-    if (delta.sign != _scrollTravel.sign) _scrollTravel = 0;
-    _scrollTravel += delta;
-    final compact = notification.metrics.pixels <= 24 || _scrollTravel < -48
-        ? false
-        : notification.metrics.pixels > 100 && _scrollTravel > 40
-        ? true
-        : _compactAdd;
-    if (compact != _compactAdd) setState(() => _compactAdd = compact);
-    return false;
   }
 
   Future<void> _details(ScheduledVaccine v) async {
@@ -84,7 +66,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
       showDragHandle: true,
       isScrollControlled: true,
       constraints: const BoxConstraints(maxWidth: 640),
-      backgroundColor: AppColors.background,
+      backgroundColor: VaccinationColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -101,7 +83,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
         useSafeArea: true,
         isScrollControlled: true,
         showDragHandle: true,
-        backgroundColor: AppColors.background,
+        backgroundColor: VaccinationColors.background,
         constraints: const BoxConstraints(maxWidth: 640),
         builder: (context) =>
             VaccineAppointmentSheet(childId: _childId, vaccine: v),
@@ -122,7 +104,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
       isDismissible: false,
       enableDrag: false,
       useSafeArea: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: VaccinationColors.background,
       constraints: const BoxConstraints(maxWidth: 640),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -155,7 +137,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
     isDismissible: false,
     enableDrag: false,
     useSafeArea: true,
-    backgroundColor: AppColors.background,
+    backgroundColor: VaccinationColors.background,
     constraints: const BoxConstraints(maxWidth: 640),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -190,7 +172,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: VaccinationColors.background,
       constraints: const BoxConstraints(maxWidth: 640),
       builder: (context) => FractionallySizedBox(
         heightFactor: .75,
@@ -207,7 +189,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: VaccinationColors.textPrimary,
                       ),
                     ),
                   ),
@@ -223,18 +205,18 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: selected == group.key
-                        ? AppColors.primarySoft
-                        : AppColors.surface,
+                        ? VaccinationColors.primarySoft
+                        : VaccinationColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     clipBehavior: Clip.antiAlias,
                     child: ListTile(
                       selected: selected == group.key,
-                      selectedColor: AppColors.primaryDark,
+                      selectedColor: VaccinationColors.primaryDark,
                       title: Text(
                         VaccineDose.ageLabelFor(group.key),
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: VaccinationColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
@@ -248,7 +230,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
+                          color: VaccinationColors.primaryDark,
                         ),
                       ),
                       onTap: () => Navigator.pop(context, group.key),
@@ -263,8 +245,6 @@ class _VaccinationScreenState extends State<VaccinationScreen>
     if (age != null && mounted) {
       setState(() {
         _selectedAge = age;
-        _compactAdd = false;
-        _scrollTravel = 0;
       });
     }
   }
@@ -276,7 +256,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
       isScrollControlled: true,
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 640),
-      backgroundColor: AppColors.background,
+      backgroundColor: VaccinationColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -310,7 +290,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: VaccinationColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -337,12 +317,12 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                       next == null
                           ? 'Hoàn thành trong lịch'
                           : needsReview
-                          ? 'Chưa ghi nhận · ${next.dose.doseLabel}'
-                          : '${next.dose.doseLabel} · ${_date(next.dueDate)}',
+                          ? 'Chưa ghi nhận - ${next.dose.doseLabel}'
+                          : '${next.dose.doseLabel} - ${_date(next.dueDate)}',
                       style: TextStyle(
                         fontSize: 13,
                         color: needsReview
-                            ? const Color(0xFF996519)
+                            ? VaccinationColors.attention
                             : next != null
                             ? VaccinationColors.planned
                             : VaccinationColors.secondary,
@@ -360,7 +340,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+                  color: VaccinationColors.primaryDark,
                 ),
               ),
               const Icon(
@@ -380,28 +360,32 @@ class _VaccinationScreenState extends State<VaccinationScreen>
     builder: (context, _) {
       final child = DemoStore.instance.childById(_childId);
       if (child == null) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text(
-              'Sổ tiêm chủng',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+        return VaccinationTheme(
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text(
+                'Sổ tiêm chủng',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: VaccinationColors.textPrimary,
+                ),
               ),
             ),
+            body: const Center(child: Text('Không tìm thấy hồ sơ bé.')),
           ),
-          body: const Center(child: Text('Không tìm thấy hồ sơ bé.')),
         );
       }
       if (!DemoStore.instance.canViewChild(_childId, 'vaccination')) {
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            title: const Text('Sổ tiêm chủng'),
-            backgroundColor: AppColors.background,
+        return VaccinationTheme(
+          child: Scaffold(
+            backgroundColor: VaccinationColors.background,
+            appBar: AppBar(
+              title: const Text('Sổ tiêm chủng'),
+              backgroundColor: VaccinationColors.background,
+            ),
+            body: const NoAccessView(section: 'sổ tiêm chủng'),
           ),
-          body: const NoAccessView(section: 'sổ tiêm chủng'),
         );
       }
       final canEdit = DemoStore.instance.canEditChild(_childId, 'vaccination');
@@ -454,55 +438,50 @@ class _VaccinationScreenState extends State<VaccinationScreen>
           .where((v) => v.record == null && v.dueDate.isAfter(_today))
           .firstOrNull;
       final priority = appointments.firstOrNull ?? future;
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text(
-            'Sổ tiêm chủng',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+      return VaccinationTheme(
+        child: Scaffold(
+          backgroundColor: VaccinationColors.background,
+          appBar: AppBar(
+            title: const Text(
+              'Sổ tiêm chủng',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: VaccinationColors.textPrimary,
+              ),
             ),
-          ),
-          backgroundColor: AppColors.background,
-          scrolledUnderElevation: 0,
-          actions: [
-            if (canEdit) Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Tooltip(
-                message: 'Thêm vắc-xin bổ sung',
-                child: FilledButton(
-                  key: const ValueKey('vaccination-add'),
-                  onPressed: _add,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    minimumSize: const Size(44, 42),
-                  ),
-                  child: AnimatedSize(
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 220),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.add_rounded, size: 21),
-                        if (!_compactAdd) ...[
-                          const SizedBox(width: 5),
-                          const Text('Thêm'),
-                        ],
-                      ],
+            backgroundColor: VaccinationColors.background,
+            scrolledUnderElevation: 0,
+            actions: [
+              if (canEdit)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Tooltip(
+                    message: 'Thêm vắc-xin bổ sung',
+                    child: FilledButton(
+                      key: const ValueKey('vaccination-add'),
+                      onPressed: _add,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: VaccinationColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Thêm',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        body: NotificationListener<ScrollNotification>(
-          onNotification: _onScroll,
-          child: SafeArea(
+            ],
+          ),
+          body: SafeArea(
             top: false,
             child: Center(
               child: ConstrainedBox(
@@ -513,11 +492,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: VaccinationTabs(
                         index: _view,
-                        onChanged: (i) => setState(() {
-                          _view = i;
-                          _compactAdd = false;
-                          _scrollTravel = 0;
-                        }),
+                        onChanged: (i) => setState(() => _view = i),
                       ),
                     ),
                     Expanded(
@@ -556,7 +531,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       color:
-                                                          AppColors.primaryDark,
+                                                          VaccinationColors.primaryDark,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 4),
@@ -570,7 +545,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       color:
-                                                          AppColors.primaryDark,
+                                                          VaccinationColors.primaryDark,
                                                     ),
                                                   ),
                                                   const Text(
@@ -578,7 +553,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color:
-                                                          AppColors.primaryDark,
+                                                          VaccinationColors.primaryDark,
                                                     ),
                                                   ),
                                                 ],
@@ -637,33 +612,18 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                           ],
                                         ),
                                         const SizedBox(height: 12),
-                                        TweenAnimationBuilder<double>(
-                                          tween: Tween(
-                                            begin: 0,
-                                            end: due.isEmpty
-                                                ? 0
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: LinearProgressIndicator(
+                                            value: due.isEmpty
+                                                ? 0.0
                                                 : done / due.length,
+                                            minHeight: 6,
+                                            color: VaccinationColors.primary,
+                                            backgroundColor:
+                                                VaccinationColors.primarySoft,
                                           ),
-                                          duration:
-                                              MediaQuery.disableAnimationsOf(
-                                                context,
-                                              )
-                                              ? Duration.zero
-                                              : const Duration(
-                                                  milliseconds: 450,
-                                                ),
-                                          builder: (context, value, _) =>
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: LinearProgressIndicator(
-                                                  value: value,
-                                                  minHeight: 6,
-                                                  color: AppColors.primary,
-                                                  backgroundColor:
-                                                      AppColors.primarySoft,
-                                                ),
-                                              ),
                                         ),
                                         const SizedBox(height: 6),
                                         const Text(
@@ -678,63 +638,135 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                   ),
                                   const SizedBox(height: 12),
                                   if (priority != null) ...[
-                                    Material(
-                                      color: priority.hasAppointment
-                                          ? AppColors.purpleSurfaceLight
-                                          : VaccinationColors.plannedSoft,
-                                      borderRadius: BorderRadius.circular(20),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: ListTile(
-                                        contentPadding: const EdgeInsets.all(
-                                          16,
-                                        ),
-                                        title: Text.rich(
-                                          TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text: priority.hasAppointment
-                                                    ? 'Lịch hẹn'
-                                                    : priority.dueDate.isAfter(
-                                                        _today,
-                                                      )
-                                                    ? 'Dự kiến'
-                                                    : 'Cần kiểm tra',
-                                              ),
-                                              if (priority.hasAppointment ||
-                                                  priority.dueDate.isAfter(
-                                                    _today,
-                                                  ))
-                                                TextSpan(
-                                                  text:
-                                                      ' · ${_date(priority.dueDate)}',
-                                                  style: const TextStyle(
-                                                    color: VaccinationColors
-                                                        .planned,
+                                    Builder(
+                                      builder: (context) {
+                                        final isOverdue = !priority.hasAppointment &&
+                                            !priority.dueDate.isAfter(_today);
+                                        final isAppointment = priority.hasAppointment;
+                                        final cardBg = isOverdue
+                                            ? VaccinationColors.attentionSoft
+                                            : VaccinationColors.plannedSoft;
+                                        final badgeBg = isOverdue
+                                            ? VaccinationColors.attention
+                                            : (isAppointment
+                                                ? VaccinationColors.primary
+                                                : VaccinationColors.planned);
+                                        final badgeIcon = isOverdue
+                                            ? Icons.warning_amber_rounded
+                                            : (isAppointment
+                                                ? Icons.event_available_rounded
+                                                : Icons.schedule_rounded);
+                                        final badgeLabel = isAppointment
+                                            ? 'Lịch hẹn'
+                                            : (isOverdue ? 'Cần kiểm tra' : 'Dự kiến');
+                                        return Material(
+                                          color: cardBg,
+                                          borderRadius: BorderRadius.circular(20),
+                                          clipBehavior: Clip.antiAlias,
+                                          child: InkWell(
+                                            onTap: () => _details(priority),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width: 44,
+                                                    height: 44,
+                                                    decoration: BoxDecoration(
+                                                      color: badgeBg.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(14),
+                                                    ),
+                                                    child: Icon(badgeIcon, color: badgeBg, size: 22),
                                                   ),
-                                                ),
-                                            ],
-                                          ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                        subtitle: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 6,
-                                          ),
-                                          child: Text(
-                                            '${priority.dose.name} · ${priority.dose.doseLabel}',
-                                            style: const TextStyle(
-                                              color: AppColors.textSecondary,
+                                                  const SizedBox(width: 14),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Wrap(
+                                                          spacing: 8,
+                                                          runSpacing: 4,
+                                                          crossAxisAlignment:
+                                                              WrapCrossAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 2,
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: badgeBg,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            8),
+                                                              ),
+                                                              child: Text(
+                                                                badgeLabel,
+                                                                style:
+                                                                    const TextStyle(
+                                                                  fontSize: 11,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w700,
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              _date(priority
+                                                                  .dueDate),
+                                                              style: TextStyle(
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: isOverdue
+                                                                    ? VaccinationColors
+                                                                        .attention
+                                                                    : VaccinationColors
+                                                                        .primaryDark,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 6,
+                                                        ),
+                                                        Text(
+                                                          '${priority.dose.name} - ${priority.dose.doseLabel}',
+                                                          maxLines: 2,
+                                                          overflow:
+                                                              TextOverflow
+                                                                  .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color:
+                                                                VaccinationColors
+                                                                    .textPrimary,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const Icon(
+                                                    Icons.chevron_right_rounded,
+                                                    color: VaccinationColors.secondary,
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        trailing: const Icon(
-                                          Icons.chevron_right,
-                                        ),
-                                        onTap: () => _details(priority),
-                                      ),
+                                        );
+                                      },
                                     ),
                                     const SizedBox(height: 16),
                                   ],
@@ -759,19 +791,22 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                       ),
                                     ),
                                   if (_view == 0) ...[
-                                    OverflowBar(
-                                      alignment: MainAxisAlignment.spaceBetween,
-                                      overflowAlignment:
-                                          OverflowBarAlignment.start,
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          selectedAge == null
-                                              ? 'Chưa có mốc'
-                                              : 'Mốc ${VaccineDose.ageLabelFor(selectedAge).toLowerCase()}',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
+                                        Expanded(
+                                          child: Text(
+                                            selectedAge == null
+                                                ? 'Chưa có mốc'
+                                                : 'Mốc ${VaccineDose.ageLabelFor(selectedAge).toLowerCase()}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w700,
+                                              color: VaccinationColors.textPrimary,
+                                            ),
                                           ),
                                         ),
                                         TextButton.icon(
@@ -797,7 +832,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                       child: Text(
                                         '${selectedDoses.where((v) => v.record != null).length}/${selectedDoses.length} mũi đã ghi nhận',
                                         style: const TextStyle(
-                                          color: AppColors.primaryDark,
+                                          color: VaccinationColors.primaryDark,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -817,7 +852,6 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                                         .recordedSoft,
                                               borderRadius:
                                                   BorderRadius.circular(18),
-                                              clipBehavior: Clip.antiAlias,
                                               child: Padding(
                                                 padding:
                                                     const EdgeInsets.symmetric(
@@ -843,7 +877,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
+                                            color: VaccinationColors.textPrimary,
                                           ),
                                         ),
                                         const Text(
@@ -870,7 +904,6 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                                         .recordedSoft,
                                               borderRadius:
                                                   BorderRadius.circular(18),
-                                              clipBehavior: Clip.antiAlias,
                                               child: Padding(
                                                 padding:
                                                     const EdgeInsets.symmetric(
@@ -890,7 +923,7 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
+                                        color: VaccinationColors.textPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -907,7 +940,6 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                           borderRadius: BorderRadius.circular(
                                             18,
                                           ),
-                                          clipBehavior: Clip.antiAlias,
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 12,
@@ -948,40 +980,82 @@ class _DoseEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = vaccine;
     final pending = v.record == null;
+    final isOverdue = pending && !v.dueDate.isAfter(_today) && !v.hasAppointment;
+    final statusColor = !pending
+        ? VaccinationColors.recorded
+        : (isOverdue ? VaccinationColors.attention : VaccinationColors.planned);
+    final statusBg = !pending
+        ? VaccinationColors.recordedSoft
+        : (isOverdue ? VaccinationColors.attentionSoft : VaccinationColors.plannedSoft);
     return Column(
       children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(vertical: 6),
-          leading: Icon(
-            pending ? Icons.circle_outlined : Icons.check_circle,
-            size: 18,
-            color: pending
-                ? VaccinationColors.attention
-                : VaccinationColors.recorded,
+          contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          leading: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              !pending
+                  ? Icons.check_circle_rounded
+                  : (isOverdue
+                      ? Icons.warning_amber_rounded
+                      : (v.hasAppointment
+                          ? Icons.event_available_rounded
+                          : Icons.schedule_rounded)),
+              size: 20,
+              color: statusColor,
+            ),
           ),
           title: Text(
             v.dose.name,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: VaccinationColors.textPrimary,
             ),
           ),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${v.dose.doseLabel}${v.dose.isCustom || v.dose.isTcmr ? "" : " · Dịch vụ"}${pending ? " · ${v.hasAppointment ? 'Hẹn' : 'Dự kiến'} ${_date(v.dueDate)}" : ""}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: pending
-                        ? VaccinationColors.planned
-                        : VaccinationColors.recorded,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      v.dose.doseLabel,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
+                    ),
+                    if (!v.dose.isCustom)
+                      Text(
+                        v.dose.isTcmr ? '- TCMR' : '- Dịch vụ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: VaccinationColors.secondary,
+                        ),
+                      ),
+                    if (pending)
+                      Text(
+                        '- ${v.hasAppointment ? "Hẹn" : "Dự kiến"} ${_date(v.dueDate)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOverdue
+                              ? VaccinationColors.attention
+                              : VaccinationColors.secondary,
+                          fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal,
+                        ),
+                      ),
+                  ],
                 ),
                 if (v.record?.reaction.isNotEmpty == true)
                   Padding(
@@ -1005,7 +1079,7 @@ class _DoseEntry extends StatelessWidget {
           ),
           onTap: onTap,
         ),
-        if (showDivider) const Divider(height: 1, color: AppColors.border),
+        if (showDivider) const Divider(height: 1, color: VaccinationColors.border),
       ],
     );
   }
@@ -1017,7 +1091,7 @@ class _BottomAction extends StatelessWidget {
   final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.background,
+    color: VaccinationColors.background,
     child: SafeArea(
       top: false,
       child: Center(
@@ -1030,15 +1104,21 @@ class _BottomAction extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: VaccinationColors.primary,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(0, 52),
+                  elevation: 2,
+                  shadowColor: VaccinationColors.primary.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 onPressed: onPressed,
-                icon: Icon(label == 'Thêm' ? Icons.add : Icons.check_rounded),
-                label: Text(label),
+                icon: Icon(label == 'Thêm' ? Icons.add_rounded : Icons.check_rounded),
+                label: Text(
+                  label,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),
@@ -1233,7 +1313,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
         title: Text(
           _custom ? 'Xóa mũi tiêm?' : 'Bỏ đánh dấu đã tiêm?',
           style: const TextStyle(
-            color: AppColors.textPrimary,
+            color: VaccinationColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1278,7 +1358,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
     padding: const EdgeInsets.only(bottom: 10),
     child: TextFormField(
       controller: controller,
-      style: const TextStyle(color: AppColors.primaryDark),
+      style: const TextStyle(color: VaccinationColors.primaryDark),
       readOnly: !_editing || _saving,
       minLines: lines > 1 ? 3 : 1,
       maxLines: lines > 1 ? 5 : 1,
@@ -1293,25 +1373,25 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
           vertical: 12,
         ),
         helperText: required ? 'Bắt buộc' : null,
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        labelStyle: const TextStyle(color: VaccinationColors.textSecondary),
         floatingLabelStyle: const TextStyle(
-          color: AppColors.primary,
+          color: VaccinationColors.primary,
           fontWeight: FontWeight.w700,
         ),
         alignLabelWithHint: lines > 1,
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: VaccinationColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: VaccinationColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: VaccinationColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: const BorderSide(color: VaccinationColors.primary, width: 2),
         ),
       ),
       validator: (value) => required && (value == null || value.trim().isEmpty)
@@ -1327,7 +1407,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
       if (!didPop) _requestClose();
     },
     child: Material(
-      color: AppColors.background,
+      color: VaccinationColors.background,
       child: Form(
         key: _form,
         onChanged: () => setState(() {}),
@@ -1339,7 +1419,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: VaccinationColors.border,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -1355,7 +1435,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: VaccinationColors.textPrimary,
                       ),
                     ),
                   ),
@@ -1407,7 +1487,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
+                          color: VaccinationColors.primarySoft,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(
@@ -1418,7 +1498,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                                color: VaccinationColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -1428,7 +1508,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: _given
-                                    ? AppColors.primary
+                                    ? VaccinationColors.primary
                                     : VaccinationColors.planned,
                               ),
                             ),
@@ -1446,7 +1526,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                             decoration: InputDecoration(
                               labelText: 'Loại vắc-xin (tùy chọn)',
                               filled: true,
-                              fillColor: AppColors.surface,
+                              fillColor: VaccinationColors.surface,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -1465,7 +1545,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                                       if (p.origin != null) p.origin!,
                                       if (p.doseCount != null)
                                         '${p.doseCount} liều',
-                                    ].join(' · '),
+                                    ].join(' - '),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -1477,11 +1557,11 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                         ),
                     ],
                     Material(
-                      color: AppColors.primarySoft,
+                      color: VaccinationColors.primarySoft,
                       clipBehavior: Clip.antiAlias,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppColors.primary),
+                        side: const BorderSide(color: VaccinationColors.primary),
                       ),
                       child: ListTile(
                         shape: RoundedRectangleBorder(
@@ -1495,7 +1575,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                           _given ? 'Ngày tiêm' : 'Ngày hẹn tiêm',
                           style: const TextStyle(
                             fontSize: 14,
-                            color: AppColors.primaryDark,
+                            color: VaccinationColors.primaryDark,
                           ),
                         ),
                         subtitle: Padding(
@@ -1506,14 +1586,14 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: _given
-                                  ? AppColors.primaryDark
+                                  ? VaccinationColors.primaryDark
                                   : VaccinationColors.planned,
                             ),
                           ),
                         ),
                         trailing: const Icon(
                           Icons.calendar_month_outlined,
-                          color: AppColors.primary,
+                          color: VaccinationColors.primary,
                         ),
                         onTap: _editing && !_saving ? _pick : null,
                       ),
@@ -1523,7 +1603,7 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                       child: Text(
                         _given
                             ? 'Ngày tiêm thực tế của bé'
-                            : 'Lịch tự lưu · Chưa xác nhận với cơ sở tiêm',
+                            : 'Lịch tự lưu - Chưa xác nhận với cơ sở tiêm',
                         style: const TextStyle(
                           fontSize: 13,
                           height: 1.5,
@@ -1540,20 +1620,20 @@ class _VaccineEditorScreenState extends State<VaccineEditorScreen> {
                       collapsedShape: const Border(),
                       leading: const Icon(
                         Icons.notes_rounded,
-                        color: AppColors.primary,
+                        color: VaccinationColors.primary,
                       ),
                       title: const Text(
                         'Thêm thông tin',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: VaccinationColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
                         _given
-                            ? 'Tùy chọn · Nơi tiêm, phản ứng, ghi chú'
-                            : 'Tùy chọn · Phòng bệnh và ghi chú',
+                            ? 'Tùy chọn - Nơi tiêm, phản ứng, ghi chú'
+                            : 'Tùy chọn - Phòng bệnh và ghi chú',
                         style: const TextStyle(fontSize: 13),
                       ),
                       children: [

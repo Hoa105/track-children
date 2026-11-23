@@ -227,9 +227,12 @@ class _HomeBackgroundSectionState extends State<HomeBackgroundSection> {
                 child: Material(
                   color: Colors.white,
                   shape: const CircleBorder(
-                    side: BorderSide(color: AppColors.primarySoft),
+                    side: BorderSide(
+                      color: HomeColors.iconBackground,
+                      width: 1.5,
+                    ),
                   ),
-                  elevation: 1,
+                  elevation: 2,
                   shadowColor: const Color(0x26194C3C),
                   child: Semantics(
                     container: true,
@@ -252,6 +255,7 @@ class _HomeBackgroundSectionState extends State<HomeBackgroundSection> {
                         child: const HomeUiIcon(
                           HomeUiIconName.photoSparkles,
                           size: 30,
+                          color: HomeColors.primary,
                         ),
                       ),
                     ),

@@ -5,7 +5,6 @@ import 'package:track_children/services/demo_store.dart';
 import 'package:track_children/services/app_notifications.dart';
 import 'package:track_children/features/notifications/notifications_screen.dart';
 import 'package:track_children/features/notifications/notification_settings_screen.dart';
-import 'package:track_children/features/notifications/growth_reminder_settings_screen.dart';
 import 'package:track_children/features/assessment/assessment_reminders.dart';
 
 void main() {

@@ -46,9 +46,9 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                     child: Text(
                       'Số ảnh',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        color: HomeColors.ink,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -58,7 +58,7 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: const Color(0xFFE2EBE0)),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(3),
@@ -89,11 +89,13 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                             ),
                             backgroundColor: WidgetStateProperty.resolveWith(
                               (states) => states.contains(WidgetState.selected)
-                                  ? AppColors.primarySoft
+                                  ? HomeColors.primary
                                   : Colors.transparent,
                             ),
-                            foregroundColor: const WidgetStatePropertyAll(
-                              AppColors.primaryDark,
+                            foregroundColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? Colors.white
+                                  : HomeColors.ink,
                             ),
                             minimumSize: const WidgetStatePropertyAll(
                               Size(44, 40),
@@ -104,7 +106,7 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                             textStyle: WidgetStatePropertyAll(
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
@@ -141,8 +143,9 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                           ? 'Chạm một ô để thay ảnh'
                           : 'Chọn ảnh cho ô ${selectedSlot + 1}',
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: HomeColors.reminderCta,
                       ),
                     ),
                   ),
@@ -151,12 +154,23 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                     liveRegion: true,
                     label: 'Đã chọn $selected trên ${session.mode.count} ảnh',
                     child: ExcludeSemantics(
-                      child: Text(
-                        '$selected/${session.mode.count}',
-                        style: const TextStyle(
-                          color: AppColors.primaryDark,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: HomeColors.reminderBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: HomeColors.iconBackground),
+                        ),
+                        child: Text(
+                          '$selected/${session.mode.count}',
+                          style: const TextStyle(
+                            color: HomeColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
@@ -166,9 +180,9 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
             ],
           ),
         ),
-        const Divider(height: 1, color: AppColors.border),
+        const Divider(height: 1, color: Color(0xFFE2EBE0)),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
+          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
           child: Row(
             children: [
               Expanded(
@@ -180,8 +194,8 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                         text: '  ${session.shots.length}',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w400,
+                          color: HomeColors.reminderCta,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -190,21 +204,25 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    color: HomeColors.ink,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               TextButton.icon(
                 onPressed: busy ? null : onAddMore,
-                icon: const HomeUiIcon(HomeUiIconName.camera, size: 18),
+                icon: const HomeUiIcon(
+                  HomeUiIconName.camera,
+                  size: 18,
+                  color: HomeColors.primary,
+                ),
                 label: const Text('Chụp thêm'),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: HomeColors.primary,
                   minimumSize: const Size(0, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   textStyle: Theme.of(context).textTheme.labelLarge
-                      ?.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+                      ?.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -226,10 +244,20 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
             ),
           ),
         ),
-        Material(
-          color: Colors.white,
+        Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x1029451E),
+                blurRadius: 10,
+                offset: Offset(0, -3),
+              ),
+            ],
+          ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -250,9 +278,15 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                   key: const ValueKey('photobooth-select-continue'),
                   onPressed: busy || !session.complete ? null : onContinue,
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: HomeColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 1,
                     textStyle: Theme.of(context).textTheme.labelLarge
-                        ?.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                        ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   child: Text(busy ? 'Đang mở bộ ảnh…' : 'Trang trí ảnh'),
                 ),
@@ -274,7 +308,9 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
       selected: active,
       button: true,
       child: Material(
-        color: active ? AppColors.primarySoft : const Color(0xFFF0EDE5),
+        color: active
+            ? HomeColors.reminderBackground.withValues(alpha: 0.6)
+            : const Color(0xFFF4F6F1),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           key: ValueKey('photobooth-slot-$slot'),
@@ -286,8 +322,8 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: active ? AppColors.primary : AppColors.border,
-                width: active ? 2 : 1,
+                color: active ? HomeColors.primary : const Color(0xFFE2EBE0),
+                width: active ? 2.5 : 1,
               ),
             ),
             child: ClipRRect(
@@ -298,10 +334,10 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                         '${slot + 1}',
                         style: TextStyle(
                           color: active
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? HomeColors.primary
+                              : HomeColors.reminderCta,
                           fontSize: 22,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     )
@@ -332,7 +368,7 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
       selected: selected,
       button: true,
       child: Material(
-        color: AppColors.primarySoft,
+        color: HomeColors.reminderBackground,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -347,7 +383,7 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary, width: 3),
+                      border: Border.all(color: HomeColors.primary, width: 3),
                     ),
                   ),
                 ),
@@ -378,13 +414,20 @@ class PhotoBoothPhotoSelection extends StatelessWidget {
     constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
     padding: const EdgeInsets.symmetric(horizontal: 4),
     decoration: BoxDecoration(
-      color: selected ? AppColors.primary : Colors.white,
+      color: selected ? HomeColors.primary : Colors.white,
       shape: BoxShape.circle,
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black26,
+          blurRadius: 4,
+          offset: Offset(0, 1),
+        ),
+      ],
     ),
     child: Text(
       label,
       style: TextStyle(
-        color: selected ? Colors.white : AppColors.primaryDark,
+        color: selected ? Colors.white : HomeColors.ink,
         fontSize: 12,
         fontWeight: FontWeight.w800,
       ),

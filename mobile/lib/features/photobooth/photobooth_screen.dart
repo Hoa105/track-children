@@ -102,15 +102,42 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
         builder: (context) {
           _dialogRoute = ModalRoute.of(context);
           return AlertDialog(
-            title: Text(title),
-            content: Text(message),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            backgroundColor: HomeColors.surface,
+            title: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: HomeColors.ink,
+              ),
+            ),
+            content: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                color: HomeColors.reminderCta,
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: HomeColors.ink,
+                ),
                 child: const Text('Ở lại'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: HomeColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
                 child: Text(confirm),
               ),
             ],
@@ -188,8 +215,11 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
           if (!didPop) _back();
         },
         child: Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: HomeColors.background,
           appBar: AppBar(
+            backgroundColor: HomeColors.background,
+            foregroundColor: HomeColors.ink,
+            elevation: 0,
             title: Text(
               idle
                   ? 'Photobooth của bé'
@@ -198,13 +228,18 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
                   : edit
                   ? 'Trang trí ảnh'
                   : 'Chụp Photobooth',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: HomeColors.ink,
+              ),
             ),
             leading: IconButton(
               tooltip: edit || (_controller.hasShots && !review)
                   ? 'Quay lại chọn ảnh'
                   : 'Thoát chụp ảnh',
               onPressed: _leaving ? null : _back,
+              color: HomeColors.ink,
               icon: const Icon(Icons.close_rounded),
             ),
             actions: [
@@ -222,6 +257,7 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
                   onPressed: _controller.canSwitch && !_leaving
                       ? _controller.switchLens
                       : null,
+                  color: HomeColors.primary,
                   icon: const Icon(Icons.cameraswitch_outlined),
                 ),
             ],
@@ -231,7 +267,11 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
             child: AbsorbPointer(
               absorbing: _leaving,
               child: _leaving
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: HomeColors.primary,
+                      ),
+                    )
                   : idle
                   ? _startScreen()
                   : review
@@ -291,55 +331,145 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
-                'Chọn thời lượng, cùng bé đổi dáng nhé!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: HomeColors.reminderBackground.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: HomeColors.iconBackground),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 20,
+                      color: HomeColors.primary,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Chọn thời lượng, cùng bé đổi dáng nhé!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: HomeColors.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               for (final duration in PhotoBoothDuration.values)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Material(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    color: _controller.session.duration == duration
+                        ? HomeColors.reminderBackground.withValues(alpha: 0.6)
+                        : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: _controller.session.duration == duration
+                            ? HomeColors.primary
+                            : const Color(0xFFE2EBE0),
+                        width: _controller.session.duration == duration ? 2 : 1,
+                      ),
+                    ),
+                    elevation: _controller.session.duration == duration ? 1 : 0,
+                    shadowColor: const Color(0x1429451E),
                     clipBehavior: Clip.antiAlias,
                     child: RadioListTile<PhotoBoothDuration>(
                       key: ValueKey('photobooth-duration-${duration.seconds}'),
                       value: duration,
+                      activeColor: HomeColors.primary,
                       title: Text(
                         '${duration.seconds} giây',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: HomeColors.ink,
+                        ),
                       ),
-                      subtitle: Text('Khoảng ${duration.estimatedPhotos} ảnh'),
+                      subtitle: Text(
+                        'Khoảng ${duration.estimatedPhotos} ảnh',
+                        style: const TextStyle(
+                          color: HomeColors.reminderCta,
+                          fontSize: 12.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               if (_controller.hasShots)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'Đã giữ ${_controller.session.shots.length} ảnh. Ảnh mới sẽ được thêm vào bộ ảnh này.',
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: HomeColors.iconBackground.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Đã giữ ${_controller.session.shots.length} ảnh. Ảnh mới sẽ được thêm vào bộ ảnh này.',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: HomeColors.ink,
+                      ),
+                    ),
                   ),
                 ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton(
-                onPressed: _controller.initialize,
-                child: const Text('Bắt đầu chụp'),
+              SizedBox(
+                height: 52,
+                child: FilledButton(
+                  onPressed: _controller.initialize,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: HomeColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 1,
+                  ),
+                  child: const Text(
+                    'Bắt đầu chụp',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
-              TextButton(
-                onPressed: _controller.hasShots
-                    ? _controller.returnToReview
-                    : _close,
-                child: Text(
-                  _controller.hasShots ? 'Quay lại chọn ảnh' : 'Quay lại',
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: _controller.hasShots
+                      ? _controller.returnToReview
+                      : _close,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: HomeColors.ink,
+                    side: const BorderSide(color: Color(0xFFD4E0D1)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    backgroundColor: Colors.white,
+                  ),
+                  child: Text(
+                    _controller.hasShots ? 'Quay lại chọn ảnh' : 'Quay lại',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -355,15 +485,64 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         child: Wrap(
           alignment: WrapAlignment.center,
-          spacing: 16,
+          spacing: 12,
+          runSpacing: 6,
           children: [
-            Text(
-              'Còn ${_controller.remainingSeconds ~/ 60}:${(_controller.remainingSeconds % 60).toString().padLeft(2, '0')}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: HomeColors.reminderBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: HomeColors.iconBackground),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 18,
+                    color: HomeColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Còn ${_controller.remainingSeconds ~/ 60}:${(_controller.remainingSeconds % 60).toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: HomeColors.ink,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(
-              'Đã chụp ${_controller.session.shots.length} ảnh',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: HomeColors.iconBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: HomeColors.primary.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.photo_library_outlined,
+                    size: 18,
+                    color: HomeColors.ink,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Đã chụp ${_controller.session.shots.length} ảnh',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: HomeColors.ink,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -487,9 +666,10 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
       ),
       _thumbnails(),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: SizedBox(
           width: double.infinity,
+          height: 52,
           child: FilledButton.icon(
             key: const ValueKey('photobooth-shutter'),
             onPressed: _controller.finishing
@@ -499,6 +679,14 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
                 : _controller.canStart
                 ? _controller.start
                 : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: HomeColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 1,
+            ),
             icon: const HomeUiIcon(HomeUiIconName.camera, color: Colors.white),
             label: Text(
               _controller.finishing
@@ -508,6 +696,10 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
                   : _controller.interrupted
                   ? 'Tiếp tục chụp'
                   : 'Chụp liên tiếp',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
@@ -518,6 +710,10 @@ class _PhotoBoothScreenState extends State<PhotoBoothScreen>
             : _controller.hasShots
             ? _controller.returnToReview
             : _close,
+        style: TextButton.styleFrom(
+          foregroundColor: HomeColors.ink,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         child: Text(_controller.hasShots ? 'Về bộ ảnh' : 'Hủy lượt chụp'),
       ),
     ],

@@ -52,6 +52,7 @@ chỉ để cập nhật một màn hình vì sẽ ảnh hưởng các tính nă
 | Thông báo & nhắc nhở | `NotificationColors`, tham chiếu `HomeColors` |
 | Cài đặt & quyền riêng tư | `SettingsColors`, tham chiếu `HomeColors` |
 | Tăng trưởng | `GrowthColors`, tham chiếu `HomeColors`; giữ `WeightChartColors` & `StatureChartColors` cho biểu đồ và trạng thái y khoa |
+| Nhật ký | `JournalColors`, tham chiếu `HomeColors` |
 | Các màn hình chưa chuyển đổi | `AppColors` và token riêng của tính năng |
 
 Khi cập nhật một tính năng, tạo hoặc tái sử dụng bộ token riêng tham chiếu màu

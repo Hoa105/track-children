@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app_colors.dart';
 import '../../models/vaccination.dart';
-import 'vaccination_style.dart';
 
 String _date(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
@@ -40,7 +39,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
     useSafeArea: true,
     isScrollControlled: true,
     showDragHandle: true,
-    backgroundColor: AppColors.background,
+    backgroundColor: VaccinationColors.background,
     constraints: const BoxConstraints(maxWidth: 640),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -65,7 +64,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: VaccinationColors.textPrimary,
                       ),
                     ),
                   ),
@@ -88,12 +87,12 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Material(
-                      color: active ? AppColors.primarySoft : AppColors.surface,
+                      color: active ? VaccinationColors.primarySoft : VaccinationColors.surface,
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,
                       child: ListTile(
                         selected: active,
-                        selectedColor: AppColors.primary,
+                        selectedColor: VaccinationColors.primary,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 4,
@@ -102,8 +101,8 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                           label,
                           style: TextStyle(
                             color: active
-                                ? AppColors.primary
-                                : AppColors.textPrimary,
+                                ? VaccinationColors.primary
+                                : VaccinationColors.textPrimary,
                             fontWeight: active
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -114,8 +113,8 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                               ? Icons.check_circle_rounded
                               : Icons.circle_outlined,
                           color: active
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? VaccinationColors.primary
+                              : VaccinationColors.textSecondary,
                           size: 22,
                         ),
                         onTap: () => Navigator.pop(context, value),
@@ -210,7 +209,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                   _oldest
                       ? Icons.arrow_upward_rounded
                       : Icons.arrow_downward_rounded,
-                  color: AppColors.primary,
+                  color: VaccinationColors.primary,
                 ),
               ),
             ],
@@ -222,7 +221,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
             children: [
               Expanded(
                 child: Text(
-                  '${visible.length} mũi · ${visits.length} buổi tiêm',
+                  '${visible.length} mũi - ${visits.length} buổi tiêm',
                   style: const TextStyle(
                     fontSize: 13,
                     color: VaccinationColors.recorded,
@@ -244,7 +243,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                       Icon(
                         filtering
                             ? Icons.search_off_rounded
-                            : Icons.auto_stories_outlined,
+                            : Icons.assignment_turned_in_outlined,
                         size: 36,
                         color: VaccinationColors.recorded,
                       ),
@@ -257,7 +256,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: VaccinationColors.textPrimary,
                         ),
                       ),
                       if (filtering)
@@ -272,7 +271,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                   key: PageStorageKey('vaccination-history-${widget.childId}'),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
                     final entry = entries[index];
@@ -304,11 +303,11 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                           iconColor: VaccinationColors.recorded,
                           collapsedIconColor: VaccinationColors.recorded,
                           title: Text(
-                            '${_date(first.date)} · ${doses.length} mũi',
+                            '${_date(first.date)} - ${doses.length} mũi',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark,
+                              color: VaccinationColors.primaryDark,
                             ),
                           ),
                           subtitle: Text(
@@ -333,7 +332,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
+                                    color: VaccinationColors.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -381,14 +380,15 @@ class _FilterButton extends StatelessWidget {
     child: TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        backgroundColor: active ? AppColors.primarySoft : AppColors.surface,
-        foregroundColor: AppColors.primary,
+        backgroundColor: active ? VaccinationColors.primary : VaccinationColors.surface,
+        foregroundColor: active ? Colors.white : VaccinationColors.primaryDark,
         minimumSize: const Size(0, 48),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        elevation: active ? 1 : 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(
-            color: active ? AppColors.primary : AppColors.border,
+            color: active ? VaccinationColors.primary : VaccinationColors.border,
           ),
         ),
       ),
@@ -404,14 +404,19 @@ class _FilterButton extends StatelessWidget {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
-          const Icon(Icons.expand_more_rounded, size: 18),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.expand_more_rounded,
+            size: 18,
+            color: active ? Colors.white : VaccinationColors.primaryDark,
+          ),
         ],
       ),
     ),
   );
 }
 
-/// " · Hẹn 20/11 · trễ 2 ngày" — trống nếu mũi không có ngày hẹn.
+/// " - Hẹn 20/11 - trễ 2 ngày" — trống nếu mũi không có ngày hẹn.
 String _schedule(VaccinationRecord record) {
   final days = record.daysFromSchedule;
   if (days == null) return '';
@@ -421,5 +426,5 @@ String _schedule(VaccinationRecord record) {
       : days > 0
       ? 'trễ $days ngày'
       : 'sớm ${-days} ngày';
-  return ' · Hẹn ${d.day}/${d.month} · $diff';
+  return ' - Hẹn ${d.day}/${d.month} - $diff';
 }

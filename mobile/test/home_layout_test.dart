@@ -289,11 +289,11 @@ void main() {
             .map((text) => text.data)
             .toList();
         expect(headerText, [
-          'Bảo An',
+          'Bé Bảo An',
           DemoStore.instance.ageLabel(DemoStore.instance.child!),
         ]);
         expect(
-          tester.getRect(find.text('Bảo An')).top,
+          tester.getRect(find.text('Bé Bảo An')).top,
           greaterThanOrEqualTo(44),
         );
         final button = tester.getRect(find.byTooltip('Đổi ảnh nền trang chủ'));

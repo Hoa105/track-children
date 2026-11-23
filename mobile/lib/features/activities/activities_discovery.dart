@@ -1,12 +1,21 @@
 part of 'activities_screen.dart';
 
 const _groupTints = [
-  Color(0xFFE3EED8),
-  Color(0xFFFFE8CF),
-  Color(0xFFE1EBFF),
-  Color(0xFFF2E3EF),
-  Color(0xFFECE3FA),
-  Color(0xFFFFEDD5),
+  Color(0xFFE8F4D9), // g0: Gross motor - fresh sprout green
+  Color(0xFFFEF3DF), // g1: Fine motor - warm amber
+  Color(0xFFE3F1FC), // g2: Language - gentle sky blue
+  Color(0xFFFDEBF2), // g3: Cognitive/Social - blossom pink
+  Color(0xFFEEE8F8), // g4: Music - soft lavender
+  Color(0xFFFFF0E2), // g5: Story - warm peach
+];
+
+const _groupAccents = [
+  Color(0xFF4A8025), // g0
+  Color(0xFFB57218), // g1
+  Color(0xFF2069B4), // g2
+  Color(0xFFB34272), // g3
+  Color(0xFF674898), // g4
+  Color(0xFFBD581F), // g5
 ];
 
 class ActivitiesScreen extends StatefulWidget {
@@ -34,6 +43,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       DemoStore.instance.syncActivities(widget.childId);
     }
   }
+
   void _open(ChildActivity a) => Navigator.push(
     context,
     MaterialPageRoute<void>(
@@ -51,11 +61,27 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       final reduced = MediaQuery.disableAnimationsOf(context);
       if (child == null) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Hoạt động')),
-          body: const Center(child: Text('Chọn hồ sơ bé để xem hoạt động.')),
+          backgroundColor: ActivitiesColors.background,
+          appBar: AppBar(
+            backgroundColor: ActivitiesColors.background,
+            elevation: 0,
+            title: const Text('Hoạt động', style: _heading),
+          ),
+          body: const Center(
+            child: Text(
+              'Chọn hồ sơ bé để xem hoạt động.',
+              style: _secondary,
+            ),
+          ),
         );
       }
       final done = store.completedActivities(widget.childId);
+      final favorites = store.favoriteActivities;
+      final childName = (child['first_name'] as String?)?.trim().isNotEmpty == true
+          ? (child['first_name'] as String).trim()
+          : (child['full_name'] as String?)?.trim().isNotEmpty == true
+          ? (child['full_name'] as String).trim()
+          : 'bé';
       final age = WhoBmiReference.ageMonths(
         DateTime.parse(child['date_of_birth'] as String),
         DateTime.now(),
@@ -82,21 +108,43 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               )
               .toList()
             ..sort((a, b) => distance(a).compareTo(distance(b)));
-      final featured = suggestions[_suggestion % suggestions.length];
+      final featured = suggestions.isEmpty
+          ? (ranked.isNotEmpty ? ranked.first : null)
+          : suggestions[_suggestion % suggestions.length];
       final picks = ranked
           .where((a) => _minutes == null || a.minutes == _minutes)
           .take(4)
           .toList();
+
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: ActivitiesColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Hoạt động', style: _heading),
+          backgroundColor: ActivitiesColors.background,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Cùng bé khám phá',
+                style: _heading,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'Hoạt động phù hợp cho $childName · $age tháng',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _secondary.copyWith(fontSize: 12),
+              ),
+            ],
+          ),
           actions: [
             IconButton.filledTonal(
               tooltip: 'Hoạt động yêu thích',
               style: IconButton.styleFrom(
-                backgroundColor: AppColors.primarySoft,
+                backgroundColor: ActivitiesColors.primarySoft,
+                padding: const EdgeInsets.all(10),
               ),
               onPressed: () => Navigator.push(
                 context,
@@ -104,223 +152,404 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   builder: (_) => ActivityListScreen(childId: widget.childId),
                 ),
               ),
-              icon: const Icon(
-                Icons.favorite_border_rounded,
-                color: AppColors.primary,
+              icon: Badge(
+                isLabelVisible: favorites.isNotEmpty,
+                label: Text('${favorites.length}'),
+                backgroundColor: ActivitiesColors.primary,
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: ActivitiesColors.primary,
+                  size: 20,
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
           ],
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
           children: [
-            _Reveal(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(32),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFE1EDD6), Color(0xFFF1E9D4)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: .09),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
+            if (featured != null) ...[
+              _Reveal(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ActivitiesColors.heroGradientStart,
+                        ActivitiesColors.heroGradientEnd,
+                      ],
                     ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.auto_awesome_rounded,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              'HÔM NAY CHƠI GÌ?',
-                              style: TextStyle(
-                                fontSize: 12,
-                                letterSpacing: 1.4,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Đổi gợi ý',
-                            onPressed: () => setState(() => _suggestion++),
-                            icon: const Icon(
-                              Icons.shuffle_rounded,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                    border: Border.all(
+                      color: ActivitiesColors.border.withValues(alpha: 0.8),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ActivitiesColors.primary.withValues(alpha: .08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
                       ),
-                      AnimatedSwitcher(
-                        duration: reduced
-                            ? Duration.zero
-                            : const Duration(milliseconds: 300),
-                        transitionBuilder: (child, animation) => FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween(
-                              begin: const Offset(.06, 0),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        ),
-                        child: Column(
-                          key: ValueKey(featured.id),
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Hero(
-                              tag: 'activity-art-${featured.id}',
-                              child: Center(
-                                child: _PlayArt(
-                                  groupId: featured.groupId,
-                                  large: true,
-                                  imageUrl: featured.thumbnailUrl,
-                                ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: ActivitiesColors.primarySoft,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 14,
+                                    color: ActivitiesColors.primary,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'GỢI Ý HÔM NAY',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      letterSpacing: 1.2,
+                                      fontWeight: FontWeight.w800,
+                                      color: ActivitiesColors.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              featured.name,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                height: 1.2,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                            const Spacer(),
+                            IconButton.filledTonal(
+                              tooltip: 'Đổi gợi ý',
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.white.withValues(alpha: 0.7),
+                                padding: const EdgeInsets.all(8),
+                                minimumSize: const Size(36, 36),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '${featured.durationLabel} · ${featured.ageLabel}',
-                              style: _secondary,
+                              onPressed: () => setState(() => _suggestion++),
+                              icon: const Icon(
+                                Icons.shuffle_rounded,
+                                size: 18,
+                                color: ActivitiesColors.primary,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primaryDark,
-                            minimumSize: const Size(0, 52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                        const SizedBox(height: 12),
+                        AnimatedSwitcher(
+                          duration: reduced
+                              ? Duration.zero
+                              : const Duration(milliseconds: 280),
+                          transitionBuilder: (child, animation) => FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween(
+                                begin: const Offset(.05, 0),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
                             ),
                           ),
-                          onPressed: () => _open(featured),
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: const Text(
-                            'Cùng bé chơi',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          child: Column(
+                            key: ValueKey(featured.id),
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Hero(
+                                tag: 'activity-art-${featured.id}',
+                                child: Center(
+                                  child: _PlayArt(
+                                    groupId: featured.groupId,
+                                    large: true,
+                                    imageUrl: featured.thumbnailUrl,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                featured.name,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w800,
+                                  color: ActivitiesColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  _MetaPill(
+                                    icon: Icons.schedule_rounded,
+                                    label: featured.durationLabel,
+                                  ),
+                                  _MetaPill(
+                                    icon: Icons.child_care_rounded,
+                                    label: featured.ageLabel,
+                                  ),
+                                  if (done.contains(featured.id))
+                                    const _MetaPill(
+                                      icon: Icons.check_circle_rounded,
+                                      label: 'Đã chơi cùng bé',
+                                      color: ActivitiesColors.primary,
+                                      bgColor: ActivitiesColors.primarySoft,
+                                    ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: ActivitiesColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 2,
+                              shadowColor: ActivitiesColors.primary.withValues(alpha: .3),
+                            ),
+                            onPressed: () => _open(featured),
+                            icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                            label: const Text(
+                              'Cùng bé chơi ngay',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+            ],
+
+            // One-handed quick time filter row
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Thời lượng chơi',
+                    style: _heading,
+                  ),
+                ),
+                if (_minutes != null)
+                  GestureDetector(
+                    onTap: () => setState(() => _minutes = null),
+                    child: const Text(
+                      'Xem tất cả',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ActivitiesColors.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (final minutes in [null, 5, 10, 15])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: _minutes == minutes
+                                ? ActivitiesColors.primary
+                                : ActivitiesColors.border.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        avatar: Icon(
+                          minutes == null
+                              ? Icons.grid_view_rounded
+                              : Icons.schedule_rounded,
+                          size: 16,
+                          color: _minutes == minutes
+                              ? ActivitiesColors.primary
+                              : ActivitiesColors.textSecondary,
+                        ),
+                        label: Text(
+                          minutes == null ? 'Tất cả' : '$minutes phút',
+                        ),
+                        selected: _minutes == minutes,
+                        selectedColor: ActivitiesColors.primarySoft,
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _minutes == minutes
+                              ? ActivitiesColors.primary
+                              : ActivitiesColors.textPrimary,
+                        ),
+                        onSelected: (_) => setState(() => _minutes = minutes),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Picked activities
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Thử cùng bé', style: _heading),
+                      SizedBox(height: 2),
+                      Text(
+                        'Ý tưởng phù hợp theo độ tuổi của bé',
+                        style: _secondary,
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            const Text('Một chút thời gian, nhiều niềm vui', style: _heading),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final minutes in [null, 5, 10, 15])
-                  ChoiceChip(
-                    showCheckmark: false,
-                    avatar: Icon(
-                      minutes == null
-                          ? Icons.apps_rounded
-                          : Icons.timer_outlined,
-                      size: 18,
-                      color: _minutes == minutes
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => ActivityListScreen(childId: widget.childId),
                     ),
-                    label: Text(minutes == null ? 'Tất cả' : '$minutes phút'),
-                    selected: _minutes == minutes,
-                    selectedColor: AppColors.primarySoft,
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _minutes == minutes
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                    onSelected: (_) => setState(() => _minutes = minutes),
                   ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Tất cả'),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right_rounded, size: 18),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('Thử cùng bé', style: _heading),
-            const SizedBox(height: 4),
-            const Text(
-              'Những ý tưởng nhỏ cho khoảnh khắc bên nhau.',
-              style: _secondary,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             for (final a in picks)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: _PressCard(
                   onTap: () => _open(a),
                   child: Row(
                     children: [
                       _PlayArt(groupId: a.groupId, imageUrl: a.thumbnailUrl),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(a.name, style: _title),
-                            const SizedBox(height: 6),
                             Text(
-                              '${a.durationLabel} · ${a.ageLabel}',
-                              style: _secondary,
+                              a.name,
+                              style: _title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            if (done.contains(a.id))
-                              const Text(
-                                'Đã chơi cùng bé',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
+                            const SizedBox(height: 6),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 13,
+                                  color: ActivitiesColors.textSecondary,
                                 ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  a.durationLabel,
+                                  style: _secondary,
+                                ),
+                                const SizedBox(width: 6),
+                                const Text('·', style: _secondary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  a.ageLabel,
+                                  style: _secondary,
+                                ),
+                              ],
+                            ),
+                            if (done.contains(a.id)) ...[
+                              const SizedBox(height: 6),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    size: 14,
+                                    color: ActivitiesColors.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Đã chơi cùng bé',
+                                    style: TextStyle(
+                                      color: ActivitiesColors.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ],
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.arrow_outward_rounded,
-                        color: AppColors.primary,
-                        size: 20,
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: ActivitiesColors.background,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: ActivitiesColors.primary,
+                          size: 13,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            const SizedBox(height: 20),
-            const Text('Khám phá thêm', style: _heading),
-            const SizedBox(height: 4),
-            const Text('Mỗi cách chơi, một điều mới mẻ.', style: _secondary),
-            const SizedBox(height: 16),
+
+            const SizedBox(height: 24),
+            const Text('Khám phá theo nhóm', style: _heading),
+            const SizedBox(height: 2),
+            const Text(
+              'Rèn luyện toàn diện các kỹ năng vận động & nhận thức',
+              style: _secondary,
+            ),
+            const SizedBox(height: 14),
             LayoutBuilder(
               builder: (context, constraints) {
                 final columns =
@@ -328,62 +557,33 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                         MediaQuery.textScalerOf(context).scale(16) < 25
                     ? 2
                     : 1;
+                final spacing = 12.0;
+                final width = (constraints.maxWidth - (columns - 1) * spacing) / columns;
                 return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                  spacing: spacing,
+                  runSpacing: spacing,
                   children: [
                     for (final group in activityGroups)
                       SizedBox(
-                        width:
-                            (constraints.maxWidth - (columns - 1) * 12) /
-                            columns,
-                        child: _PressCard(
-                          color: _groupTints[int.parse(group.id.substring(1))],
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => ActivityListScreen(
-                                childId: widget.childId,
-                                group: group,
-                              ),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _PlayArt(groupId: group.id),
-                              const SizedBox(height: 16),
-                              Text(group.name, style: _title),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${activityCatalog.where((a) => a.groupId == group.id).length} ý tưởng chơi',
-                                      style: _secondary,
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 18,
-                                    color: AppColors.primary,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                        width: width,
+                        child: _GroupCard(
+                          group: group,
+                          childId: widget.childId,
+                          tint: _groupTints[int.parse(group.id.substring(1))],
+                          accent: _groupAccents[int.parse(group.id.substring(1))],
                         ),
                       ),
                   ],
                 );
               },
             ),
+
             if (done.isNotEmpty) ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               const Text('Những trò bé đã thử', style: _heading),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
               const Text(
-                'Bé có thể chơi lại những trò quen thuộc bất cứ lúc nào.',
+                'Bé thích chơi lại những trò quen thuộc',
                 style: _secondary,
               ),
               const SizedBox(height: 12),
@@ -395,15 +595,36 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     onTap: () => _open(a),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.primary,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: ActivitiesColors.primarySoft,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            color: ActivitiesColors.primary,
+                            size: 18,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(child: Text(a.name, style: _title)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(a.name, style: _title),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${a.durationLabel} · ${a.ageLabel}',
+                                style: _secondary,
+                              ),
+                            ],
+                          ),
+                        ),
                         const Icon(
                           Icons.replay_rounded,
-                          color: AppColors.primary,
+                          color: ActivitiesColors.primary,
+                          size: 20,
                         ),
                       ],
                     ),
@@ -417,6 +638,117 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   );
 }
 
+/// Small meta tag pill
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({
+    required this.icon,
+    required this.label,
+    this.color = ActivitiesColors.textSecondary,
+    this.bgColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color? bgColor;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    decoration: BoxDecoration(
+      color: bgColor ?? Colors.white.withValues(alpha: 0.8),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: ActivitiesColors.border.withValues(alpha: 0.6),
+        width: 1,
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Group card with tactile feel
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({
+    required this.group,
+    required this.childId,
+    required this.tint,
+    required this.accent,
+  });
+
+  final ActivityGroup group;
+  final String childId;
+  final Color tint;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = activityCatalog.where((a) => a.groupId == group.id).length;
+    return _PressCard(
+      color: tint,
+      borderColor: accent.withValues(alpha: 0.18),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => ActivityListScreen(
+            childId: childId,
+            group: group,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _PlayArt(groupId: group.id),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 16,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            group.name,
+            style: _title.copyWith(fontSize: 15),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$count ý tưởng chơi',
+            style: _secondary.copyWith(color: accent, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Layered icon artwork uses the app's existing toy asset and native vector icons.
 class _PlayArt extends StatelessWidget {
   const _PlayArt({required this.groupId, this.large = false, this.imageUrl});
@@ -425,25 +757,29 @@ class _PlayArt extends StatelessWidget {
 
   /// Thumbnail from the backend; replaces the artwork when it loads.
   final String? imageUrl;
+
   @override
   Widget build(BuildContext context) {
     final group = activityGroups.firstWhere((g) => g.id == groupId);
-    final tint = _groupTints[int.parse(groupId.substring(1))];
-    final size = large ? 156.0 : 64.0;
+    final groupIndex = int.parse(groupId.substring(1));
+    final tint = _groupTints[groupIndex];
+    final accent = _groupAccents[groupIndex];
+    final size = large ? 136.0 : 58.0;
+
     if (imageUrl != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(large ? 36 : 18),
+        borderRadius: BorderRadius.circular(large ? 28 : 16),
         child: Image.network(
           ActivityApi.instance.imageUrl(imageUrl!),
           width: size,
           height: size,
           fit: BoxFit.cover,
           excludeFromSemantics: true,
-          errorBuilder: (_, _, _) =>
-              _PlayArt(groupId: groupId, large: large),
+          errorBuilder: (_, _, _) => _PlayArt(groupId: groupId, large: large),
         ),
       );
     }
+
     return SizedBox(
       width: size,
       height: size,
@@ -452,66 +788,60 @@ class _PlayArt extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Transform.rotate(
-            angle: -.13,
+            angle: -.08,
             child: Container(
-              width: size * .83,
-              height: size * .83,
+              width: size * .86,
+              height: size * .86,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .65),
-                borderRadius: BorderRadius.circular(large ? 40 : 20),
+                color: Colors.white.withValues(alpha: .75),
+                borderRadius: BorderRadius.circular(large ? 32 : 16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primaryDark.withValues(alpha: .08),
-                    blurRadius: 16,
-                    offset: const Offset(2, 8),
+                    color: accent.withValues(alpha: .12),
+                    blurRadius: 12,
+                    offset: const Offset(1, 4),
                   ),
                 ],
               ),
             ),
           ),
           Transform.rotate(
-            angle: .08,
+            angle: .05,
             child: Container(
-              width: size * .8,
-              height: size * .8,
+              width: size * .82,
+              height: size * .82,
               decoration: BoxDecoration(
                 color: tint,
-                borderRadius: BorderRadius.circular(large ? 36 : 18),
+                borderRadius: BorderRadius.circular(large ? 28 : 14),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.15),
+                  width: 1,
+                ),
               ),
               child: groupId == 'g1'
-                  ? Image.asset(
-                      'assets/images/scenery/icons/care/activity_blocks.png',
-                      fit: BoxFit.contain,
+                  ? Padding(
+                      padding: EdgeInsets.all(size * .14),
+                      child: Image.asset(
+                        'assets/images/scenery/icons/care/activity_blocks.png',
+                        fit: BoxFit.contain,
+                      ),
                     )
                   : Icon(
                       group.icon,
-                      size: size * .49,
-                      color: AppColors.primaryDark,
-                      shadows: const [
-                        Shadow(
-                          color: Colors.white,
-                          offset: Offset(0, 2),
-                          blurRadius: 1,
-                        ),
-                      ],
+                      size: size * .46,
+                      color: accent,
                     ),
             ),
           ),
           Positioned(
             right: 0,
-            top: large ? 8 : 0,
+            top: large ? 6 : 0,
             child: Icon(
               Icons.auto_awesome_rounded,
-              color: const Color(0xFFCE9E4F),
-              size: large ? 28 : 15,
+              color: const Color(0xFFE5A93C),
+              size: large ? 24 : 14,
             ),
           ),
-          if (large)
-            const Positioned(
-              left: 0,
-              bottom: 12,
-              child: Icon(Icons.circle, size: 14, color: AppColors.purpleText),
-            ),
         ],
       ),
     );
@@ -523,44 +853,55 @@ class _PressCard extends StatefulWidget {
     required this.child,
     required this.onTap,
     this.color = Colors.white,
+    this.borderColor,
   });
+
   final Widget child;
   final VoidCallback onTap;
   final Color color;
+  final Color? borderColor;
+
   @override
   State<_PressCard> createState() => _PressCardState();
 }
 
 class _PressCardState extends State<_PressCard> {
   bool _pressed = false;
+
   @override
   Widget build(BuildContext context) => AnimatedScale(
-    scale: _pressed ? .975 : 1,
+    scale: _pressed ? .98 : 1,
     duration: MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 140),
+        : const Duration(milliseconds: 120),
     child: DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withValues(
-              alpha: _pressed ? .02 : .045,
+            color: ActivitiesColors.primaryDark.withValues(
+              alpha: _pressed ? .02 : .04,
             ),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: widget.color,
-        borderRadius: BorderRadius.circular(24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: widget.borderColor ?? ActivitiesColors.border.withValues(alpha: 0.6),
+            width: 1.2,
+          ),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.onTap,
           onHighlightChanged: (value) => setState(() => _pressed = value),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             child: widget.child,
           ),
         ),
@@ -577,12 +918,12 @@ class _Reveal extends StatelessWidget {
     tween: Tween(begin: 0, end: 1),
     duration: MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 450),
+        : const Duration(milliseconds: 400),
     curve: Curves.easeOutCubic,
     builder: (_, value, child) => Opacity(
       opacity: value,
       child: Transform.translate(
-        offset: Offset(0, 16 * (1 - value)),
+        offset: Offset(0, 14 * (1 - value)),
         child: child,
       ),
     ),

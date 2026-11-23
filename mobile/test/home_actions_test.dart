@@ -35,8 +35,8 @@ void main() {
     expect(find.byKey(const ValueKey('home-background-scale')), findsNothing);
     await DemoStore.instance.selectChild('child_linh');
     await tester.pumpAndSettle();
-    expect(find.text('Gia Linh'), findsOneWidget);
-    expect(find.text('Bảo An'), findsNothing);
+    expect(find.text('Bé Gia Linh'), findsOneWidget);
+    expect(find.text('Bé Bảo An'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

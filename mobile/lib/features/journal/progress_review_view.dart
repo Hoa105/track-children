@@ -6,17 +6,17 @@ import '../../models/progress_review.dart';
 const _title = TextStyle(
   fontSize: 16,
   fontWeight: FontWeight.w600,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _body = TextStyle(
   fontSize: 14,
   height: 1.5,
-  color: AppColors.textPrimary,
+  color: JournalColors.textPrimary,
 );
 const _caption = TextStyle(
   fontSize: 12,
   height: 1.5,
-  color: AppColors.textSecondary,
+  color: JournalColors.textSecondary,
 );
 const _warningSurface = Color(0xFFFFF4E0);
 const _warningText = Color(0xFF7A4B00);
@@ -212,8 +212,8 @@ class _TrendCard extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: p == trend.points.last
-                                      ? AppColors.primary
-                                      : AppColors.primarySoft,
+                                      ? JournalColors.primary
+                                      : JournalColors.primarySoft,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                               ),
@@ -268,8 +268,8 @@ class _NumberedSection extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppColors.primarySoft,
-                  child: Icon(icon, size: 18, color: AppColors.primary),
+                  backgroundColor: JournalColors.primarySoft,
+                  child: Icon(icon, size: 18, color: JournalColors.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text('$number. $title', style: _title)),
@@ -305,7 +305,7 @@ class _Sub extends StatelessWidget {
             label,
             style: _body.copyWith(
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: JournalColors.textSecondary,
             ),
           ),
           const SizedBox(height: 4),
@@ -329,7 +329,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.primarySoft,
+      color: JournalColors.primarySoft,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Text.rich(
@@ -337,7 +337,7 @@ class _Stat extends StatelessWidget {
         children: [
           TextSpan(
             text: '$value ',
-            style: _title.copyWith(color: AppColors.primary),
+            style: _title.copyWith(color: JournalColors.primary),
           ),
           TextSpan(text: label, style: _caption),
         ],
@@ -360,10 +360,10 @@ class ProgressReviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: JournalColors.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: AppColors.border),
+      side: const BorderSide(color: JournalColors.border),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -396,7 +396,7 @@ class ProgressReviewTile extends StatelessWidget {
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
+              color: JournalColors.textSecondary,
             ),
           ],
         ),
@@ -412,9 +412,9 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: JournalColors.surface,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: JournalColors.border),
     ),
     child: child,
   );
