@@ -791,22 +791,20 @@ class _VaccinationScreenState extends State<VaccinationScreen>
                                       ),
                                     ),
                                   if (_view == 0) ...[
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                    Wrap(
+                                      alignment:
+                                          WrapAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            selectedAge == null
-                                                ? 'Chưa có mốc'
-                                                : 'Mốc ${VaccineDose.ageLabelFor(selectedAge).toLowerCase()}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700,
-                                              color: VaccinationColors.textPrimary,
-                                            ),
+                                        Text(
+                                          selectedAge == null
+                                              ? 'Chưa có mốc'
+                                              : 'Mốc ${VaccineDose.ageLabelFor(selectedAge)}',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: VaccinationColors.textPrimary,
                                           ),
                                         ),
                                         TextButton.icon(
@@ -1029,32 +1027,13 @@ class _DoseEntry extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      v.dose.doseLabel,
+                      '${v.dose.doseLabel}${!v.dose.isCustom ? (v.dose.isTcmr ? " - TCMR" : " - Dịch vụ") : ""}${pending ? " - ${v.hasAppointment ? 'Hẹn' : 'Dự kiến'} ${_date(v.dueDate)}" : ""}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: statusColor,
                       ),
                     ),
-                    if (!v.dose.isCustom)
-                      Text(
-                        v.dose.isTcmr ? '- TCMR' : '- Dịch vụ',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: VaccinationColors.secondary,
-                        ),
-                      ),
-                    if (pending)
-                      Text(
-                        '- ${v.hasAppointment ? "Hẹn" : "Dự kiến"} ${_date(v.dueDate)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isOverdue
-                              ? VaccinationColors.attention
-                              : VaccinationColors.secondary,
-                          fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal,
-                        ),
-                      ),
                   ],
                 ),
                 if (v.record?.reaction.isNotEmpty == true)

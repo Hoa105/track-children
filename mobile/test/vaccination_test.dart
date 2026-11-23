@@ -392,7 +392,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(find.text('Thêm'), findsNothing);
+    expect(find.text('Thêm'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('vaccination-add')));
     await tester.pumpAndSettle();
     expect(find.text('Thêm vắc-xin bổ sung'), findsOneWidget);

@@ -221,7 +221,7 @@ class _VaccinationHistoryState extends State<VaccinationHistory> {
             children: [
               Expanded(
                 child: Text(
-                  '${visible.length} mũi - ${visits.length} buổi tiêm',
+                  '${visible.length} mũi · ${visits.length} buổi tiêm',
                   style: const TextStyle(
                     fontSize: 13,
                     color: VaccinationColors.recorded,

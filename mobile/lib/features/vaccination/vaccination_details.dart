@@ -258,7 +258,7 @@ class VaccineDetailSheet extends StatelessWidget {
                       onPressed: () => Navigator.pop(context, 'edit'),
                       icon: const Icon(Icons.edit_outlined, size: 20),
                       label: const Text(
-                        'Sửa thông tin mũi tiêm',
+                        'Sửa thông tin',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
