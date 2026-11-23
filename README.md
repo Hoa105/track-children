@@ -1,6 +1,7 @@
 # Track Children
 
 Hệ màu giao diện mobile: [APP_COLORS.md](docs/APP_COLORS.md).
+Hướng dẫn triển khai hệ thống (Domain, Server, 24/24): [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md).
 
 Ứng dụng hỗ trợ phụ huynh và người chăm sóc theo dõi sức khỏe, sự phát triển
 và các hoạt động hằng ngày của trẻ.
