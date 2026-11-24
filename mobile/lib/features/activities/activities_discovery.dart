@@ -28,6 +28,9 @@ class ActivitiesScreen extends StatefulWidget {
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
   int _suggestion = 0;
   int? _minutes;
+  Object? _catalogCacheKey;
+  List<ChildActivity>? _cachedRanked;
+  List<ChildActivity>? _cachedSuggestions;
 
   @override
   void initState() {
@@ -91,23 +94,41 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           : age > a.maxMonths
           ? age - a.maxMonths
           : 0;
-      final ranked = [...activityCatalog]
-        ..sort((a, b) {
-          final diff = distance(a).compareTo(distance(b));
-          return diff != 0
-              ? diff
-              : (done.contains(a.id) ? 1 : 0).compareTo(
-                  done.contains(b.id) ? 1 : 0,
-                );
-        });
-      // Chỉ gợi ý trò có hướng dẫn đầy đủ (từ kho hoạt động hoặc soạn sẵn).
-      final suggestions =
-          ranked
-              .where(
-                (a) => a.remote || activityInstructions.containsKey(a.id),
-              )
-              .toList()
-            ..sort((a, b) => distance(a).compareTo(distance(b)));
+      final cacheKey = (
+        widget.childId,
+        store.revision,
+        age,
+        activityCatalog.length,
+      );
+      List<ChildActivity> ranked;
+      List<ChildActivity> suggestions;
+      if (_catalogCacheKey == cacheKey &&
+          _cachedRanked != null &&
+          _cachedSuggestions != null) {
+        ranked = _cachedRanked!;
+        suggestions = _cachedSuggestions!;
+      } else {
+        ranked = [...activityCatalog]
+          ..sort((a, b) {
+            final diff = distance(a).compareTo(distance(b));
+            return diff != 0
+                ? diff
+                : (done.contains(a.id) ? 1 : 0).compareTo(
+                    done.contains(b.id) ? 1 : 0,
+                  );
+          });
+        // Chỉ gợi ý trò có hướng dẫn đầy đủ (từ kho hoạt động hoặc soạn sẵn).
+        suggestions =
+            ranked
+                .where(
+                  (a) => a.remote || activityInstructions.containsKey(a.id),
+                )
+                .toList()
+              ..sort((a, b) => distance(a).compareTo(distance(b)));
+        _catalogCacheKey = cacheKey;
+        _cachedRanked = ranked;
+        _cachedSuggestions = suggestions;
+      }
       final featured = suggestions.isEmpty
           ? (ranked.isNotEmpty ? ranked.first : null)
           : suggestions[_suggestion % suggestions.length];

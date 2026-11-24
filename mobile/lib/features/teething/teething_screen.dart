@@ -77,17 +77,20 @@ class _TeethingScreenState extends State<TeethingScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!_trackingReady) {
-        setState(() => _trackingReady = true);
-      }
       final transition = ModalRoute.of(context)?.animation;
       if (transition == null || transition.isCompleted) {
+        if (!_trackingReady) {
+          setState(() => _trackingReady = true);
+        }
         unawaited(DemoStore.instance.syncTeeth(childId));
       } else {
         void onAnimationComplete(AnimationStatus status) {
           if (status == AnimationStatus.completed) {
             transition.removeStatusListener(onAnimationComplete);
             if (mounted) {
+              if (!_trackingReady) {
+                setState(() => _trackingReady = true);
+              }
               unawaited(DemoStore.instance.syncTeeth(childId));
             }
           }
@@ -217,19 +220,21 @@ class _TeethingScreenState extends State<TeethingScreen> {
                     ),
             ),
             Expanded(
-              child: ValueListenableBuilder<int>(
-                valueListenable: _mode,
-                builder: (context, mode, _) => IndexedStack(
-                  index: mode,
-                  children: [
-                    TickerMode(enabled: mode == 0, child: referenceTab),
-                    TickerMode(
-                      enabled: mode == 1,
-                      child: mode == 1 || _trackingReady
-                          ? trackingTab
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
+              child: RepaintBoundary(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _mode,
+                  builder: (context, mode, _) => IndexedStack(
+                    index: mode,
+                    children: [
+                      TickerMode(enabled: mode == 0, child: referenceTab),
+                      TickerMode(
+                        enabled: mode == 1,
+                        child: mode == 1 || _trackingReady
+                            ? trackingTab
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1030,11 +1035,18 @@ class _ToothEditorState extends State<ToothEditorScreen> {
     final selected = _toothId == null
         ? null
         : PrimaryTooth.all.firstWhere((t) => t.id == _toothId);
-    final options =
-        PrimaryTooth.all
-            .where((t) => t.id == _toothId || !records.containsKey(t.id))
-            .toList()
-          ..sort((a, b) => a.eruptionMonths.$1.compareTo(b.eruptionMonths.$1));
+    final options = widget.tooth != null
+        ? const <PrimaryTooth>[]
+        : (PrimaryTooth.all
+              .where((t) => t.id == _toothId || !records.containsKey(t.id))
+              .toList()
+            ..sort(
+              (a, b) => a.eruptionMonths.$1.compareTo(b.eruptionMonths.$1),
+            ));
+    final dob = child == null
+        ? null
+        : DateTime.parse(child['date_of_birth'] as String);
+    final today = DateUtils.dateOnly(DateTime.now());
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
@@ -1263,19 +1275,13 @@ class _ToothEditorState extends State<ToothEditorScreen> {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          if (child != null &&
-                              !DateTime.parse(child['date_of_birth'] as String)
-                                  .isAfter(DateTime.now()))
+                          if (dob != null && !dob.isAfter(today))
                             IgnorePointer(
                               ignoring: _busy,
                               child: TeethingDatePicker(
                                 value: _date,
-                                firstDate: DateUtils.dateOnly(
-                                  DateTime.parse(
-                                    child['date_of_birth'] as String,
-                                  ),
-                                ),
-                                lastDate: DateUtils.dateOnly(DateTime.now()),
+                                firstDate: DateUtils.dateOnly(dob),
+                                lastDate: today,
                                 onChanged: (date) =>
                                     setState(() => _date = date),
                               ),

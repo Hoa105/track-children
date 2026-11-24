@@ -254,22 +254,25 @@ class ToothIllustration extends StatelessWidget {
             Color(0xFFF0E9E2),
             Color(0xFFCAB8B5),
           );
-    return TweenAnimationBuilder<_ToothColors>(
-      tween: _ToothColorsTween(begin: colors, end: colors),
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 150),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, _) => CustomPaint(
-        size: const Size(40, 40),
-        painter: _ToothPainter(
-          type,
-          erupted,
-          expected,
-          reference,
-          selectedReference,
-          value,
-          faceRotation,
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<_ToothColors>(
+        tween: _ToothColorsTween(begin: colors, end: colors),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) => CustomPaint(
+          isComplex: true,
+          size: const Size(40, 40),
+          painter: _ToothPainter(
+            type,
+            erupted,
+            expected,
+            reference,
+            selectedReference,
+            value,
+            faceRotation,
+          ),
         ),
       ),
     );
@@ -552,6 +555,25 @@ class _ToothPainter extends CustomPainter {
     ..moveTo(-3.2, 2)
     ..quadraticBezierTo(0, 6.5, 3.2, 2);
 
+  static final _sheenPaint = Paint()
+    ..color = Colors.white.withValues(alpha: .9)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.8
+    ..strokeCap = StrokeCap.round;
+
+  static final _cheekPaint = Paint()
+    ..color = const Color(0xFFF3A6B4).withValues(alpha: .75);
+
+  static final _inkPaint = Paint()..color = const Color(0xFF3D5550);
+
+  static final _eyeHighlightPaint = Paint()..color = Colors.white;
+
+  static final _smilePaint = Paint()
+    ..color = const Color(0xFF3D5550)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5
+    ..strokeCap = StrokeCap.round;
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -581,49 +603,30 @@ class _ToothPainter extends CustomPainter {
         ..color = colors.outline,
     );
     // A curved sheen keeps the center clear for the pair number.
-    canvas.save();
-    canvas.clipPath(path);
-    canvas.drawPath(
-      _sheenPath,
-      Paint()
-        ..color = Colors.white.withValues(alpha: .9)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.8
-        ..strokeCap = StrokeCap.round,
-    );
+    // Coordinates lie strictly inside all three tooth paths, avoiding clipPath.
+    canvas.drawPath(_sheenPath, _sheenPaint);
     canvas.drawOval(
       const Rect.fromLTWH(27, 23, 4, 6),
       Paint()..color = colors.outline.withValues(alpha: .10),
     );
-    canvas.restore();
     // Keep the smile upright even when its tooth follows the dental arch.
     canvas.save();
     canvas.translate(20, 20);
     canvas.rotate(faceRotation);
-    final cheek = Paint()
-      ..color = const Color(0xFFF3A6B4).withValues(alpha: .75);
-    canvas.drawOval(const Rect.fromLTWH(-10, 0, 5, 3), cheek);
-    canvas.drawOval(const Rect.fromLTWH(5, 0, 5, 3), cheek);
-    final ink = Paint()..color = const Color(0xFF3D5550);
+    canvas.drawOval(const Rect.fromLTWH(-10, 0, 5, 3), _cheekPaint);
+    canvas.drawOval(const Rect.fromLTWH(5, 0, 5, 3), _cheekPaint);
     for (final x in [-4.8, 4.8]) {
       canvas.drawOval(
         Rect.fromCenter(center: Offset(x, -2), width: 2.6, height: 3.5),
-        ink,
+        _inkPaint,
       );
       canvas.drawCircle(
         Offset(x - .35, -2.7),
         .5,
-        Paint()..color = Colors.white,
+        _eyeHighlightPaint,
       );
     }
-    canvas.drawPath(
-      _smilePath,
-      Paint()
-        ..color = const Color(0xFF3D5550)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round,
-    );
+    canvas.drawPath(_smilePath, _smilePaint);
     canvas.restore();
     canvas.restore();
   }

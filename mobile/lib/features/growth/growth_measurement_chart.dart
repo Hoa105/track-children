@@ -115,7 +115,12 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
   void _setWindow(double start, double end) {
     final span = (end - start).clamp(1 / 30, 72.0);
     final first = start.clamp(0.0, 72 - span);
-    setState(() => _window = RangeValues(first, first + span));
+    final next = RangeValues(first, first + span);
+    if ((next.start - _window.start).abs() < 1e-6 &&
+        (next.end - _window.end).abs() < 1e-6) {
+      return;
+    }
+    setState(() => _window = next);
   }
 
   @override
@@ -309,9 +314,12 @@ class GrowthMeasurementChartState extends State<GrowthMeasurementChart> {
                                     TextStyle(color: GrowthColors.textSecondary),
                               ),
                             )
-                          : CustomPaint(
-                              key: const Key('growth-plot'),
-                              painter: painter,
+                          : RepaintBoundary(
+                              child: CustomPaint(
+                                key: const Key('growth-plot'),
+                                isComplex: true,
+                                painter: painter,
+                              ),
                             ),
                     ),
                   ),
@@ -482,6 +490,30 @@ class _MeasurementPainter extends CustomPainter {
     );
   }
 
+  static final _labelCache = <(String, double), TextPainter>{};
+
+  static final _gridPaint = Paint()
+    ..color = const Color(0xFFE2EBE5)
+    ..strokeWidth = 1;
+
+  static final _axisPaint = Paint()
+    ..color = const Color(0xFF5A7365)
+    ..strokeWidth = 1.4;
+
+  static final _curvePaint = Paint()
+    ..color = color
+    ..strokeWidth = 2.8
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..style = PaintingStyle.stroke;
+
+  static final _selectionHaloPaint = Paint()
+    ..color = color.withValues(alpha: .22);
+
+  static final _whiteDotPaint = Paint()..color = Colors.white;
+
+  static final _colorDotPaint = Paint()..color = color;
+
   void label(
     Canvas canvas,
     String value,
@@ -490,18 +522,26 @@ class _MeasurementPainter extends CustomPainter {
     bool right = false,
     double fontSize = 10.5,
   }) {
-    final text = TextPainter(
-      text: TextSpan(
-        text: value,
-        style: TextStyle(
-          fontFamily: 'Nunito',
-          color: GrowthColors.textPrimary,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
+    final key = (value, fontSize);
+    var text = _labelCache[key];
+    if (text == null) {
+      text = TextPainter(
+        text: TextSpan(
+          text: value,
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            color: GrowthColors.textPrimary,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+      if (_labelCache.length >= 64) {
+        _labelCache.remove(_labelCache.keys.first);
+      }
+      _labelCache[key] = text;
+    }
     text.paint(
       canvas,
       Offset(
@@ -522,13 +562,10 @@ class _MeasurementPainter extends CustomPainter {
     final r = plot(size);
 
     // 1. Grid lines and Y-axis labels
-    final grid = Paint()
-      ..color = const Color(0xFFE2EBE5)
-      ..strokeWidth = 1;
     final intervals = ((high - low) / valueScale.step).round();
     for (var i = 0; i <= intervals; i++) {
       final y = r.bottom - r.height * i / intervals;
-      canvas.drawLine(Offset(r.left, y), Offset(r.right, y), grid);
+      canvas.drawLine(Offset(r.left, y), Offset(r.right, y), _gridPaint);
       label(
         canvas,
         naturalLabel(low + valueScale.step * i),
@@ -593,11 +630,8 @@ class _MeasurementPainter extends CustomPainter {
     );
 
     // 4. Main Axes Lines
-    final axis = Paint()
-      ..color = const Color(0xFF5A7365)
-      ..strokeWidth = 1.4;
-    canvas.drawLine(r.topLeft, r.bottomLeft, axis);
-    canvas.drawLine(r.bottomLeft, r.bottomRight, axis);
+    canvas.drawLine(r.topLeft, r.bottomLeft, _axisPaint);
+    canvas.drawLine(r.bottomLeft, r.bottomRight, _axisPaint);
 
     // 5. Area Fill Gradient under the curve
     if (rows.length >= 2) {
@@ -642,15 +676,7 @@ class _MeasurementPainter extends CustomPainter {
       }
       previous = row;
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = 2.8
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke,
-    );
+    canvas.drawPath(path, _curvePaint);
 
     // 7. Measurement Dots & Selection Ring
     final markers = showMarkers(size);
@@ -660,16 +686,12 @@ class _MeasurementPainter extends CustomPainter {
       }
       final p = point(row, size);
       if (identical(row, selected)) {
-        canvas.drawCircle(
-          p,
-          13,
-          Paint()..color = color.withValues(alpha: .22),
-        );
-        canvas.drawCircle(p, 7.5, Paint()..color = Colors.white);
-        canvas.drawCircle(p, 5.5, Paint()..color = color);
+        canvas.drawCircle(p, 13, _selectionHaloPaint);
+        canvas.drawCircle(p, 7.5, _whiteDotPaint);
+        canvas.drawCircle(p, 5.5, _colorDotPaint);
       } else {
-        canvas.drawCircle(p, 5, Paint()..color = Colors.white);
-        canvas.drawCircle(p, 3.8, Paint()..color = color);
+        canvas.drawCircle(p, 5, _whiteDotPaint);
+        canvas.drawCircle(p, 3.8, _colorDotPaint);
       }
     }
   }
@@ -685,5 +707,12 @@ class _MeasurementPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MeasurementPainter old) => true;
+  bool shouldRepaint(covariant _MeasurementPainter old) =>
+      old.minAge != minAge ||
+      old.maxAge != maxAge ||
+      old.metric != metric ||
+      old.birth != birth ||
+      old.end != end ||
+      old.selected != selected ||
+      old.rows.length != rows.length;
 }

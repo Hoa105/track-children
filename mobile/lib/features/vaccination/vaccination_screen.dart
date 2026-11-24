@@ -46,11 +46,143 @@ class VaccinationScreen extends StatefulWidget {
   State<VaccinationScreen> createState() => _VaccinationScreenState();
 }
 
+class _VaccinationMemo {
+  _VaccinationMemo({
+    required this.key,
+    required this.schedule,
+    required this.records,
+    required this.appointments,
+    required this.reference,
+    required this.due,
+    required this.done,
+    required this.missing,
+    required this.families,
+    required this.supplements,
+    required this.active,
+    required this.ageGroups,
+    required this.sortedGroups,
+    required this.ages,
+    required this.dob,
+    required this.childAge,
+    required this.childAgeKey,
+    required this.priority,
+  });
+
+  final Object key;
+  final List<ScheduledVaccine> schedule;
+  final List<ScheduledVaccine> records;
+  final List<ScheduledVaccine> appointments;
+  final List<ScheduledVaccine> reference;
+  final List<ScheduledVaccine> due;
+  final int done;
+  final List<ScheduledVaccine> missing;
+  final Map<String, List<ScheduledVaccine>> families;
+  final Map<String, List<ScheduledVaccine>> supplements;
+  final List<List<ScheduledVaccine>> active;
+  final Map<int, List<ScheduledVaccine>> ageGroups;
+  final Map<int, List<ScheduledVaccine>> sortedGroups;
+  final List<int> ages;
+  final DateTime dob;
+  final int childAge;
+  final int childAgeKey;
+  final ScheduledVaccine? priority;
+}
+
 class _VaccinationScreenState extends State<VaccinationScreen>
     with DemoStoreBinding {
   String get _childId => widget.childId;
   int _view = 0;
   int? _selectedAge;
+  _VaccinationMemo? _memo;
+
+  _VaccinationMemo _computeMemo(Map<String, dynamic> child) {
+    final today = _today;
+    final key = (
+      _childId,
+      DemoStore.instance.revision,
+      today,
+      vaccineCatalog,
+      child['date_of_birth'],
+    );
+    final cached = _memo;
+    if (cached != null && cached.key == key) return cached;
+
+    final schedule = vaccinationSchedule(_childId);
+    final records = schedule.where((v) => v.record != null).toList()
+      ..sort((a, b) => b.record!.date.compareTo(a.record!.date));
+    final appointments = schedule.where((v) => v.hasAppointment).toList();
+    final reference = schedule.where((v) => !v.dose.isCustom).toList();
+    final due = reference.where((v) => !v.dueDate.isAfter(today)).toList();
+    final done = due.where((v) => v.record != null).length;
+    final missing = due.where((v) => v.record == null).toList();
+    final families = <String, List<ScheduledVaccine>>{};
+    for (final v in reference) {
+      families.putIfAbsent(v.dose.name, () => []).add(v);
+    }
+    final supplements = <String, List<ScheduledVaccine>>{};
+    for (final v in schedule.where((v) => v.dose.isCustom)) {
+      supplements.putIfAbsent(v.dose.groupId ?? v.dose.id, () => []).add(v);
+    }
+    final pendingWithNextDue = <(List<ScheduledVaccine>, DateTime)>[];
+    final completed = <List<ScheduledVaccine>>[];
+    for (final group in families.values) {
+      ScheduledVaccine? firstUnrecorded;
+      for (final v in group) {
+        if (v.record == null) {
+          firstUnrecorded = v;
+          break;
+        }
+      }
+      if (firstUnrecorded != null) {
+        pendingWithNextDue.add((group, firstUnrecorded.dueDate));
+      } else {
+        completed.add(group);
+      }
+    }
+    pendingWithNextDue.sort((a, b) => a.$2.compareTo(b.$2));
+    final active = <List<ScheduledVaccine>>[
+      for (final item in pendingWithNextDue) item.$1,
+      ...completed,
+    ];
+    final ageGroups = <int, List<ScheduledVaccine>>{};
+    for (final v in reference) {
+      ageGroups.putIfAbsent(v.dose.ageKey, () => []).add(v);
+    }
+    final sortedGroups = Map.fromEntries(
+      ageGroups.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+    );
+    final ages = sortedGroups.keys.toList();
+    final dob = DateTime.parse(child['date_of_birth'] as String);
+    final childAge = VaccineDose.monthsBetween(dob, today);
+    final childAgeKey = _childAgeKey(dob);
+    final future = reference
+        .where((v) => v.record == null && v.dueDate.isAfter(today))
+        .firstOrNull;
+    final priority = appointments.firstOrNull ?? future;
+
+    final next = _VaccinationMemo(
+      key: key,
+      schedule: schedule,
+      records: records,
+      appointments: appointments,
+      reference: reference,
+      due: due,
+      done: done,
+      missing: missing,
+      families: families,
+      supplements: supplements,
+      active: active,
+      ageGroups: ageGroups,
+      sortedGroups: sortedGroups,
+      ages: ages,
+      dob: dob,
+      childAge: childAge,
+      childAgeKey: childAgeKey,
+      priority: priority,
+    );
+    _memo = next;
+    return next;
+  }
 
   @override
   void initState() {
@@ -389,55 +521,26 @@ class _VaccinationScreenState extends State<VaccinationScreen>
         );
       }
       final canEdit = DemoStore.instance.canEditChild(_childId, 'vaccination');
-      final schedule = vaccinationSchedule(_childId);
-      final records = schedule.where((v) => v.record != null).toList()
-        ..sort((a, b) => b.record!.date.compareTo(a.record!.date));
-      final appointments = schedule.where((v) => v.hasAppointment).toList();
-      final reference = schedule.where((v) => !v.dose.isCustom).toList();
-      final due = reference.where((v) => !v.dueDate.isAfter(_today)).toList();
-      final done = due.where((v) => v.record != null).length;
-      final missing = due.where((v) => v.record == null).toList();
-      final families = <String, List<ScheduledVaccine>>{};
-      for (final v in reference) {
-        families.putIfAbsent(v.dose.name, () => []).add(v);
-      }
-      final supplements = <String, List<ScheduledVaccine>>{};
-      for (final v in schedule.where((v) => v.dose.isCustom)) {
-        supplements.putIfAbsent(v.dose.groupId ?? v.dose.id, () => []).add(v);
-      }
-      final active =
-          families.values.where((g) => g.any((v) => v.record == null)).toList()
-            ..sort(
-              (a, b) => a
-                  .firstWhere((v) => v.record == null)
-                  .dueDate
-                  .compareTo(b.firstWhere((v) => v.record == null).dueDate),
-            );
-      final completed = families.values
-          .where((g) => g.every((v) => v.record != null))
-          .toList();
-      active.addAll(completed);
-      final ageGroups = <int, List<ScheduledVaccine>>{};
-      for (final v in reference) {
-        ageGroups.putIfAbsent(v.dose.ageKey, () => []).add(v);
-      }
-      final sortedGroups = Map.fromEntries(
-        ageGroups.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
-      );
-      final ages = sortedGroups.keys.toList();
-      final dob = DateTime.parse(child['date_of_birth'] as String);
-      final childAge = VaccineDose.monthsBetween(dob, _today);
-      final childAgeKey = _childAgeKey(dob);
+      final memo = _computeMemo(child);
+      final records = memo.records;
+      final appointments = memo.appointments;
+      final due = memo.due;
+      final done = memo.done;
+      final missing = memo.missing;
+      final supplements = memo.supplements;
+      final active = memo.active;
+      final ageGroups = memo.ageGroups;
+      final sortedGroups = memo.sortedGroups;
+      final ages = memo.ages;
+      final childAge = memo.childAge;
+      final childAgeKey = memo.childAgeKey;
       final selectedAge = ageGroups.containsKey(_selectedAge)
           ? _selectedAge!
           : ages.where((age) => age <= childAgeKey).lastOrNull ??
                 ages.firstOrNull;
       final selectedDoses =
           ageGroups[selectedAge] ?? const <ScheduledVaccine>[];
-      final future = reference
-          .where((v) => v.record == null && v.dueDate.isAfter(_today))
-          .firstOrNull;
-      final priority = appointments.firstOrNull ?? future;
+      final priority = memo.priority;
       return VaccinationTheme(
         child: Scaffold(
           backgroundColor: VaccinationColors.background,

@@ -65,39 +65,41 @@ class TeethingDatePicker extends StatelessWidget {
         ],
       ),
     );
-    return Container(
-      key: const Key('teething-date-picker'),
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: TeethingColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          wheel(
-            'Ngày',
-            1,
-            maxDay,
-            value.day,
-            (day) => _select(value.year, value.month, day),
-          ),
-          wheel(
-            'Tháng',
-            1,
-            12,
-            value.month,
-            (month) => _select(value.year, month, value.day),
-          ),
-          wheel(
-            'Năm',
-            firstDate.year,
-            lastDate.year,
-            value.year,
-            (year) => _select(year, value.month, value.day),
-          ),
-        ],
+    return RepaintBoundary(
+      child: Container(
+        key: const Key('teething-date-picker'),
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: TeethingColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            wheel(
+              'Ngày',
+              1,
+              maxDay,
+              value.day,
+              (day) => _select(value.year, value.month, day),
+            ),
+            wheel(
+              'Tháng',
+              1,
+              12,
+              value.month,
+              (month) => _select(value.year, month, value.day),
+            ),
+            wheel(
+              'Năm',
+              firstDate.year,
+              lastDate.year,
+              value.year,
+              (year) => _select(year, value.month, value.day),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,13 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/mobile/windows",
     "cmake.buildDirectory": "${workspaceFolder}/mobile/build/windows/x64",
-    "cmake.generator": "Visual Studio 18 2026"
+    "cmake.generator": "Visual Studio 18 2026",
+    "python.analysis.exclude": [
+        "**/datasets/**",
+        "**/checkpoints/**",
+        "**/uploads/**",
+        "**/build/**",
+        "**/backups/**",
+        "**/generated/**"
+    ]
 }

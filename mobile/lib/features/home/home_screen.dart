@@ -357,53 +357,57 @@ class _CareCard extends StatelessWidget {
   final String childName;
   final ValueChanged<String> onTap;
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('home-care-card'),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: HomeColors.surface,
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RepaintBoundary(
-          child: _TimelineCard(
-            key: ValueKey(DemoStore.instance.child?['id']),
+  Widget build(BuildContext context) {
+    final activeChild = DemoStore.instance.child;
+    final activeChildId = activeChild?['id'] as String?;
+    return Container(
+      key: const ValueKey('home-care-card'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: HomeColors.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RepaintBoundary(
+            child: _TimelineCard(
+              key: ValueKey(activeChildId),
+            ),
           ),
-        ),
-        if (DemoStore.instance.child != null)
-          AssessmentHomeCard(
-            childId: DemoStore.instance.child!['id'] as String,
-            reminderOnly: true,
+          if (activeChildId != null)
+            AssessmentHomeCard(
+              childId: activeChildId,
+              reminderOnly: true,
+            ),
+          const SizedBox(height: 16),
+          Text(
+            'Hôm nay bé ${childName.replaceFirst(RegExp(r'^bé\s+', caseSensitive: false), '')} cần gì?',
+            key: const ValueKey('home-care-title'),
+            style: const TextStyle(
+              fontSize: 18,
+              color: HomeColors.ink,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        const SizedBox(height: 16),
-        Text(
-          'Hôm nay bé ${childName.replaceFirst(RegExp(r'^bé\s+', caseSensitive: false), '')} cần gì?',
-          key: const ValueKey('home-care-title'),
-          style: const TextStyle(
-            fontSize: 18,
-            color: HomeColors.ink,
-            fontWeight: FontWeight.w800,
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              spacing: 12,
+              runSpacing: 18,
+              children: [
+                for (final item in _HomeScreenState._shortcuts)
+                  SizedBox(
+                    width: (constraints.maxWidth - 24) / 3,
+                    child: _CareItem(item: item, onTap: () => onTap(item.label)),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) => Wrap(
-            spacing: 12,
-            runSpacing: 18,
-            children: [
-              for (final item in _HomeScreenState._shortcuts)
-                SizedBox(
-                  width: (constraints.maxWidth - 24) / 3,
-                  child: _CareItem(item: item, onTap: () => onTap(item.label)),
-                ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _CareItem extends StatelessWidget {
@@ -412,58 +416,63 @@ class _CareItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: Semantics(
-      label: item.label,
-      button: true,
-      excludeSemantics: true,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-        child: InkWell(
-          onTap: onTap,
+  Widget build(BuildContext context) {
+    final cacheSize = (56 * MediaQuery.devicePixelRatioOf(context))
+        .round()
+        .clamp(56, 224);
+    return SizedBox(
+      width: double.infinity,
+      child: Semantics(
+        label: item.label,
+        button: true,
+        excludeSemantics: true,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
-          splashColor: item.accentColor.withValues(alpha: .14),
-          highlightColor: item.accentColor.withValues(alpha: .08),
-          hoverColor: item.accentColor.withValues(alpha: .08),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: HomeColors.iconBackground,
-                  borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+            splashColor: item.accentColor.withValues(alpha: .14),
+            highlightColor: item.accentColor.withValues(alpha: .08),
+            hoverColor: item.accentColor.withValues(alpha: .08),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: HomeColors.iconBackground,
+                    borderRadius: BorderRadius.circular(AppLayout.homeCareRadius),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(
+                    'assets/images/scenery/icons/care/${item.iconAsset}',
+                    width: 56,
+                    height: 56,
+                    cacheWidth: cacheSize,
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
+                  ),
                 ),
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/images/scenery/icons/care/${item.iconAsset}',
-                  width: 56,
-                  height: 56,
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true,
+                const SizedBox(height: 8),
+                Text(
+                  item.label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: HomeColors.ink,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                item.label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: HomeColors.ink,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-int get _currentAgeMilestoneIndex {
-  final child = DemoStore.instance.child;
+int _ageMilestoneIndexForChild(Map<String, dynamic>? child) {
   if (child == null) return 0;
   final months = int.parse(DemoStore.instance.ageLabel(child).split(' ').first);
   return months < 4
@@ -498,10 +507,15 @@ class _TimelineCardState extends State<_TimelineCard> {
     super.dispose();
   }
 
-  void _revealCurrentMilestone(double viewportWidth, double itemWidth) {
+  void _revealCurrentMilestone(
+    String? childId,
+    int activeMilestoneIndex,
+    double viewportWidth,
+    double itemWidth,
+  ) {
     final target = (
-      DemoStore.instance.child?['id'],
-      _currentAgeMilestoneIndex,
+      childId,
+      activeMilestoneIndex,
       viewportWidth,
       itemWidth,
     );
@@ -565,102 +579,114 @@ class _TimelineCardState extends State<_TimelineCard> {
     '5–6 tuổi',
   ];
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: AppLayout.mediumGap),
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = MediaQuery.textScalerOf(context)
-            .scale(72)
-            .clamp(72.0, 144.0)
-            .toDouble();
-        _revealCurrentMilestone(constraints.maxWidth, itemWidth);
-        return SingleChildScrollView(
-          key: const ValueKey('home-milestones-scroll'),
-          controller: _milestoneScrollController,
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: _totalMilestonesWidth(itemWidth),
-            child: Stack(
-              children: [
-                for (var i = 0; i < ages.length - 1; i++)
-                  Positioned(
-                    left: _milestoneCenter(i, itemWidth),
-                    top: 62,
-                    width: _milestoneCenter(i + 1, itemWidth) -
-                        _milestoneCenter(i, itemWidth),
-                    height: 24,
-                    child: Image.asset(
-                      'assets/images/scenery/icons/age-milestones/timeline/'
-                      'connector_${i.isEven ? 'up' : 'down'}_inactive.png',
-                      fit: BoxFit.fill,
+  Widget build(BuildContext context) {
+    final activeChild = DemoStore.instance.child;
+    final activeIndex = _ageMilestoneIndexForChild(activeChild);
+    final milestoneCacheSize = (72 * MediaQuery.devicePixelRatioOf(context))
+        .round()
+        .clamp(72, 288);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppLayout.mediumGap),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth = MediaQuery.textScalerOf(context)
+              .scale(72)
+              .clamp(72.0, 144.0)
+              .toDouble();
+          _revealCurrentMilestone(
+            activeChild?['id'] as String?,
+            activeIndex,
+            constraints.maxWidth,
+            itemWidth,
+          );
+          return SingleChildScrollView(
+            key: const ValueKey('home-milestones-scroll'),
+            controller: _milestoneScrollController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: _totalMilestonesWidth(itemWidth),
+              child: Stack(
+                children: [
+                  for (var i = 0; i < ages.length - 1; i++)
+                    Positioned(
+                      left: _milestoneCenter(i, itemWidth),
+                      top: 62,
+                      width: _milestoneCenter(i + 1, itemWidth) -
+                          _milestoneCenter(i, itemWidth),
+                      height: 24,
+                      child: Image.asset(
+                        'assets/images/scenery/icons/age-milestones/timeline/'
+                        'connector_${i.isEven ? 'up' : 'down'}_inactive.png',
+                        fit: BoxFit.fill,
+                      ),
                     ),
-                  ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < ages.length; i++)
-                      SizedBox(
-                        key: ValueKey('home-milestone-$i'),
-                        width: _milestoneWidth(i, itemWidth),
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              height: 8,
-                              child: i == _currentAgeMilestoneIndex
-                                  ? const Center(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: HomeColors.milestoneAccent,
-                                          shape: BoxShape.circle,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < ages.length; i++)
+                        SizedBox(
+                          key: ValueKey('home-milestone-$i'),
+                          width: _milestoneWidth(i, itemWidth),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 8,
+                                child: i == activeIndex
+                                    ? const Center(
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: HomeColors.milestoneAccent,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: SizedBox.square(dimension: 6),
                                         ),
-                                        child: SizedBox.square(dimension: 6),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            SizedBox(
-                              height: 72,
-                              child: OverflowBox(
-                                minWidth: 72,
-                                maxWidth: 72,
-                                child: Image.asset(
-                                  _ageMilestoneAssets[i][i ==
-                                          _currentAgeMilestoneIndex
-                                      ? 1
-                                      : 0],
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.contain,
-                                  alignment: Alignment.bottomCenter,
+                                      )
+                                    : null,
+                              ),
+                              SizedBox(
+                                height: 72,
+                                child: OverflowBox(
+                                  minWidth: 72,
+                                  maxWidth: 72,
+                                  child: Image.asset(
+                                    _ageMilestoneAssets[i][i == activeIndex
+                                        ? 1
+                                        : 0],
+                                    width: 72,
+                                    height: 72,
+                                    cacheWidth: milestoneCacheSize,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.bottomCenter,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              ages[i],
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: i == _currentAgeMilestoneIndex
-                                    ? HomeColors.ink
-                                    : HomeColors.primary,
-                                fontWeight: i == _currentAgeMilestoneIndex
-                                    ? FontWeight.w700
-                                    : FontWeight.normal,
+                              const SizedBox(height: 4),
+                              Text(
+                                ages[i],
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: i == activeIndex
+                                      ? HomeColors.ink
+                                      : HomeColors.primary,
+                                  fontWeight: i == activeIndex
+                                      ? FontWeight.w700
+                                      : FontWeight.normal,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 }
 
 const _ageMilestoneAssets = <List<String>>[

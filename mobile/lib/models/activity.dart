@@ -134,13 +134,24 @@ final activityCatalogState = ValueNotifier<List<ChildActivity>>(
   bundledActivityCatalog,
 );
 
+final RegExp _corruptedActivityText = RegExp(
+  r'[A-Za-zÀ-ỹ]\?[A-Za-zÀ-ỹ]|\?[A-Za-zÀ-ỹ]|\?\?',
+);
+
 /// Replaces the bundled ideas of every group the backend has content for;
 /// groups still empty there (âm nhạc, kể chuyện) keep the bundled ones.
 void applyActivityCatalog(List<ChildActivity> remote) {
-  if (remote.isEmpty) return;
-  final groups = remote.map((a) => a.groupId).toSet();
+  final cleanRemote = remote
+      .where(
+        (a) =>
+            !_corruptedActivityText.hasMatch(a.name) &&
+            (a.summary == null || !_corruptedActivityText.hasMatch(a.summary!)),
+      )
+      .toList();
+  if (cleanRemote.isEmpty) return;
+  final groups = cleanRemote.map((a) => a.groupId).toSet();
   activityCatalogState.value = [
-    ...remote,
+    ...cleanRemote,
     ...bundledActivityCatalog.where((a) => !groups.contains(a.groupId)),
   ];
 }

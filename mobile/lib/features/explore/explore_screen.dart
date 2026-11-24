@@ -81,10 +81,10 @@ class ExploreScreen extends StatelessWidget {
                   : (rawChildName.toLowerCase() == 'bé'
                       ? 'Bé'
                       : 'Bé $rawChildName'));
-          final entries = store.journalEntries(id);
-          final growthCount = store.records(id).length;
-          final vaxCount = store.vaccinations(id).length;
-          final teethCount = store.teeth(id).length;
+          final entriesCount = store.journalEntryCount(id);
+          final growthCount = store.recordCount(id);
+          final vaxCount = store.vaccinationCount(id);
+          final teethCount = store.toothCount(id);
 
           return Scaffold(
             backgroundColor: ExploreColors.background,
@@ -153,7 +153,7 @@ class ExploreScreen extends StatelessWidget {
                 _ModernExploreTile(
                   title: 'Lịch sử nhật ký',
                   subtitle:
-                      '${entries.length} ghi chép · Những khoảnh khắc đáng nhớ bên bé',
+                      '$entriesCount ghi chép · Những khoảnh khắc đáng nhớ bên bé',
                   icon: Icons.auto_stories_rounded,
                   tint: const Color(0xFFFFE8CF),
                   iconColor: const Color(0xFFD36E1A),

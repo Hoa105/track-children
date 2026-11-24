@@ -231,69 +231,71 @@ class _JournalScreenState extends State<JournalScreen> {
                         ),
                       ),
                     for (final entry in entries)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _Panel(
-                          onTap: () => _open(entry),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today_outlined,
-                                    size: 16,
-                                    color: JournalColors.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _dateLabel(
-                                        DateTime.parse(entry['date'] as String),
-                                      ),
-                                      style: _caption,
+                      RepaintBoundary(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _Panel(
+                            onTap: () => _open(entry),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 16,
+                                      color: JournalColors.primary,
                                     ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _dateLabel(
+                                          DateTime.parse(entry['date'] as String),
+                                        ),
+                                        style: _caption,
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: JournalColors.textSecondary,
+                                    ),
+                                  ],
+                                ),
+                              if ((entry['media'] as List?)?.isNotEmpty ??
+                                  false) ...[
+                                const SizedBox(height: 12),
+                                JournalMediaTile(
+                                  childId: widget.childId,
+                                  entryId: entry['id'] as String,
+                                  media: Map<String, dynamic>.from(
+                                    (entry['media'] as List).first as Map,
                                   ),
-                                  const Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: JournalColors.textSecondary,
+                                ),
+                              ] else if (entry['photo'] != null) ...[
+                                const SizedBox(height: 12),
+                                _Photo(photo: entry['photo'] as String),
+                              ],
+                              const SizedBox(height: 12),
+                              Text(entry['note'] as String? ?? '', style: _body),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _Tag(
+                                    label: entry['mood'] as String? ?? 'Vui vẻ',
                                   ),
+                                  if (entry['activityName'] != null)
+                                    _Tag(label: entry['activityName'] as String),
+                                  if (entry['insight'] != null)
+                                    const _Tag(label: 'Có nhận xét AI'),
+                                  for (final domain
+                                      in entry['domains'] as List? ?? [])
+                                    _Tag(label: domain.toString()),
                                 ],
                               ),
-                            if ((entry['media'] as List?)?.isNotEmpty ??
-                                false) ...[
-                              const SizedBox(height: 12),
-                              JournalMediaTile(
-                                childId: widget.childId,
-                                entryId: entry['id'] as String,
-                                media: Map<String, dynamic>.from(
-                                  (entry['media'] as List).first as Map,
-                                ),
-                              ),
-                            ] else if (entry['photo'] != null) ...[
-                              const SizedBox(height: 12),
-                              _Photo(photo: entry['photo'] as String),
                             ],
-                            const SizedBox(height: 12),
-                            Text(entry['note'] as String? ?? '', style: _body),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _Tag(
-                                  label: entry['mood'] as String? ?? 'Vui vẻ',
-                                ),
-                                if (entry['activityName'] != null)
-                                  _Tag(label: entry['activityName'] as String),
-                                if (entry['insight'] != null)
-                                  const _Tag(label: 'Có nhận xét AI'),
-                                for (final domain
-                                    in entry['domains'] as List? ?? [])
-                                  _Tag(label: domain.toString()),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

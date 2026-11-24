@@ -165,4 +165,83 @@ void main() {
     expect(custom.dose.isCustom, isTrue);
     expect(custom.dueDate, DateTime(2026, 11, 1));
   });
+
+  test('repairs corrupted Vietnamese diacritics from catalog and entries', () {
+    final corruptedCatalog = VaccineCatalog.fromJson({
+      'vaccines': [
+        {
+          'code': 'ipv',
+          'name': 'B?i li?t ti?m (IPV)',
+          'prevents': 'B?i li?t',
+          'isTcmr': true,
+          'description': null,
+          'choiceGroup': 'dtp',
+          'choiceOption': 'tcmr',
+          'choiceLabel': 'TCMR: 5 trong 1 + b?i li?t OPV/IPV + nh?c DPT',
+          'choiceDefault': true,
+          'products': [],
+        },
+      ],
+      'doses': [
+        {
+          'id': 'ipv-1',
+          'vaccine': 'ipv',
+          'doseNumber': 1,
+          'doseLabel': 'M?i 1',
+          'ageWeeks': null,
+          'ageMonths': 5,
+          'offsetDays': 0,
+          'afterDose': null,
+          'minIntervalDays': null,
+          'repeatEveryMonths': null,
+          'repeatUntilMonths': null,
+          'isTcmr': true,
+          'note':
+              'Theo l?ch TCMR ? ??i chi?u h??ng d?n B? Y t? hi?n h?nh.',
+        },
+      ],
+    });
+    final sanitized = sanitizeVaccineCatalog(corruptedCatalog);
+    expect(sanitized.vaccines.single.name, 'Bại liệt tiêm (IPV)');
+    expect(sanitized.vaccines.single.prevents, 'Bại liệt');
+    expect(
+      sanitized.vaccines.single.choiceLabel,
+      'TCMR: 5 trong 1 + bại liệt OPV/IPV + nhắc DPT',
+    );
+    expect(sanitized.doses.single.doseLabel, 'Mũi 1');
+    expect(
+      sanitized.doses.single.note,
+      'Theo lịch TCMR — đối chiếu hướng dẫn Bộ Y tế hiện hành.',
+    );
+
+    final sanitizedEntry = sanitizeVaccinationEntry({
+      'id': 'bcg',
+      'custom': false,
+      'name': 'BCG',
+      'prevents': 'Lao',
+      'doseLabel': 'M?i duy nh?t',
+      'given': true,
+      'date': DateTime(2025, 1, 10).toIso8601String(),
+      'note':
+          'Ti?m trong 24 gi? ??u sau sinh (ho?c c?ng s?m c?ng t?t trong th?ng ??u).',
+    });
+    expect(sanitizedEntry['doseLabel'], 'Mũi duy nhất');
+    expect(
+      sanitizedEntry['note'],
+      'Tiêm trong 24 giờ đầu sau sinh (hoặc càng sớm càng tốt trong tháng đầu).',
+    );
+
+    final customSanitized = sanitizeVaccinationEntry({
+      'id': 'custom-ipv',
+      'custom': true,
+      'name': 'B?i li?t ti?m',
+      'prevents': 'B?i li?t',
+      'doseLabel': 'M?i 1',
+      'given': true,
+      'date': DateTime(2025, 6, 10).toIso8601String(),
+    });
+    expect(customSanitized['name'], 'Bại liệt tiêm');
+    expect(customSanitized['prevents'], 'Bại liệt');
+    expect(customSanitized['doseLabel'], 'Mũi 1');
+  });
 }

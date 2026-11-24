@@ -14,6 +14,7 @@ import 'journal_media.dart';
 import 'teething_api.dart';
 import 'progress_review_api.dart';
 import 'vaccination_remote.dart';
+import 'vaccination_schedule.dart';
 import 'video_insight_api.dart';
 import 'who_bmi_reference.dart';
 import 'growth_api.dart';
@@ -30,7 +31,9 @@ export 'vaccination_remote.dart';
 /// first and copied to the backend ([journalRemote]).
 class DemoStore extends ChangeNotifier {
   DemoStore({DateTime? today})
-    : _data = _DemoFixture.create(today ?? DateTime.now());
+    : _data = _DemoFixture.create(today ?? DateTime.now()) {
+    onVaccineCatalogChanged = notifyListeners;
+  }
   static DemoStore _instance = DemoStore();
   static DemoStore get instance => _instance;
   @visibleForTesting
@@ -69,8 +72,29 @@ class DemoStore extends ChangeNotifier {
   final Map<String, int> _growthRevisions = {};
   late final _TeethingStore _teething = _TeethingStore(this);
   int _ownerEpoch = 0;
+  int _revision = 0;
+  int get revision => _revision;
+
+  @override
+  void notifyListeners() {
+    _revision++;
+    super.notifyListeners();
+  }
+  static dynamic _deepCopyValue(dynamic value) {
+    if (value is Map) {
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          entry.key.toString(): _deepCopyValue(entry.value),
+      };
+    }
+    if (value is List) {
+      return <dynamic>[for (final item in value) _deepCopyValue(item)];
+    }
+    return value;
+  }
+
   Map<String, dynamic> _copy(Map value) =>
-      Map<String, dynamic>.from(jsonDecode(jsonEncode(value)) as Map);
+      _deepCopyValue(value) as Map<String, dynamic>;
   List<Map<String, dynamic>> get _parents =>
       (_data['parents'] as List).cast<Map<String, dynamic>>();
   List<Map<String, dynamic>> get _children =>
@@ -87,12 +111,16 @@ class DemoStore extends ChangeNotifier {
       .map(_copy)
       .toList();
   Map<String, dynamic>? get child {
-    final available = children;
-    if (available.isEmpty) return null;
-    return available.firstWhere(
-      (c) => c['id'] == _data['childId'],
-      orElse: () => available.first,
-    );
+    final parentId = _data['parentId'];
+    final targetId = _data['childId'];
+    Map<String, dynamic>? firstMatch;
+    for (final c in _children) {
+      if (c['parentId'] == parentId) {
+        if (c['id'] == targetId) return _copy(c);
+        firstMatch ??= c;
+      }
+    }
+    return firstMatch == null ? null : _copy(firstMatch);
   }
 
   Map<String, dynamic>? childById(String id) {
@@ -124,9 +152,29 @@ class DemoStore extends ChangeNotifier {
   Future<void> _initialize() async {
     if (_loaded) return;
     final cached = await _cache.load();
-    if (cached != null) _data = cached;
+    if (cached != null) {
+      _sanitizeCachedData(cached);
+      _data = cached;
+    }
     _loaded = true;
     notifyListeners();
+  }
+
+  static void _sanitizeCachedData(Map<String, dynamic> data) {
+    final children = data['children'];
+    if (children is! List) return;
+    for (final child in children) {
+      if (child is! Map) continue;
+      final vax = child['vaccinations'];
+      if (vax is List) {
+        child['vaccinations'] = [
+          for (final item in vax)
+            item is Map
+                ? sanitizeVaccinationEntry(Map<String, dynamic>.from(item))
+                : item,
+        ];
+      }
+    }
   }
 
   Future<void> _write(void Function(Map<String, dynamic>) change) {
@@ -303,14 +351,14 @@ class DemoStore extends ChangeNotifier {
   /// Chủ hồ sơ (hoặc bé tạo trên máy) có toàn quyền; người được chia sẻ chỉ có
   /// quyền theo từng mục do chủ hồ sơ cấp (F23).
   bool isChildOwner(String? childId) {
-    final child = childId == null ? null : childById(childId);
+    final child = childId == null ? null : _findChild(childId);
     return child == null || child['server'] != true || child['role'] != 'member';
   }
 
   /// 'none' | 'view' | 'edit' của tài khoản hiện tại với một mục của bé.
   String childAccess(String? childId, String scope) {
     if (isChildOwner(childId)) return 'edit';
-    final child = childById(childId!)!;
+    final child = _findChild(childId!)!;
     final access = child['access'];
     final level = access is Map ? access[scope] : null;
     if (level is String) return level;
@@ -459,9 +507,26 @@ class DemoStore extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> records(String id) =>
-      ((childById(id)?['records'] ?? []) as List)
+      ((_findChild(id)?['records'] ?? const []) as List)
           .map((r) => _copy(r as Map))
           .toList();
+
+  int recordCount(String id) =>
+      ((_findChild(id)?['records'] ?? const []) as List).length;
+
+  int journalEntryCount(String childId) {
+    final child = _findChild(childId);
+    if (child == null) return 0;
+    final saved = child['journalEntries'] as List?;
+    if (saved != null) return saved.length;
+    return child['journal'] is Map ? 1 : 0;
+  }
+
+  int vaccinationCount(String id) =>
+      ((_findChild(id)?['vaccinations'] ?? const []) as List).length;
+
+  int toothCount(String id) =>
+      ((_findChild(id)?['teeth'] ?? const []) as List).length;
   Future<void> refreshGrowth(String id) async {
     if (!GrowthApi.instance.signedIn) return;
     final owner = _data['parentId'];
@@ -535,7 +600,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> journalEntries(String childId) {
-    final child = childById(childId);
+    final child = _findChild(childId);
     if (child == null) return [];
     final saved = child['journalEntries'] as List?;
     final legacy = child['journal'] as Map?;
@@ -927,11 +992,18 @@ class DemoStore extends ChangeNotifier {
   }
 
   Set<String> completedActivities(String childId) => Set<String>.from(
-    childById(childId)?['completedActivities'] as List? ?? [],
+    _findChild(childId)?['completedActivities'] as List? ?? const [],
   );
 
-  Set<String> get favoriteActivities =>
-      Set<String>.from(parent['favoriteActivities'] as List? ?? []);
+  Set<String> get favoriteActivities {
+    final activeParent = _parents.firstWhere(
+      (p) => p['id'] == _data['parentId'],
+      orElse: () => _parents.first,
+    );
+    return Set<String>.from(
+      activeParent['favoriteActivities'] as List? ?? const [],
+    );
+  }
 
   /// Library activities (uuid ids) are saved to the backend first, so a failed
   /// request leaves the local state unchanged. Bundled ideas stay local.
@@ -1069,8 +1141,8 @@ class DemoStore extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> vaccinations(String id) =>
-      ((childById(id)?['vaccinations'] ?? []) as List)
-          .map((r) => _copy(r as Map))
+      ((_findChild(id)?['vaccinations'] ?? const []) as List)
+          .map((r) => sanitizeVaccinationEntry(_copy(r as Map)))
           .toList();
 
   Future<void> saveVaccination(String id, Map<String, dynamic> record) {
@@ -1128,7 +1200,7 @@ class DemoStore extends ChangeNotifier {
 
   /// {vaccine code: followed?} — only vaccines whose default the parent changed.
   Map<String, bool> vaccinePlans(String id) => {
-    for (final e in ((childById(id)?['vaccinePlans'] ?? {}) as Map).entries)
+    for (final e in ((_findChild(id)?['vaccinePlans'] ?? const {}) as Map).entries)
       e.key as String: e.value as bool,
   };
 
@@ -1360,8 +1432,10 @@ class DemoStore extends ChangeNotifier {
       ];
       final serverIds = {for (final r in records) r['id']};
       c['vaccinations'] = [
-        ...records,
-        ...stayLocal.where((r) => !serverIds.contains(r['id'])),
+        for (final r in records) sanitizeVaccinationEntry(r),
+        for (final r in stayLocal)
+          if (!serverIds.contains(r['id']))
+            sanitizeVaccinationEntry(Map<String, dynamic>.from(r as Map)),
       ];
       c['vaccinePlans'] = plans;
       final synced = Set<String>.from(d['vaccinationSynced'] as List? ?? []);
